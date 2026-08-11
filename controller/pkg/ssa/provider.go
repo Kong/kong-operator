@@ -174,6 +174,11 @@ func (p *TypeConverterProvider) Rebuild(ctx context.Context, logger logr.Logger,
 	crdSpecs := make([]*kubespec3.OpenAPI, 0, len(crds))
 	for _, crd := range crds {
 		for _, v := range crd.Spec.Versions {
+			if !v.Served {
+				// Not served, so no client (including this provider's own callers) ever
+				// applies against it - building and caching its schema would be waste.
+				continue
+			}
 			key := crd.Name + "/" + v.Name
 			if entry, ok := specCacheSnapshot[key]; ok && entry.rv == crd.ResourceVersion {
 				newCache[key] = entry
@@ -219,19 +224,40 @@ func (p *TypeConverterProvider) Ready(_ *http.Request) error {
 	return nil
 }
 
-// listRelevantCRDs lists all CRDs in the configured groups using the given reader.
+// crdListPageSize bounds how many full CRD objects (each carrying its complete OpenAPI
+// schema) are held in memory at once while listing. Without pagination, a single List
+// would decode every CRD in the cluster - including ones outside crdGroups - before any
+// of them could be discarded.
+const crdListPageSize = 32
+
+// listRelevantCRDs lists all CRDs in the configured groups using the given reader,
+// paginating so irrelevant CRDs from other pages can be GC'd before the next page is
+// fetched instead of holding the whole cluster's CRDs in memory at once.
 func listRelevantCRDs(ctx context.Context, r client.Reader, crdGroups map[string]struct{}) ([]*apiextensionsv1.CustomResourceDefinition, error) {
-	allCRDs := &apiextensionsv1.CustomResourceDefinitionList{}
-	if err := r.List(ctx, allCRDs); err != nil {
-		return nil, err
-	}
-	relevant := make([]*apiextensionsv1.CustomResourceDefinition, 0, len(allCRDs.Items))
-	for i := range allCRDs.Items {
-		if isCRDGroupRelevant(crdGroups, allCRDs.Items[i].Spec.Group) {
-			relevant = append(relevant, &allCRDs.Items[i])
+	var relevant []*apiextensionsv1.CustomResourceDefinition
+	continueToken := ""
+	for {
+		page := &apiextensionsv1.CustomResourceDefinitionList{}
+		opts := []client.ListOption{client.Limit(crdListPageSize)}
+		if continueToken != "" {
+			opts = append(opts, client.Continue(continueToken))
 		}
+		if err := r.List(ctx, page, opts...); err != nil {
+			return nil, err
+		}
+		for i := range page.Items {
+			if isCRDGroupRelevant(crdGroups, page.Items[i].Spec.Group) {
+				// Copy the crd to prevent Go from keeping the entire backing array
+				// in memory while we hold a reference to the slice element.
+				crd := page.Items[i].DeepCopy()
+				relevant = append(relevant, crd)
+			}
+		}
+		if page.Continue == "" {
+			return relevant, nil
+		}
+		continueToken = page.Continue
 	}
-	return relevant, nil
 }
 
 // mergeApplyModels merges pre-built CRD OpenAPI specs with the cached built-in
