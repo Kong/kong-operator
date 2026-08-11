@@ -58,4 +58,8 @@ func TestEventGatewayListener(t *testing.T) {
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("gatewayRef immutability", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validListener(ns.Name, intstr.FromInt32(9092))).RunWithConfig(t, cfg, scheme)
+	})
 }

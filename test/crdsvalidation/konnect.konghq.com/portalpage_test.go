@@ -80,4 +80,18 @@ func TestPortalPage(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("portalRef immutability", func(t *testing.T) {
+		obj := &konnectv1alpha1.PortalPage{
+			ObjectMeta: common.CommonObjectMeta(ns.Name),
+			Spec: konnectv1alpha1.PortalPageSpec{
+				PortalRef: portalRef,
+				APISpec: konnectv1alpha1.PortalPageAPISpec{
+					Content: "Page content",
+					Slug:    "slug-1",
+				},
+			},
+		}
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, obj).RunWithConfig(t, cfg, scheme)
+	})
+
 }

@@ -67,6 +67,10 @@ func TestEventGatewayBackendCluster(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("gatewayRef immutability", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validBackendCluster(ns.Name)).RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("clientIdentity SensitiveDataSource validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.EventGatewayBackendCluster]{
 			{
