@@ -86,9 +86,6 @@
   `ConfigStoreRefValid=False` with reason `RefNotPermitted` and is not pushed to
   Konnect.
   [#5221](https://github.com/Kong/kong-operator/pull/5221)
-- Helm chart: added `nodeSelector` value for the operator pod, mirroring the
-  existing `tolerations` and `affinity` values.
-  [#5246](https://github.com/Kong/kong-operator/pull/5246)
 
 ### Changed
 

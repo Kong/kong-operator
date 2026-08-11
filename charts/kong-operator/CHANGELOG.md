@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+### Added
+
+- Added `nodeSelector` value for the operator pod, mirroring the existing
+  `tolerations` and `affinity` values.
+  [#5246](https://github.com/Kong/kong-operator/pull/5246)
+
+### Changed
+
 - Bump operator's memory limits from `256Mi` to `512Mi` to prevent OOM issues
   with default settings in environments with a lot of cluster resources.
   [#5248](https://github.com/Kong/kong-operator/pull/5248)
