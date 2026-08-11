@@ -103987,7 +103987,7 @@ spec:
         version: "2.3.0-rc.3"
     spec:
       nodeSelector:
-        disktype: ssd
+        kubernetes.io/os: linux
       containers:
       - name: manager
         env:

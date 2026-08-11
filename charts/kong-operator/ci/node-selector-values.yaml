@@ -1,5 +1,5 @@
 nodeSelector:
-  disktype: ssd
+  kubernetes.io/os: linux
 livenessProbe:
   httpGet:
     path: /healthz
