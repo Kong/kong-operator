@@ -107,8 +107,8 @@
   Previously a single transient failure (e.g. a rejected admission webhook
   call) left the Service without its `konghq.com/plugins` annotation
   indefinitely, since nothing else would trigger another reconcile.
-- fix routes become unaccepted and removed from dataplane when listener is
-  transient unprogrammed
+- Fix Gateway API routes becoming transiently unaccepted and removed from dataplane
+  when listener is intermittently marked as Programmed=False.
   [#5237](https://github.com/Kong/kong-operator/pull/5237)
 
 ## [v2.3.0-rc.3]

@@ -36,7 +36,7 @@ func init() {
 	}
 }
 
-func TestIsGatewaySettledForRoute(t *testing.T) {
+func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 	udpListener := gatewayapi.Listener{
 		Name:     "udp",
 		Protocol: gatewayapi.UDPProtocolType,
@@ -276,7 +276,7 @@ func TestIsGatewaySettledForRoute(t *testing.T) {
 				listenerName:          tt.listener,
 				attachedListenerNames: tt.attachedListenerNames,
 			}
-			assert.Equal(t, tt.wantReady, isGatewaySettledForRoute(gateway))
+			assert.Equal(t, tt.wantReady, isGatewayProgrammedSettledForRoute(gateway))
 		})
 	}
 }
