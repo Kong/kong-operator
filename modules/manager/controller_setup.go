@@ -29,6 +29,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
@@ -202,6 +203,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForMCPServer(cl),
+			index.OptionsForMCPServerDataPlane(),
 		)
 	}
 
@@ -322,6 +324,11 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "mcpservers",
+				},
+				{
+					Group:    mcpv1alpha1.SchemeGroupVersion.Group,
+					Version:  mcpv1alpha1.SchemeGroupVersion.Version,
+					Resource: "mcpserverdataplanes",
 				},
 			},
 		},
@@ -828,7 +835,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 
 	// MCPServer controllers
 	if c.FeatureGates.Enabled(FeatureGateMCPServer) {
-		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider)...)
+		controllers = append(controllers, newMCPServerControllers(mgr, c, ctrlOpts, ssaProvider, metricRecorder)...)
 	}
 
 	// Konnect controllers
@@ -1036,7 +1043,13 @@ func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootOb
 	}
 }
 
-func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller.Options, ssaProvider *controllerpkgssa.TypeConverterProvider) []ControllerDef {
+func newMCPServerControllers(
+	mgr manager.Manager,
+	c *Config,
+	ctrlOpts controller.Options,
+	ssaProvider *controllerpkgssa.TypeConverterProvider,
+	metricsRecorder metrics.Recorder,
+) []ControllerDef {
 	var (
 		reconcileEventCh     = make(chan event.GenericEvent, mcpserver.TriggerChannelBufSize)
 		sm                   = mcpserver.NewSignalManager(c.LoggingMode, mgr.GetClient(), mgr.GetScheme(), reconcileEventCh)
@@ -1044,6 +1057,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 		sdkFactoryForPolling = sdkops.NewSDKFactory(sdkops.WithHTTPClient(httpClientForKonnectLongPolling()))
 		controllerFactory    = konnectControllerFactory{
 			sdkFactory:        sdkFactory,
+			metricRecorder:    metricsRecorder,
 			loggingMode:       c.LoggingMode,
 			client:            mgr.GetClient(),
 			syncPeriod:        c.KonnectSyncPeriod,
@@ -1053,7 +1067,7 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 	return []ControllerDef{
 		{
 			Enabled: true,
-			Controller: &mcpserver.MCPServerReconciler{
+			Controller: &mcpserver.MCPServerDataPlaneReconciler{
 				Client:            mgr.GetClient(),
 				Scheme:            mgr.GetScheme(),
 				ControllerOptions: ctrlOpts,
@@ -1074,6 +1088,15 @@ func newMCPServerControllers(mgr manager.Manager, c *Config, ctrlOpts controller
 				SignalManager:        sm,
 				SdkFactory:           sdkFactory,
 				SdkFactoryForPolling: sdkFactoryForPolling,
+			},
+		},
+		{
+			Enabled: true,
+			Controller: &mcpserver.MCPServerSignalReconciler{
+				Client:            mgr.GetClient(),
+				ControllerOptions: ctrlOpts,
+				LoggingMode:       c.LoggingMode,
+				SignalManager:     sm,
 			},
 		},
 		// Generic KonnectEntityReconciler for MCPServer: resolves ControlPlaneRef,

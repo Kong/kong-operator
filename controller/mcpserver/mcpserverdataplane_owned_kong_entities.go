@@ -13,10 +13,11 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -25,15 +26,15 @@ import (
 // has preallocated for the given MCPServer, each with an already-assigned UUID.
 // It ensures the corresponding Kubernetes custom resources are created using
 // those exact UUIDs and cleans up stale resources that are no longer expected.
-func (r *MCPServerReconciler) ensureKongEntities(
+func (r *MCPServerDataPlaneReconciler) ensureKongEntities(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	sdk sdkops.SDKWrapper,
+	cpID string,
+	mcpServerID string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) error {
 	logger := log.GetLogger(ctx, "mcpserver", r.LoggingMode)
-
-	cpID := mcpServer.GetControlPlaneID()
-	mcpServerID := mcpServer.GetKonnectID()
 
 	resp, err := sdk.GetMCPServersSDK().GetMcpServerKongEntities(ctx, sdkkonnectops.GetMcpServerKongEntitiesRequest{
 		ControlPlaneID: cpID,
@@ -41,11 +42,11 @@ func (r *MCPServerReconciler) ensureKongEntities(
 	})
 	if err != nil {
 		return fmt.Errorf("failed to get kong entities for MCPServer %s/%s: %w",
-			mcpServer.Namespace, mcpServer.Name, err)
+			mcpDataPlane.Namespace, mcpDataPlane.Name, err)
 	}
 	if resp == nil || resp.KongEntitiesResponse == nil {
 		return fmt.Errorf("got nil kong entities response for MCPServer %s/%s",
-			mcpServer.Namespace, mcpServer.Name)
+			mcpDataPlane.Namespace, mcpDataPlane.Name)
 	}
 
 	entities := resp.KongEntitiesResponse
@@ -59,13 +60,13 @@ func (r *MCPServerReconciler) ensureKongEntities(
 	// ------------------------------------------------------------------
 	desiredServiceNames := make(map[string]struct{}, len(entities.Services))
 	for _, svc := range entities.Services {
-		res, svcNN, err := r.ensureKongService(ctx, mcpServer, svc)
+		res, svcNN, err := r.ensureKongService(ctx, mcpDataPlane, svc, cpRef)
 		if err != nil {
 			return err
 		}
 		if res != op.Noop {
 			log.Info(logger, fmt.Sprintf("%s KongService for MCPServer", res),
-				"namespace", mcpServer.Namespace, "name", mcpServer.Name, "service", svcNN.Name)
+				"namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name, "service", svcNN.Name)
 		}
 		desiredServiceNames[svcNN.Name] = struct{}{}
 		if svc.ID != nil {
@@ -75,7 +76,7 @@ func (r *MCPServerReconciler) ensureKongEntities(
 
 	// Delete stale KongService CRs that are owned by this MCPServer but no
 	// longer present in the remote response.
-	if err := r.deleteStaleResources(ctx, mcpServer, &configurationv1alpha1.KongServiceList{}, desiredServiceNames); err != nil {
+	if err := r.deleteStaleResources(ctx, mcpDataPlane, &configurationv1alpha1.KongServiceList{}, desiredServiceNames); err != nil {
 		return err
 	}
 
@@ -84,30 +85,30 @@ func (r *MCPServerReconciler) ensureKongEntities(
 	// ------------------------------------------------------------------
 	desiredRouteNames := make(map[string]struct{}, len(entities.Routes))
 	for _, route := range entities.Routes {
-		res, routeNN, err := r.ensureKongRoute(ctx, mcpServer, route, svcIDToName)
+		res, routeNN, err := r.ensureKongRoute(ctx, mcpDataPlane, route, svcIDToName, cpRef)
 		if err != nil {
 			return err
 		}
 		if res != op.Noop {
 			log.Info(logger, fmt.Sprintf("%s KongRoute for MCPServer", res),
-				"namespace", mcpServer.Namespace, "name", mcpServer.Name, "route", routeNN.Name)
+				"namespace", mcpDataPlane.Namespace, "name", mcpDataPlane.Name, "route", routeNN.Name)
 		}
 		desiredRouteNames[routeNN.Name] = struct{}{}
 	}
 
 	// Delete stale KongRoute CRs.
-	if err := r.deleteStaleResources(ctx, mcpServer, &configurationv1alpha1.KongRouteList{}, desiredRouteNames); err != nil {
+	if err := r.deleteStaleResources(ctx, mcpDataPlane, &configurationv1alpha1.KongRouteList{}, desiredRouteNames); err != nil {
 		return err
 	}
 
 	// ------------------------------------------------------------------
 	// Ensure KongPlugin and KongPluginBinding CRs
 	// ------------------------------------------------------------------
-	if _, err := r.ensureKongPlugins(ctx, mcpServer); err != nil {
+	if _, err := r.ensureKongPlugins(ctx, mcpDataPlane); err != nil {
 		return err
 	}
 
-	if err := r.ensureKongPluginBindings(ctx, mcpServer, desiredServiceNames); err != nil {
+	if err := r.ensureKongPluginBindings(ctx, mcpDataPlane, desiredServiceNames, cpRef); err != nil {
 		return err
 	}
 
@@ -118,15 +119,16 @@ func (r *MCPServerReconciler) ensureKongEntities(
 // KongService
 // ----------------------------------------------------------------------------
 
-func (r *MCPServerReconciler) ensureKongService(
+func (r *MCPServerDataPlaneReconciler) ensureKongService(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	svc sdkkonnectcomp.KongService,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongService(mcpServer, svc, r.ClusterDomain)
+	desired := generateKongService(mcpDataPlane, svc, r.ClusterDomain, cpRef)
 	nn := client.ObjectKeyFromObject(desired)
 
-	k8sutils.SetOwnerForObject(desired, mcpServer)
+	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
 	k8sresources.LabelObjectAsMCPServerManaged(desired)
 
 	existing := &configurationv1alpha1.KongService{}
@@ -147,8 +149,15 @@ func (r *MCPServerReconciler) ensureKongService(
 	return op.Noop, nn, nil
 }
 
-func generateKongService(mcpServer *konnectv1alpha1.MCPServer, svc sdkkonnectcomp.KongService, clusterDomain string) *configurationv1alpha1.KongService {
-	nn := generateWorkloadNN(mcpServer)
+func generateKongService(
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	svc sdkkonnectcomp.KongService,
+	clusterDomain string,
+	cpRef commonv1alpha1.ControlPlaneRef,
+) *configurationv1alpha1.KongService {
+	// TODO: this currently assumes there is only one service per MCPServer returned.
+	// If this changes this has to be updated to generate a unique name for each service.
+	nn := generateWorkloadNN(mcpDataPlane)
 
 	// Use the Kubernetes Service DNS name so that Kong routes traffic to the
 	// in-cluster workload rather than using the host from the Konnect response.
@@ -169,7 +178,7 @@ func generateKongService(mcpServer *konnectv1alpha1.MCPServer, svc sdkkonnectcom
 				Protocol: sdkkonnectcomp.Protocol(svc.Protocol),
 				Path:     &svc.Path,
 			},
-			ControlPlaneRef: &mcpServer.Spec.ControlPlaneRef,
+			ControlPlaneRef: &cpRef,
 		},
 	}
 }
@@ -178,16 +187,17 @@ func generateKongService(mcpServer *konnectv1alpha1.MCPServer, svc sdkkonnectcom
 // KongRoute
 // ----------------------------------------------------------------------------
 
-func (r *MCPServerReconciler) ensureKongRoute(
+func (r *MCPServerDataPlaneReconciler) ensureKongRoute(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	route sdkkonnectcomp.KongRoute,
 	svcIDToName map[string]string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) (op.Result, client.ObjectKey, error) {
-	desired := generateKongRoute(mcpServer, route, svcIDToName)
+	desired := generateKongRoute(mcpDataPlane, route, svcIDToName, cpRef)
 	nn := client.ObjectKeyFromObject(desired)
 
-	k8sutils.SetOwnerForObject(desired, mcpServer)
+	k8sutils.SetOwnerForObject(desired, mcpDataPlane)
 	k8sresources.LabelObjectAsMCPServerManaged(desired)
 
 	existing := &configurationv1alpha1.KongRoute{}
@@ -209,11 +219,14 @@ func (r *MCPServerReconciler) ensureKongRoute(
 }
 
 func generateKongRoute(
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	route sdkkonnectcomp.KongRoute,
 	svcIDToName map[string]string,
+	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongRoute {
-	nn := generateWorkloadNN(mcpServer)
+	// TODO: this currently assumes there is only one route per MCPServer returned.
+	// If this changes this has to be updated to generate a unique name for each route.
+	nn := generateWorkloadNN(mcpDataPlane)
 
 	kr := &configurationv1alpha1.KongRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -243,7 +256,7 @@ func generateKongRoute(
 		}
 	}
 	if kr.Spec.ServiceRef == nil {
-		kr.Spec.ControlPlaneRef = &mcpServer.Spec.ControlPlaneRef
+		kr.Spec.ControlPlaneRef = &cpRef
 	}
 
 	return kr
@@ -255,19 +268,25 @@ func generateKongRoute(
 
 // deleteStaleResources lists resources of the given type that are owned by the
 // MCPServer and deletes those whose names are not in the desiredNames set.
-func (r *MCPServerReconciler) deleteStaleResources(
+func (r *MCPServerDataPlaneReconciler) deleteStaleResources(
 	ctx context.Context,
-	mcpServer *konnectv1alpha1.MCPServer,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	list client.ObjectList,
 	desiredNames map[string]struct{},
 ) error {
-	if err := r.List(ctx, list, client.InNamespace(mcpServer.Namespace)); err != nil {
+	err := r.List(ctx, list,
+		client.InNamespace(mcpDataPlane.Namespace),
+		client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.MCPServerManagedByLabelValue,
+		},
+	)
+	if err != nil {
 		return fmt.Errorf("failed to list resources for stale cleanup: %w", err)
 	}
 
 	items := extractItems(list)
 	for _, item := range items {
-		if !isOwnedBy(item.GetOwnerReferences(), mcpServer.GetUID()) {
+		if !isOwnedBy(item.GetOwnerReferences(), mcpDataPlane.GetUID()) {
 			continue
 		}
 		if _, ok := desiredNames[item.GetName()]; ok {

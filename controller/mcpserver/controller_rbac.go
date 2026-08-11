@@ -1,5 +1,8 @@
 package mcpserver
 
+// +kubebuilder:rbac:groups=mcp.konghq.com,resources=mcpserverdataplanes,verbs=get;list;watch;update;patch
+// +kubebuilder:rbac:groups=mcp.konghq.com,resources=mcpserverdataplanes/status,verbs=update;patch
+// +kubebuilder:rbac:groups=mcp.konghq.com,resources=mcpserverdataplanes/finalizers,verbs=update
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=mcpservers,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=mcpservers/status,verbs=update;patch
 // +kubebuilder:rbac:groups=konnect.konghq.com,resources=mcpservers/finalizers,verbs=update
