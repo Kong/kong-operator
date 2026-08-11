@@ -225,6 +225,45 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
 }
 
+// AIGatewayCacheWriteCost **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayCacheWriteCost struct {
+	// Cost per cache-write prompt token for this TTL.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	Cost float64 `json:"cost,omitzero"`
+	// Cache TTL this price applies to, e.g. "5m" or "1h".
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[0-9]+\.?[0-9]*[hm]$`
+	Ttl string `json:"ttl,omitzero"`
+}
+
+// AIGatewayContextWindowFactor **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayContextWindowFactor struct {
+	// Input-token threshold above which the factors apply, e.g. "128k" or "1m".
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[0-9]+\.?[0-9]*[km]$`
+	Above string `json:"above,omitzero"`
+	// Multiplier applied to input pricing above the threshold.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	InputFactor float64 `json:"inputFactor,omitzero"`
+	// Multiplier applied to output pricing above the threshold.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	OutputFactor float64 `json:"outputFactor,omitzero"`
+}
+
 // AIGatewayDenyACL **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayDenyACL struct {
@@ -681,10 +720,19 @@ type AIGatewayIdentityProviderOpenIDConnect struct {
 // See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
 // list of properties
 type AIGatewayIdentityProviderOpenIDConnectConfig struct {
+	// Audiences required in the access token or introspection response.
+	//
+	// +optional
+	AudienceRequired []string `json:"audienceRequired,omitempty"`
 	// Types of credentials/grants to enable.
 	//
 	// +optional
 	AuthMethods []string `json:"authMethods,omitempty"`
+	// Cache introspection endpoint requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	CacheIntrospection string `json:"cacheIntrospection,omitzero"`
 	// Salt used for generating the cache key that is used for caching the token
 	// endpoint requests.
 	//
@@ -693,6 +741,15 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	CacheTokensSalt string `json:"cacheTokensSalt,omitzero"`
+	// Algorithm to use for `client_secret_jwt` or `private_key_jwt`
+	// authentication.
+	//
+	// +optional
+	ClientAlg []string `json:"clientAlg,omitempty"`
+	// Client authentication methods used with the identity provider.
+	//
+	// +optional
+	ClientAuth []string `json:"clientAuth,omitempty"`
 	// An array of strings representing the client id for the OpenID Connect
 	// provider.
 	// When multiple values are provided, the client ID and secrets pairs
@@ -709,6 +766,10 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	ClientSecret []SensitiveDataSource `json:"clientSecret,omitempty"`
+	// Consumer fields used when mapping a token claim to a Kong consumer.
+	//
+	// +optional
+	ConsumerBy []string `json:"consumerBy,omitempty"`
 	// An array containing an array of string paths representing the location of
 	// the claim in a nested object.
 	// For example, to map to user.info.id, set [ "user", "info", "id" ].
@@ -735,11 +796,76 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ConsumerOptional string `json:"consumerOptional,omitzero"`
+	// Claim path used to derive virtual credentials when consumer mapping is not
+	// used.
+	//
+	// +optional
+	CredentialClaim []string `json:"credentialClaim,omitempty"`
+	// Remove credentials used for authentication before proxying the request
+	// upstream.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	HideCredentials string `json:"hideCredentials,omitzero"`
+	// HTTP proxy used for identity provider requests.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPProxy string `json:"httpProxy,omitzero"`
+	// Authorization header value sent to the HTTP proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPProxyAuthorization string `json:"httpProxyAuthorization,omitzero"`
+	// HTTP version used for identity provider requests.
+	//
+	// +optional
+	HTTPVersion float64 `json:"httpVersion,omitzero"`
+	// HTTPS proxy used for identity provider requests.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPSProxy string `json:"httpsProxy,omitzero"`
+	// Authorization header value sent to the HTTPS proxy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	HTTPSProxyAuthorization string `json:"httpsProxyAuthorization,omitzero"`
+	// Overrides the introspection endpoint returned by discovery.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	IntrospectionEndpoint string `json:"introspectionEndpoint,omitzero"`
 	// URL that identifies the OpenID Provider
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Issuer string `json:"issuer,omitzero"`
+	// Overrides the JWKS endpoint returned by discovery.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	JwksEndpoint string `json:"jwksEndpoint,omitzero"`
+	// Reuse HTTP client connections for identity provider requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Keepalive string `json:"keepalive,omitzero"`
+	// Leeway, in seconds, for validating token time claims.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	Leeway int `json:"leeway,omitzero"`
+	// mTLS alias for the introspection endpoint.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	MtlsIntrospectionEndpoint string `json:"mtlsIntrospectionEndpoint,omitzero"`
+	// Comma-separated hosts that bypass the configured proxies.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	NoProxy string `json:"noProxy,omitzero"`
 	// This field is referenceable.
 	//
 	//
@@ -750,6 +876,30 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	SSLVerify string `json:"sslVerify,omitzero"`
+	// Network I/O timeout, in milliseconds, for identity provider requests.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	Timeout int `json:"timeout,omitzero"`
+	// Map token claims to upstream headers using path-based access.
+	//
+	// +optional
+	UpstreamHeaders []AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
+}
+
+// AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders Map token claims
+// to upstream headers using path-based access.
+type AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders struct {
+	// The name of the header.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Header string `json:"header,omitzero"`
+	// The path of the header value.
+	//
+	// +required
+	Path []string `json:"path,omitempty"`
 }
 
 // AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -1827,12 +1977,12 @@ type AIGatewayMCPServerProtectedResourceMetadata struct {
 	//
 	// +optional
 	AuthorizationServers []string `json:"authorizationServers,omitempty"`
-	// The URL where the protected resource metadata is served.
+	// The authorization server metadata discovery URL.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	DiscoveryEndpoint string `json:"discoveryEndpoint,omitzero"`
-	// The protected resource endpoint the metadata describes.
+	// The URL path where the OAuth 2.0 Protected Resource Metadata is served.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
@@ -7183,12 +7333,12 @@ type AIGatewayModelRouteConfig struct {
 	// +optional
 	Methods []string `json:"methods,omitempty"`
 	// Configuration for overriding routing to this model using a selector.
-	// When not set, a default model selector will be created using the model's
-	// name and format.
+	// When no selector location is set, the format default selector is used.
+	// When values are not set, the model name is used as the selector value.
 	//
 	//
 	// +optional
-	Model *AIGatewayModelRouteConfigModel `json:"model,omitempty"`
+	Model AIGatewayModelSelectorConfig `json:"model,omitzero"`
 	// A list of paths that match this route.
 	//
 	// +optional
@@ -7245,206 +7395,36 @@ type AIGatewayModelRouteConfig struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
-// AIGatewayModelRouteConfigModel represents a union type for model.
-// Only one of the fields should be set based on the Type.
-type AIGatewayModelRouteConfigModel struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=body;headers;path
-	Type AIGatewayModelRouteConfigModelType `json:"type,omitempty"`
-
-	// Body configuration.
-	//
-	// +optional
-	Body *AIGatewayModelSelectorConfigBody `json:"body,omitempty"`
-	// Headers configuration.
-	//
-	// +optional
-	Headers *AIGatewayModelSelectorConfigHeaders `json:"headers,omitempty"`
-	// Path configuration.
-	//
-	// +optional
-	Path *AIGatewayModelSelectorConfigPath `json:"path,omitempty"`
-}
-
-// AIGatewayModelRouteConfigModelType represents the type of model.
-type AIGatewayModelRouteConfigModelType string
-
-// AIGatewayModelRouteConfigModelType values.
-const (
-	AIGatewayModelRouteConfigModelTypeBody    AIGatewayModelRouteConfigModelType = "body"
-	AIGatewayModelRouteConfigModelTypeHeaders AIGatewayModelRouteConfigModelType = "headers"
-	AIGatewayModelRouteConfigModelTypePath    AIGatewayModelRouteConfigModelType = "path"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayModelRouteConfigModel) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayModelRouteConfigModelTypeBody:
-		if u.Body != nil {
-			raw, err := json.Marshal(u.Body)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Body: %w", err)
-			}
-			m["body"] = raw
-		}
-	case AIGatewayModelRouteConfigModelTypeHeaders:
-		if u.Headers != nil {
-			raw, err := json.Marshal(u.Headers)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Headers: %w", err)
-			}
-			m["headers"] = raw
-		}
-	case AIGatewayModelRouteConfigModelTypePath:
-		if u.Path != nil {
-			raw, err := json.Marshal(u.Path)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelRouteConfigModel Path: %w", err)
-			}
-			m["path"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayModelRouteConfigModel) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayModelRouteConfigModelType(probe.Type)
-	switch probe.Type {
-	case "body":
-		payload, ok := raw["body"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelSelectorConfigBody
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Body: %w", err)
-		}
-		u.Body = &val
-	case "headers":
-		payload, ok := raw["headers"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelSelectorConfigHeaders
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Headers: %w", err)
-		}
-		u.Headers = &val
-	case "path":
-		payload, ok := raw["path"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelSelectorConfigPath
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelRouteConfigModel Path: %w", err)
-		}
-		u.Path = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayModelRouteConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: nil receiver")
-	}
-	type alias AIGatewayModelRouteConfig
-	aux := alias{}
-	aux.Model = &AIGatewayModelRouteConfigModel{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelRouteConfig: %w", err)
-	}
-	if aux.Model != nil && aux.Model.Type == "" && aux.Model.Body == nil && aux.Model.Headers == nil && aux.Model.Path == nil {
-		aux.Model = nil
-	}
-	*s = AIGatewayModelRouteConfig(aux)
-	return nil
-}
-
 // AIGatewayModelSelectorConfig Configuration for overriding routing to this
 // model using a selector.
-// When not set, a default model selector will be created using the model's name
-// and format.
-type AIGatewayModelSelectorConfig map[string]string
-
-// AIGatewayModelSelectorConfigBody Configuration for routing requests to a
-// specific model using a request body property.
-type AIGatewayModelSelectorConfigBody struct {
+// When no selector location is set, the format default selector is used.
+// When values are not set, the model name is used as the selector value.
+type AIGatewayModelSelectorConfig struct {
 	// The body property name to match for routing.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	BodyParam string `json:"bodyParam,omitzero"`
-	// The list of values that are matched against the body property value.
-	// If the body property value matches any of the specified values, the request
-	// will be routed to the corresponding model.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxItems=1
-	Values []string `json:"values,omitempty"`
-}
-
-// AIGatewayModelSelectorConfigHeaders Configuration for routing requests to a
-// specific model using a header.
-type AIGatewayModelSelectorConfigHeaders struct {
 	// The header property name to match for routing.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	HeaderParam string `json:"headerParam,omitzero"`
-	// The list of values that are matched against the header property value.
-	// If the header property value matches any of the specified values, the
-	// request will be routed to the corresponding model.
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MaxItems=1
-	Values []string `json:"values,omitempty"`
-}
-
-// AIGatewayModelSelectorConfigPath Configuration for routing requests to a
-// specific model using a path selector.
-type AIGatewayModelSelectorConfigPath struct {
 	// The name of the regex capture group defined in the route path for routing.
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	PathParam string `json:"pathParam,omitzero"`
-	// The list of values that are matched against the path param value.
-	// If the path param value matches any of the specified values, the request
-	// will be routed to the corresponding model.
+	// An optional model alias. When omitted, the model name is used.
+	// When no selector location is configured, the format default selector is
+	// used.
 	//
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MaxItems=1
 	Values []string `json:"values,omitempty"`
 }
@@ -8958,6 +8938,26 @@ type AIGatewayRouteConfig struct {
 	Tags []string `json:"tags,omitempty"`
 }
 
+// AIGatewayServiceTierFactor **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+type AIGatewayServiceTierFactor struct {
+	// Multiplier applied to the whole request for this service tier.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	Factor float64 `json:"factor,omitzero"`
+	// Matched case-insensitively as a substring of the vendor's reported service
+	// tier (e.g.
+	// "priority", "flex", "throughput").
+	// When more than one entry matches, the longest (most specific) tier wins;
+	// array order does not matter.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Tier string `json:"tier,omitzero"`
+}
+
 // AIGatewayTarget A target instance a model entry routes requests to.
 type AIGatewayTarget struct {
 	// When enabled, request-level auth parameters (such as API keys or bearer
@@ -9025,6 +9025,25 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 //
 // Anthropic-specific configuration for a model.
 type AIGatewayTargetAnthropicConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9041,6 +9060,11 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9078,6 +9102,25 @@ type AIGatewayTargetAzureConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	APIVersion string `json:"apiVersion,omitzero"`
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The Azure deployment ID for the model.
 	//
 	// +required
@@ -9100,6 +9143,11 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9132,6 +9180,25 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	BatchBucketPrefix string `json:"batchBucketPrefix,omitzero"`
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9165,6 +9232,11 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Region string `json:"region,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9197,6 +9269,25 @@ type AIGatewayTargetBedrockConfig struct {
 //
 // Cerebras-specific configuration for a model.
 type AIGatewayTargetCerebrasConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9213,6 +9304,11 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9248,6 +9344,25 @@ type AIGatewayTargetCohereConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=v1;v2
 	APIVersion string `json:"apiVersion,omitzero"`
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The intended downstream use of the embeddings to improve model quality.
 	//
 	// +optional
@@ -9270,6 +9385,11 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9815,6 +9935,25 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 //
 // Alibaba DashScope-specific configuration for a model.
 type AIGatewayTargetDashscopeConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9836,6 +9975,11 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9863,6 +10007,25 @@ type AIGatewayTargetDashscopeConfig struct {
 //
 // Databricks-specific configuration for a model.
 type AIGatewayTargetDatabricksConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9879,6 +10042,11 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9912,6 +10080,25 @@ type AIGatewayTargetDatabricksConfig struct {
 //
 // Deepseek-specific configuration for a model.
 type AIGatewayTargetDeepseekConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9928,6 +10115,11 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -9955,6 +10147,25 @@ type AIGatewayTargetDeepseekConfig struct {
 //
 // Google Gemini-specific configuration for a model.
 type AIGatewayTargetGeminiConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -9978,6 +10189,11 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10005,6 +10221,25 @@ type AIGatewayTargetGeminiConfig struct {
 //
 // Hugging Face-specific configuration for a model.
 type AIGatewayTargetHuggingfaceConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10021,6 +10256,11 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10058,6 +10298,25 @@ type AIGatewayTargetHuggingfaceConfig struct {
 //
 // Kimi (Moonshot AI)-specific configuration for a model.
 type AIGatewayTargetKimiConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10081,6 +10340,11 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10108,6 +10372,25 @@ type AIGatewayTargetKimiConfig struct {
 //
 // Llama2-specific configuration for a model.
 type AIGatewayTargetLlama2Config struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10131,6 +10414,11 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10159,6 +10447,25 @@ type AIGatewayTargetLlama2Config struct {
 //
 // Mistral-specific configuration for a model.
 type AIGatewayTargetMistralConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10182,6 +10489,11 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10209,6 +10521,25 @@ type AIGatewayTargetMistralConfig struct {
 //
 // Ollama-specific configuration for a model.
 type AIGatewayTargetOllamaConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10225,6 +10556,11 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10252,6 +10588,25 @@ type AIGatewayTargetOllamaConfig struct {
 //
 // Openai-specific configuration for a model.
 type AIGatewayTargetOpenaiConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10268,6 +10623,11 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10300,6 +10660,25 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	Aws AIGatewayTargetSagemakerConfigAws `json:"aws,omitzero"`
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10316,6 +10695,11 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	//
 	//
 	// +optional
@@ -10394,6 +10778,25 @@ type AIGatewayTargetSagemakerConfigTarget struct {
 //
 // Vercel AI Gateway-specific configuration for a model.
 type AIGatewayTargetVercelConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10410,6 +10813,11 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10437,6 +10845,25 @@ type AIGatewayTargetVercelConfig struct {
 //
 // Google Vertex-specific configuration for a model.
 type AIGatewayTargetVertexConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10460,6 +10887,11 @@ type AIGatewayTargetVertexConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10520,6 +10952,25 @@ type AIGatewayTargetVertexConfigGcpEnvironment struct {
 //
 // Vllm-specific configuration for a model.
 type AIGatewayTargetVllmConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10536,6 +10987,11 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//
@@ -10564,6 +11020,25 @@ type AIGatewayTargetVllmConfig struct {
 //
 // Xai-specific configuration for a model.
 type AIGatewayTargetXaiConfig struct {
+	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Cost per cache-write prompt token for billing and cost tracking.
+	//
+	// +optional
+	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
+	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
+	// Configure this when the upstream provider charges differently for different
+	// cache TTLs.
+	//
+	// +optional
+	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
+	// Above an input-token threshold, scale input and output pricing by the
+	// corresponding factor.
+	//
+	// +optional
+	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
@@ -10580,6 +11055,11 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Multiplier applied to the whole request for a service tier.
+	// The default factor is 1.0 when no tier matches.
+	//
+	// +optional
+	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
 	// Controls randomness in the model output.
 	// Higher values produce more varied responses.
 	//

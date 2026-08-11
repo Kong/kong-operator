@@ -30,7 +30,6 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
 							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
-								Type:   sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:     "other-id",
 								Name:   "other-mcp-server",
 								Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
@@ -43,7 +42,6 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 						},
 						{
 							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
-								Type:   sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:     "matched-by-uid",
 								Name:   "different-name",
 								Labels: map[string]string{KubernetesUIDLabelKey: string(obj.GetUID())},
@@ -78,7 +76,6 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
 							AIGatewayMCPServerAIGatewayMCPServerConversionOnly: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerConversionOnly{
-								Type: sdkkonnectcomp.AIGatewayMCPServerConversionOnlyAIGatewayMCPServerTypeConversionOnly,
 								ID:   "wrong-variant",
 								Name: "flights-mcp-server",
 							},
@@ -86,7 +83,6 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 						},
 						{
 							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
-								Type: sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:   "matched-by-name",
 								Name: "flights-mcp-server",
 								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
@@ -120,7 +116,6 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
 							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
-								Type: sdkkonnectcomp.AIGatewayMCPServerListenerAIGatewayMCPServerTypeListener,
 								ID:   "other-id",
 								Name: "other-mcp-server",
 								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
