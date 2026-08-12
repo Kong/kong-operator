@@ -1,0 +1,42 @@
+# Template for creating and asserting a KonnectConfigStore.
+#
+# Required bindings:
+#   - config_store_name: Name of the KonnectConfigStore to create.
+#   - config_store_namespace: Namespace where the KonnectConfigStore will be created.
+#   - cp_name: Name of the KonnectGatewayControlPlane to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-konnect-config-store
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectConfigStore
+          metadata:
+            name: ($config_store_name)
+            namespace: ($config_store_namespace)
+          spec:
+            controlPlaneRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($cp_name)
+            apiSpec:
+              name: ($config_store_name)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectConfigStore
+          metadata:
+            name: ($config_store_name)
+            namespace: ($config_store_namespace)
+          status:
+            (conditions[?type == 'ControlPlaneRefValid']):
+              - status: 'True'
+                reason: Valid
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+                reason: Programmed
+            (controlPlaneID.id != null): true
+            (id != null): true
