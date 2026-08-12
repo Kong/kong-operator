@@ -10,17 +10,17 @@ integration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.3'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.15.0.2'
+  kong-ee: '3.15.0.3'
 
 kongintegration:
   # renovate: datasource=docker depName=kong versioning=docker
   kong-oss: '3.9.3'
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.15.0.2'
+  kong-ee: '3.15.0.3'
 
 envtests:
   # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-  kong-ee: '3.15.0.2'
+  kong-ee: '3.15.0.3'
   # This is a version of Kong Gateway that does not support sticky sessions,
   # all versions >= 3.11.0 support sticky sessions.
   kong-without-sticky-sessions: '3.9.1'
@@ -29,7 +29,7 @@ chainsaw:
   kong-ee:
     image: kong/kong-gateway
     # renovate: datasource=docker depName=kong/kong-gateway versioning=docker
-    tag: '3.15.0.2'
+    tag: '3.15.0.3'
   aigw-dp:
     image: kong/kong-ai-gateway
     # renovate: datasource=docker depName=kong/kong-ai-gateway versioning=docker
