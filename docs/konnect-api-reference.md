@@ -6445,6 +6445,8 @@ _Appears in:_
 
 - [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
 
+
+
 #### DataPlaneClientAuthStatus
 
 
