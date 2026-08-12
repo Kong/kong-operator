@@ -1,7 +1,7 @@
 ---
 # The original listener counts both same-listener UDPRoutes. The extra listener
-# has the third route, which creates a DataPlane config change and refreshes
-# object reports for the second route.
+# has the third route, which creates a DataPlane config change. The second route's
+# Programmed condition should be kept as Unknown.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
@@ -88,8 +88,8 @@ status:
         - status: 'True'
           reason: Accepted
       (conditions[?type == 'Programmed']):
-        - status: 'True'
-          reason: ConfiguredInGateway
+        - status: Unknown
+          reason: Unknown
       (conditions[?type == 'ResolvedRefs']):
         - status: 'True'
           reason: ResolvedRefs
