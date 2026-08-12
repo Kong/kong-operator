@@ -61,17 +61,17 @@ type PortalTeamAPISpec struct {
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	CanOwnApplications string `json:"canOwnApplications,omitzero"`
 
-	//
+	// The description of the team.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=250
 	Description string `json:"description,omitzero"`
 
-	//
+	// The name of the team.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:MaxLength=250
 	// +kubebuilder:validation:Pattern=`^[\w \W]+$`
 	Name string `json:"name,omitzero"`
 }

@@ -236,11 +236,23 @@ spec:
                           See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
                           list of properties
                         properties:
+                          audienceRequired:
+                            description: Audiences required in the access token or
+                              introspection response.
+                            items:
+                              type: string
+                            type: array
                           authMethods:
                             description: Types of credentials/grants to enable.
                             items:
                               type: string
                             type: array
+                          cacheIntrospection:
+                            description: Cache introspection endpoint requests.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
                           cacheTokensSalt:
                             description: |-
                               Salt used for generating the cache key that is used for caching the token
@@ -248,6 +260,19 @@ spec:
                             maxLength: 253
                             minLength: 1
                             type: string
+                          clientAlg:
+                            description: |-
+                              Algorithm to use for `client_secret_jwt` or `private_key_jwt`
+                              authentication.
+                            items:
+                              type: string
+                            type: array
+                          clientAuth:
+                            description: Client authentication methods used with the
+                              identity provider.
+                            items:
+                              type: string
+                            type: array
                           clientID:
                             description: |-
                               An array of strings representing the client id for the OpenID Connect
@@ -322,6 +347,12 @@ spec:
                                 rule: 'self.type == ''inline'' ? has(self.value) :
                                   has(self.secretRef)'
                             type: array
+                          consumerBy:
+                            description: Consumer fields used when mapping a token
+                              claim to a Kong consumer.
+                            items:
+                              type: string
+                            type: array
                           consumerClaims:
                             description: |-
                               An array containing an array of string paths representing the location of
@@ -354,8 +385,74 @@ spec:
                             - Enabled
                             - Disabled
                             type: string
+                          credentialClaim:
+                            description: |-
+                              Claim path used to derive virtual credentials when consumer mapping is not
+                              used.
+                            items:
+                              type: string
+                            type: array
+                          hideCredentials:
+                            description: |-
+                              Remove credentials used for authentication before proxying the request
+                              upstream.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          httpProxy:
+                            description: HTTP proxy used for identity provider requests.
+                            maxLength: 253
+                            type: string
+                          httpProxyAuthorization:
+                            description: Authorization header value sent to the HTTP
+                              proxy.
+                            maxLength: 253
+                            type: string
+                          httpVersion:
+                            description: HTTP version used for identity provider requests.
+                            type: number
+                          httpsProxy:
+                            description: HTTPS proxy used for identity provider requests.
+                            maxLength: 253
+                            type: string
+                          httpsProxyAuthorization:
+                            description: Authorization header value sent to the HTTPS
+                              proxy.
+                            maxLength: 253
+                            type: string
+                          introspectionEndpoint:
+                            description: Overrides the introspection endpoint returned
+                              by discovery.
+                            maxLength: 253
+                            type: string
                           issuer:
                             description: URL that identifies the OpenID Provider
+                            maxLength: 253
+                            type: string
+                          jwksEndpoint:
+                            description: Overrides the JWKS endpoint returned by discovery.
+                            maxLength: 253
+                            type: string
+                          keepalive:
+                            description: Reuse HTTP client connections for identity
+                              provider requests.
+                            enum:
+                            - Enabled
+                            - Disabled
+                            type: string
+                          leeway:
+                            description: Leeway, in seconds, for validating token
+                              time claims.
+                            minimum: 0
+                            type: integer
+                          mtlsIntrospectionEndpoint:
+                            description: mTLS alias for the introspection endpoint.
+                            maxLength: 253
+                            type: string
+                          noProxy:
+                            description: Comma-separated hosts that bypass the configured
+                              proxies.
                             maxLength: 253
                             type: string
                           scopes:
@@ -368,6 +465,34 @@ spec:
                             - Enabled
                             - Disabled
                             type: string
+                          timeout:
+                            description: Network I/O timeout, in milliseconds, for
+                              identity provider requests.
+                            minimum: 0
+                            type: integer
+                          upstreamHeaders:
+                            description: Map token claims to upstream headers using
+                              path-based access.
+                            items:
+                              description: |-
+                                AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders Map token claims
+                                to upstream headers using path-based access.
+                              properties:
+                                header:
+                                  description: The name of the header.
+                                  maxLength: 253
+                                  minLength: 1
+                                  type: string
+                                path:
+                                  description: The path of the header value.
+                                  items:
+                                    type: string
+                                  type: array
+                              required:
+                              - header
+                              - path
+                              type: object
+                            type: array
                         required:
                         - cacheTokensSalt
                         type: object

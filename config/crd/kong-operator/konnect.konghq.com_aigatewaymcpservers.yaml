@@ -203,13 +203,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
@@ -302,13 +302,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
@@ -1780,13 +1780,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
@@ -1879,13 +1879,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
@@ -2869,13 +2869,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
@@ -2968,13 +2968,13 @@ spec:
                                       type: string
                                     type: array
                                   discoveryEndpoint:
-                                    description: The URL where the protected resource
-                                      metadata is served.
+                                    description: The authorization server metadata
+                                      discovery URL.
                                     maxLength: 253
                                     type: string
                                   endpoint:
-                                    description: The protected resource endpoint the
-                                      metadata describes.
+                                    description: The URL path where the OAuth 2.0
+                                      Protected Resource Metadata is served.
                                     maxLength: 253
                                     type: string
                                   resource:
