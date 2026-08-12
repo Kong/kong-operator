@@ -91,6 +91,22 @@ make test.charts.golden         # Helm chart golden file tests
 make test.charts.golden.update  # Update chart golden files
 ```
 
+### Helm Chart CI Test Fixtures (`charts/kong-operator/ci/*.yaml`)
+
+Each `charts/kong-operator/ci/*-values.yaml` file is used both by `make test.charts.golden` (helm-template
+snapshot only, no real cluster) and by the `chart-testing (install)` CI job, which actually
+`helm install`s every fixture onto a real kind cluster and waits for the Deployment to become ready.
+
+- Any scheduling-related fixture (`nodeSelector`, `affinity`, `tolerations`) must use a
+  constraint the kind test node actually satisfies (e.g. `kubernetes.io/os: linux`), or a
+  trivially-true rule (see `affinity-values.yaml`'s podAffinity `NotIn dummy` trick).
+  A hard constraint the node doesn't match (e.g. a made-up `nodeSelector` key like
+  `disktype: ssd`) makes the pod permanently unschedulable — `test.charts.golden` still
+  passes (it never touches a real cluster) but the `lint-test` / `chart-testing (install)`
+  CI job times out after 3m with `Available: 0/1`.
+- After adding/editing a `ci/*.yaml` fixture, run `make test.charts.golden.update` to
+  regenerate its snapshot, then `make test.charts.golden` to verify, then `make lint.charts`.
+
 ### Test File Locations
 
 - Unit tests: `*_test.go` files next to source code
