@@ -12,7 +12,6 @@
   "enabledManagers": [
     "custom.regex",
     "kustomize",
-    // Only for Go toolchain updates, not module updates. Modules are still update via dependabot.
      "gomod",
      "dockerfile"
   ],
@@ -177,18 +176,58 @@
   ],
   "packageRules": [
     {
+      "description": "Cooldown for Go module major updates (was dependabot cooldown.semver-major-days)",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["major"],
+      "minimumReleaseAge": "5 days"
+    },
+    {
+      "description": "Cooldown for Go module minor and patch updates (was dependabot cooldown.semver-{minor,patch}-days)",
+      "matchManagers": ["gomod"],
+      "matchUpdateTypes": ["minor", "patch"],
+      "minimumReleaseAge": "2 days"
+    },
+    {
+      "description": "No cooldown for Kong-owned and sigs.k8s.io modules (was dependabot cooldown.exclude)",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": [
+        "github.com/kong/**",
+        "github.com/Kong/**",
+        "sigs.k8s.io/**"
+      ],
+      "minimumReleaseAge": null
+    },
+    {
       "description": "Group all k8s.io/* module updates into one PR",
       "matchManagers": ["gomod"],
-      "matchPackageNames": ["/^k8s\\.io\\/.*/"],
-      "excludePackageNames": [
-        "k8s.io/utils",
-        "k8s.io/kube-openapi"
-      ],
-      "excludePackagePatterns": [
-        "^k8s\\.io/klog/.*$"
+      "matchPackageNames": [
+        "k8s.io/**",
+        "!k8s.io/utils",
+        "!k8s.io/kube-openapi",
+        "!k8s.io/klog/**"
       ],
       "groupName": "k8s.io modules",
       "groupSlug": "k8s-io-modules"
+    },
+    {
+      "description": "Group all sigs.k8s.io/gateway-api module updates into one PR",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": [
+        "sigs.k8s.io/gateway-api",
+        "sigs.k8s.io/gateway-api/**"
+      ],
+      "groupName": "gateway-api",
+      "groupSlug": "gateway-api"
+    },
+    {
+      "description": "Group all aws-sdk-go-v2 module updates into one PR",
+      "matchManagers": ["gomod"],
+      "matchPackageNames": [
+        "github.com/aws/aws-sdk-go-v2",
+        "github.com/aws/aws-sdk-go-v2/**"
+      ],
+      "groupName": "aws-sdk-go-v2",
+      "groupSlug": "aws-sdk-go-v2"
     },
     {
       "description": "Strip kustomize/ version prefix",
@@ -222,16 +261,6 @@
     },
 
     // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
-    {
-      "description": "Disable Go dependencies updates (still handled by dependabot)",
-      "matchManagers": ["gomod"],
-      "matchBaseBranches": [
-        "$default",
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
-      "enabled": false
-    },
     {
       "description": "Disable dependency updates on 2.1 and 2.2",
       "matchBaseBranches": [
