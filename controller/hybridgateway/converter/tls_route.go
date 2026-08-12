@@ -6,14 +6,12 @@ import (
 	"fmt"
 
 	"github.com/go-logr/logr"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/kongroute"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/route"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
@@ -94,55 +92,7 @@ func (c *tlsRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger
 //   - skipDelete: true if the resource should NOT be deleted (skip deletion), false if it should be deleted
 //   - err: any error that occurred during processing
 func (c *tlsRouteConverter) HandleOrphanedResource(ctx context.Context, logger logr.Logger, resource *unstructured.Unstructured) (skipDelete bool, err error) {
-	am := metadata.NewAnnotationManager(logger)
-	key := client.ObjectKeyFromObject(resource)
-	gvk := resource.GroupVersionKind()
-
-	// Remove this Route from the shared hybrid-routes annotation atomically. Multiple Routes (or
-	// rules) can share the same Kong resource, so a concurrent Route adding itself must not be lost
-	// and the resource must not be deleted while still referenced. We re-read the live object, drop
-	// our entry, and either patch with an optimistic lock (when other Routes remain) or surface the
-	// validated resourceVersion so the caller can delete with an optimistic-lock precondition.
-	fresh := &unstructured.Unstructured{}
-	fresh.SetGroupVersionKind(gvk)
-	if err := c.Get(ctx, key, fresh); err != nil {
-		if apierrors.IsNotFound(err) {
-			// Already gone; nothing to delete.
-			return true, nil
-		}
-		return true, fmt.Errorf("failed to get resource: %w", err)
-	}
-
-	// If the route is not present in the hybrid-routes annotation of the Kong resource, don't touch it.
-	if !am.ContainsRoute(fresh, c.route) {
-		log.Trace(logger, "Route annotation not found, skipping resource", "kind", fresh.GetKind(), "obj", key)
-		return true, nil
-	}
-
-	base := fresh.DeepCopy()
-	am.RemoveRouteFromAnnotation(fresh, c.route)
-
-	// If other Routes are still present in the annotation, we just need to update the resource.
-	if len(am.GetRoutesWithKind(fresh, "TLSRoute")) > 0 {
-		log.Debug(logger, "Updating hybrid-routes annotation", "kind", fresh.GetKind(), "obj", key)
-		if err := c.Patch(ctx, fresh, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
-			if apierrors.IsNotFound(err) {
-				return true, nil
-			}
-			return true, fmt.Errorf("failed to update resource: %w", err)
-		}
-		// Reflect the persisted state back onto the caller's resource.
-		resource.SetAnnotations(fresh.GetAnnotations())
-		resource.SetResourceVersion(fresh.GetResourceVersion())
-		return true, nil
-	}
-
-	// No other routes remain. Surface the validated resourceVersion (and the annotation
-	// removal) on the caller's resource so the orphan deletion uses it as an optimistic-lock
-	// precondition, and don't skip deletion.
-	resource.SetAnnotations(fresh.GetAnnotations())
-	resource.SetResourceVersion(fresh.GetResourceVersion())
-	return false, nil
+	return handleOrphanedResourceForRoute(ctx, logger, c.Client, c.route, "TLSRoute", resource)
 }
 
 // Translate implements APIConverter.

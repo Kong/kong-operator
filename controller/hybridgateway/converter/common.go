@@ -7,11 +7,13 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -237,4 +239,62 @@ func convertOutputStoreToUnstructured(logger logr.Logger, scheme *runtime.Scheme
 
 	log.Debug(logger, "Successfully converted all objects in output store", "totalObjectsConverted", len(objects))
 	return objects, nil
+}
+
+// handleOrphanedResourceForRoute implements the OrphanedResourceHandler logic shared by every
+// route converter: it removes route from the shared hybrid-routes annotation on resource before
+// orphan deletion, atomically. Multiple Routes (or rules) can share the same Kong resource, so a
+// concurrent Route adding itself must not be lost and the resource must not be deleted while still
+// referenced. We re-read the live object, drop our entry, and either patch with an optimistic lock
+// (when other Routes remain) or surface the validated resourceVersion so the caller can delete with
+// an optimistic-lock precondition. routeKind is the route's Kind (e.g. "TCPRoute"), used to check
+// whether any other routes of the same kind remain in the annotation.
+func handleOrphanedResourceForRoute(
+	ctx context.Context, logger logr.Logger, cl client.Client, route client.Object, routeKind string,
+	resource *unstructured.Unstructured,
+) (skipDelete bool, err error) {
+	am := metadata.NewAnnotationManager(logger)
+	key := client.ObjectKeyFromObject(resource)
+	gvk := resource.GroupVersionKind()
+
+	fresh := &unstructured.Unstructured{}
+	fresh.SetGroupVersionKind(gvk)
+	if err := cl.Get(ctx, key, fresh); err != nil {
+		if apierrors.IsNotFound(err) {
+			// Already gone; nothing to delete.
+			return true, nil
+		}
+		return true, fmt.Errorf("failed to get resource: %w", err)
+	}
+
+	// If the route is not present in the hybrid-routes annotation of the Kong resource, don't touch it.
+	if !am.ContainsRoute(fresh, route) {
+		log.Trace(logger, "Route annotation not found, skipping resource", "kind", fresh.GetKind(), "obj", key)
+		return true, nil
+	}
+
+	base := fresh.DeepCopy()
+	am.RemoveRouteFromAnnotation(fresh, route)
+
+	// If other Routes are still present in the annotation, we just need to update the resource.
+	if len(am.GetRoutesWithKind(fresh, routeKind)) > 0 {
+		log.Debug(logger, "Updating hybrid-routes annotation", "kind", fresh.GetKind(), "obj", key)
+		if err := cl.Patch(ctx, fresh, client.MergeFromWithOptions(base, client.MergeFromWithOptimisticLock{})); err != nil {
+			if apierrors.IsNotFound(err) {
+				return true, nil
+			}
+			return true, fmt.Errorf("failed to update resource: %w", err)
+		}
+		// Reflect the persisted state back onto the caller's resource.
+		resource.SetAnnotations(fresh.GetAnnotations())
+		resource.SetResourceVersion(fresh.GetResourceVersion())
+		return true, nil
+	}
+
+	// No other routes remain. Surface the validated resourceVersion (and the annotation
+	// removal) on the caller's resource so the orphan deletion uses it as an optimistic-lock
+	// precondition, and don't skip deletion.
+	resource.SetAnnotations(fresh.GetAnnotations())
+	resource.SetResourceVersion(fresh.GetResourceVersion())
+	return false, nil
 }
