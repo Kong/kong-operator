@@ -7,6 +7,8 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	hybridgatewayerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
@@ -203,4 +205,36 @@ func deduplicateOutputStore(objects []client.Object) []client.Object {
 	}
 
 	return deduplicated
+}
+
+// convertOutputStoreToUnstructured converts a converter's outputStore into unstructured.Unstructured
+// objects, using scheme for the type conversion. Shared by every APIConverter.GetOutputStore
+// implementation, which otherwise differ only in the receiver type.
+func convertOutputStoreToUnstructured(logger logr.Logger, scheme *runtime.Scheme, outputStore []client.Object) ([]unstructured.Unstructured, error) {
+	logger = logger.WithValues("phase", "output-store-conversion")
+	log.Debug(logger, "Starting output store conversion")
+
+	var conversionErrors []error
+	objects := make([]unstructured.Unstructured, 0, len(outputStore))
+	for _, obj := range outputStore {
+		unstr, err := utils.ToUnstructured(obj, scheme)
+		if err != nil {
+			conversionErr := fmt.Errorf("failed to convert %T %s to unstructured: %w", obj, obj.GetName(), err)
+			conversionErrors = append(conversionErrors, conversionErr)
+			log.Error(logger, err, "Failed to convert object to unstructured", "objectName", obj.GetName())
+			continue
+		}
+		objects = append(objects, unstr)
+	}
+
+	if len(conversionErrors) > 0 {
+		log.Error(logger, nil, "Output store conversion completed with errors",
+			"totalObjectsAttempted", len(outputStore),
+			"successfulConversions", len(objects),
+			"conversionErrors", len(conversionErrors))
+		return objects, fmt.Errorf("output store conversion failed with %d errors: %w", len(conversionErrors), errors.Join(conversionErrors...))
+	}
+
+	log.Debug(logger, "Successfully converted all objects in output store", "totalObjectsConverted", len(objects))
+	return objects, nil
 }
