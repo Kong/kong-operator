@@ -59,11 +59,9 @@ spec:
           nameHeader: Enabled
         route:
           model:
-            type: headers
-            headers:
-              headerParam: X-Kong-LLM-Model
-              values:
-                - qwen2.5:0.5b
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
           paths:
             - /aigw11/chat
       policies:
