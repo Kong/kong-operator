@@ -64,6 +64,7 @@ type PortalTeamAPISpec struct {
 	// The description of the team.
 	//
 	// +optional
+	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=250
 	Description string `json:"description,omitzero"`
 

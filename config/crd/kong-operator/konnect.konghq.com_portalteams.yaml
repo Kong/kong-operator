@@ -72,6 +72,7 @@ spec:
                   description:
                     description: The description of the team.
                     maxLength: 250
+                    minLength: 1
                     type: string
                   name:
                     description: The name of the team.

@@ -630,7 +630,8 @@ This feature is currently in beta and is subject to change.<br /><br />Azure-spe
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | The Azure OpenAI API version to use. |
-| `deploymentID` _string_ | The Azure deployment ID for the model. |
+| `deploymentID` _string_ | The Azure deployment ID for the model. Applies when the Azure provider's `service` is `azure-openai`; not used for `azure-foundry`. |
+| `foundryPathPrefix` _string_ | The API path prefix for the Azure AI Foundry endpoint, selecting the model's API surface. `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1` targets the Anthropic surface. Applies when the Azure provider's `service` is `azure-foundry`. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 
 _Appears in:_
@@ -3213,7 +3214,9 @@ AIGatewayModelProviderAzureConfig is a type alias.
 | Field | Description |
 | --- | --- |
 | `auth` _[AIGatewayModelProviderAzureConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfigauth)_ |  |
-| `instance` _string_ |  |
+| `foundry` _[AIGatewayModelProviderAzureConfigFoundry](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfigfoundry)_ | Endpoint configuration for Azure AI Foundry hosted models. Required when `service` is `azure-foundry`. |
+| `instance` _string_ | The Azure OpenAI instance name. Required when `service` is `azure-openai`. |
+| `service` _string_ | Selects the Azure backend for this provider instance. Use `azure-openai` for Azure OpenAI deployments or `azure-foundry` for Azure AI Foundry. |
 
 _Appears in:_
 
@@ -3256,6 +3259,25 @@ Allowed values:
 | --- | --- |
 | `azure` |  |
 | `basic` |  |
+
+#### AIGatewayModelProviderAzureConfigFoundry
+
+
+AIGatewayModelProviderAzureConfigFoundry Endpoint configuration for Azure AI
+Foundry hosted models.
+Required when
+`service` is `azure-foundry`.
+
+
+
+| Field | Description |
+| --- | --- |
+| `domain` _string_ | The domain for Azure AI Foundry hosted models. |
+| `resource` _string_ | The Azure AI Foundry resource name. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderAzureConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderazureconfig)
 
 #### AIGatewayModelProviderBedrock
 
@@ -3451,6 +3473,7 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `batchRoleArn` _string_ | AWS role arn to use when calling the batch API. |
 | `roleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `secretAccessKey` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | The secret access key for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `sessionToken` _string_ | The session token for authenticating with temporary IAM credentials (issued by AWS STS, Vault, or SSO/SAML). It is sent to AWS as the `X-Amz-Security-Token` header. Because temporary credentials are short-lived, reference this from a secrets backend so it is refreshed before it expires. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `stsEndpointURL` _string_ | The STS endpoint URL to use for generating authentication tokens. If not specified, the default AWS STS endpoint will be used. |
 
 _Appears in:_
@@ -5386,8 +5409,9 @@ This feature is currently in beta and is subject to change.<br /><br />Azure-spe
 | `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
-| `deploymentID` _string_ | The Azure deployment ID for the model. |
+| `deploymentID` _string_ | The Azure deployment ID for the model. Applies when the Azure provider's `service` is `azure-openai`; not used for `azure-foundry`. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
+| `foundryPathPrefix` _string_ | The API path prefix for the Azure AI Foundry endpoint, selecting the model's API surface. `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1` targets the Anthropic surface. Applies when the Azure provider's `service` is `azure-foundry`. |
 | `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
 | `outputCost` _float64_ | Cost per output token for billing and cost tracking. |

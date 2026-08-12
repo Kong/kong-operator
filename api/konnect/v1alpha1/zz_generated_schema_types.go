@@ -173,12 +173,26 @@ type AIGatewayAzureEmbeddingsModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	APIVersion string `json:"apiVersion,omitzero"`
-	// The Azure deployment ID for the model.
+	// The Azure deployment ID for the model. Applies when the Azure provider's
+	// `service` is `azure-openai`; not used for `azure-foundry`.
+	//
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	DeploymentID string `json:"deploymentID,omitzero"`
+	// The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+	// API surface.
+	// `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+	// targets the Anthropic surface.
+	// Applies when the Azure provider's `service` is
+	// `azure-foundry`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=/openai/v1;/anthropic/v1
+	FoundryPathPrefix string `json:"foundryPathPrefix,omitzero"`
 	// The URL of the embeddings model.
 	//
 	// +optional
@@ -5379,12 +5393,44 @@ type AIGatewayModelProviderAzureConfig struct {
 	//
 	// +required
 	Auth *AIGatewayModelProviderAzureConfigAuth `json:"auth,omitempty"`
+	// Endpoint configuration for Azure AI Foundry hosted models. Required when
+	// `service` is `azure-foundry`.
 	//
+	//
+	// +optional
+	Foundry AIGatewayModelProviderAzureConfigFoundry `json:"foundry,omitzero"`
+	// The Azure OpenAI instance name. Required when `service` is `azure-openai`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Instance string `json:"instance,omitzero"`
+	// Selects the Azure backend for this provider instance. Use `azure-openai`
+	// for Azure OpenAI deployments or `azure-foundry` for Azure AI Foundry.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=azure-openai;azure-foundry
+	Service string `json:"service,omitzero"`
+}
+
+// AIGatewayModelProviderAzureConfigFoundry Endpoint configuration for Azure AI
+// Foundry hosted models.
+// Required when
+// `service` is `azure-foundry`.
+type AIGatewayModelProviderAzureConfigFoundry struct {
+	// The domain for Azure AI Foundry hosted models.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Domain string `json:"domain,omitzero"`
+	// The Azure AI Foundry resource name.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	Instance string `json:"instance,omitzero"`
+	Resource string `json:"resource,omitzero"`
 }
 
 // AIGatewayModelProviderAzureConfigAuth represents a union type for auth.
@@ -5841,6 +5887,18 @@ type AIGatewayModelProviderConfigAuthAWS struct {
 	//
 	// +optional
 	SecretAccessKey SensitiveDataSource `json:"secretAccessKey,omitzero"`
+	// The session token for authenticating with temporary IAM credentials (issued
+	// by AWS STS, Vault, or SSO/SAML).
+	// It is sent to AWS as the `X-Amz-Security-Token` header.
+	// Because temporary credentials are short-lived, reference this from a secrets
+	// backend so it is refreshed before it expires.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionToken string `json:"sessionToken,omitzero"`
 	// The STS endpoint URL to use for generating authentication tokens.
 	// If not specified, the default AWS STS endpoint will be used.
 	//
@@ -9121,7 +9179,9 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
-	// The Azure deployment ID for the model.
+	// The Azure deployment ID for the model. Applies when the Azure provider's
+	// `service` is `azure-openai`; not used for `azure-foundry`.
+	//
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -9131,6 +9191,18 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
+	// The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+	// API surface.
+	// `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+	// targets the Anthropic surface.
+	// Applies when the Azure provider's `service` is
+	// `azure-foundry`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=/openai/v1;/anthropic/v1
+	FoundryPathPrefix string `json:"foundryPathPrefix,omitzero"`
 	// Cost per input token for billing and cost tracking.
 	//
 	// +optional

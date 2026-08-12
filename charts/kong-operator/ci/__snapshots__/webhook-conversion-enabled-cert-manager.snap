@@ -50175,13 +50175,38 @@ spec:
                             required:
                             - type
                             type: object
+                          foundry:
+                            description: |-
+                              Endpoint configuration for Azure AI Foundry hosted models. Required when
+                              `service` is `azure-foundry`.
+                            properties:
+                              domain:
+                                description: The domain for Azure AI Foundry hosted models.
+                                maxLength: 253
+                                type: string
+                              resource:
+                                description: The Azure AI Foundry resource name.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - resource
+                            type: object
                           instance:
+                            description: The Azure OpenAI instance name. Required when `service` is `azure-openai`.
                             maxLength: 253
-                            minLength: 1
+                            type: string
+                          service:
+                            description: |-
+                              Selects the Azure backend for this provider instance. Use `azure-openai`
+                              for Azure OpenAI deployments or `azure-foundry` for Azure AI Foundry.
+                            enum:
+                            - azure-openai
+                            - azure-foundry
+                            maxLength: 253
                             type: string
                         required:
                         - auth
-                        - instance
                         type: object
                       displayName:
                         description: The display name for this model provider instance.
@@ -50328,6 +50353,17 @@ spec:
                                     x-kubernetes-validations:
                                     - message: value required when type=inline; secretRef required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                  sessionToken:
+                                    description: |-
+                                      The session token for authenticating with temporary IAM credentials (issued
+                                      by AWS STS, Vault, or SSO/SAML).
+                                      It is sent to AWS as the `X-Amz-Security-Token` header.
+                                      Because temporary credentials are short-lived, reference this from a secrets
+                                      backend so it is refreshed before it expires.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
                                   stsEndpointURL:
                                     description: |-
                                       The STS endpoint URL to use for generating authentication tokens.
@@ -55265,9 +55301,24 @@ spec:
                                                 maxLength: 253
                                                 type: string
                                               deploymentID:
-                                                description: The Azure deployment ID for the model.
+                                                description: |-
+                                                  The Azure deployment ID for the model. Applies when the Azure provider's
+                                                  `service` is `azure-openai`; not used for `azure-foundry`.
                                                 maxLength: 253
                                                 minLength: 1
+                                                type: string
+                                              foundryPathPrefix:
+                                                description: |-
+                                                  The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+                                                  API surface.
+                                                  `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+                                                  targets the Anthropic surface.
+                                                  Applies when the Azure provider's `service` is
+                                                  `azure-foundry`.
+                                                enum:
+                                                - /openai/v1
+                                                - /anthropic/v1
+                                                maxLength: 253
                                                 type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings model.
@@ -56504,13 +56555,28 @@ spec:
                                         type: object
                                       type: array
                                     deploymentID:
-                                      description: The Azure deployment ID for the model.
+                                      description: |-
+                                        The Azure deployment ID for the model. Applies when the Azure provider's
+                                        `service` is `azure-openai`; not used for `azure-foundry`.
                                       maxLength: 253
                                       minLength: 1
                                       type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
+                                    foundryPathPrefix:
+                                      description: |-
+                                        The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+                                        API surface.
+                                        `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+                                        targets the Anthropic surface.
+                                        Applies when the Azure provider's `service` is
+                                        `azure-foundry`.
+                                      enum:
+                                      - /openai/v1
+                                      - /anthropic/v1
+                                      maxLength: 253
+                                      type: string
                                     inputCost:
                                       description: Cost per input token for billing and cost tracking.
                                       type: number
@@ -59607,9 +59673,24 @@ spec:
                                                 maxLength: 253
                                                 type: string
                                               deploymentID:
-                                                description: The Azure deployment ID for the model.
+                                                description: |-
+                                                  The Azure deployment ID for the model. Applies when the Azure provider's
+                                                  `service` is `azure-openai`; not used for `azure-foundry`.
                                                 maxLength: 253
                                                 minLength: 1
+                                                type: string
+                                              foundryPathPrefix:
+                                                description: |-
+                                                  The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+                                                  API surface.
+                                                  `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+                                                  targets the Anthropic surface.
+                                                  Applies when the Azure provider's `service` is
+                                                  `azure-foundry`.
+                                                enum:
+                                                - /openai/v1
+                                                - /anthropic/v1
+                                                maxLength: 253
                                                 type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings model.
@@ -60862,13 +60943,28 @@ spec:
                                         type: object
                                       type: array
                                     deploymentID:
-                                      description: The Azure deployment ID for the model.
+                                      description: |-
+                                        The Azure deployment ID for the model. Applies when the Azure provider's
+                                        `service` is `azure-openai`; not used for `azure-foundry`.
                                       maxLength: 253
                                       minLength: 1
                                       type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
+                                    foundryPathPrefix:
+                                      description: |-
+                                        The API path prefix for the Azure AI Foundry endpoint, selecting the model's
+                                        API surface.
+                                        `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
+                                        targets the Anthropic surface.
+                                        Applies when the Azure provider's `service` is
+                                        `azure-foundry`.
+                                      enum:
+                                      - /openai/v1
+                                      - /anthropic/v1
+                                      maxLength: 253
+                                      type: string
                                     inputCost:
                                       description: Cost per input token for billing and cost tracking.
                                       type: number
@@ -68638,6 +68734,7 @@ spec:
                   description:
                     description: The description of the team.
                     maxLength: 250
+                    minLength: 1
                     type: string
                   name:
                     description: The name of the team.
