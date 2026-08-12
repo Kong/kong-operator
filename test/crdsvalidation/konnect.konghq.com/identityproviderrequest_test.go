@@ -43,6 +43,10 @@ func TestIdentityProviderRequest(t *testing.T) {
 		}
 	}
 
+	t.Run("portalRef immutability", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validOIDCIdentityProviderRequest()).RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("OIDC config validation and defaults", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.PortalIdentityProviderRequest]{
 			{

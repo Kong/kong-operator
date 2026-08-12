@@ -49,13 +49,19 @@ func NewCRDValidationTestCasesGroupParentRefChange[
 					},
 				})
 			},
-			ExpectedUpdateErrorMessage: new("can't update"),
+			ExpectedUpdateErrorMessage: new("immutable when an entity is already Programmed"),
 		})
 	}
 	{
 		obj := obj.DeepCopy()
+		obj.SetConditions([]metav1.Condition{{
+			Type:               "Ready",
+			Status:             metav1.ConditionFalse,
+			Reason:             "NotReady",
+			LastTransitionTime: metav1.Now(),
+		}})
 		ret = append(ret, TestCase[T]{
-			Name:       "can change parent ref when no status conditions",
+			Name:       "can change parent ref when not programmed",
 			TestObject: obj,
 			Update: func(obj T) {
 				obj.SetParentRef(commonv1alpha1.ObjectRef{

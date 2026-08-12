@@ -107,6 +107,10 @@ func TestKonnectConfigStore(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("controlPlaneRef immutability", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validKonnectConfigStore(ns.Name)).RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("apiSpec.name validation", func(t *testing.T) {
 		common.TestCasesGroup[*konnectv1alpha1.KonnectConfigStore]{
 			{

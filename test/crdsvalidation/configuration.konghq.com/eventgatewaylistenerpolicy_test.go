@@ -56,6 +56,10 @@ func TestEventGatewayListenerPolicy(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("eventGatewayListenerRef immutability", func(t *testing.T) {
+		common.NewCRDValidationTestCasesGroupParentRefChange(t, cfg, validListenerPolicy(ns.Name)).RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("certificates SensitiveDataSource validation", func(t *testing.T) {
 		common.TestCasesGroup[*configurationv1alpha1.EventGatewayListenerPolicy]{
 			{
