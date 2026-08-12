@@ -71,19 +71,16 @@ func (t *Translator) ingressRulesFromUDPRoutes() ingressRules {
 		if err := t.translateUDPRouteWithPorts(&result, r, ports); err != nil {
 			errs = append(errs, fmt.Errorf("UDPRoute %s/%s can't be routed: %w",
 				r.Namespace, r.Name, err))
+			continue
 		}
-	}
 
-	// Only the winner produced Kong entities, so only the winner is reported as
-	// successfully translated. A route that loses arbitration on every listener
-	// it attached to is left unreported (Programmed stays Unknown) - this way
-	// Programmed reflects the route's real dataplane status: it flips to True
-	// only once the route actually wins arbitration (e.g. after the current
-	// winner is deleted) and its config is genuinely pushed.
-	for _, r := range valid {
-		if _, isWinner := winningPorts[r]; isWinner {
-			t.registerSuccessfullyTranslatedObject(r)
-		}
+		// Only the winner produced Kong entities, so only the winner is reported as
+		// successfully translated. A route that loses arbitration on every listener
+		// it attached to is left unreported (Programmed stays Unknown) - this way
+		// Programmed reflects the route's real dataplane status: it flips to True
+		// only once the route actually wins arbitration (e.g. after the current
+		// winner is deleted) and its config is genuinely pushed.
+		t.registerSuccessfullyTranslatedObject(r)
 	}
 
 	if t.featureFlags.ExpressionRoutes {
