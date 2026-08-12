@@ -54,6 +54,14 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 		},
 	},
 	{
+		Label: "openid-connect.config.cache_introspection",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"cache_introspection",
+		},
+	},
+	{
 		Label: "openid-connect.config.consumer_groups_optional",
 		Path: []string{
 			"openid-connect",
@@ -67,6 +75,22 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 			"openid-connect",
 			"config",
 			"consumer_optional",
+		},
+	},
+	{
+		Label: "openid-connect.config.hide_credentials",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"hide_credentials",
+		},
+	},
+	{
+		Label: "openid-connect.config.keepalive",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"keepalive",
 		},
 	},
 	{
