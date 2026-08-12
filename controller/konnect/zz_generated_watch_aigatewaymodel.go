@@ -58,6 +58,14 @@ func AIGatewayModelReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&konnectv1alpha1.AIGatewayIdentityProvider{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayModelForAIGatewayIdentityProvider(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.AIGatewayModelList](cl),
@@ -132,6 +140,24 @@ func enqueueAIGatewayModelForAIGatewayModelProvider(
 		var l konnectv1alpha1.AIGatewayModelList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayModelOnAIGatewayModelProviderRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayModelForAIGatewayIdentityProvider(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*konnectv1alpha1.AIGatewayIdentityProvider)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.AIGatewayModelList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

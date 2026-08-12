@@ -220,9 +220,26 @@ spec:
                           referenced.
                         items:
                           description: |-
-                            AIGatewayIdentityProviderReference Reference to a identity provider instance
-                            by name.
-                          type: string
+                            AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayIdentityProvider
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayIdentityProvider
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         maxItems: 1
                         type: array
                     type: object

@@ -395,6 +395,14 @@ apiGroupVersions:
             kinds: [AIGatewayModelProvider]
             refTypeName: AIGatewayModelProviderRef
             resolvesTo: name
+          - path: spec.apiSpec.api.access.identityProviders
+            kinds: [AIGatewayIdentityProvider]
+            refTypeName: AIGatewayIdentityProviderRef
+            resolvesTo: name
+          - path: spec.apiSpec.model.access.identityProviders
+            kinds: [AIGatewayIdentityProvider]
+            refTypeName: AIGatewayIdentityProviderRef
+            resolvesTo: name
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelsSDK
@@ -479,6 +487,10 @@ apiGroupVersions:
           - path: spec.apiSpec.access.acls.deny.deny
             kinds: [AIGatewayConsumerGroup]
             refTypeName: AIGatewayACLRef
+            resolvesTo: name
+          - path: spec.apiSpec.access.identityProviders
+            kinds: [AIGatewayIdentityProvider]
+            refTypeName: AIGatewayIdentityProviderRef
             resolvesTo: name
         ops:
           sdk:

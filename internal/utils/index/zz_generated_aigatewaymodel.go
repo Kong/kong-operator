@@ -17,6 +17,8 @@ const (
 	IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef = "aiGatewayModelOnAIGatewayConsumerGroupRef"
 	// IndexFieldAIGatewayModelOnAIGatewayModelProviderRef is the index field for AIGatewayModel -> AIGatewayModelProvider.
 	IndexFieldAIGatewayModelOnAIGatewayModelProviderRef = "aiGatewayModelOnAIGatewayModelProviderRef"
+	// IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef is the index field for AIGatewayModel -> AIGatewayIdentityProvider.
+	IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef = "aiGatewayModelOnAIGatewayIdentityProviderRef"
 )
 
 // OptionsForAIGatewayModel returns required Index options for AIGatewayModel reconciler.
@@ -41,6 +43,11 @@ func OptionsForAIGatewayModel() []Option {
 			Object:         &konnectv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayModelProviderRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayModelProviderRef,
+		},
+		{
+			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Field:          IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef,
+			ExtractValueFn: aiGatewayModelOnAIGatewayIdentityProviderRef,
 		},
 	}
 }
@@ -138,6 +145,35 @@ func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
 	}
 	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelTargetsProvider(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayModelProvider" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	return out
+}
+
+func aiGatewayModelOnAIGatewayIdentityProviderRef(object client.Object) []string {
+	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	if !ok {
+		return nil
+	}
+	var out []string
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIAccessIdentityProviders(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelAccessIdentityProviders(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
 			continue
 		}
 		ns := ref.Namespace

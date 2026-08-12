@@ -9546,7 +9546,7 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayAgentAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced. |
 
 _Appears in:_
 
@@ -10280,6 +10280,25 @@ _Appears in:_
 
 - [AIGatewayIdentityProviderOpenIDConnectConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
 
+#### AIGatewayIdentityProviderRef
+
+
+AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccess](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccess)
+- [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
+
 #### AIGatewayIdentityProviderReference
 
 _Underlying type:_ `string`
@@ -10292,10 +10311,8 @@ by name.
 
 _Appears in:_
 
-- [AIGatewayAgentAccess](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccess)
 - [AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
-- [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 
 
@@ -11671,7 +11688,7 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayModelAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced. |
 
 _Appears in:_
 
