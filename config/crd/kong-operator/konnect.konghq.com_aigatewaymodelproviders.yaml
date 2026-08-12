@@ -629,13 +629,40 @@ spec:
                             required:
                             - type
                             type: object
+                          foundry:
+                            description: |-
+                              Endpoint configuration for Azure AI Foundry hosted models. Required when
+                              `service` is `azure-foundry`.
+                            properties:
+                              domain:
+                                description: The domain for Azure AI Foundry hosted
+                                  models.
+                                maxLength: 253
+                                type: string
+                              resource:
+                                description: The Azure AI Foundry resource name.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - resource
+                            type: object
                           instance:
+                            description: The Azure OpenAI instance name. Required
+                              when `service` is `azure-openai`.
                             maxLength: 253
-                            minLength: 1
+                            type: string
+                          service:
+                            description: |-
+                              Selects the Azure backend for this provider instance. Use `azure-openai`
+                              for Azure OpenAI deployments or `azure-foundry` for Azure AI Foundry.
+                            enum:
+                            - azure-openai
+                            - azure-foundry
+                            maxLength: 253
                             type: string
                         required:
                         - auth
-                        - instance
                         type: object
                       displayName:
                         description: The display name for this model provider instance.
@@ -789,6 +816,17 @@ spec:
                                         required when type=secretRef
                                       rule: 'self.type == ''inline'' ? has(self.value)
                                         : has(self.secretRef)'
+                                  sessionToken:
+                                    description: |-
+                                      The session token for authenticating with temporary IAM credentials (issued
+                                      by AWS STS, Vault, or SSO/SAML).
+                                      It is sent to AWS as the `X-Amz-Security-Token` header.
+                                      Because temporary credentials are short-lived, reference this from a secrets
+                                      backend so it is refreshed before it expires.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
                                   stsEndpointURL:
                                     description: |-
                                       The STS endpoint URL to use for generating authentication tokens.
