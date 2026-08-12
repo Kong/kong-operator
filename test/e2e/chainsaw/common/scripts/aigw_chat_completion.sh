@@ -53,17 +53,19 @@ for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
        -H 'X-Kong-LLM-Model: ${MODEL_ALIAS}' \
        -H 'Content-Type: application/json' \
        -d '${BODY}'; echo; \
-     grep -i '^${EXPECT_HEADER}:' /tmp/h | head -1 | cut -d' ' -f2- | tr -d '\r'" \
+     grep -i '^${EXPECT_HEADER}:' /tmp/h | head -1 | cut -d' ' -f2- | tr -d '\r'; echo; \
+     head -c 500 /tmp/b | tr '\n' ' '" \
     2>/dev/null || true)"
   CODE="$(printf '%s\n' "${OUT}" | sed -n '1p')"
   HDR="$(printf '%s\n' "${OUT}" | sed -n '2p')"
+  RESP_BODY="$(printf '%s\n' "${OUT}" | sed -n '3p')"
   if [ "${CODE}" = "200" ] && [ -n "${HDR}" ]; then
     echo "ok: status=${CODE} ${EXPECT_HEADER}=${HDR}"
     exit 0
   fi
-  echo "attempt ${ATTEMPT}/${MAX_RETRIES}: status='${CODE}' header='${HDR}'" >&2
+  echo "attempt ${ATTEMPT}/${MAX_RETRIES}: status='${CODE}' header='${HDR}' body='${RESP_BODY}'" >&2
   sleep "${RETRY_DELAY}"
 done
 
-echo "FAILED: no 200 with ${EXPECT_HEADER} after ${MAX_RETRIES} attempts (last status='${CODE}')" >&2
+echo "FAILED: no 200 with ${EXPECT_HEADER} after ${MAX_RETRIES} attempts (last status='${CODE}' body='${RESP_BODY}')" >&2
 exit 1
