@@ -160,9 +160,9 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	object.DeleteAndWaitForDeletionFn(context.Background(), t, cl, konnectExtension.DeepCopy())()
 }
 
+// Keep observing this test's stability.
+// TODO: https://github.com/Kong/kong-operator/issues/4807
 func TestKonnectExtension(t *testing.T) {
-	// t.Skipf("Skip until flakiness is resolved, TODO: https://github.com/Kong/kong-operator/issues/4807")
-
 	ctx := t.Context()
 	ns, _ := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 	cl := integration.GetClients().MgrClient
