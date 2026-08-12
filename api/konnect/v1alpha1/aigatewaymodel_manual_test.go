@@ -36,13 +36,10 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 						Config: AIGatewayModelAPIConfig{
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
-								Model: &AIGatewayModelRouteConfigModel{
-									Type: AIGatewayModelRouteConfigModelTypePath,
-									Path: &AIGatewayModelSelectorConfigPath{
-										PathParam: "model",
-										Values: []string{
-											"gpt-4o-mini",
-										},
+								Model: AIGatewayModelSelectorConfig{
+									PathParam: "model",
+									Values: []string{
+										"gpt-4o-mini",
 									},
 								},
 							},
@@ -112,13 +109,10 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 						Config: AIGatewayModelModelConfig{
 							Route: AIGatewayModelRouteConfig{
 								Paths: []string{"/v1/chat/completions"},
-								Model: &AIGatewayModelRouteConfigModel{
-									Type: AIGatewayModelRouteConfigModelTypePath,
-									Path: &AIGatewayModelSelectorConfigPath{
-										PathParam: "model",
-										Values: []string{
-											"gpt-4o-mini",
-										},
+								Model: AIGatewayModelSelectorConfig{
+									PathParam: "model",
+									Values: []string{
+										"gpt-4o-mini",
 									},
 								},
 							},

@@ -70,10 +70,12 @@ spec:
                     - Disabled
                     type: string
                   description:
+                    description: The description of the team.
                     maxLength: 250
                     type: string
                   name:
-                    maxLength: 253
+                    description: The name of the team.
+                    maxLength: 250
                     minLength: 1
                     pattern: ^[\w \W]+$
                     type: string

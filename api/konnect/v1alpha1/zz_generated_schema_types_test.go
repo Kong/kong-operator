@@ -59,6 +59,32 @@ func TestAIGatewayBedrockEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayCacheWriteCost_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayCacheWriteCost
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayContextWindowFactor_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayContextWindowFactor
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayDenyACL_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -995,36 +1021,10 @@ func TestAIGatewayModelRouteConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayModelSelectorConfigBody_MarshalEmpty(t *testing.T) {
+func TestAIGatewayModelSelectorConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayModelSelectorConfigBody
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelSelectorConfigHeaders_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelSelectorConfigHeaders
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelSelectorConfigPath_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelSelectorConfigPath
+	var spec AIGatewayModelSelectorConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1168,6 +1168,19 @@ func TestAIGatewayRouteConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayRouteConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayServiceTierFactor_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayServiceTierFactor
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1974,35 +1987,6 @@ func TestAIGatewayModelModelConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayModelModelConfigBalancer: nil receiver"; got != want {
-				t.Fatalf("unexpected error: got %q want %q", got, want)
-			}
-		})
-	}
-}
-
-func TestAIGatewayModelRouteConfigModelUnmarshalJSON_NilReceiver(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-	}{
-		{name: "Body", payload: []byte("{\"type\":\"body\",\"body\":{}}")},
-		{name: "Headers", payload: []byte("{\"type\":\"headers\",\"headers\":{}}")},
-		{name: "Path", payload: []byte("{\"type\":\"path\",\"path\":{}}")},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target *AIGatewayModelRouteConfigModel
-			err := target.UnmarshalJSON(tt.payload)
-			if err == nil {
-				t.Fatal("expected error for nil receiver")
-			}
-			if got, want := err.Error(), "unmarshaling AIGatewayModelRouteConfigModel: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -2909,78 +2893,6 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			t.Parallel()
 
 			var target AIGatewayModelModelConfig
-			if err := json.Unmarshal(tt.payload, &target); err != nil {
-				t.Fatalf("json.Unmarshal() error = %v", err)
-			}
-			tt.assert(t, target)
-		})
-	}
-}
-
-func TestAIGatewayModelRouteConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-		assert  func(*testing.T, AIGatewayModelRouteConfig)
-	}{
-		{
-			name:    "Model/Body",
-			payload: []byte("{\"model\":{\"type\":\"body\",\"body\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
-				t.Helper()
-				if target.Model == nil {
-					t.Fatalf("Model should be allocated")
-				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeBody; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Model.Body == nil {
-					t.Fatalf("Model.Body should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Model/Headers",
-			payload: []byte("{\"model\":{\"type\":\"headers\",\"headers\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
-				t.Helper()
-				if target.Model == nil {
-					t.Fatalf("Model should be allocated")
-				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypeHeaders; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Model.Headers == nil {
-					t.Fatalf("Model.Headers should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Model/Path",
-			payload: []byte("{\"model\":{\"type\":\"path\",\"path\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayModelRouteConfig) {
-				t.Helper()
-				if target.Model == nil {
-					t.Fatalf("Model should be allocated")
-				}
-				if got, want := target.Model.Type, AIGatewayModelRouteConfigModelTypePath; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Model.Path == nil {
-					t.Fatalf("Model.Path should be allocated")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target AIGatewayModelRouteConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}
