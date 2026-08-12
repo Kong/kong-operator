@@ -1321,6 +1321,8 @@ _Appears in:_
 
 - [KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)
 
+
+
 #### DecryptionRecordPart
 
 _Underlying type:_ `string`
@@ -15503,6 +15505,8 @@ CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
 _Appears in:_
 
 - [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+
 
 #### DataPlaneClientAuthStatus
 

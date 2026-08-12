@@ -911,6 +911,15 @@ func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl clie
 	return errors.Join(errs...)
 }
 
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *AIGatewayModel) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
 // ToCreateAIGatewayModelRequest converts the AIGatewayModel to the SDK type
 // sdkkonnectcomp.CreateAIGatewayModelRequest, resolving referenced CRs via the provided client.
 func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayModelRequest, error) {
