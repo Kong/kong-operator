@@ -18,7 +18,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/service"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/target"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/upstream"
-	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -82,42 +81,9 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 // Converts all objects in the outputStore to unstructured format for use by the caller.
 // It outputs all resources generated from the `Translate` method that translate the TLSRoute to entities that can be managed in Konnect.
 // A non-nil error is returned if there are errors in the translation.
-func (c *tlsRouteConverter) GetOutputStore(ctx context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
-	logger = logger.WithValues("phase", "output-store-conversion")
-	log.Debug(logger, "Starting output store conversion")
-
-	var conversionErrors []error
-
+func (c *tlsRouteConverter) GetOutputStore(_ context.Context, logger logr.Logger) ([]unstructured.Unstructured, error) {
 	// c.outputStore is already deduplicated in translate(); no need to deduplicate again here.
-	objects := make([]unstructured.Unstructured, 0, len(c.outputStore))
-	for _, obj := range c.outputStore {
-		unstr, err := utils.ToUnstructured(obj, c.Scheme())
-		if err != nil {
-			conversionErr := fmt.Errorf("failed to convert %T %s to unstructured: %w", obj, obj.GetName(), err)
-			conversionErrors = append(conversionErrors, conversionErr)
-			log.Error(logger, err, "Failed to convert object to unstructured",
-				"objectName", obj.GetName())
-			continue
-		}
-		objects = append(objects, unstr)
-	}
-
-	// Check if any conversion errors occurred and return aggregated error.
-	if len(conversionErrors) > 0 {
-		log.Error(logger, nil, "Output store conversion completed with errors",
-			"totalObjectsAttempted", len(c.outputStore),
-			"successfulConversions", len(objects),
-			"conversionErrors", len(conversionErrors))
-
-		// Join all errors using errors.Join for better error handling.
-		return objects, fmt.Errorf("output store conversion failed with %d errors: %w", len(conversionErrors), errors.Join(conversionErrors...))
-	}
-
-	log.Debug(logger, "Successfully converted all objects in output store",
-		"totalObjectsConverted", len(objects))
-
-	log.Debug(logger, "Finished output store conversion", "totalObjectsConverted", len(objects))
-	return objects, nil
+	return convertOutputStoreToUnstructured(logger, c.Scheme(), c.outputStore)
 }
 
 // HandleOrphanedResource implements OrphanedResourceHandler.
