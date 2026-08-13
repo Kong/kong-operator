@@ -49,6 +49,27 @@ func programmedModelProvider(name, namespace, konnectID string) *konnectv1alpha1
 	return p
 }
 
+// programmedIdentityProvider builds an AIGatewayIdentityProvider that already
+// has a Konnect ID and a Konnect name, i.e. a reference target that resolves
+// successfully.
+func programmedIdentityProvider(name, namespace, konnectName, konnectID string) *konnectv1alpha1.AIGatewayIdentityProvider {
+	p := &konnectv1alpha1.AIGatewayIdentityProvider{
+		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Spec: konnectv1alpha1.AIGatewayIdentityProviderSpec{
+			APISpec: konnectv1alpha1.AIGatewayIdentityProviderAPISpec{
+				AIGatewayIdentityProviderConfig: &konnectv1alpha1.AIGatewayIdentityProviderConfig{
+					Type: konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
+					KeyAuth: &konnectv1alpha1.AIGatewayIdentityProviderKeyAuth{
+						Name: konnectv1alpha1.AIGatewayEntityIdentifier(konnectName),
+					},
+				},
+			},
+		},
+	}
+	p.SetKonnectID(konnectID)
+	return p
+}
+
 func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *konnectv1alpha1.AIGatewayPolicy {
 	p := &konnectv1alpha1.AIGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
@@ -203,7 +224,8 @@ func TestToCreateAIGatewayAgentRequest_RejectsPolicyRefFromDifferentGateway(t *t
 
 // TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling verifies
 // that rebuilding the referenced acls union in the model payload does not drop
-// the identity_providers sibling that lives next to acls under access.
+// the identity_providers sibling that lives next to acls under access, and
+// that the identity provider reference itself resolves to its Konnect name.
 func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *testing.T) {
 	t.Parallel()
 
@@ -211,10 +233,13 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	// testGeneratedAIGatewayModelForSDKOps's fixture targets a provider named
 	// "provider-1" in the model's own ("default") namespace.
 	provider := programmedModelProvider("provider-1", "default", "kid-provider-1")
+	identityProvider := programmedIdentityProvider("idp-1", "default", "konnect-idp-name", "kid-idp-1")
 
 	model := testGeneratedAIGatewayModelForSDKOps()
 	model.Spec.APISpec.API.Access = konnectv1alpha1.AIGatewayModelAccess{
-		IdentityProviders: []konnectv1alpha1.AIGatewayIdentityProviderReference{"idp-1"},
+		IdentityProviders: []konnectv1alpha1.AIGatewayIdentityProviderRef{
+			{Name: "idp-1"},
+		},
 		Acls: &konnectv1alpha1.AIGatewayModelAccessAcls{
 			Type: konnectv1alpha1.AIGatewayModelAccessAclsTypeAllow,
 			Allow: &konnectv1alpha1.AIGatewayAllowACL{
@@ -225,7 +250,7 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup, provider).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup, provider, identityProvider).Build()
 
 	req, err := model.ToCreateAIGatewayModelRequest(t.Context(), cl)
 	require.NoError(t, err)
@@ -236,6 +261,7 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL)
 	assert.Equal(t, []string{"konnect-consumer-group-name"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL.Allow)
 
-	// The identity_providers sibling survived the union rebuild.
-	assert.Equal(t, []string{"idp-1"}, req.AIGatewayModelAPI.Access.IdentityProviders)
+	// The identity_providers sibling survived the union rebuild, resolved to
+	// the referenced AIGatewayIdentityProvider's Konnect name.
+	assert.Equal(t, []string{"konnect-idp-name"}, req.AIGatewayModelAPI.Access.IdentityProviders)
 }

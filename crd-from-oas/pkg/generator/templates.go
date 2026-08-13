@@ -1147,7 +1147,9 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
 {{- end}}
+{{- if .Cond}}
 	if {{.Cond}} {
+{{- end}}
 {{- if .UnionVar}}
 		{{.UnionVar}} := {{.UnionExpr}}
 {{- end}}
@@ -1213,7 +1215,9 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 {{- range .ParentNavsReversed}}
 		{{.Parent}}["{{.Key}}"] = {{.Var}}
 {{- end}}
+{{- if .Cond}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}`
 

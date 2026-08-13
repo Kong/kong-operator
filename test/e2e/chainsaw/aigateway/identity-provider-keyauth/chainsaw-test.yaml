@@ -133,7 +133,7 @@ spec:
         - name: agent_access
           value:
             identityProviders:
-              - ($keyauth_idp_name)
+              - name: ($keyauth_idp_name)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
     - name: 9-Create-aigateway-dataplane

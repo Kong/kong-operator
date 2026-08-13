@@ -39,6 +39,24 @@ type: Opaque
 data:
   token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
 ---
+kind: AIGatewayIdentityProvider
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-model-identity-provider
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: model-key-auth-provider
+      displayName: Model Key Auth Identity Provider
+      config:
+        hideCredentials: Enabled
+---
 kind: AIGatewayModelProvider
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
@@ -131,6 +149,12 @@ spec:
             allow:
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-model-consumer-group
+        # References to AIGatewayIdentityProvider CRs (by metadata.name). The
+        # operator resolves each reference to the referenced CR's Konnect name
+        # at reconcile time. At most 1 identity provider of each type can be
+        # referenced.
+        identityProviders:
+          - name: ai-gw-model-identity-provider
       config:
         route:
           paths:

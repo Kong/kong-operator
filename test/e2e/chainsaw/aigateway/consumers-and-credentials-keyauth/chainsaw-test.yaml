@@ -177,7 +177,7 @@ spec:
         - name: agent_access
           value:
             identityProviders:
-              - ($keyauth_idp_name)
+              - name: ($keyauth_idp_name)
             acls:
               type: allow
               allow:
@@ -330,7 +330,7 @@ spec:
         - name: agent_access
           value:
             identityProviders:
-              - ($keyauth_idp_name)
+              - name: ($keyauth_idp_name)
             acls:
               type: deny
               deny:

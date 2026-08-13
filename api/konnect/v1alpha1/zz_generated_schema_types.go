@@ -33,7 +33,7 @@ type AIGatewayAgentAccess struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+	IdentityProviders []AIGatewayIdentityProviderRef `json:"identityProviders,omitempty"`
 }
 
 // AIGatewayAgentAccessAcls represents a union type for acls.
@@ -3687,7 +3687,7 @@ type AIGatewayModelAccess struct {
 	//
 	//
 	// +optional
-	IdentityProviders []AIGatewayIdentityProviderReference `json:"identityProviders,omitempty"`
+	IdentityProviders []AIGatewayIdentityProviderRef `json:"identityProviders,omitempty"`
 }
 
 // AIGatewayModelAccessAcls represents a union type for acls.

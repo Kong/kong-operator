@@ -202,7 +202,7 @@ spec:
         - name: agent_access
           value:
             identityProviders:
-              - ($oidc_idp_name)
+              - name: ($oidc_idp_name)
             acls:
               type: allow
               allow:
@@ -378,7 +378,7 @@ spec:
         - name: agent_access
           value:
             identityProviders:
-              - ($oidc_idp_name)
+              - name: ($oidc_idp_name)
             acls:
               type: deny
               deny:
