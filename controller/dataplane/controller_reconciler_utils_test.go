@@ -785,7 +785,9 @@ func TestEnsureDataPlaneIsMarkedNotReady(t *testing.T) {
 	)
 	require.NoError(t, err)
 
-	condition, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dataplane)
+	stored := &operatorv1beta1.DataPlane{}
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(dataplane), stored))
+	condition, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, stored)
 	require.True(t, ok)
 	assert.EqualValues(t, 6, condition.ObservedGeneration)
 }
