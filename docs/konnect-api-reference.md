@@ -543,7 +543,9 @@ The structure varies depending on the agent type.
 | --- | --- |
 | `logging` _[AIGatewayAgentConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `upstream` _[AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream A2A Agent using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -623,15 +625,15 @@ _Appears in:_
 
 
 AIGatewayAzureEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Azure-specific configuration for a model.
+This feature is currently in beta and is subject to change.<br /><br />Azure OpenAI-specific configuration for an embeddings model. Azure AI Foundry
+embeddings are not supported.
 
 
 
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | The Azure OpenAI API version to use. |
-| `deploymentID` _string_ | The Azure deployment ID for the model. Applies when the Azure provider's `service` is `azure-openai`; not used for `azure-foundry`. |
-| `foundryPathPrefix` _string_ | The API path prefix for the Azure AI Foundry endpoint, selecting the model's API surface. `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1` targets the Anthropic surface. Applies when the Azure provider's `service` is `azure-foundry`. |
+| `deploymentID` _string_ | The Azure OpenAI deployment ID for the embeddings model. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 
 _Appears in:_
@@ -1974,6 +1976,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
 | `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
 | `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
+| `upstream` _[AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -2174,6 +2177,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | `proxy` _[AIGatewayProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
+| `upstream` _[AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -2211,6 +2215,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
+| `upstream` _[AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -2248,6 +2253,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `route` _[AIGatewayRouteConfig](#konnect-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `upstream` _[AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -4934,6 +4940,7 @@ the upstream AI provider.
 
 _Appears in:_
 
+- [AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 - [AIGatewayModelAPIConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
@@ -6093,6 +6100,85 @@ This feature is currently in beta and is subject to change.<br /><br />Xai-speci
 _Appears in:_
 
 - [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
+
+#### AIGatewayUpstreamAuthAWS
+
+
+AIGatewayUpstreamAuthAWS **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />AWS IAM (SigV4) authentication for the upstream service.
+
+
+
+| Field | Description |
+| --- | --- |
+| `accessKeyID` _string_ | The access key id for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `assumeRoleArn` _string_ | The ARN of the IAM role to assume for generating authentication tokens. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `region` _string_ | The AWS region of the upstream service. Overrides the region inferred from the environment. |
+| `roleSessionName` _string_ | The session name for the temporary credentials when assuming the IAM role. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `secretAccessKey` _string_ | The secret access key for authenticating with static IAM User credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `sessionToken` _string_ | The session token for authenticating with temporary IAM credentials. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `stsEndpointURL` _string_ | The STS endpoint URL to use for generating authentication tokens. If not specified, the default AWS STS endpoint will be used. |
+
+_Appears in:_
+
+- [AIGatewayUpstreamConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)
+
+#### AIGatewayUpstreamConfig
+
+
+AIGatewayUpstreamConfig **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including
+authentication.
+
+
+
+| Field | Description |
+| --- | --- |
+| `auth` _[AIGatewayUpstreamConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Authentication to use when proxying to the upstream service. |
+
+_Appears in:_
+
+- [AIGatewayAgentConfig](#konnect-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
+
+#### AIGatewayUpstreamConfigAuth
+
+
+AIGatewayUpstreamConfigAuth represents a union type for auth.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AIGatewayUpstreamConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfigauthtype)_ | Type designates the type of configuration. |
+| `aws` _[AIGatewayUpstreamAuthAWS](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamauthaws)_ | AIGatewayUpstreamAuthAWS configuration. |
+
+_Appears in:_
+
+- [AIGatewayUpstreamConfig](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfig)
+
+#### AIGatewayUpstreamConfigAuthType
+
+_Underlying type:_ `string`
+
+AIGatewayUpstreamConfigAuthType represents the type of auth.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayUpstreamConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `aws` |  |
 
 #### AIGatewayVertexEmbeddingsModelConfig
 
