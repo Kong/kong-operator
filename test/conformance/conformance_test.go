@@ -118,11 +118,12 @@ func runConformance(
 	// still run the conformance test suite setup to ensure that the
 	// GatewayClass gets accepted.
 	t.Logf("configuring the Gateway API (%s) conformance test suite", gwType)
-	// Currently mode only relies on the KongRouterFlavor, but in the future
-	// we may want to add more modes.
-	mode := string(kongRouterFlavor)
+	// mode encodes both the router flavor and the gateway deployment topology
+	// (standard vs hybrid) so that reports for different topologies don't
+	// collide on the same mode value in the gateway-api conformance table.
+	mode := fmt.Sprintf("%s-%s", kongRouterFlavor, gwType)
 	md := metadata.Metadata()
-	reportFileName := fmt.Sprintf("experimental-%s-%s-%s-report.yaml", md.Release, mode, gwType)
+	reportFileName := fmt.Sprintf("experimental-%s-%s-report.yaml", md.Release, mode)
 
 	// Set looser timeouts to avoid flakiness.
 	timeoutConfig := conformanceconfig.DefaultTimeoutConfig()
