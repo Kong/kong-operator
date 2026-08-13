@@ -166,33 +166,20 @@ type AIGatewayAllowACL struct {
 // AIGatewayAzureEmbeddingsModelConfig **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
-// Azure-specific configuration for a model.
+// Azure OpenAI-specific configuration for an embeddings model. Azure AI Foundry
+// embeddings are not supported.
 type AIGatewayAzureEmbeddingsModelConfig struct {
 	// The Azure OpenAI API version to use.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	APIVersion string `json:"apiVersion,omitzero"`
-	// The Azure deployment ID for the model. Applies when the Azure provider's
-	// `service` is `azure-openai`; not used for `azure-foundry`.
-	//
+	// The Azure OpenAI deployment ID for the embeddings model.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	DeploymentID string `json:"deploymentID,omitzero"`
-	// The API path prefix for the Azure AI Foundry endpoint, selecting the model's
-	// API surface.
-	// `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
-	// targets the Anthropic surface.
-	// Applies when the Azure provider's `service` is
-	// `azure-foundry`.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=/openai/v1;/anthropic/v1
-	FoundryPathPrefix string `json:"foundryPathPrefix,omitzero"`
 	// The URL of the embeddings model.
 	//
 	// +optional
@@ -2315,6 +2302,14 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// +required
 	// +kubebuilder:validation:Minimum=0
 	ToolsCacheTtlSeconds int `json:"toolsCacheTtlSeconds,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
@@ -2783,6 +2778,14 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
@@ -2842,6 +2845,14 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
@@ -2895,6 +2906,14 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream service
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
@@ -9183,8 +9202,7 @@ type AIGatewayTargetAzureConfig struct {
 	// `service` is `azure-openai`; not used for `azure-foundry`.
 	//
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	DeploymentID string `json:"deploymentID,omitzero"`
 	// The number of dimensions for embedding outputs.
@@ -11152,6 +11170,176 @@ type AIGatewayTargetXaiConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayUpstreamAuthAWS **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// AWS IAM (SigV4) authentication for the upstream service.
+type AIGatewayUpstreamAuthAWS struct {
+	// The access key id for authenticating with static IAM User credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AccessKeyID string `json:"accessKeyID,omitzero"`
+	// The ARN of the IAM role to assume for generating authentication tokens.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	AssumeRoleArn string `json:"assumeRoleArn,omitzero"`
+	// The AWS region of the upstream service.
+	// Overrides the region inferred from the environment.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Region string `json:"region,omitzero"`
+	// The session name for the temporary credentials when assuming the IAM role.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	RoleSessionName string `json:"roleSessionName,omitzero"`
+	// The secret access key for authenticating with static IAM User credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SecretAccessKey string `json:"secretAccessKey,omitzero"`
+	// The session token for authenticating with temporary IAM credentials.
+	// This field is
+	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionToken string `json:"sessionToken,omitzero"`
+	// The STS endpoint URL to use for generating authentication tokens.
+	// If not specified, the default AWS STS endpoint will be used.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	StsEndpointURL string `json:"stsEndpointURL,omitzero"`
+}
+
+// AIGatewayUpstreamConfig **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Configuration applied when proxying to the upstream service, including
+// authentication.
+type AIGatewayUpstreamConfig struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Authentication to use when proxying to the upstream service.
+	//
+	// +optional
+	Auth *AIGatewayUpstreamConfigAuth `json:"auth,omitempty"`
+}
+
+// AIGatewayUpstreamConfigAuth represents a union type for auth.
+// Only one of the fields should be set based on the Type.
+type AIGatewayUpstreamConfigAuth struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=aws
+	Type AIGatewayUpstreamConfigAuthType `json:"type,omitempty"`
+
+	// AIGatewayUpstreamAuthAWS configuration.
+	//
+	// +optional
+	AIGatewayUpstreamAuthAWS *AIGatewayUpstreamAuthAWS `json:"aws,omitempty"`
+}
+
+// AIGatewayUpstreamConfigAuthType represents the type of auth.
+type AIGatewayUpstreamConfigAuthType string
+
+// AIGatewayUpstreamConfigAuthType values.
+const (
+	AIGatewayUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS AIGatewayUpstreamConfigAuthType = "aws"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u AIGatewayUpstreamConfigAuth) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling AIGatewayUpstreamConfigAuth type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case AIGatewayUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS:
+		if u.AIGatewayUpstreamAuthAWS != nil {
+			raw, err := json.Marshal(u.AIGatewayUpstreamAuthAWS)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling AIGatewayUpstreamConfigAuth aws: %w", err)
+			}
+			m["aws"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *AIGatewayUpstreamConfigAuth) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling AIGatewayUpstreamConfigAuth: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = AIGatewayUpstreamConfigAuthType(probe.Type)
+	switch probe.Type {
+	case "aws":
+		payload, ok := raw["aws"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val AIGatewayUpstreamAuthAWS
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling AIGatewayUpstreamConfigAuth aws: %w", err)
+		}
+		u.AIGatewayUpstreamAuthAWS = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *AIGatewayUpstreamConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling AIGatewayUpstreamConfig: nil receiver")
+	}
+	type alias AIGatewayUpstreamConfig
+	aux := alias{}
+	aux.Auth = &AIGatewayUpstreamConfigAuth{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling AIGatewayUpstreamConfig: %w", err)
+	}
+	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.AIGatewayUpstreamAuthAWS == nil {
+		aux.Auth = nil
+	}
+	*s = AIGatewayUpstreamConfig(aux)
+	return nil
 }
 
 // AIGatewayVertexEmbeddingsModelConfig **Pre-release Feature**

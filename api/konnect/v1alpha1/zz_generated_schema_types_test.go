@@ -1463,6 +1463,32 @@ func TestAIGatewayTargetXaiConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayUpstreamAuthAWS_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamAuthAWS
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayUpstreamConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayUpstreamConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayVertexEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -2175,6 +2201,33 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayTargetConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAIGatewayUpstreamConfigAuthUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws", payload: []byte("{\"type\":\"aws\",\"aws\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayUpstreamConfigAuth
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayUpstreamConfigAuth: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -3445,6 +3498,46 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 			t.Parallel()
 
 			var target AIGatewayTarget
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayUpstreamConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayUpstreamConfig)
+	}{
+		{
+			name:    "Auth/aws",
+			payload: []byte("{\"auth\":{\"type\":\"aws\",\"aws\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayUpstreamConfig) {
+				t.Helper()
+				if target.Auth == nil {
+					t.Fatalf("Auth should be allocated")
+				}
+				if got, want := target.Auth.Type, AIGatewayUpstreamConfigAuthTypeAIGatewayUpstreamAuthAWS; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Auth.AIGatewayUpstreamAuthAWS == nil {
+					t.Fatalf("Auth.AIGatewayUpstreamAuthAWS should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayUpstreamConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

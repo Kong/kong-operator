@@ -42707,6 +42707,66 @@ spec:
                       maxRequestBodySize:
                         description: Maximum size of request body to parse. Set to 0 for unlimited.
                         type: integer
+                      proxy:
+                        description: |-
+                          HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
+                          provider.
+                        properties:
+                          auth:
+                            description: Credentials used to authenticate to the proxy server.
+                            properties:
+                              password:
+                                description: |-
+                                  The password to use for proxy authentication.
+                                  This field is
+                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                maxLength: 253
+                                type: string
+                              username:
+                                description: |-
+                                  The username to use for proxy authentication.
+                                  This field is
+                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                maxLength: 253
+                                type: string
+                            type: object
+                          httpProxy:
+                            description: HTTP proxy server to route plaintext outbound requests through.
+                            properties:
+                              host:
+                                description: A string representing a host name, such as example.com.
+                                maxLength: 253
+                                type: string
+                              port:
+                                description: An integer representing a port number between 0 and 65535, inclusive.
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                            type: object
+                          httpsProxy:
+                            description: HTTPS proxy server to route TLS outbound requests through.
+                            properties:
+                              host:
+                                description: A string representing a host name, such as example.com.
+                                maxLength: 253
+                                type: string
+                              port:
+                                description: An integer representing a port number between 0 and 65535, inclusive.
+                                maximum: 65535
+                                minimum: 0
+                                type: integer
+                            type: object
+                          noProxy:
+                            description: Comma-separated list of hosts that should not be proxied.
+                            maxLength: 253
+                            type: string
+                          proxyScheme:
+                            description: The proxy scheme to use when connecting to the proxy server.
+                            enum:
+                            - http
+                            maxLength: 253
+                            type: string
+                        type: object
                       route:
                         description: |-
                           **Pre-release Feature**
@@ -42812,6 +42872,82 @@ spec:
                             items:
                               type: string
                             type: array
+                        type: object
+                      upstream:
+                        description: |-
+                          **Pre-release Feature**
+                          This feature is currently in beta and is subject to change.
+
+                          Configuration applied when proxying to the upstream service, including
+                          authentication.
+                        properties:
+                          auth:
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Authentication to use when proxying to the upstream service.
+                            properties:
+                              aws:
+                                description: AIGatewayUpstreamAuthAWS configuration.
+                                properties:
+                                  accessKeyID:
+                                    description: |-
+                                      The access key id for authenticating with static IAM User credentials.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
+                                  assumeRoleArn:
+                                    description: |-
+                                      The ARN of the IAM role to assume for generating authentication tokens.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
+                                  region:
+                                    description: |-
+                                      The AWS region of the upstream service.
+                                      Overrides the region inferred from the environment.
+                                    maxLength: 253
+                                    type: string
+                                  roleSessionName:
+                                    description: |-
+                                      The session name for the temporary credentials when assuming the IAM role.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
+                                  secretAccessKey:
+                                    description: |-
+                                      The secret access key for authenticating with static IAM User credentials.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
+                                  sessionToken:
+                                    description: |-
+                                      The session token for authenticating with temporary IAM credentials.
+                                      This field is
+                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                    maxLength: 253
+                                    type: string
+                                  stsEndpointURL:
+                                    description: |-
+                                      The STS endpoint URL to use for generating authentication tokens.
+                                      If not specified, the default AWS STS endpoint will be used.
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              type:
+                                description: Type designates the type of configuration.
+                                enum:
+                                - aws
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
                         type: object
                       url:
                         description: |-
@@ -45484,6 +45620,82 @@ spec:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
                             type: object
+                          upstream:
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration applied when proxying to the upstream service, including
+                              authentication.
+                            properties:
+                              auth:
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Authentication to use when proxying to the upstream service.
+                                properties:
+                                  aws:
+                                    description: AIGatewayUpstreamAuthAWS configuration.
+                                    properties:
+                                      accessKeyID:
+                                        description: |-
+                                          The access key id for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        description: |-
+                                          The ARN of the IAM role to assume for generating authentication tokens.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      region:
+                                        description: |-
+                                          The AWS region of the upstream service.
+                                          Overrides the region inferred from the environment.
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        description: |-
+                                          The session name for the temporary credentials when assuming the IAM role.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        description: |-
+                                          The secret access key for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      sessionToken:
+                                        description: |-
+                                          The session token for authenticating with temporary IAM credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      stsEndpointURL:
+                                        description: |-
+                                          The STS endpoint URL to use for generating authentication tokens.
+                                          If not specified, the default AWS STS endpoint will be used.
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - aws
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            type: object
                           url:
                             description: |-
                               Helper field to set protocol, host, port and path of the upstream service
@@ -45946,6 +46158,82 @@ spec:
                                 items:
                                   type: string
                                 type: array
+                            type: object
+                          upstream:
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration applied when proxying to the upstream service, including
+                              authentication.
+                            properties:
+                              auth:
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Authentication to use when proxying to the upstream service.
+                                properties:
+                                  aws:
+                                    description: AIGatewayUpstreamAuthAWS configuration.
+                                    properties:
+                                      accessKeyID:
+                                        description: |-
+                                          The access key id for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        description: |-
+                                          The ARN of the IAM role to assume for generating authentication tokens.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      region:
+                                        description: |-
+                                          The AWS region of the upstream service.
+                                          Overrides the region inferred from the environment.
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        description: |-
+                                          The session name for the temporary credentials when assuming the IAM role.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        description: |-
+                                          The secret access key for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      sessionToken:
+                                        description: |-
+                                          The session token for authenticating with temporary IAM credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      stsEndpointURL:
+                                        description: |-
+                                          The STS endpoint URL to use for generating authentication tokens.
+                                          If not specified, the default AWS STS endpoint will be used.
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - aws
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
                             type: object
                           url:
                             description: |-
@@ -48102,6 +48390,82 @@ spec:
                                 description: The timeout for calling the tools in milliseconds.
                                 type: integer
                             type: object
+                          upstream:
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration applied when proxying to the upstream service, including
+                              authentication.
+                            properties:
+                              auth:
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Authentication to use when proxying to the upstream service.
+                                properties:
+                                  aws:
+                                    description: AIGatewayUpstreamAuthAWS configuration.
+                                    properties:
+                                      accessKeyID:
+                                        description: |-
+                                          The access key id for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        description: |-
+                                          The ARN of the IAM role to assume for generating authentication tokens.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      region:
+                                        description: |-
+                                          The AWS region of the upstream service.
+                                          Overrides the region inferred from the environment.
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        description: |-
+                                          The session name for the temporary credentials when assuming the IAM role.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        description: |-
+                                          The secret access key for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      sessionToken:
+                                        description: |-
+                                          The session token for authenticating with temporary IAM credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      stsEndpointURL:
+                                        description: |-
+                                          The STS endpoint URL to use for generating authentication tokens.
+                                          If not specified, the default AWS STS endpoint will be used.
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - aws
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            type: object
                           url:
                             description: |-
                               Helper field to set protocol, host, port and path of the upstream service
@@ -49198,6 +49562,82 @@ spec:
                               every client call.
                             minimum: 0
                             type: integer
+                          upstream:
+                            description: |-
+                              **Pre-release Feature**
+                              This feature is currently in beta and is subject to change.
+
+                              Configuration applied when proxying to the upstream service, including
+                              authentication.
+                            properties:
+                              auth:
+                                description: |-
+                                  **Pre-release Feature**
+                                  This feature is currently in beta and is subject to change.
+
+                                  Authentication to use when proxying to the upstream service.
+                                properties:
+                                  aws:
+                                    description: AIGatewayUpstreamAuthAWS configuration.
+                                    properties:
+                                      accessKeyID:
+                                        description: |-
+                                          The access key id for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        description: |-
+                                          The ARN of the IAM role to assume for generating authentication tokens.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      region:
+                                        description: |-
+                                          The AWS region of the upstream service.
+                                          Overrides the region inferred from the environment.
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        description: |-
+                                          The session name for the temporary credentials when assuming the IAM role.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        description: |-
+                                          The secret access key for authenticating with static IAM User credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      sessionToken:
+                                        description: |-
+                                          The session token for authenticating with temporary IAM credentials.
+                                          This field is
+                                          [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                        maxLength: 253
+                                        type: string
+                                      stsEndpointURL:
+                                        description: |-
+                                          The STS endpoint URL to use for generating authentication tokens.
+                                          If not specified, the default AWS STS endpoint will be used.
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    description: Type designates the type of configuration.
+                                    enum:
+                                    - aws
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            type: object
                           url:
                             description: |-
                               Helper field to set protocol, host, port and path of the upstream service
@@ -55384,24 +55824,9 @@ spec:
                                                 maxLength: 253
                                                 type: string
                                               deploymentID:
-                                                description: |-
-                                                  The Azure deployment ID for the model. Applies when the Azure provider's
-                                                  `service` is `azure-openai`; not used for `azure-foundry`.
+                                                description: The Azure OpenAI deployment ID for the embeddings model.
                                                 maxLength: 253
                                                 minLength: 1
-                                                type: string
-                                              foundryPathPrefix:
-                                                description: |-
-                                                  The API path prefix for the Azure AI Foundry endpoint, selecting the model's
-                                                  API surface.
-                                                  `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
-                                                  targets the Anthropic surface.
-                                                  Applies when the Azure provider's `service` is
-                                                  `azure-foundry`.
-                                                enum:
-                                                - /openai/v1
-                                                - /anthropic/v1
-                                                maxLength: 253
                                                 type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings model.
@@ -56642,7 +57067,6 @@ spec:
                                         The Azure deployment ID for the model. Applies when the Azure provider's
                                         `service` is `azure-openai`; not used for `azure-foundry`.
                                       maxLength: 253
-                                      minLength: 1
                                       type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
@@ -56716,8 +57140,6 @@ spec:
                                       description: The upstream URL for the model endpoint.
                                       maxLength: 253
                                       type: string
-                                  required:
-                                  - deploymentID
                                   type: object
                                 bedrock:
                                   description: Bedrock configuration.
@@ -59772,24 +60194,9 @@ spec:
                                                 maxLength: 253
                                                 type: string
                                               deploymentID:
-                                                description: |-
-                                                  The Azure deployment ID for the model. Applies when the Azure provider's
-                                                  `service` is `azure-openai`; not used for `azure-foundry`.
+                                                description: The Azure OpenAI deployment ID for the embeddings model.
                                                 maxLength: 253
                                                 minLength: 1
-                                                type: string
-                                              foundryPathPrefix:
-                                                description: |-
-                                                  The API path prefix for the Azure AI Foundry endpoint, selecting the model's
-                                                  API surface.
-                                                  `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1`
-                                                  targets the Anthropic surface.
-                                                  Applies when the Azure provider's `service` is
-                                                  `azure-foundry`.
-                                                enum:
-                                                - /openai/v1
-                                                - /anthropic/v1
-                                                maxLength: 253
                                                 type: string
                                               upstreamURL:
                                                 description: The URL of the embeddings model.
@@ -61046,7 +61453,6 @@ spec:
                                         The Azure deployment ID for the model. Applies when the Azure provider's
                                         `service` is `azure-openai`; not used for `azure-foundry`.
                                       maxLength: 253
-                                      minLength: 1
                                       type: string
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
@@ -61120,8 +61526,6 @@ spec:
                                       description: The upstream URL for the model endpoint.
                                       maxLength: 253
                                       type: string
-                                  required:
-                                  - deploymentID
                                   type: object
                                 bedrock:
                                   description: Bedrock configuration.

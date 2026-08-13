@@ -175,6 +175,11 @@ type AIGatewayAgentConfig struct {
 	//
 	// +optional
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
+	// provider.
+	//
+	// +optional
+	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -182,6 +187,14 @@ type AIGatewayAgentConfig struct {
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
 	// Helper field to set protocol, host, port and path of the upstream A2A Agent
 	// using a URL.
 	// This is the same as a Kong Gateway Service URL:
