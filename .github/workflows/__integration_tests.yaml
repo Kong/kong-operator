@@ -83,14 +83,19 @@ jobs:
 
     - name: set kong image override
       if: ${{ inputs.kong-image-repo != '' }}
+      env:
+        KONG_IMAGE_REPO: ${{ inputs.kong-image-repo }}
+        KONG_IMAGE_TAG: ${{ inputs.kong-image-tag }}
       run: |
-        echo "TEST_KONG_IMAGE=${{ inputs.kong-image-repo }}" >> $GITHUB_ENV
-        echo "TEST_KONG_TAG=${{ inputs.kong-image-tag }}" >> $GITHUB_ENV
+        echo "TEST_KONG_IMAGE=$KONG_IMAGE_REPO" >> $GITHUB_ENV
+        echo "TEST_KONG_TAG=$KONG_IMAGE_TAG" >> $GITHUB_ENV
 
     - name: set kong effective version
       if: ${{ inputs.kong-effective-version != '' }}
+      env:
+        KONG_EFFECTIVE_VERSION: ${{ inputs.kong-effective-version }}
       run: |
-        echo "TEST_KONG_EFFECTIVE_VERSION=${{ inputs.kong-effective-version }}" >> $GITHUB_ENV
+        echo "TEST_KONG_EFFECTIVE_VERSION=$KONG_EFFECTIVE_VERSION" >> $GITHUB_ENV
 
     - run: echo "GO_MOD_CACHE=$(go env GOMODCACHE)" >> $GITHUB_ENV
     - run: echo "GO_BUILD_CACHE=$(go env GOCACHE)" >> $GITHUB_ENV

@@ -295,6 +295,7 @@ lint.actions: download.actionlint download.shellcheck
 	SHELLCHECK_OPTS='--exclude=SC2086,SC2155,SC2046' \
 	$(ACTIONLINT) -shellcheck $(SHELLCHECK) \
 		./.github/workflows/*
+	YQ_BIN=$(YQ) $(PROJECT_DIR)/scripts/verify-no-run-expressions.sh
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
