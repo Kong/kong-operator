@@ -109,6 +109,7 @@ func DataPlaneIsReady(t *testing.T, ctx context.Context, dataplane types.Namespa
 				return true
 			}
 		}
+		t.Logf("DataPlane %q is not ready yet. Current conditions: %+v", dataplane, c.Status.Conditions)
 		return false
 	}, operatorClient)
 }
