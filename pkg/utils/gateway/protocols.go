@@ -3,6 +3,7 @@ package gateway
 import (
 	"slices"
 
+	"github.com/samber/lo"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -34,10 +35,7 @@ func ProtocolsFromListeners(gw *gatewayv1.Gateway, sectionName *gatewayv1.Sectio
 		return nil
 	}
 
-	protocols := make([]string, 0, len(protoSet))
-	for p := range protoSet {
-		protocols = append(protocols, p)
-	}
+	protocols := lo.Keys(protoSet)
 	slices.Sort(protocols)
 
 	return protocols
