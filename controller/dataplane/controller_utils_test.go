@@ -576,6 +576,16 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 							"",
 							102,
 						),
+						// Left behind by the previous reconcile. Without the
+						// DeploymentRolledOut skip in AreAllConditionsHaveTrueStatus,
+						// SetReadyWithGeneration writes Ready=False/DependenciesNotReady here.
+						k8sutils.NewConditionWithGeneration(
+							kcfgdataplane.DeploymentRolledOutType,
+							metav1.ConditionFalse,
+							kcfgdataplane.DeploymentRolloutProgressingReason,
+							"Waiting for the Deployment to roll out",
+							102,
+						),
 					},
 				},
 			},
