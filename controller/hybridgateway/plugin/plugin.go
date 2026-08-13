@@ -80,6 +80,7 @@ func PluginsForRule(
 			WithPluginName(pConf.name).
 			WithPluginConfig(pConf.config).
 			WithAnnotations(httpRoute, pRef).
+			WithTagsAnnotation(httpRoute).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
@@ -116,6 +117,7 @@ func PluginsForRule(
 			WithPluginName(plugin.PluginName).
 			WithPluginConfig(plugin.Config.Raw).
 			WithAnnotations(httpRoute, pRef).
+			WithTagsAnnotation(httpRoute, plugin).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
