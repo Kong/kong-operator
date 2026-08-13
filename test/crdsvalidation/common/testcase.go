@@ -38,7 +38,7 @@ func (g TestCasesGroup[T]) Run(t *testing.T) {
 
 const (
 	// DefaultEventuallyTimeout is the default timeout for EventuallyConfig.
-	DefaultEventuallyTimeout = 5 * time.Second
+	DefaultEventuallyTimeout = 30 * time.Second
 	// DefaultEventuallyPeriod is the default period for EventuallyConfig.
 	DefaultEventuallyPeriod = 10 * time.Millisecond
 )
@@ -223,15 +223,27 @@ func (tc *TestCase[T]) RunWithConfig(t *testing.T, cfg *rest.Config, scheme *run
 			desiredObj.SetName(tc.TestObject.GetName())
 			desiredObj.SetResourceVersion(tc.TestObject.GetResourceVersion())
 
-			err = cl.Status().Update(ctx, desiredObj)
-			require.NoError(t, err)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				// Refresh the resource version on every attempt: if a prior update
+				// actually landed server-side but the client just timed out waiting
+				// for the response, reusing the stale resource version would turn
+				// the retry into a spurious conflict.
+				if !assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)) {
+					return
+				}
+				desiredObj.SetResourceVersion(tc.TestObject.GetResourceVersion())
+				assert.NoError(c, cl.Status().Update(ctx, desiredObj))
+			}, timeout, period)
 
-			err = cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject)
-			require.NoError(t, err)
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+			}, timeout, period)
 		}
 
 		if tc.Assert != nil {
-			require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+			require.EventuallyWithT(t, func(c *assert.CollectT) {
+				assert.NoError(c, cl.Get(ctx, client.ObjectKeyFromObject(tc.TestObject), tc.TestObject))
+			}, timeout, period)
 			tc.Assert(t, tc.TestObject)
 		}
 
