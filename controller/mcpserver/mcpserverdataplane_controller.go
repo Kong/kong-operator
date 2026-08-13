@@ -62,6 +62,8 @@ type MCPServerDataPlaneReconciler struct {
 
 	// eventRecorder records Kubernetes events on MCPServer objects.
 	eventRecorder events.EventRecorder
+
+	SecretLabelSelector string
 }
 
 func enqueueMCPServerForMCPServerDataPlane(cl client.Client) func(context.Context, client.Object) []reconcile.Request {
@@ -207,8 +209,13 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 		MCPServerID:        mcpServerID,
 	}
 
+	secret, err := r.ensureTokenSecret(ctx, logger, mcpDataPlane, apiAuth)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+
 	// Ensure a Deployment exists for this MCPServer.
-	deployment, err := r.ensureDeployment(ctx, logger, mcpDataPlane, mcpServerMetadata, apiAuth)
+	deployment, err := r.ensureDeployment(ctx, logger, mcpDataPlane, mcpServerMetadata, apiAuth.Spec.ServerURL, secret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

@@ -59,6 +59,80 @@ func derefImage(c *sdkkonnectcomp.ContainerSpec) string {
 	return *c.Image
 }
 
+func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
+	ctx context.Context,
+	logger logr.Logger,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) (*corev1.Secret, error) {
+	var (
+		secret = corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+	)
+
+	switch apiAuth.Spec.Type {
+	case konnectv1alpha1.KonnectAPIAuthTypeToken:
+		nn := generateWorkloadNN(mcpDataPlane)
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+			Labels: map[string]string{
+				r.SecretLabelSelector: "true",
+			},
+		}
+		secret.StringData = map[string]string{
+			"token": apiAuth.Spec.Token,
+		}
+		k8sresources.LabelObjectAsMCPServerManaged(&secret)
+		k8sutils.SetOwnerForObject(&secret, mcpDataPlane)
+
+		result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, &secret, controllerpkgssa.FieldManager)
+		if err != nil {
+			r.eventRecorder.Eventf(mcpDataPlane, nil, corev1.EventTypeWarning, "TokenSecretFailed", "ApplyTokenSecret",
+				"Failed to apply Token Secret: %v", err)
+			return nil, fmt.Errorf("failed to apply Token Secret for MCPServer %s/%s: %w",
+				mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+		}
+		switch result {
+		case op.Created:
+			log.Debug(logger, "Token Secret created", "name", secret.GetName())
+			r.eventRecorder.Eventf(mcpDataPlane, nil, corev1.EventTypeNormal, "TokenSecretCreated", "CreateTokenSecret",
+				"Token Secret %s created", secret.GetName())
+		case op.Updated:
+			log.Debug(logger, "Token Secret updated", "name", secret.GetName())
+			r.eventRecorder.Eventf(mcpDataPlane, nil, corev1.EventTypeNormal, "TokenSecretUpdated", "UpdateTokenSecret",
+				"Token Secret %s updated", secret.GetName())
+		case op.Noop, op.Deleted:
+		}
+
+		existing := &corev1.Secret{}
+		if err := r.Get(ctx, client.ObjectKeyFromObject(&secret), existing); err != nil {
+			return nil, fmt.Errorf("failed to get Token Secret after apply for MCPServer %s/%s: %w",
+				mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+		}
+		return existing, nil
+
+	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
+		secretRef := apiAuth.Spec.SecretRef.DeepCopy()
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name: secretRef.Name,
+			// default to the same namespace as the KonnectAPIAuthConfiguration
+			Namespace: apiAuth.Namespace,
+		}
+		if secretRef.Namespace != "" {
+			secret.Namespace = secretRef.Namespace
+		}
+		return &secret, nil
+	default:
+		return nil, fmt.Errorf("unsupported KonnectAPIAuthConfiguration type: %s", apiAuth.Spec.Type)
+	}
+}
+
 // ----------------------------------------------------------------------------
 // Deployment
 // ----------------------------------------------------------------------------
@@ -71,7 +145,8 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 	logger logr.Logger,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	mcpMetadata mcpServerMetadata,
-	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	apiURL string,
+	tokenSecret *corev1.Secret,
 ) (*appsv1.Deployment, error) {
 	if mcpMetadata.InitContainerImage == "" {
 		return nil, fmt.Errorf("remote MCPServer %s is missing init container info", mcpMetadata.ID)
@@ -80,7 +155,7 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 		return nil, fmt.Errorf("remote MCPServer %s is missing container info", mcpMetadata.ID)
 	}
 
-	desired := generateDeployment(logger, mcpDataPlane, mcpMetadata, apiAuth)
+	desired := generateDeployment(logger, mcpDataPlane, mcpMetadata, tokenSecret, apiURL)
 
 	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
@@ -114,7 +189,8 @@ func generateDeployment(
 	logger logr.Logger,
 	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
 	mcpMetadata mcpServerMetadata,
-	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+	tokenSecret *corev1.Secret,
+	apiURL string,
 ) *appsv1.Deployment {
 	nn := generateWorkloadNN(mcpDataPlane)
 	selectorLabels := map[string]string{
@@ -135,7 +211,7 @@ func generateDeployment(
 		// TODO: handle other scaling types (e.g. HPA) in the future when API adds them.
 	}
 
-	patEnvVar := patEnvVarFromAuth(apiAuth)
+	patEnvVar := patEnvVarFromAuth(tokenSecret)
 
 	const (
 		mcpServerVolumeName      = "mcp-server-code"
@@ -186,13 +262,15 @@ func generateDeployment(
 							Image:           mcpMetadata.InitContainerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
-								"-cp-url", apiAuth.Spec.ServerURL,
+								"-cp-url", apiURL,
 								"-cp-id", mcpMetadata.ControlPlaneID,
 								"-mcp-server-id", mcpMetadata.MCPServerID,
 								"-output-path", mcpServerVolumeMountPath + "/app.py",
 								"-pat", "$(PAT)",
 							},
-							Env: []corev1.EnvVar{patEnvVar},
+							Env: []corev1.EnvVar{
+								patEnvVar,
+							},
 							VolumeMounts: []corev1.VolumeMount{
 								{
 									Name:      mcpServerVolumeName,
@@ -300,23 +378,17 @@ func addLabelsForMCPServerDataPlaneDeployment(logger logr.Logger, deployment *ap
 // patEnvVarFromAuth builds a PAT environment variable from the given
 // KonnectAPIAuthConfiguration. For token-type auth the token value is inlined;
 // for secretRef-type auth the value is sourced from the referenced Secret.
-func patEnvVarFromAuth(apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration) corev1.EnvVar {
-	if apiAuth.Spec.Type == konnectv1alpha1.KonnectAPIAuthTypeSecretRef && apiAuth.Spec.SecretRef != nil {
-		return corev1.EnvVar{
-			Name: "PAT",
-			ValueFrom: &corev1.EnvVarSource{
-				SecretKeyRef: &corev1.SecretKeySelector{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: apiAuth.Spec.SecretRef.Name,
-					},
-					Key: "token",
-				},
-			},
-		}
-	}
+func patEnvVarFromAuth(tokenSecret *corev1.Secret) corev1.EnvVar {
 	return corev1.EnvVar{
-		Name:  "PAT",
-		Value: apiAuth.Spec.Token,
+		Name: "PAT",
+		ValueFrom: &corev1.EnvVarSource{
+			SecretKeyRef: &corev1.SecretKeySelector{
+				LocalObjectReference: corev1.LocalObjectReference{
+					Name: tokenSecret.Name,
+				},
+				Key: "token",
+			},
+		},
 	}
 }
 

@@ -21,6 +21,8 @@ import (
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 const (
@@ -53,6 +55,49 @@ func mcpServerMetadataWithContainers() mcpServerMetadata {
 		ControlPlaneID:     "cp-id",
 		MCPServerID:        "mcp-server-id",
 	}
+}
+
+func tokenSecret(
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
+) *corev1.Secret {
+	var (
+		secret = corev1.Secret{
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: "v1",
+				Kind:       "Secret",
+			},
+			Type: corev1.SecretTypeOpaque,
+		}
+	)
+
+	switch apiAuth.Spec.Type {
+	case konnectv1alpha1.KonnectAPIAuthTypeToken:
+		nn := generateWorkloadNN(mcpDataPlane)
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+		}
+		secret.StringData = map[string]string{
+			"token": apiAuth.Spec.Token,
+		}
+		k8sresources.LabelObjectAsMCPServerManaged(&secret)
+		k8sutils.SetOwnerForObject(&secret, mcpDataPlane)
+	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
+		secretRef := apiAuth.Spec.SecretRef.DeepCopy()
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name: secretRef.Name,
+			// default to the same namespace as the KonnectAPIAuthConfiguration
+			Namespace: apiAuth.Namespace,
+		}
+		if secretRef.Namespace != "" {
+			secret.Namespace = secretRef.Namespace
+		}
+	default:
+		return nil
+	}
+
+	return &secret
 }
 
 func Test_ensureDeployment(t *testing.T) {
@@ -92,7 +137,8 @@ func Test_ensureDeployment(t *testing.T) {
 			metadata:    mcpServerMetadataWithContainers(),
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder) {
-				_, _ = r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, mcpServerMetadataWithContainers(), apiAuth)
+				ts := tokenSecret(mcpDataPlane, apiAuth)
+				_, _ = r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, mcpServerMetadataWithContainers(), apiAuth.Spec.ServerURL, ts)
 				<-rec.Events
 			},
 			wantEvent: "DeploymentUpdated",
@@ -126,7 +172,8 @@ func Test_ensureDeployment(t *testing.T) {
 				testcase.prepareRecorder(t, r, recorder)
 			}
 
-			deploy, err := r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, testcase.metadata, apiAuth)
+			tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+			deploy, err := r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, testcase.metadata, apiAuth.Spec.ServerURL, tokenSecret)
 
 			if testcase.wantErr {
 				require.Error(t, err)
@@ -231,7 +278,8 @@ func Test_generateDeployment(t *testing.T) {
 	apiAuth := minimalAPIAuth()
 	metadata := mcpServerMetadataWithContainers()
 
-	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
+	tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 	nn := generateWorkloadNN(mcpDataPlane)
 	assert.Equal(t, nn.Name, deploy.Name)
@@ -263,7 +311,8 @@ func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
 	apiAuth := minimalAPIAuth()
 	metadata := mcpServerMetadataWithContainers()
 
-	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
+	tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 	assert.Equal(t, "platform", deploy.Labels["team"])
 	assert.Equal(t, consts.MCPServerManagedByLabelValue, deploy.Labels[consts.GatewayOperatorManagedByLabel],
@@ -420,7 +469,8 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			mcpDataPlane := minimalMCPServerDataPlane()
 			mcpDataPlane.Spec.Deployment = tc.deployment
 
-			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, apiAuth)
+			tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 			require.NotNil(t, deploy.Spec.Replicas)
 			assert.Equal(t, tc.want, *deploy.Spec.Replicas)
@@ -441,26 +491,12 @@ func Test_generateService(t *testing.T) {
 }
 
 func Test_patEnvVarFromAuth(t *testing.T) {
-	t.Run("token type inlines the token value", func(t *testing.T) {
-		apiAuth := minimalAPIAuth()
-		env := patEnvVarFromAuth(apiAuth)
-		assert.Equal(t, "PAT", env.Name)
-		assert.Equal(t, "test-token", env.Value)
-		assert.Nil(t, env.ValueFrom)
-	})
-
-	t.Run("secretRef type sources the value from a Secret", func(t *testing.T) {
-		apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
-				Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
-				SecretRef: &corev1.SecretReference{Name: "konnect-token"},
-			},
-		}
-		env := patEnvVarFromAuth(apiAuth)
-		assert.Equal(t, "PAT", env.Name)
-		require.NotNil(t, env.ValueFrom)
-		require.NotNil(t, env.ValueFrom.SecretKeyRef)
-		assert.Equal(t, "konnect-token", env.ValueFrom.SecretKeyRef.Name)
-		assert.Equal(t, "token", env.ValueFrom.SecretKeyRef.Key)
-	})
+	apiAuth := minimalAPIAuth()
+	secret := tokenSecret(minimalMCPServerDataPlane(), apiAuth)
+	env := patEnvVarFromAuth(secret)
+	assert.Equal(t, "PAT", env.Name)
+	require.NotNil(t, env.ValueFrom)
+	require.NotNil(t, env.ValueFrom.SecretKeyRef)
+	assert.Equal(t, secret.Name, env.ValueFrom.SecretKeyRef.Name)
+	assert.Equal(t, "token", env.ValueFrom.SecretKeyRef.Key)
 }
