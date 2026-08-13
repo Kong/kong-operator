@@ -26,7 +26,7 @@ spec:
 kind: AIGatewayPolicy
 apiVersion: konnect.konghq.com/v1alpha1
 metadata:
-  name: aigw-agent-policy-prompt-decorator
+  name: aigw-agent-policy-rate-limiting-advanced
   namespace: default
 spec:
   aiGatewayRef:
@@ -34,21 +34,25 @@ spec:
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
-    name: aigw-agent-policy-prompt-decorator
-    displayName: AI Gateway Policy Prompt Decorator
-    type: ai-prompt-decorator
+    name: aigw-agent-policy-rate-limiting-advanced
+    displayName: AI Gateway Policy Rate Limiting Advanced
+    # NOTE: not every policy type is available on every scope. The "agents"
+    # scope (used below by AIGatewayAgent) only supports a subset of policy
+    # types (e.g. "rate-limiting-advanced"); policies scoped to "models",
+    # "consumers" and "consumerGroups" only (like "ai-prompt-decorator")
+    # cannot be referenced from an AIGatewayAgent.
+    type: rate-limiting-advanced
     enabled: Enabled
     global: Disabled
     config:
       type: "inline"
       value:
-        llm_format: openai
-        max_request_body_size: 8388608
-        prompts:
-          append: null
-          prepend:
-            - content: "In short words"
-              role: user
+        limit:
+          - 10
+        window_size:
+          - 60
+        sync_rate: -1
+        strategy: local
 ---
 kind: AIGatewayConsumerGroup
 apiVersion: konnect.konghq.com/v1alpha1
@@ -80,8 +84,9 @@ spec:
     type: http
     enabled: Enabled
     # References to AIGatewayPolicy CRs (by metadata.name) applied to this agent.
+    # Only policy types supported for the "agents" scope can be referenced here.
     policies:
-      - name: aigw-agent-policy-prompt-decorator
+      - name: aigw-agent-policy-rate-limiting-advanced
     # Access control: allow-list of AIGatewayConsumerGroup
     # CRs (referenced by metadata.name). The operator resolves each reference to
     # the referenced CR's Konnect name at reconcile time.
