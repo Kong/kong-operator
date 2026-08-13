@@ -59,6 +59,7 @@ func GRPCPluginsForRule(
 				WithPluginName(conf.name).
 				WithPluginConfig(conf.config).
 				WithAnnotations(grpcRoute, pRef).
+				WithTagsAnnotation(grpcRoute).
 				Build()
 			if err != nil {
 				return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
@@ -96,6 +97,7 @@ func GRPCPluginsForRule(
 			WithPluginName(plugin.PluginName).
 			WithPluginConfig(plugin.Config.Raw).
 			WithAnnotations(grpcRoute, pRef).
+			WithTagsAnnotation(grpcRoute, plugin).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
