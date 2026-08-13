@@ -81,9 +81,11 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 		secret.ObjectMeta = metav1.ObjectMeta{
 			Name:      nn.Name,
 			Namespace: nn.Namespace,
-			Labels: map[string]string{
+		}
+		if r.SecretLabelSelector != "" {
+			secret.Labels = map[string]string{
 				r.SecretLabelSelector: "true",
-			},
+			}
 		}
 		secret.StringData = map[string]string{
 			"token": apiAuth.Spec.Token,
