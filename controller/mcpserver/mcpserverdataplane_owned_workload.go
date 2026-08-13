@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
@@ -16,6 +17,7 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
+	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/reservedkeys"
@@ -87,8 +89,8 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 				r.SecretLabelSelector: "true",
 			}
 		}
-		secret.StringData = map[string]string{
-			"token": apiAuth.Spec.Token,
+		secret.Data = map[string][]byte{
+			konnectcontroller.SecretTokenKey: []byte(apiAuth.Spec.Token),
 		}
 		k8sresources.LabelObjectAsMCPServerManaged(&secret)
 		k8sutils.SetOwnerForObject(&secret, mcpDataPlane)
@@ -112,22 +114,47 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 		case op.Noop, op.Deleted:
 		}
 
-		existing := &corev1.Secret{}
-		if err := r.Get(ctx, client.ObjectKeyFromObject(&secret), existing); err != nil {
-			return nil, fmt.Errorf("failed to get Token Secret after apply for MCPServer %s/%s: %w",
-				mcpDataPlane.Namespace, mcpDataPlane.Name, err)
-		}
-		return existing, nil
+		// Only the name is used downstream (patEnvVarFromAuth), and it's
+		// already known from generateWorkloadNN. Avoid a Get through the
+		// (possibly lagging) manager cache right after the apply.
+		return &secret, nil
 
 	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
 		secretRef := apiAuth.Spec.SecretRef.DeepCopy()
-		secret.ObjectMeta = metav1.ObjectMeta{
-			Name: secretRef.Name,
+		ns := secretRef.Namespace
+		if ns == "" {
 			// default to the same namespace as the KonnectAPIAuthConfiguration
-			Namespace: apiAuth.Namespace,
+			ns = apiAuth.Namespace
 		}
-		if secretRef.Namespace != "" {
-			secret.Namespace = secretRef.Namespace
+		if ns != mcpDataPlane.Namespace {
+			// A SecretKeyRef only resolves inside the Pod's own namespace, so
+			// a cross-namespace secretRef would leave the Deployment mounting
+			// a Secret that doesn't exist there.
+			return nil, fmt.Errorf(
+				"KonnectAPIAuthConfiguration %s/%s references Secret %s/%s in a different namespace than MCPServerDataPlane %s/%s: a Pod can only mount Secrets from its own namespace",
+				apiAuth.Namespace, apiAuth.Name, ns, secretRef.Name,
+				mcpDataPlane.Namespace, mcpDataPlane.Name,
+			)
+		}
+		secret.ObjectMeta = metav1.ObjectMeta{
+			Name:      secretRef.Name,
+			Namespace: ns,
+		}
+
+		// If auth switched from token to secretRef, delete the Secret this
+		// controller generated earlier so the plaintext PAT doesn't linger.
+		if generatedNN := generateWorkloadNN(mcpDataPlane); generatedNN.Name != secretRef.Name {
+			var stale corev1.Secret
+			switch err := r.Get(ctx, generatedNN, &stale); {
+			case err == nil:
+				if err := r.Delete(ctx, &stale); err != nil && !apierrors.IsNotFound(err) {
+					return nil, fmt.Errorf("failed to delete stale Token Secret %s for MCPServer %s/%s: %w",
+						generatedNN, mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+				}
+			case !apierrors.IsNotFound(err):
+				return nil, fmt.Errorf("failed to get stale Token Secret %s for MCPServer %s/%s: %w",
+					generatedNN, mcpDataPlane.Namespace, mcpDataPlane.Name, err)
+			}
 		}
 		return &secret, nil
 	default:
@@ -377,9 +404,9 @@ func addLabelsForMCPServerDataPlaneDeployment(logger logr.Logger, deployment *ap
 	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
 }
 
-// patEnvVarFromAuth builds a PAT environment variable from the given
-// KonnectAPIAuthConfiguration. For token-type auth the token value is inlined;
-// for secretRef-type auth the value is sourced from the referenced Secret.
+// patEnvVarFromAuth builds a PAT environment variable sourced from the given
+// token Secret, as returned by ensureTokenSecret for both the token and
+// secretRef KonnectAPIAuthConfiguration types.
 func patEnvVarFromAuth(tokenSecret *corev1.Secret) corev1.EnvVar {
 	return corev1.EnvVar{
 		Name: "PAT",
@@ -388,7 +415,7 @@ func patEnvVarFromAuth(tokenSecret *corev1.Secret) corev1.EnvVar {
 				LocalObjectReference: corev1.LocalObjectReference{
 					Name: tokenSecret.Name,
 				},
-				Key: "token",
+				Key: konnectcontroller.SecretTokenKey,
 			},
 		},
 	}

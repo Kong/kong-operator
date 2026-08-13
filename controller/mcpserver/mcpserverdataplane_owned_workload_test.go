@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -19,10 +20,9 @@ import (
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
+	konnectcontroller "github.com/kong/kong-operator/v2/controller/konnect"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
-	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 const (
@@ -57,47 +57,13 @@ func mcpServerMetadataWithContainers() mcpServerMetadata {
 	}
 }
 
-func tokenSecret(
-	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
-	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-) *corev1.Secret {
-	var (
-		secret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			Type: corev1.SecretTypeOpaque,
-		}
-	)
-
-	switch apiAuth.Spec.Type {
-	case konnectv1alpha1.KonnectAPIAuthTypeToken:
-		nn := generateWorkloadNN(mcpDataPlane)
-		secret.ObjectMeta = metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		}
-		secret.StringData = map[string]string{
-			"token": apiAuth.Spec.Token,
-		}
-		k8sresources.LabelObjectAsMCPServerManaged(&secret)
-		k8sutils.SetOwnerForObject(&secret, mcpDataPlane)
-	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
-		secretRef := apiAuth.Spec.SecretRef.DeepCopy()
-		secret.ObjectMeta = metav1.ObjectMeta{
-			Name: secretRef.Name,
-			// default to the same namespace as the KonnectAPIAuthConfiguration
-			Namespace: apiAuth.Namespace,
-		}
-		if secretRef.Namespace != "" {
-			secret.Namespace = secretRef.Namespace
-		}
-	default:
-		return nil
-	}
-
-	return &secret
+// tokenSecret returns a bare Secret with the name/namespace ensureTokenSecret
+// would generate. Callers that only need patEnvVarFromAuth/generateDeployment
+// to resolve a Secret name don't need its content, so this doesn't replicate
+// ensureTokenSecret's body (see Test_ensureTokenSecret for that).
+func tokenSecret(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) *corev1.Secret {
+	nn := generateWorkloadNN(mcpDataPlane)
+	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nn.Name, Namespace: nn.Namespace}}
 }
 
 func Test_ensureDeployment(t *testing.T) {
@@ -137,7 +103,7 @@ func Test_ensureDeployment(t *testing.T) {
 			metadata:    mcpServerMetadataWithContainers(),
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder) {
-				ts := tokenSecret(mcpDataPlane, apiAuth)
+				ts := tokenSecret(mcpDataPlane)
 				_, _ = r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, mcpServerMetadataWithContainers(), apiAuth.Spec.ServerURL, ts)
 				<-rec.Events
 			},
@@ -172,7 +138,7 @@ func Test_ensureDeployment(t *testing.T) {
 				testcase.prepareRecorder(t, r, recorder)
 			}
 
-			tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+			tokenSecret := tokenSecret(mcpDataPlane)
 			deploy, err := r.ensureDeployment(t.Context(), logr.Discard(), mcpDataPlane, testcase.metadata, apiAuth.Spec.ServerURL, tokenSecret)
 
 			if testcase.wantErr {
@@ -181,6 +147,143 @@ func Test_ensureDeployment(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				require.NotNil(t, deploy)
+			}
+
+			if testcase.wantEvent != "" {
+				select {
+				case event := <-recorder.Events:
+					assert.Contains(t, event, testcase.wantEvent)
+				default:
+					t.Errorf("expected event containing %q but channel was empty", testcase.wantEvent)
+				}
+			} else {
+				assert.Empty(t, recorder.Events, "expected no events but got %d", len(recorder.Events))
+			}
+		})
+	}
+}
+
+func Test_ensureTokenSecret(t *testing.T) {
+	scheme := managerscheme.Get()
+	tc := managedfields.NewDeducedTypeConverter()
+	mcpDataPlane := minimalMCPServerDataPlane()
+
+	tests := []struct {
+		name                string
+		secretLabelSelector string
+		apiAuth             *konnectv1alpha1.KonnectAPIAuthConfiguration
+		buildClient         func(base client.WithWatch) client.Client
+		seed                []client.Object
+		wantErr             bool
+		wantEvent           string
+		check               func(t *testing.T, secret *corev1.Secret, c client.Client)
+	}{
+		{
+			name:    "token type creates a Secret with Data (not StringData) and no empty label",
+			apiAuth: minimalAPIAuth(),
+			check: func(t *testing.T, secret *corev1.Secret, c client.Client) {
+				assert.Equal(t, []byte("test-token"), secret.Data[konnectcontroller.SecretTokenKey])
+				assert.Nil(t, secret.StringData)
+				assert.NotContains(t, secret.Labels, "")
+				assert.Equal(t, consts.MCPServerManagedByLabelValue, secret.Labels[consts.GatewayOperatorManagedByLabel])
+				require.Len(t, secret.OwnerReferences, 1)
+				assert.Equal(t, mcpDataPlane.Name, secret.OwnerReferences[0].Name)
+			},
+			wantEvent: "TokenSecretCreated",
+		},
+		{
+			name:                "token type with a SecretLabelSelector sets the label",
+			secretLabelSelector: "konghq.com/some-selector",
+			apiAuth:             minimalAPIAuth(),
+			check: func(t *testing.T, secret *corev1.Secret, c client.Client) {
+				assert.Equal(t, "true", secret.Labels["konghq.com/some-selector"])
+			},
+			wantEvent: "TokenSecretCreated",
+		},
+		{
+			name: "secretRef type in the same namespace returns the referenced name and deletes a stale generated Secret",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "user-provided-secret"},
+				},
+			},
+			seed: []client.Object{tokenSecret(mcpDataPlane)},
+			check: func(t *testing.T, secret *corev1.Secret, c client.Client) {
+				assert.Equal(t, "user-provided-secret", secret.Name)
+				assert.Equal(t, testMCPServerNamespace, secret.Namespace)
+
+				stale := tokenSecret(mcpDataPlane)
+				err := c.Get(t.Context(), client.ObjectKeyFromObject(stale), stale)
+				assert.True(t, apierrors.IsNotFound(err), "stale generated Token Secret should have been deleted, got err: %v", err)
+			},
+		},
+		{
+			name: "secretRef type in a different namespace is rejected",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
+					SecretRef: &corev1.SecretReference{Name: "other-ns-secret", Namespace: "other-ns"},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "unsupported auth type returns an error",
+			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
+				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Spec:       konnectv1alpha1.KonnectAPIAuthConfigurationSpec{Type: "bogus"},
+			},
+			wantErr: true,
+		},
+		{
+			name:    "apply error is propagated and TokenSecretFailed event is recorded",
+			apiAuth: minimalAPIAuth(),
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Apply: func(ctx context.Context, c client.WithWatch, obj runtime.ApplyConfiguration, opts ...client.ApplyOption) error {
+						return assert.AnError
+					},
+				})
+			},
+			wantErr:   true,
+			wantEvent: "TokenSecretFailed",
+		},
+	}
+
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
+			recorder := events.NewFakeRecorder(10)
+			builder := fake.NewClientBuilder().WithScheme(scheme)
+			if len(testcase.seed) > 0 {
+				builder = builder.WithObjects(testcase.seed...)
+			}
+			base := builder.Build()
+			buildClient := testcase.buildClient
+			if buildClient == nil {
+				buildClient = func(base client.WithWatch) client.Client { return base }
+			}
+			r := &MCPServerDataPlaneReconciler{
+				Client:              buildClient(base),
+				TypeConverter:       tc,
+				eventRecorder:       recorder,
+				SecretLabelSelector: testcase.secretLabelSelector,
+			}
+
+			secret, err := r.ensureTokenSecret(t.Context(), logr.Discard(), mcpDataPlane, testcase.apiAuth)
+
+			if testcase.wantErr {
+				require.Error(t, err)
+				assert.Nil(t, secret)
+			} else {
+				require.NoError(t, err)
+				require.NotNil(t, secret)
+			}
+
+			if testcase.check != nil {
+				testcase.check(t, secret, r.Client)
 			}
 
 			if testcase.wantEvent != "" {
@@ -278,7 +381,7 @@ func Test_generateDeployment(t *testing.T) {
 	apiAuth := minimalAPIAuth()
 	metadata := mcpServerMetadataWithContainers()
 
-	tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+	tokenSecret := tokenSecret(mcpDataPlane)
 	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 	nn := generateWorkloadNN(mcpDataPlane)
@@ -311,7 +414,7 @@ func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
 	apiAuth := minimalAPIAuth()
 	metadata := mcpServerMetadataWithContainers()
 
-	tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+	tokenSecret := tokenSecret(mcpDataPlane)
 	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 	assert.Equal(t, "platform", deploy.Labels["team"])
@@ -469,7 +572,7 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			mcpDataPlane := minimalMCPServerDataPlane()
 			mcpDataPlane.Spec.Deployment = tc.deployment
 
-			tokenSecret := tokenSecret(mcpDataPlane, apiAuth)
+			tokenSecret := tokenSecret(mcpDataPlane)
 			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
 			require.NotNil(t, deploy.Spec.Replicas)
@@ -491,12 +594,11 @@ func Test_generateService(t *testing.T) {
 }
 
 func Test_patEnvVarFromAuth(t *testing.T) {
-	apiAuth := minimalAPIAuth()
-	secret := tokenSecret(minimalMCPServerDataPlane(), apiAuth)
+	secret := tokenSecret(minimalMCPServerDataPlane())
 	env := patEnvVarFromAuth(secret)
 	assert.Equal(t, "PAT", env.Name)
 	require.NotNil(t, env.ValueFrom)
 	require.NotNil(t, env.ValueFrom.SecretKeyRef)
 	assert.Equal(t, secret.Name, env.ValueFrom.SecretKeyRef.Name)
-	assert.Equal(t, "token", env.ValueFrom.SecretKeyRef.Key)
+	assert.Equal(t, konnectcontroller.SecretTokenKey, env.ValueFrom.SecretKeyRef.Key)
 }
