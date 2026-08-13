@@ -94,8 +94,9 @@
   the behavior that already applied to every other Konnect entity.
   [#5207](https://github.com/Kong/kong-operator/pull/5207)
 - AIGateway: update the default AI Gateway DataPlane image to
-  `kong/kong-ai-gateway-dev:2.0.2-rc.1`.
+  `kong/kong-ai-gateway-dev:2.0.2-rc.2`.
   [#5231](https://github.com/Kong/kong-operator/pull/5231)
+  [#5269](https://github.com/Kong/kong-operator/pull/5269)
 - AIGateway: enable AIGatewayAgent and AIGatewayModel to reference IdentityProvider
   [#5265](https://github.com/Kong/kong-operator/pull/5265)
 
