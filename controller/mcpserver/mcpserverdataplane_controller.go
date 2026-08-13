@@ -125,6 +125,7 @@ func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr
 		For(&mcpv1alpha1.MCPServerDataPlane{}).
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
+		Owns(&corev1.Secret{}).
 		Owns(&configurationv1alpha1.KongService{}).
 		Owns(&configurationv1alpha1.KongRoute{}).
 		Owns(&configurationv1.KongPlugin{}).
