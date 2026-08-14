@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"sort"
 	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -130,6 +131,7 @@ func (b *KongPluginBuilder) WithTagsAnnotation(sources ...pkgmetadata.ObjectWith
 	if b.plugin.Annotations == nil {
 		b.plugin.Annotations = make(map[string]string)
 	}
+	sort.Strings(deduped)
 	b.plugin.Annotations[pkgmetadata.AnnotationKeyTags] = strings.Join(deduped, ",")
 	return b
 }

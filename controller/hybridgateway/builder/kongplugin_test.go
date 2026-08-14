@@ -204,3 +204,113 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	assert.NotNil(t, plugin.Annotations)
 	assert.JSONEq(t, string(config), string(plugin.Config.Raw))
 }
+
+func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
+	t.Run("tags from single source", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "team-payments,env-prod",
+				},
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsAnnotation(route).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "env-prod,team-payments", plugin.Annotations["konghq.com/tags"])
+	})
+
+	t.Run("tags from multiple sources are merged and deduplicated", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "shared-tag,route-tag",
+				},
+			},
+		}
+		sourcePlugin := &configurationv1.KongPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "user-plugin",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "shared-tag,plugin-tag",
+				},
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsAnnotation(route, sourcePlugin).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "plugin-tag,route-tag,shared-tag", plugin.Annotations["konghq.com/tags"])
+	})
+
+	t.Run("no tags annotation when sources have no tags", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsAnnotation(route).
+			Build()
+		require.NoError(t, err)
+		assert.Empty(t, plugin.Annotations["konghq.com/tags"])
+	})
+
+	t.Run("nil source is safely skipped", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "my-tag",
+				},
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsAnnotation(route, nil).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "my-tag", plugin.Annotations["konghq.com/tags"])
+	})
+
+	t.Run("tags annotation preserved alongside tracking annotations", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "my-tag",
+				},
+			},
+		}
+		parentRef := &gwtypes.ParentReference{
+			Name: "test-gateway",
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithAnnotations(route, parentRef).
+			WithTagsAnnotation(route).
+			Build()
+		require.NoError(t, err)
+		// Tags annotation should be present
+		assert.Equal(t, "my-tag", plugin.Annotations["konghq.com/tags"])
+		// Tracking annotations from BuildAnnotations should also be present
+		assert.NotEmpty(t, plugin.Annotations["gateway-operator.konghq.com/hybrid-gateways"])
+	})
+}
