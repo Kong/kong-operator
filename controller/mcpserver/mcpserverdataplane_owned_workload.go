@@ -120,6 +120,10 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 		return &secret, nil
 
 	case konnectv1alpha1.KonnectAPIAuthTypeSecretRef:
+		if apiAuth.Spec.SecretRef == nil {
+			return nil, fmt.Errorf("KonnectAPIAuthConfiguration %s/%s has auth type secretRef but no spec.secretRef",
+				apiAuth.Namespace, apiAuth.Name)
+		}
 		secretRef := apiAuth.Spec.SecretRef.DeepCopy()
 		ns := secretRef.Namespace
 		if ns == "" {
