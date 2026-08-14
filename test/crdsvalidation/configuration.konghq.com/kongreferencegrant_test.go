@@ -302,29 +302,6 @@ func TestKongReferenceGrant(t *testing.T) {
 				},
 				ExpectedErrorMessage: new("namespace must be empty for KongVault and non-empty for other kinds"),
 			},
-			{
-				Name: "an unsupported target kind in the konnect group is rejected",
-				TestObject: &configurationv1alpha1.KongReferenceGrant{
-					TypeMeta:   typeMeta,
-					ObjectMeta: common.CommonObjectMeta(ns.Name),
-					Spec: configurationv1alpha1.KongReferenceGrantSpec{
-						From: []configurationv1alpha1.ReferenceGrantFrom{
-							{
-								Namespace: configurationv1alpha1.Namespace(""),
-								Kind:      "KongVault",
-								Group:     "configuration.konghq.com",
-							},
-						},
-						To: []configurationv1alpha1.ReferenceGrantTo{
-							{
-								Group: "konnect.konghq.com",
-								Kind:  "KonnectConfigStoreTypo",
-							},
-						},
-					},
-				},
-				ExpectedErrorMessage: new("kinds are supported for 'konnect.konghq.com' group"),
-			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

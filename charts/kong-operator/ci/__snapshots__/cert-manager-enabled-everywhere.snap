@@ -19687,8 +19687,6 @@ spec:
                   x-kubernetes-validations:
                   - message: Only 'Secret' kind is supported for 'core' group
                     rule: .self.group != 'core' || .self.kind == 'Secret'
-                  - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster' and 'KonnectConfigStore' kinds are supported for 'konnect.konghq.com' group
-                    rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore']
                   - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']
                 maxItems: 16
@@ -42535,7 +42533,9 @@ spec:
                                       minLength: 1
                                       type: string
                                     namespace:
-                                      description: Namespace is reserved for future cross-namespace support.
+                                      description: |-
+                                        Namespace, if set to a namespace other than the referrer's, must be
+                                        permitted by a KongReferenceGrant in that namespace.
                                       type: string
                                   required:
                                   - name
@@ -42567,7 +42567,9 @@ spec:
                                       minLength: 1
                                       type: string
                                     namespace:
-                                      description: Namespace is reserved for future cross-namespace support.
+                                      description: |-
+                                        Namespace, if set to a namespace other than the referrer's, must be
+                                        permitted by a KongReferenceGrant in that namespace.
                                       type: string
                                   required:
                                   - name
@@ -55253,7 +55255,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -55285,7 +55289,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -59623,7 +59629,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -59655,7 +59663,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
