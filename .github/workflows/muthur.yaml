@@ -20,7 +20,7 @@ on:
 env:
   CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.0.4
   AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.9.7
-  KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.0
+  KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.1
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
