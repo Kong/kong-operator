@@ -13,6 +13,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
+	clientgoapplyconfigurations "k8s.io/client-go/applyconfigurations"
+	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -165,7 +167,12 @@ func Test_ensureDeployment(t *testing.T) {
 
 func Test_ensureTokenSecret(t *testing.T) {
 	scheme := managerscheme.Get()
-	tc := managedfields.NewDeducedTypeConverter()
+	// A real, built-in-type TypeConverter (not managedfields.NewDeducedTypeConverter,
+	// used by the other Test_ensure* functions in this file) is required here: the
+	// no-op case below relies on the fake client's SSA emulation correctly detecting
+	// "no changes" on a second identical apply, which only works when field sets are
+	// computed from a schema, not deduced per-call from each object's own JSON shape.
+	tc := clientgoapplyconfigurations.NewTypeConverter(clientgoscheme.Scheme)
 	mcpDataPlane := minimalMCPServerDataPlane()
 
 	tests := []struct {
@@ -174,6 +181,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 		apiAuth             *konnectv1alpha1.KonnectAPIAuthConfiguration
 		buildClient         func(base client.WithWatch) client.Client
 		seed                []client.Object
+		prepareRecorder     func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder)
 		wantErr             bool
 		wantEvent           string
 		check               func(t *testing.T, secret *corev1.Secret, c client.Client)
@@ -239,6 +247,15 @@ func Test_ensureTokenSecret(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "second identical call is a no-op and records no event",
+			apiAuth: minimalAPIAuth(),
+			prepareRecorder: func(t *testing.T, r *MCPServerDataPlaneReconciler, rec *events.FakeRecorder) {
+				_, err := r.ensureTokenSecret(t.Context(), logr.Discard(), mcpDataPlane, minimalAPIAuth())
+				require.NoError(t, err)
+				<-rec.Events // drain TokenSecretCreated
+			},
+		},
+		{
 			name:    "apply error is propagated and TokenSecretFailed event is recorded",
 			apiAuth: minimalAPIAuth(),
 			buildClient: func(base client.WithWatch) client.Client {
@@ -256,7 +273,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
-			builder := fake.NewClientBuilder().WithScheme(scheme)
+			builder := fake.NewClientBuilder().WithScheme(scheme).WithReturnManagedFields()
 			if len(testcase.seed) > 0 {
 				builder = builder.WithObjects(testcase.seed...)
 			}
@@ -270,6 +287,10 @@ func Test_ensureTokenSecret(t *testing.T) {
 				TypeConverter:       tc,
 				eventRecorder:       recorder,
 				SecretLabelSelector: testcase.secretLabelSelector,
+			}
+
+			if testcase.prepareRecorder != nil {
+				testcase.prepareRecorder(t, r, recorder)
 			}
 
 			secret, err := r.ensureTokenSecret(t.Context(), logr.Discard(), mcpDataPlane, testcase.apiAuth)
