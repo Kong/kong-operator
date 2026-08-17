@@ -16,6 +16,11 @@ func TestFinalizerConstants(t *testing.T) {
 		assert.NotEmpty(t, HybridHTTPRouteFinalizer)
 	})
 
+	t.Run("GRPCRouteFinalizer is defined", func(t *testing.T) {
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-grpcroute-cleanup", HybridGRPCRouteFinalizer)
+		assert.NotEmpty(t, HybridGRPCRouteFinalizer)
+	})
+
 	t.Run("GatewayFinalizer is defined", func(t *testing.T) {
 		assert.Equal(t, "gateway-operator.konghq.com/hybrid-gateway-cleanup", HybridGatewayFinalizer)
 		assert.NotEmpty(t, HybridGatewayFinalizer)
@@ -37,7 +42,7 @@ func TestFinalizerConstants(t *testing.T) {
 	})
 
 	t.Run("all finalizers are unique", func(t *testing.T) {
-		finalizers := []string{HybridHTTPRouteFinalizer, HybridTLSRouteFinalizer, HybridTCPRouteFinalizer, HybridUDPRouteFinalizer, HybridGatewayFinalizer, HybridDefaultFinalizer}
+		finalizers := []string{HybridHTTPRouteFinalizer, HybridGRPCRouteFinalizer, HybridTLSRouteFinalizer, HybridTCPRouteFinalizer, HybridUDPRouteFinalizer, HybridGatewayFinalizer, HybridDefaultFinalizer}
 		seen := make(map[string]bool)
 		for _, f := range finalizers {
 			assert.False(t, seen[f], "Duplicate finalizer found: %s", f)
@@ -46,7 +51,7 @@ func TestFinalizerConstants(t *testing.T) {
 	})
 
 	t.Run("all finalizers follow naming convention", func(t *testing.T) {
-		finalizers := []string{HybridHTTPRouteFinalizer, HybridTLSRouteFinalizer, HybridTCPRouteFinalizer, HybridUDPRouteFinalizer, HybridGatewayFinalizer, HybridDefaultFinalizer}
+		finalizers := []string{HybridHTTPRouteFinalizer, HybridGRPCRouteFinalizer, HybridTLSRouteFinalizer, HybridTCPRouteFinalizer, HybridUDPRouteFinalizer, HybridGatewayFinalizer, HybridDefaultFinalizer}
 		for _, f := range finalizers {
 			assert.Contains(t, f, "gateway-operator.konghq.com/", "Finalizer should contain domain prefix: %s", f)
 			assert.Contains(t, f, "-cleanup", "Finalizer should contain -cleanup suffix: %s", f)
@@ -65,6 +70,18 @@ func TestGetFinalizerForType(t *testing.T) {
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridHTTPRouteFinalizer, finalizer)
 		assert.Equal(t, "gateway-operator.konghq.com/hybrid-httproute-cleanup", finalizer)
+	})
+
+	t.Run("GRPCRoute returns GRPCRouteFinalizer", func(t *testing.T) {
+		route := gwtypes.GRPCRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+			},
+		}
+		finalizer := GetFinalizerForType(route)
+		assert.Equal(t, HybridGRPCRouteFinalizer, finalizer)
+		assert.Equal(t, "gateway-operator.konghq.com/hybrid-grpcroute-cleanup", finalizer)
 	})
 
 	t.Run("Gateway returns GatewayFinalizer", func(t *testing.T) {
@@ -95,6 +112,12 @@ func TestGetFinalizerForType(t *testing.T) {
 		route := gwtypes.HTTPRoute{}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridHTTPRouteFinalizer, finalizer)
+	})
+
+	t.Run("works with zero-value GRPCRoute", func(t *testing.T) {
+		route := gwtypes.GRPCRoute{}
+		finalizer := GetFinalizerForType(route)
+		assert.Equal(t, HybridGRPCRouteFinalizer, finalizer)
 	})
 
 	t.Run("works with zero-value Gateway", func(t *testing.T) {
@@ -143,6 +166,7 @@ func TestGenericTypeConstraints(t *testing.T) {
 		// This test verifies that we're using the same RootObject constraint
 		// from the converter package
 		testGenericFinalizerFunction[gwtypes.HTTPRoute](t)
+		testGenericFinalizerFunction[gwtypes.GRPCRoute](t)
 		testGenericFinalizerFunction[gwtypes.TCPRoute](t)
 		testGenericFinalizerFunction[gwtypes.UDPRoute](t)
 		testGenericFinalizerFunction[gwtypes.Gateway](t)

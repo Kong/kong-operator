@@ -87,6 +87,69 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 				&configurationv1alpha1.KongReferenceGrant{},
 			},
 		}
+	case *gwtypes.GRPCRoute:
+		return []Watcher{
+			{
+				MapRouteForGateway(cl, gwtypes.GRPCRoute{}),
+				&gwtypes.Gateway{},
+			},
+			{
+				MapRouteForGatewayClass(cl, gwtypes.GRPCRoute{}),
+				&gwtypes.GatewayClass{},
+			},
+			{
+				MapRouteForService(cl, gwtypes.GRPCRoute{}),
+				&corev1.Service{},
+			},
+			{
+				MapRouteForEndpointSlice(cl, gwtypes.GRPCRoute{}),
+				&discoveryv1.EndpointSlice{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindGRPCRoute),
+				&configurationv1alpha1.KongUpstream{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongTarget](kindGRPCRoute),
+				&configurationv1alpha1.KongTarget{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongService](kindGRPCRoute),
+				&configurationv1alpha1.KongService{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongRoute](kindGRPCRoute),
+				&configurationv1alpha1.KongRoute{},
+			},
+			{
+				MapGRPCRouteForKongPlugin(cl),
+				&configurationv1.KongPlugin{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongPluginBinding](kindGRPCRoute),
+				&configurationv1alpha1.KongPluginBinding{},
+			},
+			{
+				MapGRPCRouteForReferenceGrant(cl),
+				&gwtypes.ReferenceGrant{},
+			},
+			{
+				MapGRPCRouteForKongUpstreamPolicy(cl),
+				&configurationv1beta1.KongUpstreamPolicy{},
+			},
+			{
+				MapGRPCRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindGRPCRoute),
+				&configurationv1alpha1.KongCertificate{},
+			},
+			{
+				MapRouteForKongResource[*configurationv1alpha1.KongReferenceGrant](kindGRPCRoute),
+				&configurationv1alpha1.KongReferenceGrant{},
+			},
+		}
 	case *gwtypes.TLSRoute:
 		return []Watcher{
 			{
