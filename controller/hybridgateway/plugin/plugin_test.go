@@ -19,6 +19,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 var (
@@ -184,6 +185,47 @@ func TestPluginForFilter(t *testing.T) {
 				assert.Equal(t, "request-transformer", plugin.PluginName)
 				assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation)
 				assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
+			},
+		},
+		{
+			name: "route tags are merged into the tags annotation",
+			filter: gwtypes.HTTPRouteFilter{
+				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
+				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+					Set: []gatewayv1.HTTPHeader{
+						{Name: "X-Custom-Header", Value: "custom-value"},
+					},
+				},
+			},
+			rule: gwtypes.HTTPRouteRule{
+				Matches: []gatewayv1.HTTPRouteMatch{
+					{
+						Path: &gatewayv1.HTTPPathMatch{
+							Type:  new(gatewayv1.PathMatchPathPrefix),
+							Value: new("/test"),
+						},
+					},
+				},
+			},
+			existingPlugin: nil,
+			httpRoute: &gwtypes.HTTPRoute{
+				TypeMeta: httpRouteTypeMeta,
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					UID:       "test-uid",
+					Annotations: map[string]string{
+						pkgmetadata.AnnotationKeyTags: "team-b, team-a",
+					},
+				},
+			},
+			parentRef: &gwtypes.ParentReference{
+				Name: "test-gateway",
+			},
+			expectedError: false,
+			validatePlugin: func(t *testing.T, plugin *configurationv1.KongPlugin) {
+				require.NotNil(t, plugin)
+				assert.Equal(t, "team-a,team-b", plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 			},
 		},
 	}
@@ -366,4 +408,59 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "route-tag",
+			},
+		},
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	referencedPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "referenced-plugin",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
+			},
+		},
+		PluginName: "rate-limiting",
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(referencedPlugin).
+		Build()
+
+	plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+
+	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 }

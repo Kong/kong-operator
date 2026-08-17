@@ -17,6 +17,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 var grpcRouteTypeMeta = metav1.TypeMeta{
@@ -34,6 +35,9 @@ func TestGRPCPluginsForRule(t *testing.T) {
 			Name:      "test-route",
 			Namespace: "test-namespace",
 			UID:       "test-uid",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "grpc-tag, shared-tag",
+			},
 		},
 	}
 	parentRef := &gwtypes.ParentReference{
@@ -66,6 +70,7 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Equal(t, "request-transformer", plugin.PluginName)
 	assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation)
 	assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
+	assert.Equal(t, "grpc-tag,shared-tag", plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
@@ -235,4 +240,59 @@ func TestGetReferencedKongPluginForGRPCFilter(t *testing.T) {
 			assert.Equal(t, tt.expectedPlugin.Config.Raw, plugin.Config.Raw)
 		})
 	}
+}
+
+func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta: grpcRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "route-tag",
+			},
+		},
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	referencedPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "referenced-plugin",
+			Namespace: "test-namespace",
+			Annotations: map[string]string{
+				pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
+			},
+		},
+		PluginName: "rate-limiting",
+	}
+
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{
+			{
+				Type: gatewayv1.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(referencedPlugin).
+		Build()
+
+	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+
+	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 }
