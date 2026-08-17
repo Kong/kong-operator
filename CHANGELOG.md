@@ -100,6 +100,9 @@
   [#5298](https://github.com/Kong/kong-operator/pull/5298)
 - AIGateway: enable AIGatewayAgent and AIGatewayModel to reference IdentityProvider
   [#5265](https://github.com/Kong/kong-operator/pull/5265)
+- CRD-from-OAS: enable resources to reference other resources from different
+  namespaces by setting `supportCrossNamespaceReference` in `ReferenceConfig`.
+  [#5263](https://github.com/Kong/kong-operator/pull/5263)
 
 ### Fixes
 

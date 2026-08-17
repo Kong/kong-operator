@@ -1272,6 +1272,41 @@ func TestReferenceConfigValidation(t *testing.T) {
 	}
 }
 
+func TestValidateReferenceTypeConsistency_SupportCrossNamespaceReference(t *testing.T) {
+	mk := func(firstFlag, secondFlag bool) *APIGroupVersionConfig {
+		return &APIGroupVersionConfig{
+			Types: []*TypeConfig{
+				{
+					Path: "/v1/ai-gateways/{gatewayId}/agents",
+					Name: "AIGatewayAgent",
+					References: []ReferenceConfig{{
+						Path:                           "spec.apiSpec.access.acls.allow.allow",
+						Kinds:                          []string{"AIGatewayConsumerGroup"},
+						RefTypeName:                    "AIGatewayACLRef",
+						ResolvesTo:                     "name",
+						SupportCrossNamespaceReference: firstFlag,
+					}},
+				},
+				{
+					Path: "/v1/ai-gateways/{gatewayId}/models",
+					Name: "AIGatewayModel",
+					References: []ReferenceConfig{{
+						Path:                           "spec.apiSpec.api.access.acls.allow.allow",
+						Kinds:                          []string{"AIGatewayConsumerGroup"},
+						RefTypeName:                    "AIGatewayACLRef",
+						ResolvesTo:                     "name",
+						SupportCrossNamespaceReference: secondFlag,
+					}},
+				},
+			},
+		}
+	}
+
+	require.NoError(t, mk(true, true).validate())
+	require.NoError(t, mk(false, false).validate())
+	require.ErrorContains(t, mk(true, false).validate(), "conflicting kinds, resolvesTo, or supportCrossNamespaceReference")
+}
+
 func TestReferenceConfigTypeName(t *testing.T) {
 	require.Equal(t, "AIGatewayPolicyRef", ReferenceConfig{Kinds: []string{"AIGatewayPolicy"}}.TypeName())
 	require.Equal(t, "AIGatewayACLRef", ReferenceConfig{

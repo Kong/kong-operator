@@ -98,6 +98,12 @@ type ReferenceConfig struct {
 	// than one entry (the name cannot be derived); must be empty otherwise
 	// (single-kind names derive as "<Kind>Ref").
 	RefTypeName string `yaml:"refTypeName,omitempty"`
+	// SupportCrossNamespaceReference indicates whether this reference may
+	// point at a CR in a different namespace than the referrer's, subject to
+	// an authorizing KongReferenceGrant in the target namespace. Defaults to
+	// false: a mismatched namespace is rejected with
+	// ReferenceCrossNamespaceError, exactly as today.
+	SupportCrossNamespaceReference bool `yaml:"supportCrossNamespaceReference,omitempty"`
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -875,7 +881,7 @@ func (c *APIGroupVersionConfig) validate() error {
 // validateReferenceTypeConsistency ensures that every generated ref struct type
 // name (see ReferenceConfig.TypeName) is declared consistently across all types
 // in the API group-version: two references that share a type name must agree on
-// their Kinds (order-insensitive) and ResolvesTo.
+// their Kinds (order-insensitive), ResolvesTo, and SupportCrossNamespaceReference.
 func (c *APIGroupVersionConfig) validateReferenceTypeConsistency() error {
 	seen := make(map[string]ReferenceConfig)
 	for _, tc := range c.Types {
@@ -889,8 +895,10 @@ func (c *APIGroupVersionConfig) validateReferenceTypeConsistency() error {
 				seen[name] = ref
 				continue
 			}
-			if !equalKinds(prev.Kinds, ref.Kinds) || prev.ResolvesTo != ref.ResolvesTo {
-				return fmt.Errorf("reference type %q declared with conflicting kinds or resolvesTo", name)
+			if !equalKinds(prev.Kinds, ref.Kinds) ||
+				prev.ResolvesTo != ref.ResolvesTo ||
+				prev.SupportCrossNamespaceReference != ref.SupportCrossNamespaceReference {
+				return fmt.Errorf("reference type %q declared with conflicting kinds, resolvesTo, or supportCrossNamespaceReference", name)
 			}
 		}
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
+	"github.com/kong/kong-operator/v2/internal/utils/crossnamespace"
 )
 
 // handleTypeSpecific handles type-specific logic for Konnect entities.
@@ -140,12 +141,19 @@ func handleKongConsumerSpecific(
 // that declare CR references on their spec (see crd-from-oas `references` config).
 type konnectReferenceResolver interface {
 	ResolveKonnectReferences(ctx context.Context, cl client.Client) error
+	// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+	// reference declared on the entity's spec (references with
+	// SupportCrossNamespaceReference: true whose target namespace differs
+	// from the entity's own) that must be authorized by a KongReferenceGrant
+	// before ResolveKonnectReferences is called.
+	CrossNamespaceSiblingReferences() []konnectv1alpha1.CrossNamespaceReferenceCheck
 }
 
-// handleKonnectReferences resolves the CR references declared on ent's spec (if
-// any) and reflects the outcome in the KonnectReferencesResolved condition.
-// Reconciliation must stop (isProblem=true) before any SDK calls when
-// references fail to resolve.
+// handleKonnectReferences authorizes any cross-namespace sibling references
+// declared on ent's spec against KongReferenceGrant, then resolves the CR
+// references declared on ent's spec (if any), and reflects the outcome in the
+// KonnectReferencesResolved condition. Reconciliation must stop
+// (isProblem=true) before any SDK calls when references fail to resolve.
 func handleKonnectReferences[
 	T constraints.SupportedKonnectEntityType,
 	TEnt constraints.EntityType[T],
@@ -155,7 +163,34 @@ func handleKonnectReferences[
 	ent TEnt,
 	resolver konnectReferenceResolver,
 ) (updated bool, isProblem bool, err error) {
-	err = resolver.ResolveKonnectReferences(ctx, cl)
+	if grantErr := checkCrossNamespaceSiblingReferences(ctx, cl, resolver.CrossNamespaceSiblingReferences()); grantErr != nil {
+		return setKonnectReferencesResolvedCondition(ent, grantErr)
+	}
+	return setKonnectReferencesResolvedCondition(ent, resolver.ResolveKonnectReferences(ctx, cl))
+}
+
+// checkCrossNamespaceSiblingReferences authorizes every check against
+// KongReferenceGrant, reusing the same authorization mechanism the parent-ref
+// handler uses (see ensureKongReferenceGrantForParentRef). Returns nil when
+// checks is empty (the common case today, since no ReferenceConfig entry sets
+// SupportCrossNamespaceReference yet) without listing any KongReferenceGrant.
+func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client, checks []konnectv1alpha1.CrossNamespaceReferenceCheck) error {
+	var errs []error
+	for _, c := range checks {
+		if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, c.FromNamespace, c.ToNamespace, c.ToName, c.FromGVK, c.ToGVK); err != nil {
+			errs = append(errs, err)
+		}
+	}
+	return errors.Join(errs...)
+}
+
+// setKonnectReferencesResolvedCondition reflects a reference-resolution
+// outcome (from either checkCrossNamespaceSiblingReferences or
+// ResolveKonnectReferences) in the KonnectReferencesResolved condition.
+func setKonnectReferencesResolvedCondition[
+	T constraints.SupportedKonnectEntityType,
+	TEnt constraints.EntityType[T],
+](ent TEnt, err error) (updated bool, isProblem bool, retErr error) {
 	if err == nil {
 		updated = patch.SetStatusWithConditionIfDifferent(
 			ent,
@@ -190,6 +225,9 @@ func konnectReferenceResolutionReason(err error) string {
 	if reasons[referenceResolutionReasonInvalid] {
 		return konnectv1alpha1.KonnectReferencesResolvedReasonInvalid
 	}
+	if reasons[referenceResolutionReasonNotPermitted] {
+		return konnectv1alpha1.KonnectReferencesResolvedReasonNotPermitted
+	}
 	if reasons[referenceResolutionReasonNotFound] {
 		return konnectv1alpha1.KonnectReferencesResolvedReasonNotFound
 	}
@@ -200,6 +238,7 @@ type referenceResolutionReasonCategory string
 
 const (
 	referenceResolutionReasonInvalid       referenceResolutionReasonCategory = "invalid"
+	referenceResolutionReasonNotPermitted  referenceResolutionReasonCategory = "not-permitted"
 	referenceResolutionReasonNotFound      referenceResolutionReasonCategory = "not-found"
 	referenceResolutionReasonNotProgrammed referenceResolutionReasonCategory = "not-programmed"
 )
@@ -226,6 +265,8 @@ func collectKonnectReferenceResolutionReasons(err error, reasons map[referenceRe
 	switch {
 	case hasInvalidKonnectReferenceResolutionError(err):
 		reasons[referenceResolutionReasonInvalid] = true
+	case hasNotPermittedKonnectReferenceResolutionError(err):
+		reasons[referenceResolutionReasonNotPermitted] = true
 	case hasNotFoundKonnectReferenceResolutionError(err):
 		reasons[referenceResolutionReasonNotFound] = true
 	case hasNotProgrammedKonnectReferenceResolutionError(err):
@@ -260,6 +301,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[konnectv1alpha1.ReferenceDifferentGatewayError](err); ok {
 		return true
 	}
+	if crossnamespace.IsReferenceNotGranted(err) {
+		return true
+	}
 	return false
 }
 
@@ -271,6 +315,10 @@ func hasInvalidKonnectReferenceResolutionError(err error) bool {
 		return true
 	}
 	return false
+}
+
+func hasNotPermittedKonnectReferenceResolutionError(err error) bool {
+	return crossnamespace.IsReferenceNotGranted(err)
 }
 
 func hasNotFoundKonnectReferenceResolutionError(err error) bool {

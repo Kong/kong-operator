@@ -5620,6 +5620,90 @@ func TestGenerateSDKOps_EmitsResolveKonnectReferences(t *testing.T) {
 	require.Contains(t, content, "return errors.Join(errs...)")
 }
 
+func TestGenerateSDKOps_CrossNamespaceSiblingReferences(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id", SupportCrossNamespaceReference: true},
+				{Path: "spec.apiSpec.consumerGroups", Kinds: []string{"AIGatewayConsumerGroup"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "consumerGroups", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	// The opted-in field's resolver no longer rejects cross-namespace refs.
+	idxPolicies := strings.Index(content, "func resolveAIGatewayAgentPolicies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {")
+	idxConsumerGroups := strings.Index(content, "func resolveAIGatewayAgentConsumerGroups(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {")
+	idxResolveKonnectReferences := strings.Index(content, "func (obj *AIGatewayAgent) ResolveKonnectReferences(")
+	idxCrossNamespaceSiblingReferences := strings.Index(content, "func (obj *AIGatewayAgent) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {")
+	require.GreaterOrEqual(t, idxPolicies, 0)
+	require.GreaterOrEqual(t, idxConsumerGroups, 0)
+	require.GreaterOrEqual(t, idxResolveKonnectReferences, 0)
+	require.GreaterOrEqual(t, idxCrossNamespaceSiblingReferences, 0)
+
+	policiesResolver := content[idxPolicies:idxConsumerGroups]
+	require.NotContains(t, policiesResolver, "ReferenceCrossNamespaceError{")
+
+	// The non-opted-in field's resolver still rejects cross-namespace refs.
+	consumerGroupsResolver := content[idxConsumerGroups:idxResolveKonnectReferences]
+	require.Contains(t, consumerGroupsResolver, "ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()}")
+
+	// CrossNamespaceSiblingReferences only collects checks for the opted-in field.
+	crossNamespaceMethod := content[idxCrossNamespaceSiblingReferences:]
+	require.Contains(t, crossNamespaceMethod, "for _, ref := range obj.Spec.APISpec.Policies {")
+	require.NotContains(t, crossNamespaceMethod, "obj.Spec.APISpec.ConsumerGroups")
+	require.Contains(t, crossNamespaceMethod, `FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},`)
+	require.Contains(t, crossNamespaceMethod, "ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},")
+
+	// metav1 import is pulled in because at least one reference needs it.
+	require.Contains(t, content, `metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"`)
+}
+
+func TestGenerateSDKOps_NoCrossNamespaceReferences_OmitsMetav1Import(t *testing.T) {
+	g := NewGenerator(Config{
+		APIVersion: "v1alpha1",
+		References: map[string][]config.ReferenceConfig{
+			"AIGatewayAgent": {
+				{Path: "spec.apiSpec.policies", Kinds: []string{"AIGatewayPolicy"}, ResolvesTo: "id"},
+			},
+		},
+	})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{Name: "policies", Type: "array"},
+			{Name: "name", Type: "string"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+			"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+		},
+	}
+
+	content, err := g.generateSDKOps("AIGatewayAgent", schema, opsConfig)
+	require.NoError(t, err)
+
+	require.NotContains(t, content, "k8s.io/apimachinery/pkg/apis/meta/v1")
+	require.Contains(t, content, "func (obj *AIGatewayAgent) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {\n\tvar checks []CrossNamespaceReferenceCheck\n\treturn checks\n}")
+}
+
 func TestGenerateOpsUpdate_PointerBody(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",

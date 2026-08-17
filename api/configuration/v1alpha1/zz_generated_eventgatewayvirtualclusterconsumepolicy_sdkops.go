@@ -472,6 +472,15 @@ func (obj *EventGatewayVirtualClusterConsumePolicy) ResolveKonnectReferences(ctx
 	return errors.Join(errs...)
 }
 
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *EventGatewayVirtualClusterConsumePolicy) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
 // ToCreateEventGatewayVirtualClusterConsumePolicyRequest converts the EventGatewayVirtualClusterConsumePolicy to the SDK type
 // sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest, resolving referenced CRs via the provided client.
 func (obj *EventGatewayVirtualClusterConsumePolicy) ToCreateEventGatewayVirtualClusterConsumePolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest, error) {
