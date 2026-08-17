@@ -33,4 +33,4 @@ chainsaw:
   aigw-dp:
     image: kong/kong-ai-gateway-dev
     # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
-    tag: '2.0.2-rc.2'
+    tag: '2.0.2-rc.3'
