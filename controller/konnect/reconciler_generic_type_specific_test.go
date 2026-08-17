@@ -13,16 +13,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 type failingKonnectReferenceResolver struct {
-	err error
+	err                             error
+	crossNamespaceSiblingReferences []konnectv1alpha1.CrossNamespaceReferenceCheck
 }
 
 func (r failingKonnectReferenceResolver) ResolveKonnectReferences(context.Context, client.Client) error {
 	return r.err
+}
+
+func (r failingKonnectReferenceResolver) CrossNamespaceSiblingReferences() []konnectv1alpha1.CrossNamespaceReferenceCheck {
+	return r.crossNamespaceSiblingReferences
 }
 
 func TestHandleKongConsumerSpecific(t *testing.T) {
@@ -382,6 +388,75 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.ErrorIs(t, err, resolverErr)
 		require.False(t, isProblem)
 		require.False(t, updated)
+	})
+
+	crossNamespaceCheck := konnectv1alpha1.CrossNamespaceReferenceCheck{
+		FromGVK:       metav1.GroupVersionKind{Group: konnectv1alpha1.GroupVersion.Group, Version: konnectv1alpha1.GroupVersion.Version, Kind: "AIGatewayAgent"},
+		ToGVK:         metav1.GroupVersionKind{Group: konnectv1alpha1.GroupVersion.Group, Version: konnectv1alpha1.GroupVersion.Version, Kind: "AIGatewayPolicy"},
+		FromNamespace: "ns",
+		ToNamespace:   "other-ns",
+		ToName:        "policy",
+	}
+
+	t.Run("cross-namespace sibling reference without a KongReferenceGrant sets condition False with NotPermitted, without calling the resolver", func(t *testing.T) {
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
+		ent := agent.DeepCopy()
+
+		updated, isProblem, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{
+				err:                             errors.New("resolver should not be called"),
+				crossNamespaceSiblingReferences: []konnectv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+			},
+		)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotPermitted, cond.Reason)
+	})
+
+	t.Run("cross-namespace sibling reference permitted by a KongReferenceGrant proceeds to resolve", func(t *testing.T) {
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{Name: "allow-agent", Namespace: "other-ns"},
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{{
+					Group:     configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Kind:      configurationv1alpha1.Kind("AIGatewayAgent"),
+					Namespace: configurationv1alpha1.Namespace("ns"),
+				}},
+				To: []configurationv1alpha1.ReferenceGrantTo{{
+					Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Kind:  configurationv1alpha1.Kind("AIGatewayPolicy"),
+				}},
+			},
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(grant).Build()
+		ent := agent.DeepCopy()
+		resolverErr := konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
+
+		updated, isProblem, err := handleKonnectReferences(
+			t.Context(),
+			cl,
+			ent,
+			failingKonnectReferenceResolver{
+				err:                             resolverErr,
+				crossNamespaceSiblingReferences: []konnectv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+			},
+		)
+		require.NoError(t, err)
+		require.True(t, isProblem)
+		require.True(t, updated)
+
+		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
+		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
 	})
 }
 

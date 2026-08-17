@@ -1705,13 +1705,14 @@ func (g *Generator) generateSharedFiles(parsed *parser.ParsedSpec, referencedSch
 
 // refTypeTemplateData is the per-ref-struct data for referencesFileTemplate.
 type refTypeTemplateData struct {
-	TypeName      string
-	Kinds         []string
-	SingleKind    bool
-	DefaultKind   string
-	KindsEnum     string // "A;B"
-	KindsSentence string // "an AIGatewayPolicy" / "an AIGatewayConsumer or AIGatewayConsumerGroup"
-	ResolvesTo    string
+	TypeName                       string
+	Kinds                          []string
+	SingleKind                     bool
+	DefaultKind                    string
+	KindsEnum                      string // "A;B"
+	KindsSentence                  string // "an AIGatewayPolicy" / "an AIGatewayConsumer or AIGatewayConsumerGroup"
+	ResolvesTo                     string
+	SupportCrossNamespaceReference bool
 }
 
 // GenerateReferencesFile emits the shared zz_generated_references.go content,
@@ -1727,13 +1728,14 @@ func (g *Generator) GenerateReferencesFile() (string, error) {
 			}
 			names = append(names, name)
 			byName[name] = refTypeTemplateData{
-				TypeName:      name,
-				Kinds:         ref.Kinds,
-				SingleKind:    len(ref.Kinds) == 1,
-				DefaultKind:   ref.Kinds[0],
-				KindsEnum:     strings.Join(ref.Kinds, ";"),
-				KindsSentence: kindsSentence(ref.Kinds),
-				ResolvesTo:    ref.ResolvesTo,
+				TypeName:                       name,
+				Kinds:                          ref.Kinds,
+				SingleKind:                     len(ref.Kinds) == 1,
+				DefaultKind:                    ref.Kinds[0],
+				KindsEnum:                      strings.Join(ref.Kinds, ";"),
+				KindsSentence:                  kindsSentence(ref.Kinds),
+				ResolvesTo:                     ref.ResolvesTo,
+				SupportCrossNamespaceReference: ref.SupportCrossNamespaceReference,
 			}
 		}
 	}
@@ -4526,6 +4528,18 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 	return result
 }
 
+// referencesNeedCrossNamespaceCheck reports whether any reference opts into
+// cross-namespace resolution, which requires the metav1 import in the
+// generated sdkops file for the CrossNamespaceSiblingReferences method.
+func referencesNeedCrossNamespaceCheck(refs []TemplateReferenceConfig) bool {
+	for _, r := range refs {
+		if r.SupportCrossNamespaceReference {
+			return true
+		}
+	}
+	return false
+}
+
 // TemplateRefParentNav is one sibling-preserving navigation hop from the SDK
 // payload root down to the map holding the value being written.
 type TemplateRefParentNav struct {
@@ -5723,39 +5737,41 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 
 	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
-		APIVersion              string
-		EntityName              string
-		Imports                 []*sdkOpsImport
-		BoolFields              []sdkOpsBoolField
-		ConstFields             []sdkOpsConstField
-		FreeformKeyFields       []sdkOpsFreeformKeyField
-		Methods                 []sdkOpsMethod
-		NeedsClient             bool
-		SecretReferences        []SecretReferenceForTemplate
-		NeedsSecretFetchImport  bool
-		HasReferences           bool
-		References              []TemplateReferenceConfig
-		RefInjections           []TemplateRefInjection
-		HasParentRefReplacement bool
-		ParentRefReplacesField  string
-		ParentStatusEntityName  string
+		APIVersion               string
+		EntityName               string
+		Imports                  []*sdkOpsImport
+		BoolFields               []sdkOpsBoolField
+		ConstFields              []sdkOpsConstField
+		FreeformKeyFields        []sdkOpsFreeformKeyField
+		Methods                  []sdkOpsMethod
+		NeedsClient              bool
+		SecretReferences         []SecretReferenceForTemplate
+		NeedsSecretFetchImport   bool
+		HasReferences            bool
+		References               []TemplateReferenceConfig
+		NeedsCrossNamespaceCheck bool
+		RefInjections            []TemplateRefInjection
+		HasParentRefReplacement  bool
+		ParentRefReplacesField   string
+		ParentStatusEntityName   string
 	}{
-		APIVersion:              g.config.APIVersion,
-		EntityName:              entityName,
-		Imports:                 imports,
-		BoolFields:              boolFields,
-		ConstFields:             constFields,
-		FreeformKeyFields:       freeformKeyFields,
-		Methods:                 standardMethods,
-		NeedsClient:             opsConfig.RequireClient || g.entityHasReferences(entityName),
-		SecretReferences:        secretReferences,
-		NeedsSecretFetchImport:  secretReferencesNeedCoreV1Import(secretReferences),
-		HasReferences:           g.entityHasReferences(entityName),
-		References:              references,
-		RefInjections:           injections,
-		HasParentRefReplacement: hasParentRefReplacement,
-		ParentRefReplacesField:  parentRefReplacesField,
-		ParentStatusEntityName:  parentStatusEntityName,
+		APIVersion:               g.config.APIVersion,
+		EntityName:               entityName,
+		Imports:                  imports,
+		BoolFields:               boolFields,
+		ConstFields:              constFields,
+		FreeformKeyFields:        freeformKeyFields,
+		Methods:                  standardMethods,
+		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
+		SecretReferences:         secretReferences,
+		NeedsSecretFetchImport:   secretReferencesNeedCoreV1Import(secretReferences),
+		HasReferences:            g.entityHasReferences(entityName),
+		References:               references,
+		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		RefInjections:            injections,
+		HasParentRefReplacement:  hasParentRefReplacement,
+		ParentRefReplacesField:   parentRefReplacesField,
+		ParentStatusEntityName:   parentStatusEntityName,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -6026,37 +6042,39 @@ func (g *Generator) generateRootUnionSDKOps(
 	var buf strings.Builder
 	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
-		APIVersion             string
-		EntityName             string
-		UnionTypeName          string
-		Imports                []*sdkOpsImport
-		BoolFields             []sdkOpsBoolField
-		ConstFields            []sdkOpsConstField
-		UnionUnwrapFields      []sdkOpsUnionUnwrapField
-		FreeformKeyFields      []sdkOpsFreeformKeyField
-		Methods                []sdkOpsRootUnionMethod
-		Variants               []sdkOpsRootUnionVariant
-		NeedsClient            bool
-		SecretReferences       []SecretReferenceForTemplate
-		NeedsSecretFetchImport bool
-		References             []TemplateReferenceConfig
-		RefInjections          []TemplateRefInjection
+		APIVersion               string
+		EntityName               string
+		UnionTypeName            string
+		Imports                  []*sdkOpsImport
+		BoolFields               []sdkOpsBoolField
+		ConstFields              []sdkOpsConstField
+		UnionUnwrapFields        []sdkOpsUnionUnwrapField
+		FreeformKeyFields        []sdkOpsFreeformKeyField
+		Methods                  []sdkOpsRootUnionMethod
+		Variants                 []sdkOpsRootUnionVariant
+		NeedsClient              bool
+		SecretReferences         []SecretReferenceForTemplate
+		NeedsSecretFetchImport   bool
+		References               []TemplateReferenceConfig
+		NeedsCrossNamespaceCheck bool
+		RefInjections            []TemplateRefInjection
 	}{
-		APIVersion:             g.config.APIVersion,
-		EntityName:             entityName,
-		UnionTypeName:          rootUnionTypeName,
-		Imports:                imports,
-		BoolFields:             boolFields,
-		ConstFields:            constFields,
-		UnionUnwrapFields:      unionUnwrapFields,
-		FreeformKeyFields:      freeformKeyFields,
-		Methods:                rootUnionMethods,
-		Variants:               variants,
-		NeedsClient:            opsConfig.RequireClient || g.entityHasReferences(entityName),
-		SecretReferences:       secretReferences,
-		NeedsSecretFetchImport: secretReferencesNeedCoreV1Import(secretReferences),
-		References:             references,
-		RefInjections:          injections,
+		APIVersion:               g.config.APIVersion,
+		EntityName:               entityName,
+		UnionTypeName:            rootUnionTypeName,
+		Imports:                  imports,
+		BoolFields:               boolFields,
+		ConstFields:              constFields,
+		UnionUnwrapFields:        unionUnwrapFields,
+		FreeformKeyFields:        freeformKeyFields,
+		Methods:                  rootUnionMethods,
+		Variants:                 variants,
+		NeedsClient:              opsConfig.RequireClient || g.entityHasReferences(entityName),
+		SecretReferences:         secretReferences,
+		NeedsSecretFetchImport:   secretReferencesNeedCoreV1Import(secretReferences),
+		References:               references,
+		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
+		RefInjections:            injections,
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err

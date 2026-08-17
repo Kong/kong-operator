@@ -1321,6 +1321,8 @@ _Appears in:_
 
 - [KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)
 
+
+
 #### DecryptionRecordPart
 
 _Underlying type:_ `string`
@@ -9503,7 +9505,7 @@ object's Konnect name is used where the Konnect API accepts it.
 | --- | --- |
 | `kind` _string_ | Kind is the kind of the referenced object. |
 | `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
 
 _Appears in:_
 
@@ -15503,6 +15505,8 @@ CreatePortalCustomDomainSSLWithCustomCertificate is a type alias.
 _Appears in:_
 
 - [PortalCustomDomainSSL](#konnect-konghq-com-v1alpha1-types-portalcustomdomainssl)
+
+
 
 #### DataPlaneClientAuthStatus
 

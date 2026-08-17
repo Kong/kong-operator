@@ -1052,6 +1052,8 @@ _Appears in:_
 
 - [KongLicenseControllerStatus](#configuration-konghq-com-v1alpha1-types-konglicensecontrollerstatus)
 
+
+
 #### DecryptionRecordPart
 
 _Underlying type:_ `string`

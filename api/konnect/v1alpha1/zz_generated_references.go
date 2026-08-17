@@ -2,7 +2,11 @@
 
 package v1alpha1
 
-import "fmt"
+import (
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 const (
 	// KonnectReferencesResolvedConditionType indicates whether all CR references
@@ -19,10 +23,28 @@ const (
 	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
 	// and cannot be resolved by waiting for the referenced CR to be programmed.
 	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	// KonnectReferencesResolvedReasonNotPermitted indicates a cross-namespace
+	// reference is not permitted by any KongReferenceGrant in the referenced
+	// namespace.
+	KonnectReferencesResolvedReasonNotPermitted = "ReferenceNotPermitted"
 	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
 	// for multiple reasons. The condition message contains per-reference details.
 	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
 )
+
+// CrossNamespaceReferenceCheck describes one cross-namespace sibling
+// reference (a ReferenceConfig entry with SupportCrossNamespaceReference:
+// true whose target namespace differs from the referrer's) that must be
+// authorized by a KongReferenceGrant before it is resolved. Entities that
+// declare such references expose them via CrossNamespaceSiblingReferences,
+// for callers outside this package to check against KongReferenceGrant
+// before calling ResolveKonnectReferences.
+//
+// +kubebuilder:object:generate=false
+type CrossNamespaceReferenceCheck struct {
+	FromGVK, ToGVK                     metav1.GroupVersionKind
+	FromNamespace, ToNamespace, ToName string
+}
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 //
@@ -104,7 +126,8 @@ type AIGatewayACLRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`

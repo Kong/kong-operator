@@ -545,6 +545,7 @@ import (
 {{- if .NeedsClient}}
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
+{{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 {{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
@@ -1034,10 +1035,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		if kind == "" {
 			kind = "{{.DefaultKind}}"
 		}
+{{- if not .SupportCrossNamespaceReference}}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
+{{- end}}
 {{- if .MultiKind}}
 		var resolvedValue, konnectID string
 		switch kind {
@@ -1120,6 +1123,39 @@ func (obj *{{$.EntityName}}) ResolveKonnectReferences(ctx context.Context, cl cl
 	}
 	{{- end}}
 	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	{{- range $.References}}
+	{{- if .SupportCrossNamespaceReference}}
+	for _, ref := range {{.RefsExpr}} {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "{{.DefaultKind}}"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{$.EntityName}}"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	{{- end}}
+	{{- end}}
+	return checks
 }
 {{- end}}
 {{- end}}
@@ -1237,6 +1273,7 @@ import (
 {{- if .NeedsClient}}
 
 {{if .NeedsSecretFetchImport}}	corev1 "k8s.io/api/core/v1"
+{{end}}{{if .NeedsCrossNamespaceCheck}}	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 {{end}}{{if .References}}	apierrors "k8s.io/apimachinery/pkg/api/errors"
 {{end}}	"sigs.k8s.io/controller-runtime/pkg/client"
 {{- end}}
@@ -3461,7 +3498,11 @@ const referencesFileTemplate = sharedGeneratedFilePreamble + `
 
 package {{.PackageName}}
 
-import "fmt"
+import (
+	"fmt"
+
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+)
 
 const (
 	// KonnectReferencesResolvedConditionType indicates whether all CR references
@@ -3478,10 +3519,28 @@ const (
 	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
 	// and cannot be resolved by waiting for the referenced CR to be programmed.
 	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	// KonnectReferencesResolvedReasonNotPermitted indicates a cross-namespace
+	// reference is not permitted by any KongReferenceGrant in the referenced
+	// namespace.
+	KonnectReferencesResolvedReasonNotPermitted = "ReferenceNotPermitted"
 	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
 	// for multiple reasons. The condition message contains per-reference details.
 	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
 )
+
+// CrossNamespaceReferenceCheck describes one cross-namespace sibling
+// reference (a ReferenceConfig entry with SupportCrossNamespaceReference:
+// true whose target namespace differs from the referrer's) that must be
+// authorized by a KongReferenceGrant before it is resolved. Entities that
+// declare such references expose them via CrossNamespaceSiblingReferences,
+// for callers outside this package to check against KongReferenceGrant
+// before calling ResolveKonnectReferences.
+//
+// +kubebuilder:object:generate=false
+type CrossNamespaceReferenceCheck struct {
+	FromGVK, ToGVK                     metav1.GroupVersionKind
+	FromNamespace, ToNamespace, ToName string
+}
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
 //
@@ -3569,9 +3628,13 @@ type {{.TypeName}} struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string ` + "`" + `json:"name"` + "`" + `
 
-	// Namespace is reserved for future cross-namespace support.
+{{if .SupportCrossNamespaceReference}}	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
-	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
+{{else}}	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+{{end}}	Namespace string ` + "`" + `json:"namespace,omitempty"` + "`" + `
 }
 {{end}}`
