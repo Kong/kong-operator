@@ -26,10 +26,6 @@ var skippedTestsForHybrid = []string{
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
 
-	// Extended profile.
-	tests.HTTPRouteRewriteHost.ShortName,
-	tests.HTTPRouteRewritePath.ShortName,
-
 	tests.GRPCRouteWeight.ShortName,
 }
 
