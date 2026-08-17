@@ -127,7 +127,7 @@
   to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propogate the
   tags to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
-  [#5284])https://github.com/Kong/kong-operator/pull/5284
+  [#5284](https://github.com/Kong/kong-operator/pull/5284)
 
 ## [v2.3.0-rc.3]
 
