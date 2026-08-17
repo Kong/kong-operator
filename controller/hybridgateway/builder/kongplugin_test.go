@@ -313,4 +313,23 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 		// Tracking annotations from BuildAnnotations should also be present
 		assert.NotEmpty(t, plugin.Annotations["gateway-operator.konghq.com/hybrid-gateways"])
 	})
+
+	t.Run("tags with spaces are trimmed", func(t *testing.T) {
+		route := &gwtypes.HTTPRoute{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-route",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "team-payments , env-prod,env-prod, ,  shared-tag  ",
+				},
+			},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsAnnotation(route).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "env-prod,shared-tag,team-payments", plugin.Annotations["konghq.com/tags"])
+	})
 }

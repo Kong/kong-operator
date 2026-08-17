@@ -123,11 +123,20 @@ func (b *KongPluginBuilder) WithTagsAnnotation(sources ...pkgmetadata.ObjectWith
 	seen := make(map[string]struct{}, len(allTags))
 	deduped := make([]string, 0, len(allTags))
 	for _, t := range allTags {
+		// Trim trailing and leading whitespace from each tag to avoid duplicates that differ only by whitespace.
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
 		if _, ok := seen[t]; !ok {
 			seen[t] = struct{}{}
 			deduped = append(deduped, t)
 		}
 	}
+	if len(deduped) == 0 {
+		return b
+	}
+
 	if b.plugin.Annotations == nil {
 		b.plugin.Annotations = make(map[string]string)
 	}
