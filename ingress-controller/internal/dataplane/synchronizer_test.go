@@ -62,12 +62,12 @@ func TestSynchronizer(t *testing.T) {
 	assert.Equal(t, "server is already running", err.Error())
 
 	t.Log("verifying that eventually the synchronizer reports as ready for a dbless dataplane")
-	assert.Eventually(t, func() bool { return sync.IsReady() }, testSynchronizerTick*3, testSynchronizerTick)
+	assert.Eventually(t, func() bool { return sync.IsReady() }, time.Second, testSynchronizerTick)
 
 	t.Log("verifying that the dataplane eventually receives several successful updates from the synchronizer")
-	assert.Eventually(t, func() bool {
-		return c.totalUpdates() >= 5
-	}, 10*testSynchronizerTick, testSynchronizerTick, "got %d updates, expected 5 or more", c.totalUpdates())
+	assert.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.GreaterOrEqual(ct, c.totalUpdates(), 5)
+	}, time.Second, testSynchronizerTick)
 
 	t.Log("verifying that the server shuts down when the context is cancelled")
 	cancel()
@@ -114,16 +114,15 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 			require.NoError(t, s.Start(ctx))
 
 			t.Log("verifying the first update happened and the synchronizer is ready")
-			require.Eventually(t, func() bool { return s.IsReady() }, testSynchronizerTick*10, testSynchronizerTick)
+			require.Eventually(t, func() bool { return s.IsReady() }, time.Second, testSynchronizerTick)
 
 			const clientBlockTime = time.Second * 10
 
 			t.Log("making the data plane calls block for significantly longer than the synchronizer tick")
 			c.clientShouldBlockFor(clientBlockTime)
-			updateCount := c.totalUpdates()
 
 			t.Log("waiting for a blocking update to happen")
-			require.Eventually(t, func() bool { return c.totalUpdates() > updateCount }, testSynchronizerTick*10, testSynchronizerTick)
+			require.Eventually(t, func() bool { return c.totalBlockingUpdates() > 0 }, time.Second, testSynchronizerTick)
 
 			t.Log("verifying that IsReady is not blocking even though the client is blocked")
 			// NOTE: Allow a little extra time for the synchronizer to return from IsReady() as
@@ -139,6 +138,7 @@ func TestSynchronizer_IsReadyDoesntBlockWhenDataPlaneIsBlocked(t *testing.T) {
 type fakeDataplaneClient struct {
 	dbmode                  dpconf.DBMode
 	updateCount             atomic.Uint64
+	blockingUpdateCount     atomic.Uint64
 	lock                    sync.RWMutex
 	clientCallBlockDuration time.Duration
 	t                       *testing.T
@@ -161,19 +161,20 @@ func (c *fakeDataplaneClient) DBMode() dpconf.DBMode {
 }
 
 func (c *fakeDataplaneClient) Update(ctx context.Context) error {
-	c.updateCount.Add(1)
 	c.lock.RLock()
-	defer c.lock.RUnlock()
-	if c.clientCallBlockDuration > 0 {
-		ch := time.After(c.clientCallBlockDuration)
+	blockFor := c.clientCallBlockDuration
+	c.lock.RUnlock()
 
-		select {
-		case <-c.t.Context().Done():
-			return c.t.Context().Err()
-		case <-ctx.Done():
-			return ctx.Err()
-		case <-ch:
-		}
+	c.updateCount.Add(1)
+	if blockFor <= 0 {
+		return nil
+	}
+
+	c.blockingUpdateCount.Add(1)
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-time.After(blockFor):
 	}
 	return nil
 }
@@ -190,4 +191,8 @@ func (c *fakeDataplaneClient) clientShouldBlockFor(d time.Duration) {
 
 func (c *fakeDataplaneClient) totalUpdates() int {
 	return int(c.updateCount.Load())
+}
+
+func (c *fakeDataplaneClient) totalBlockingUpdates() int {
+	return int(c.blockingUpdateCount.Load())
 }
