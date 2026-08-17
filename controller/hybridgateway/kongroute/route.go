@@ -688,7 +688,7 @@ func RoutesForTCPRouteRuleWithPorts(
 
 // destinationPortsFromGatewayListeners resolves the destination ports for an L4 route rule
 // from the listeners of the given protocol on the parent Gateway referenced by parentRef.
-// routeKind, routeNamespace and routeName are used only to produce a descriptive error message.
+// routeNamespace and routeName are used only to produce a descriptive error message.
 func destinationPortsFromGatewayListeners(
 	ctx context.Context,
 	cl client.Client,
