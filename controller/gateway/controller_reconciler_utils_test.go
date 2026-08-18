@@ -1121,6 +1121,38 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				81: 16384,
 			},
 		},
+		{
+			// Regression test: re-reconciling a KONG_PROXY_LISTEN the controller
+			// itself already wrote (which always carries "http2" for HTTPS
+			// listeners) must not duplicate "http2" on every pass.
+			name: "re-reconciling own previous KONG_PROXY_LISTEN output does not duplicate http2",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(8443),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8443:8443",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8443: 8443,
+			},
+		},
 	}
 
 	for _, tc := range testCases {
