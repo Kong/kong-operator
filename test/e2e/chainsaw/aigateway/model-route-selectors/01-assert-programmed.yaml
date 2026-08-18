@@ -1,0 +1,39 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-headers-selector
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-body-selector
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: konnect.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-path-selector
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
