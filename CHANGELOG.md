@@ -79,6 +79,11 @@
   once the referenced `KonnectConfigStore` is programmed.
   [#5208](https://github.com/Kong/kong-operator/pull/5208)
   [#5211](https://github.com/Kong/kong-operator/pull/5211)
+- `MCPServerDataPlane`: added `spec.deployment.podTemplateSpec.metadata.labels`
+  and `.annotations`, letting users set custom labels/annotations on the Pods of
+  the owned Deployment (as opposed to the Deployment object itself). Keys
+  managed by the operator (the `app` selector label, the operator's own labels,
+  and the MCP server version annotation) cannot be overridden.
 - `KongVault`: `spec.configStoreRef` now requires the referenced namespace to
   permit the reference with a `KongReferenceGrant`. `KongVault` is cluster-scoped,
   so the grant's `from` entry has to use `namespace: ""`, and `KonnectConfigStore`

@@ -370,15 +370,18 @@ func generateDeployment(
 
 	addAnnotationsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
 	addLabelsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
+	addPodTemplateMetadataForMCPServerDataPlane(logger, deployment, mcpDataPlane)
 
 	return deployment
 }
 
 // mcpServerDataPlaneDeploymentReservedKeys reports whether a label/annotation key is
 // reserved for internal operator or Kubernetes use and must be dropped from any
-// spec.deployment.labels/annotations provided by the user.
+// spec.deployment.labels/annotations or spec.deployment.podTemplateSpec.metadata
+// labels/annotations provided by the user.
 var mcpServerDataPlaneDeploymentReservedKeys = reservedkeys.NewChecker(
 	"app",
+	"pod-template-hash",
 	"deployment.kubernetes.io/revision",
 	mcpServerVersionAnnotationKey,
 )
@@ -406,6 +409,23 @@ func addLabelsForMCPServerDataPlaneDeployment(logger logr.Logger, deployment *ap
 	}
 	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, mcpDataPlane.Spec.Deployment.Labels, mcpServerDataPlaneDeploymentReservedKeys)
 	deployment.Labels = reservedkeys.Merge(deployment.Labels, specLabels)
+}
+
+// addPodTemplateMetadataForMCPServerDataPlane merges the user-provided
+// spec.deployment.podTemplateSpec.metadata labels/annotations (with reserved
+// keys filtered out) into the Deployment's Pod template. reservedkeys.Merge
+// never mutates the base maps, so the Deployment's own labels/annotations and
+// the selector labels are unaffected.
+func addPodTemplateMetadataForMCPServerDataPlane(logger logr.Logger, deployment *appsv1.Deployment, mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) {
+	if mcpDataPlane.Spec.Deployment == nil {
+		return
+	}
+	meta := mcpDataPlane.Spec.Deployment.PodTemplateSpec.Metadata
+	podMeta := &deployment.Spec.Template.ObjectMeta
+	specLabels := reservedkeys.Filter(logger, reservedkeys.MetadataTypeLabel, meta.Labels, mcpServerDataPlaneDeploymentReservedKeys)
+	podMeta.Labels = reservedkeys.Merge(podMeta.Labels, specLabels)
+	specAnnotations := reservedkeys.Filter(logger, reservedkeys.MetadataTypeAnnotation, meta.Annotations, mcpServerDataPlaneDeploymentReservedKeys)
+	podMeta.Annotations = reservedkeys.Merge(podMeta.Annotations, specAnnotations)
 }
 
 // patEnvVarFromAuth builds a PAT environment variable sourced from the given

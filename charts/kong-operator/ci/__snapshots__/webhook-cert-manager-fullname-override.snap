@@ -69435,6 +69435,34 @@ spec:
                       metadata by the operator.
                     maxProperties: 64
                     type: object
+                  podTemplateSpec:
+                    description: PodTemplateSpec defines PodTemplateSpec for managed Deployment's Pods.
+                    properties:
+                      metadata:
+                        description: Metadata is the metadata of the pod template spec.
+                        properties:
+                          annotations:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Annotations is an unstructured key value map stored with a resource that may be
+                              set by external tools to store and retrieve arbitrary metadata. They are not
+                              queryable and should be preserved when modifying objects.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations
+                            maxProperties: 64
+                            type: object
+                          labels:
+                            additionalProperties:
+                              type: string
+                            description: |-
+                              Map of string keys and values that can be used to organize and categorize
+                              (scope and select) objects. May match selectors of replication controllers
+                              and services.
+                              More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+                            maxProperties: 64
+                            type: object
+                        type: object
+                    type: object
                   replicas:
                     default: 1
                     description: Replicas describes the number of desired pods.

@@ -18093,6 +18093,7 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 | `replicas` _*int32_ | Replicas describes the number of desired pods. |
 | `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the MCP server Deployment metadata by the operator. |
 | `labels` _map[string]string_ | Labels are custom labels that are propagated to the MCP server Deployment metadata by the operator. |
+| `podTemplateSpec` _[MCPServerDataPlanePodTemplateSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespec)_ | PodTemplateSpec defines PodTemplateSpec for managed Deployment's Pods. |
 
 _Appears in:_
 
@@ -18112,6 +18113,39 @@ KonnectNamespacedRef is a reference to a MCPServer resource in the same namespac
 _Appears in:_
 
 - [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
+
+#### MCPServerDataPlanePodTemplateSpec
+
+
+MCPServerDataPlanePodTemplateSpec defines the pod template spec for the
+Deployment managed by the MCPServerDataPlane controller.
+
+
+
+| Field | Description |
+| --- | --- |
+| `metadata` _[MCPServerDataPlanePodTemplateSpecMetadata](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespecmetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+
+_Appears in:_
+
+- [DeploymentOptions](#mcp-konghq-com-v1alpha1-types-deploymentoptions)
+
+#### MCPServerDataPlanePodTemplateSpecMetadata
+
+
+MCPServerDataPlanePodTemplateSpecMetadata defines the metadata of the pod template spec
+for the Deployment managed by the MCPServerDataPlane controller.
+
+
+
+| Field | Description |
+| --- | --- |
+| `labels` _map[string]string_ | Map of string keys and values that can be used to organize and categorize (scope and select) objects. May match selectors of replication controllers and services. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels |
+| `annotations` _map[string]string_ | Annotations is an unstructured key value map stored with a resource that may be set by external tools to store and retrieve arbitrary metadata. They are not queryable and should be preserved when modifying objects. More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations |
+
+_Appears in:_
+
+- [MCPServerDataPlanePodTemplateSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespec)
 
 #### MCPServerDataPlaneSpec
 

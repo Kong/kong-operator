@@ -105,6 +105,70 @@ func TestMCPServerDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("pod template metadata labels and annotations", func(t *testing.T) {
+		common.TestCasesGroup[*mcpv1alpha1.MCPServerDataPlane]{
+			{
+				Name: "labels and annotations are accepted",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+							Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+								Labels:      map[string]string{"team": "platform"},
+								Annotations: map[string]string{"team-contact": "platform@konghq.com"},
+							},
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "exactly 64 labels is accepted",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+							Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+								Labels: stringMapOfSize(64),
+							},
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "65 labels is rejected",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+							Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+								Labels: stringMapOfSize(65),
+							},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.deployment.podTemplateSpec.metadata.labels: Too many: 65: must have at most 64 items"),
+			},
+			{
+				Name: "65 annotations is rejected",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+							Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+								Annotations: stringMapOfSize(65),
+							},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.deployment.podTemplateSpec.metadata.annotations: Too many: 65: must have at most 64 items"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("deployment replicas", func(t *testing.T) {
 		common.TestCasesGroup[*mcpv1alpha1.MCPServerDataPlane]{
 			{

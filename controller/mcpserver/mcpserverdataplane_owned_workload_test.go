@@ -450,6 +450,43 @@ func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
 	assert.NotContains(t, deploy.Spec.Template.Annotations, "team-contact")
 }
 
+func Test_generateDeployment_PodTemplateLabelsAndAnnotations(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	mcpDataPlane.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+		PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+			Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+				Labels: map[string]string{
+					"team": "platform",
+					"app":  "should-not-override-selector-label",
+				},
+				Annotations: map[string]string{
+					"team-contact":                "platform@konghq.com",
+					mcpServerVersionAnnotationKey: "should-not-override-version-annotation",
+				},
+			},
+		},
+	}
+	apiAuth := minimalAPIAuth()
+	metadata := mcpServerMetadataWithContainers()
+
+	tokenSecret := tokenSecret(mcpDataPlane)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+	assert.Equal(t, "platform", deploy.Spec.Template.Labels["team"])
+	assert.Equal(t, generateWorkloadNN(mcpDataPlane).Name, deploy.Spec.Template.Labels["app"],
+		"reserved pod label key must remain operator-managed")
+	assert.Equal(t, "platform@konghq.com", deploy.Spec.Template.Annotations["team-contact"])
+	assert.Equal(t, metadata.Version, deploy.Spec.Template.Annotations[mcpServerVersionAnnotationKey],
+		"reserved pod annotation key must remain operator-managed")
+
+	// The selector must stay untouched by pod template labels.
+	assert.Equal(t, map[string]string{"app": generateWorkloadNN(mcpDataPlane).Name}, deploy.Spec.Selector.MatchLabels)
+
+	// The Deployment's own metadata must be unaffected by Pod template labels/annotations.
+	assert.NotContains(t, deploy.Labels, "team")
+	assert.NotContains(t, deploy.Annotations, "team-contact")
+}
+
 // infoCountSink is a minimal logr.LogSink that counts Info() calls.
 type infoCountSink struct{ count *int }
 
@@ -555,6 +592,107 @@ func Test_addLabelsForMCPServerDataPlaneDeployment(t *testing.T) {
 			var infoCount int
 			addLabelsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
 			require.Equal(t, tc.expectedLabels, deployment.Labels)
+			assert.Equal(t, tc.expectedInfoCount, infoCount)
+		})
+	}
+}
+
+func Test_addPodTemplateMetadataForMCPServerDataPlane(t *testing.T) {
+	testCases := []struct {
+		name                string
+		deployment          *mcpv1alpha1.DeploymentOptions
+		existingLabels      map[string]string
+		existingAnnotations map[string]string
+		expectedLabels      map[string]string
+		expectedAnnotations map[string]string
+		expectedInfoCount   int
+	}{
+		{
+			name:                "no-op when MCPServerDataPlane has no deployment options",
+			deployment:          nil,
+			existingLabels:      map[string]string{"existing": "val"},
+			existingAnnotations: map[string]string{"existing": "val"},
+			expectedLabels:      map[string]string{"existing": "val"},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name:                "no-op when podTemplateSpec metadata is empty",
+			deployment:          &mcpv1alpha1.DeploymentOptions{},
+			existingLabels:      map[string]string{"existing": "val"},
+			existingAnnotations: map[string]string{"existing": "val"},
+			expectedLabels:      map[string]string{"existing": "val"},
+			expectedAnnotations: map[string]string{"existing": "val"},
+		},
+		{
+			name: "new keys merged, conflicting keys overridden",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+					Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+						Labels:      map[string]string{"new": "val", "conflict": "new"},
+						Annotations: map[string]string{"new": "val", "conflict": "new"},
+					},
+				},
+			},
+			existingLabels:      map[string]string{"existing": "val", "conflict": "old"},
+			existingAnnotations: map[string]string{"existing": "val", "conflict": "old"},
+			expectedLabels:      map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+			expectedAnnotations: map[string]string{"existing": "val", "new": "val", "conflict": "new"},
+		},
+		{
+			name: "nil existing labels and annotations initialized correctly",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+					Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+						Labels:      map[string]string{"k": "v"},
+						Annotations: map[string]string{"k": "v"},
+					},
+				},
+			},
+			expectedLabels:      map[string]string{"k": "v"},
+			expectedAnnotations: map[string]string{"k": "v"},
+		},
+		{
+			name: "reserved keys are dropped and a warning is logged",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+					Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+						Labels: map[string]string{
+							"safe": "val",
+							"app":  "should-not-override-selector-label",
+						},
+						Annotations: map[string]string{
+							"safe":                           "val",
+							consts.OperatorLabelPrefix + "x": "val",
+							mcpServerVersionAnnotationKey:    "should-not-be-settable-by-user",
+						},
+					},
+				},
+			},
+			expectedLabels:      map[string]string{"safe": "val"},
+			expectedAnnotations: map[string]string{"safe": "val"},
+			expectedInfoCount:   3,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
+				Spec: mcpv1alpha1.MCPServerDataPlaneSpec{Deployment: tc.deployment},
+			}
+			deployment := &appsv1.Deployment{
+				Spec: appsv1.DeploymentSpec{
+					Template: corev1.PodTemplateSpec{
+						ObjectMeta: metav1.ObjectMeta{
+							Labels:      tc.existingLabels,
+							Annotations: tc.existingAnnotations,
+						},
+					},
+				},
+			}
+			var infoCount int
+			addPodTemplateMetadataForMCPServerDataPlane(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
+			require.Equal(t, tc.expectedLabels, deployment.Spec.Template.Labels)
+			require.Equal(t, tc.expectedAnnotations, deployment.Spec.Template.Annotations)
 			assert.Equal(t, tc.expectedInfoCount, infoCount)
 		})
 	}

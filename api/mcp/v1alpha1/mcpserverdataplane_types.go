@@ -97,6 +97,42 @@ type DeploymentOptions struct {
 	// +optional
 	// +kubebuilder:validation:MaxProperties=64
 	Labels map[string]string `json:"labels,omitempty"`
+
+	// PodTemplateSpec defines PodTemplateSpec for managed Deployment's Pods.
+	//
+	// +optional
+	PodTemplateSpec MCPServerDataPlanePodTemplateSpec `json:"podTemplateSpec,omitzero"`
+}
+
+// MCPServerDataPlanePodTemplateSpec defines the pod template spec for the
+// Deployment managed by the MCPServerDataPlane controller.
+type MCPServerDataPlanePodTemplateSpec struct {
+	// Metadata is the metadata of the pod template spec.
+	//
+	// +optional
+	Metadata MCPServerDataPlanePodTemplateSpecMetadata `json:"metadata,omitzero"`
+}
+
+// MCPServerDataPlanePodTemplateSpecMetadata defines the metadata of the pod template spec
+// for the Deployment managed by the MCPServerDataPlane controller.
+type MCPServerDataPlanePodTemplateSpecMetadata struct {
+	// Map of string keys and values that can be used to organize and categorize
+	// (scope and select) objects. May match selectors of replication controllers
+	// and services.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/labels
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Labels map[string]string `json:"labels,omitempty"`
+
+	// Annotations is an unstructured key value map stored with a resource that may be
+	// set by external tools to store and retrieve arbitrary metadata. They are not
+	// queryable and should be preserved when modifying objects.
+	// More info: https://kubernetes.io/docs/concepts/overview/working-with-objects/annotations
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=64
+	Annotations map[string]string `json:"annotations,omitempty"`
 }
 
 // MCPServerDataPlaneStatus defines the observed state of MCPServerDataPlane.
