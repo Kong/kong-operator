@@ -120,6 +120,9 @@
 - Fix Gateway API routes becoming transiently unaccepted and removed from dataplane
   when listener is intermittently marked as Programmed=False.
   [#5237](https://github.com/Kong/kong-operator/pull/5237)
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306)
 
 ## [v2.3.0-rc.3]
 
