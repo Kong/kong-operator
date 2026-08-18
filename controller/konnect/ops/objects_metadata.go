@@ -60,6 +60,8 @@ func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []s
 		// The maximum number of tags that can be attached to a Konnect entity.
 		maxAllowedTagsCount = 20
 	)
+	// TODO: truncate by unicode code points instead of bytes to avoid cutting off a multi-byte character in the middle:
+	// https://github.com/Kong/kong-operator/issues/5305
 
 	// Truncate the tags from annotations as we do not validate their length in CEL validations rules.
 	var annotationTags []string
