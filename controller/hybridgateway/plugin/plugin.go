@@ -116,8 +116,8 @@ func PluginsForRule(
 			WithPluginName(plugin.PluginName).
 			WithPluginConfig(plugin.Config.Raw).
 			WithAnnotations(httpRoute, pRef).
-			// Since plugins are shared across multiple routes, we don't want to overwrite the tags annotation from the HTTPRoute on the original plugin.
-			WithTagsAnnotation(plugin).
+			// Copy the tags annotation from the original plugin to the new plugin copy.
+			WithTagsFromAnnotations(plugin).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)

@@ -104,11 +104,11 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 	return plugin
 }
 
-// WithTagsAnnotation merges the konghq.com/tags annotation value from the given
+// WithTagsFromAnnotations merges the konghq.com/tags annotation value from the given
 // sources into the KongPlugin being built. This ensures that when the generated
 // KongPlugin copy is later read by the Konnect ops layer (via metadata.ExtractTags),
 // the user-supplied tags are present. Multiple sources are merged and deduplicated.
-func (b *KongPluginBuilder) WithTagsAnnotation(sources ...pkgmetadata.ObjectWithAnnotations) *KongPluginBuilder {
+func (b *KongPluginBuilder) WithTagsFromAnnotations(sources ...pkgmetadata.ObjectWithAnnotations) *KongPluginBuilder {
 	var allTags []string
 	for _, src := range sources {
 		if src == nil {

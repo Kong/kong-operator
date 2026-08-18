@@ -219,7 +219,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
-			WithTagsAnnotation(route).
+			WithTagsFromAnnotations(route).
 			Build()
 		require.NoError(t, err)
 		assert.Equal(t, "env-prod,team-payments", plugin.Annotations["konghq.com/tags"])
@@ -247,7 +247,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
-			WithTagsAnnotation(route, sourcePlugin).
+			WithTagsFromAnnotations(route, sourcePlugin).
 			Build()
 		require.NoError(t, err)
 		assert.Equal(t, "plugin-tag,route-tag,shared-tag", plugin.Annotations["konghq.com/tags"])
@@ -263,7 +263,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
-			WithTagsAnnotation(route).
+			WithTagsFromAnnotations(route).
 			Build()
 		require.NoError(t, err)
 		assert.Empty(t, plugin.Annotations["konghq.com/tags"])
@@ -282,7 +282,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
-			WithTagsAnnotation(route, nil).
+			WithTagsFromAnnotations(route, nil).
 			Build()
 		require.NoError(t, err)
 		assert.Equal(t, "my-tag", plugin.Annotations["konghq.com/tags"])
@@ -305,7 +305,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
 			WithAnnotations(route, parentRef).
-			WithTagsAnnotation(route).
+			WithTagsFromAnnotations(route).
 			Build()
 		require.NoError(t, err)
 		// Tags annotation should be present
@@ -327,7 +327,7 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 		plugin, err := NewKongPlugin().
 			WithName("test-plugin").
-			WithTagsAnnotation(route).
+			WithTagsFromAnnotations(route).
 			Build()
 		require.NoError(t, err)
 		assert.Equal(t, "env-prod,shared-tag,team-payments", plugin.Annotations["konghq.com/tags"])

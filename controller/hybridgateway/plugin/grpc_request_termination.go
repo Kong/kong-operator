@@ -48,7 +48,7 @@ func GRPCRequestTerminationForBackendNotFound(
 		WithNamespace(metadata.NamespaceFromParentRef(grpcRoute, pRef)).
 		WithLabels(grpcRoute, pRef).
 		WithAnnotations(grpcRoute, pRef).
-		WithTagsAnnotation(grpcRoute).
+		WithTagsFromAnnotations(grpcRoute).
 		WithPluginName("request-termination").
 		WithPluginConfig(config).
 		Build()
