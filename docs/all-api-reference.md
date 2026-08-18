@@ -9734,7 +9734,7 @@ This feature is currently in beta and is subject to change.
 
 | Field | Description |
 | --- | --- |
-| `cost` _float64_ | Cost per cache-write prompt token for this TTL. |
+| `cost` _float64_ | Cost per 1M cache-write prompt tokens for this TTL. |
 | `ttl` _string_ | Cache TTL this price applies to, e.g. "5m" or "1h". |
 
 _Appears in:_
@@ -14460,14 +14460,14 @@ This feature is currently in beta and is subject to change.<br /><br />Anthropic
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14490,16 +14490,16 @@ This feature is currently in beta and is subject to change.<br /><br />Azure-spe
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | The Azure OpenAI API version to use. |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `deploymentID` _string_ | The Azure deployment ID for the model. Applies when the Azure provider's `service` is `azure-openai`; not used for `azure-foundry`. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `foundryPathPrefix` _string_ | The API path prefix for the Azure AI Foundry endpoint, selecting the model's API surface. `/openai/v1` targets the OpenAI-compatible surface; `/anthropic/v1` targets the Anthropic surface. Applies when the Azure provider's `service` is `azure-foundry`. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14521,15 +14521,15 @@ This feature is currently in beta and is subject to change.<br /><br />AWS Bedro
 | Field | Description |
 | --- | --- |
 | `batchBucketPrefix` _string_ | S3 bucket prefix for batch inference jobs. |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `embeddingsNormalize` _string_ | Whether to normalize embedding vectors in the response. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `performanceConfigLatency` _string_ | Latency performance configuration for the model invocation. |
 | `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
@@ -14553,14 +14553,14 @@ This feature is currently in beta and is subject to change.<br /><br />Cerebras-
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14582,15 +14582,15 @@ This feature is currently in beta and is subject to change.<br /><br />Cohere-sp
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | Cohere API version. `v1` uses the legacy `/v1/chat` endpoint; `v2` (default) uses `/v2/chat` and supports tool calling. |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingInputType` _string_ | The intended downstream use of the embeddings to improve model quality. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14686,15 +14686,15 @@ This feature is currently in beta and is subject to change.<br /><br />Alibaba D
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `international` _string_ | Whether to use the international DashScope endpoint. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14715,14 +14715,14 @@ This feature is currently in beta and is subject to change.<br /><br />Databrick
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14744,14 +14744,14 @@ This feature is currently in beta and is subject to change.<br /><br />Deepseek-
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14772,15 +14772,15 @@ This feature is currently in beta and is subject to change.<br /><br />Google Ge
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `gcpEnvironment` _[GCPModelConfig](#konnect-konghq-com-v1alpha1-types-gcpmodelconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14801,14 +14801,14 @@ This feature is currently in beta and is subject to change.<br /><br />Hugging F
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14831,15 +14831,15 @@ This feature is currently in beta and is subject to change.<br /><br />Kimi (Moo
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `international` _string_ | When `true`, requests are sent to `api.moonshot.ai` (international). When `false`, requests are sent to `api.moonshot.cn` (mainland China). |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14860,15 +14860,15 @@ This feature is currently in beta and is subject to change.<br /><br />Llama2-sp
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `format` _string_ | The request format to use when communicating with the Llama2 model. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14889,15 +14889,15 @@ This feature is currently in beta and is subject to change.<br /><br />Mistral-s
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `format` _string_ | The request format to use when communicating with the Mistral model. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14918,14 +14918,14 @@ This feature is currently in beta and is subject to change.<br /><br />Ollama-sp
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14946,14 +14946,14 @@ This feature is currently in beta and is subject to change.<br /><br />Openai-sp
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -14975,14 +14975,14 @@ This feature is currently in beta and is subject to change.<br /><br />AWS SageM
 | Field | Description |
 | --- | --- |
 | `aws` _[AIGatewayTargetSagemakerConfigAws](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigaws)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `target` _[AIGatewayTargetSagemakerConfigTarget](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigtarget)_ |  |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
@@ -15040,14 +15040,14 @@ This feature is currently in beta and is subject to change.<br /><br />Vercel AI
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -15068,15 +15068,15 @@ This feature is currently in beta and is subject to change.<br /><br />Google Ve
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
 | `gcpEnvironment` _[AIGatewayTargetVertexConfigGcpEnvironment](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfiggcpenvironment)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -15116,14 +15116,14 @@ This feature is currently in beta and is subject to change.<br /><br />Vllm-spec
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
@@ -15144,14 +15144,14 @@ This feature is currently in beta and is subject to change.<br /><br />Xai-speci
 
 | Field | Description |
 | --- | --- |
-| `cacheReadCost` _float64_ | Cost per cache-read (cached) prompt token for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per cache-write prompt token for billing and cost tracking. |
+| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
+| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `inputCost` _float64_ | Cost per input token for billing and cost tracking. |
+| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per output token for billing and cost tracking. |
+| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
 | `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
 | `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
 | `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |

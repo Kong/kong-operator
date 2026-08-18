@@ -229,7 +229,7 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 // AIGatewayCacheWriteCost **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayCacheWriteCost struct {
-	// Cost per cache-write prompt token for this TTL.
+	// Cost per 1M cache-write prompt tokens for this TTL.
 	//
 	// +required
 	// +kubebuilder:validation:Minimum=0
@@ -9102,11 +9102,11 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 //
 // Anthropic-specific configuration for a model.
 type AIGatewayTargetAnthropicConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -9125,7 +9125,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -9133,7 +9133,7 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -9179,11 +9179,11 @@ type AIGatewayTargetAzureConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	APIVersion string `json:"apiVersion,omitzero"`
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -9221,7 +9221,7 @@ type AIGatewayTargetAzureConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=/openai/v1;/anthropic/v1
 	FoundryPathPrefix string `json:"foundryPathPrefix,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -9229,7 +9229,7 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -9270,11 +9270,11 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	BatchBucketPrefix string `json:"batchBucketPrefix,omitzero"`
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -9298,7 +9298,7 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	EmbeddingsNormalize string `json:"embeddingsNormalize,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -9306,7 +9306,7 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -9359,11 +9359,11 @@ type AIGatewayTargetBedrockConfig struct {
 //
 // Cerebras-specific configuration for a model.
 type AIGatewayTargetCerebrasConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -9382,7 +9382,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -9390,7 +9390,7 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -9434,11 +9434,11 @@ type AIGatewayTargetCohereConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=v1;v2
 	APIVersion string `json:"apiVersion,omitzero"`
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -9463,7 +9463,7 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -9471,7 +9471,7 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10025,11 +10025,11 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 //
 // Alibaba DashScope-specific configuration for a model.
 type AIGatewayTargetDashscopeConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10048,7 +10048,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10061,7 +10061,7 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10097,11 +10097,11 @@ type AIGatewayTargetDashscopeConfig struct {
 //
 // Databricks-specific configuration for a model.
 type AIGatewayTargetDatabricksConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10120,7 +10120,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10128,7 +10128,7 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10170,11 +10170,11 @@ type AIGatewayTargetDatabricksConfig struct {
 //
 // Deepseek-specific configuration for a model.
 type AIGatewayTargetDeepseekConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10193,7 +10193,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10201,7 +10201,7 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10237,11 +10237,11 @@ type AIGatewayTargetDeepseekConfig struct {
 //
 // Google Gemini-specific configuration for a model.
 type AIGatewayTargetGeminiConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10267,7 +10267,7 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10275,7 +10275,7 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10311,11 +10311,11 @@ type AIGatewayTargetGeminiConfig struct {
 //
 // Hugging Face-specific configuration for a model.
 type AIGatewayTargetHuggingfaceConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10334,7 +10334,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10342,7 +10342,7 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10388,11 +10388,11 @@ type AIGatewayTargetHuggingfaceConfig struct {
 //
 // Kimi (Moonshot AI)-specific configuration for a model.
 type AIGatewayTargetKimiConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10411,7 +10411,7 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10426,7 +10426,7 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10462,11 +10462,11 @@ type AIGatewayTargetKimiConfig struct {
 //
 // Llama2-specific configuration for a model.
 type AIGatewayTargetLlama2Config struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10492,7 +10492,7 @@ type AIGatewayTargetLlama2Config struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=ollama;openai;raw
 	Format string `json:"format,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10500,7 +10500,7 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10537,11 +10537,11 @@ type AIGatewayTargetLlama2Config struct {
 //
 // Mistral-specific configuration for a model.
 type AIGatewayTargetMistralConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10567,7 +10567,7 @@ type AIGatewayTargetMistralConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=ollama;openai
 	Format string `json:"format,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10575,7 +10575,7 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10611,11 +10611,11 @@ type AIGatewayTargetMistralConfig struct {
 //
 // Ollama-specific configuration for a model.
 type AIGatewayTargetOllamaConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10634,7 +10634,7 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10642,7 +10642,7 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10678,11 +10678,11 @@ type AIGatewayTargetOllamaConfig struct {
 //
 // Openai-specific configuration for a model.
 type AIGatewayTargetOpenaiConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10701,7 +10701,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10709,7 +10709,7 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10750,11 +10750,11 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	Aws AIGatewayTargetSagemakerConfigAws `json:"aws,omitzero"`
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10773,7 +10773,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10781,7 +10781,7 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10868,11 +10868,11 @@ type AIGatewayTargetSagemakerConfigTarget struct {
 //
 // Vercel AI Gateway-specific configuration for a model.
 type AIGatewayTargetVercelConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10891,7 +10891,7 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10899,7 +10899,7 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -10935,11 +10935,11 @@ type AIGatewayTargetVercelConfig struct {
 //
 // Google Vertex-specific configuration for a model.
 type AIGatewayTargetVertexConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -10965,7 +10965,7 @@ type AIGatewayTargetVertexConfig struct {
 	//
 	// +optional
 	GcpEnvironment AIGatewayTargetVertexConfigGcpEnvironment `json:"gcpEnvironment,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -10973,7 +10973,7 @@ type AIGatewayTargetVertexConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -11042,11 +11042,11 @@ type AIGatewayTargetVertexConfigGcpEnvironment struct {
 //
 // Vllm-specific configuration for a model.
 type AIGatewayTargetVllmConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -11065,7 +11065,7 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -11073,7 +11073,7 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
@@ -11110,11 +11110,11 @@ type AIGatewayTargetVllmConfig struct {
 //
 // Xai-specific configuration for a model.
 type AIGatewayTargetXaiConfig struct {
-	// Cost per cache-read (cached) prompt token for billing and cost tracking.
+	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per cache-write prompt token for billing and cost tracking.
+	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
 	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
@@ -11133,7 +11133,7 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// Cost per input token for billing and cost tracking.
+	// Cost per 1M input tokens for billing and cost tracking.
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
@@ -11141,7 +11141,7 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per output token for billing and cost tracking.
+	// Cost per 1M output tokens for billing and cost tracking.
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
