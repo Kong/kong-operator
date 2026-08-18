@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 )
 
@@ -487,6 +488,7 @@ func compareSplitHTTPRouteMatchesRelativePriority(match1, match2 SplitHTTPRouteM
 // kongExpressionRouteFromHTTPRouteMatchWithPriority translates a split HTTPRoute match into expression
 // based kong route with assigned priority.
 func kongExpressionRouteFromHTTPRouteMatchWithPriority(
+	storer store.Storer,
 	httpRouteMatchWithPriority SplitHTTPRouteMatchToKongRoutePriority,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) (*kongstate.Route, error) {
@@ -537,6 +539,20 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	matchers := matchersFromParentHTTPRoute(hostnames, httproute.Annotations)
 	// generate ATC matcher from split HTTPRouteMatch itself.
 	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match, containReplacePrefixMatchURLRewriteFilter))
+
+	// Scope the route to the Gateway listener(s) the HTTPRoute is attached to, since Kong
+	// Route entities don't support destinations/sources (stream-only) for http/https
+	// protocols: without this, a route generated for one listener would also match traffic
+	// arriving on a sibling listener bound to a different port on the same Gateway.
+	// It's doable only for expressions router.
+	if ports := httpPortsFromHTTPRouteGatewayListeners(storer, httproute); len(ports) > 0 {
+		portMatchers := make([]atc.Matcher, 0, len(ports))
+		for _, p := range ports {
+			portMatcher, _ := atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p)))
+			portMatchers = append(portMatchers, portMatcher)
+		}
+		matchers = append(matchers, atc.Or(portMatchers...))
+	}
 
 	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
 
@@ -590,6 +606,7 @@ func groupHTTPRouteMatchesWithPrioritiesByRule(
 // translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression translates a list of split HTTPRoute matches with assigned priorities
 // that are pointing to the same service to list of kongstate route with expressions.
 func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
+	storer store.Storer,
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
 ) ([]kongstate.Route, error) {
@@ -600,7 +617,7 @@ func translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
 		// TODO: update the algorithm to assign priorities to matches to make it possible to consolidate some matches.
 		// For example, we can assign the same priority to multiple matches from the same rule if they tie on the priority from the fixed fields:
 		// https://github.com/Kong/kubernetes-ingress-controller/issues/6807
-		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, options)
+		route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(storer, matchWithPriority, options)
 		if err != nil {
 			return []kongstate.Route{}, err
 		}

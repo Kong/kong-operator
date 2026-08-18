@@ -18,6 +18,7 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	k8stypes "k8s.io/apimachinery/pkg/types"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -305,13 +306,17 @@ func translateHTTPRouteRulesMetaToKongstateService(
 	}
 
 	if options.ExpressionRoutes {
-		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(matchesWithPriorities, options)
+		routes, err := translateSplitHTTPRouteMatchesToKongstateRoutesWithExpression(
+			storer, matchesWithPriorities, options,
+		)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
 		service.Routes = routes
 	} else {
-		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(rulesMeta, matchesWithPriorities, options)
+		routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+			storer, rulesMeta, matchesWithPriorities, options,
+		)
 		if err != nil {
 			return kongstate.Service{}, err
 		}
@@ -361,10 +366,34 @@ func applyTimeoutToServiceFromHTTPRouteRule(svc *kongstate.Service, rule gateway
 // getHTTPRouteHostnamesAsSliceOfStringPointers translates the hostnames defined
 // in an HTTPRoute specification into a []*string slice, which is the type required
 // by kong.Route{}.
-func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRoute) []*string {
-	return lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
-		return new(string(h))
-	})
+//
+// When the ports of the HTTPRoute's attached Gateway listener(s) can be resolved, each
+// hostname is suffixed with ":<port>" (one entry per hostname/port pair) so that the
+// generated Kong route only matches requests directed at that specific listener. This is
+// safe for both default ports (Kong's traditional router falls back to 80/http or 443/https
+// when a request's Host header omits a port) and non-default ports (a client can only reach
+// a non-default port by addressing it explicitly, so its Host header already carries it).
+// If no listener ports can be resolved (e.g. the parent Gateway can't be found), hostnames
+// are returned unqualified, matching prior behavior.
+func getHTTPRouteHostnamesAsSliceOfStringPointers(storer store.Storer, httproute *gatewayapi.HTTPRoute) []*string {
+	if len(httproute.Spec.Hostnames) == 0 {
+		return nil
+	}
+
+	ports := httpPortsFromHTTPRouteGatewayListeners(storer, httproute)
+	if len(ports) == 0 {
+		return lo.Map(httproute.Spec.Hostnames, func(h gatewayapi.Hostname, _ int) *string {
+			return new(string(h))
+		})
+	}
+
+	hostnames := make([]*string, 0, len(httproute.Spec.Hostnames)*len(ports))
+	for _, h := range httproute.Spec.Hostnames {
+		for _, p := range ports {
+			hostnames = append(hostnames, new(fmt.Sprintf("%s:%d", h, p)))
+		}
+	}
+	return hostnames
 }
 
 func groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(
@@ -475,6 +504,7 @@ func traditionalHTTPRouteMatchPriorityClass(match SplitHTTPRouteMatch) RoutePrio
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
+	storer store.Storer,
 	rulesMeta []httpRouteRuleMeta,
 	matchesWithPriorities []SplitHTTPRouteMatchToKongRoutePriority,
 	options TranslateHTTPRouteRulesToKongRouteOptions,
@@ -504,7 +534,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 					parentRoute.Namespace, parentRoute.Name, ruleMeta.RuleNumber)
 				objectInfo := util.FromK8sObject(parentRoute)
 				tags := util.GenerateTagsForObject(parentRoute)
-				hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
+				hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(storer, parentRoute)
 				routesFromRule, err := GenerateKongRoutesFromHTTPRouteMatches(
 					routeName,
 					[]gatewayapi.HTTPRouteMatch{},
@@ -530,7 +560,7 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 			tags := util.GenerateTagsForObject(parentRoute, util.AdditionalTagsK8sNamedRouteRule(optionalNamedRouteRules...)...)
 			routeName := translateToKongRouteName(matchGroup, parentRoute.GetNamespace(), parentRoute.GetName())
 			// Since the grouped matches here are from the same HTTPRoute, it is OK to use the hostnames from the first HTTPRoute.
-			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(parentRoute)
+			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(storer, parentRoute)
 			regexPriority := regexPriorityForHTTPRouteMatchGroup(matchGroup, prioritiesByMatch)
 
 			routesFromMatchGroup, err := GenerateKongRoutesFromHTTPRouteMatches(
@@ -1102,6 +1132,47 @@ func protocolsFromHTTPRoutesGatewayListeners(storer store.Storer, routes []*gate
 	}
 
 	return kong.StringSlice(slices.Sorted(maps.Keys(protoSet))...)
+}
+
+// httpPortsFromHTTPRouteGatewayListeners derives the declared (Gateway-side) ports of the
+// HTTP/HTTPS listeners that a single HTTPRoute's parentRefs resolve to (honoring
+// sectionName and port). These are the logical ports the DataPlane's KONG_PORT_MAPS config remaps
+// physical listen ports to, so matching against them (via `net.dst.port` or a `host:port`
+// Hosts suffix) works regardless of which physical port Kong actually binds to for the
+// corresponding Gateway listener.
+//
+// Unlike protocolsFromHTTPRoutesGatewayListeners, this operates on a single HTTPRoute rather
+// than a group, since different HTTPRoutes grouped into the same Kong service (when
+// CombinedServicesFromDifferentHTTPRoutes is enabled) can attach to different listeners/ports.
+//
+// Returns nil (no port restriction applied) as a fallback when no matching Gateway listener
+// is found.
+func httpPortsFromHTTPRouteGatewayListeners(storer store.Storer, route *gatewayapi.HTTPRoute) []int32 {
+	portSet := make(map[int32]struct{})
+	for _, pr := range route.Spec.ParentRefs {
+		ns := route.Namespace
+		if pr.Namespace != nil && string(*pr.Namespace) != "" {
+			ns = string(*pr.Namespace)
+		}
+		gw, err := storer.GetGateway(ns, string(pr.Name))
+		if err != nil {
+			continue // Gateway not found, skip this parentRef.
+		}
+		for _, p := range gatewayutils.ProtocolPortsFromListeners(
+			gw, pr.SectionName, pr.Port, gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType,
+		) {
+			portSet[p] = struct{}{}
+		}
+	}
+
+	if len(portSet) == 0 {
+		return nil
+	}
+
+	ports := lo.Keys(portSet)
+	slices.Sort(ports)
+
+	return ports
 }
 
 // convertGatewayMatchHeadersToKongRouteMatchHeaders takes an input list of Gateway APIs HTTPHeaderMatch

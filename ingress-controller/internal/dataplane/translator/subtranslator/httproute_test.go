@@ -1978,7 +1978,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 				ExpressionRoutes:      false,
 				SupportRedirectPlugin: false,
 			}
-			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(tc.rulesMeta, nil, generateOptions)
+			routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(store.NewFakeStoreEmpty(), tc.rulesMeta, nil, generateOptions)
 			if tc.expectError {
 				require.Error(t, err)
 				return
@@ -2033,6 +2033,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxR
 	}
 
 	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		store.NewFakeStoreEmpty(),
 		rulesMeta,
 		matchesWithPriorities,
 		TranslateHTTPRouteRulesToKongRouteOptions{},
@@ -2091,6 +2092,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFrom
 	}
 
 	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		store.NewFakeStoreEmpty(),
 		rulesMeta,
 		matchesWithPriorities,
 		TranslateHTTPRouteRulesToKongRouteOptions{},
@@ -2145,6 +2147,7 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNo
 	}
 
 	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		store.NewFakeStoreEmpty(),
 		rulesMeta,
 		matchesWithPriorities,
 		TranslateHTTPRouteRulesToKongRouteOptions{},
@@ -2375,6 +2378,197 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 
 			protocols := protocolsFromHTTPRoutesGatewayListeners(fakeStore, []*gatewayapi.HTTPRoute{route})
 			require.Equal(t, tc.expectedProtocols, protocols)
+		})
+	}
+}
+
+func TestHTTPPortsFromHTTPRouteGatewayListeners(t *testing.T) {
+	testCases := []struct {
+		name                 string
+		gateways             []*gatewayapi.Gateway
+		parentRefSectionName *gatewayapi.SectionName
+		parentRefPort        *gatewayapi.PortNumber
+		expectedPorts        []int32
+	}{
+		{
+			name: "single HTTP listener",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+						},
+					},
+				},
+			},
+			expectedPorts: []int32{80},
+		},
+		{
+			name: "multiple HTTP listeners on different ports, no sectionName resolves all",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+							{Name: "http-additional", Protocol: gatewayapi.HTTPProtocolType, Port: 5000},
+						},
+					},
+				},
+			},
+			expectedPorts: []int32{80, 5000},
+		},
+		{
+			name: "sectionName narrows to a single listener's port",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+							{Name: "http-additional", Protocol: gatewayapi.HTTPProtocolType, Port: 5000},
+						},
+					},
+				},
+			},
+			parentRefSectionName: new(gatewayapi.SectionName("http")),
+			expectedPorts:        []int32{80},
+		},
+		{
+			name: "port narrows to a single listener's port",
+			gateways: []*gatewayapi.Gateway{
+				{
+					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+					Spec: gatewayapi.GatewaySpec{
+						Listeners: []gatewayapi.Listener{
+							{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+							{Name: "http-additional", Protocol: gatewayapi.HTTPProtocolType, Port: 5000},
+						},
+					},
+				},
+			},
+			parentRefPort: new(gatewayapi.PortNumber(5000)),
+			expectedPorts: []int32{5000},
+		},
+		{
+			name:          "no matching gateway found resolves no ports",
+			gateways:      nil,
+			expectedPorts: nil,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Gateways: tc.gateways,
+			})
+			require.NoError(t, err)
+
+			route := &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					CommonRouteSpec: gatewayapi.CommonRouteSpec{
+						ParentRefs: []gatewayapi.ParentReference{
+							{
+								Name:        "test-gateway",
+								SectionName: tc.parentRefSectionName,
+								Port:        tc.parentRefPort,
+							},
+						},
+					},
+				},
+			}
+
+			ports := httpPortsFromHTTPRouteGatewayListeners(fakeStore, route)
+			require.Equal(t, tc.expectedPorts, ports)
+		})
+	}
+}
+
+func TestGetHTTPRouteHostnamesAsSliceOfStringPointers(t *testing.T) {
+	gatewayWithSinglePort := []*gatewayapi.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+			Spec: gatewayapi.GatewaySpec{
+				Listeners: []gatewayapi.Listener{
+					{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 5000},
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name              string
+		gateways          []*gatewayapi.Gateway
+		hostnames         []gatewayapi.Hostname
+		hasParentRef      bool
+		expectedHostnames []*string
+	}{
+		{
+			name:              "no hostnames returns nil regardless of resolvable ports",
+			gateways:          gatewayWithSinglePort,
+			hostnames:         nil,
+			hasParentRef:      true,
+			expectedHostnames: nil,
+		},
+		{
+			name:              "hostname with unresolvable port falls back to bare hostname",
+			gateways:          nil,
+			hostnames:         []gatewayapi.Hostname{"example.com"},
+			hasParentRef:      true,
+			expectedHostnames: []*string{new("example.com")},
+		},
+		{
+			name:              "hostname with no parentRefs falls back to bare hostname",
+			gateways:          gatewayWithSinglePort,
+			hostnames:         []gatewayapi.Hostname{"example.com"},
+			hasParentRef:      false,
+			expectedHostnames: []*string{new("example.com")},
+		},
+		{
+			name:              "hostname with resolvable port is suffixed with :port",
+			gateways:          gatewayWithSinglePort,
+			hostnames:         []gatewayapi.Hostname{"example.com"},
+			hasParentRef:      true,
+			expectedHostnames: []*string{new("example.com:5000")},
+		},
+		{
+			name:              "multiple hostnames each get suffixed with the resolved port",
+			gateways:          gatewayWithSinglePort,
+			hostnames:         []gatewayapi.Hostname{"example.com", "foo.example.com"},
+			hasParentRef:      true,
+			expectedHostnames: []*string{new("example.com:5000"), new("foo.example.com:5000")},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Gateways: tc.gateways,
+			})
+			require.NoError(t, err)
+
+			route := &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-route",
+					Namespace: "default",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Hostnames: tc.hostnames,
+				},
+			}
+			if tc.hasParentRef {
+				route.Spec.ParentRefs = []gatewayapi.ParentReference{
+					{Name: "test-gateway"},
+				}
+			}
+
+			hostnames := getHTTPRouteHostnamesAsSliceOfStringPointers(fakeStore, route)
+			require.Equal(t, tc.expectedHostnames, hostnames)
 		})
 	}
 }
