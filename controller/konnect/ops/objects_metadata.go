@@ -5,6 +5,7 @@ import (
 	"maps"
 	"slices"
 	"sort"
+	"unicode/utf8"
 
 	"github.com/samber/lo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -135,9 +136,11 @@ func UIDLabelForObject(obj client.Object) string {
 	return fmt.Sprintf("%s:%s", KubernetesUIDLabelKey, obj.GetUID())
 }
 
+// truncate truncates a string to the specified limit in runes, since tags supports unicode runes.
+// If the string is shorter than or equal to the limit, it returns the original string.
 func truncate(s string, limit int) string {
-	if len(s) <= limit {
+	if utf8.RuneCountInString(s) <= limit {
 		return s
 	}
-	return s[:limit]
+	return string([]rune(s)[:limit])
 }

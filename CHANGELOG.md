@@ -41,6 +41,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306)
+
 ## [v2.0.11]
 
 > Release date: 2026-07-21
