@@ -59,7 +59,6 @@ func GRPCPluginsForRule(
 				WithPluginName(conf.name).
 				WithPluginConfig(conf.config).
 				WithAnnotations(grpcRoute, pRef).
-				WithTagsAnnotation(grpcRoute).
 				Build()
 			if err != nil {
 				return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
@@ -97,7 +96,8 @@ func GRPCPluginsForRule(
 			WithPluginName(plugin.PluginName).
 			WithPluginConfig(plugin.Config.Raw).
 			WithAnnotations(grpcRoute, pRef).
-			WithTagsAnnotation(grpcRoute, plugin).
+			// Since plugins are shared across multiple routes, we don't want to overwrite the tags annotation from the GRPCRoute on the original plugin.
+			WithTagsAnnotation(plugin).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)

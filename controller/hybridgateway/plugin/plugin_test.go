@@ -188,7 +188,7 @@ func TestPluginForFilter(t *testing.T) {
 			},
 		},
 		{
-			name: "route tags are merged into the tags annotation",
+			name: "route tags are not merged into the tags annotation",
 			filter: gwtypes.HTTPRouteFilter{
 				Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier,
 				RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
@@ -225,7 +225,7 @@ func TestPluginForFilter(t *testing.T) {
 			expectedError: false,
 			validatePlugin: func(t *testing.T, plugin *configurationv1.KongPlugin) {
 				require.NotNil(t, plugin)
-				assert.Equal(t, "team-a,team-b", plugin.Annotations[pkgmetadata.AnnotationKeyTags])
+				assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 			},
 		},
 	}

@@ -70,7 +70,8 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Equal(t, "request-transformer", plugin.PluginName)
 	assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation)
 	assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
-	assert.Equal(t, "grpc-tag,shared-tag", plugin.Annotations[pkgmetadata.AnnotationKeyTags])
+	// tags in GRPCRoute should not be merged into the tags annotation of the KongPlugin, since plugins are shared across multiple routes.
+	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
 func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
@@ -266,7 +267,7 @@ func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 			Name:      "referenced-plugin",
 			Namespace: "test-namespace",
 			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
+				pkgmetadata.AnnotationKeyTags: "plugin-tag",
 			},
 		},
 		PluginName: "rate-limiting",
@@ -293,6 +294,6 @@ func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
 	require.NoError(t, err)
 	require.Len(t, plugins, 1)
-
-	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+	// Should only include the tags from the referenced plugin, not the route.
+	assert.Equal(t, "plugin-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 }
