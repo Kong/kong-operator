@@ -59,6 +59,9 @@
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
   [#5003](https://github.com/Kong/kong-operator/pull/5003)
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306)
 
 ## [v2.1.9]
 
