@@ -123,9 +123,9 @@
 - Konnect entities: Fix truncating of tags to cut at 128 unicode runes
   (UTF8 code points).
   [#5306](https://github.com/Kong/kong-operator/pull/5306)
-- Hybrid gateway: Propogate tags in the annotation `konghq.com/tags` in `KongPlugin`s
-  to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propogate the
-  tags to plugins in Konnect.
+- Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
+  to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
+  tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
 
