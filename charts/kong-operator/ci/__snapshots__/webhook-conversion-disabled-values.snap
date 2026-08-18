@@ -56846,10 +56846,10 @@ spec:
                                   description: Anthropic configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -56862,7 +56862,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -56909,13 +56909,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -56977,10 +56977,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -56993,7 +56993,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57059,13 +57059,13 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57123,10 +57123,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57139,7 +57139,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57192,13 +57192,13 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     performanceConfigLatency:
                                       description: Latency performance configuration for the model invocation.
@@ -57266,10 +57266,10 @@ spec:
                                   description: Cerebras configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57282,7 +57282,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57329,13 +57329,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57398,10 +57398,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57414,7 +57414,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57471,13 +57471,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57537,10 +57537,10 @@ spec:
                                   description: Dashscope configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57553,7 +57553,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57600,7 +57600,7 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     international:
                                       description: Whether to use the international DashScope endpoint.
@@ -57612,7 +57612,7 @@ spec:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57666,10 +57666,10 @@ spec:
                                   description: Databricks configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57682,7 +57682,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57729,13 +57729,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57796,10 +57796,10 @@ spec:
                                   description: Deepseek configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57812,7 +57812,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -57859,13 +57859,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -57919,10 +57919,10 @@ spec:
                                   description: Gemini configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -57935,7 +57935,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58009,13 +58009,13 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58069,10 +58069,10 @@ spec:
                                   description: Huggingface configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58085,7 +58085,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58132,13 +58132,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58204,10 +58204,10 @@ spec:
                                   description: Kimi configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58220,7 +58220,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58267,7 +58267,7 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     international:
                                       description: |-
@@ -58281,7 +58281,7 @@ spec:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58335,10 +58335,10 @@ spec:
                                   description: Llama2 configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58351,7 +58351,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58407,13 +58407,13 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58471,10 +58471,10 @@ spec:
                                   description: Mistral configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58487,7 +58487,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58542,13 +58542,13 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58604,10 +58604,10 @@ spec:
                                   description: Ollama configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58620,7 +58620,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58667,13 +58667,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58727,10 +58727,10 @@ spec:
                                   description: Openai configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58743,7 +58743,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58790,13 +58790,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -58876,10 +58876,10 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -58892,7 +58892,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -58939,13 +58939,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -59042,10 +59042,10 @@ spec:
                                   description: Vercel configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -59058,7 +59058,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -59105,13 +59105,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -59165,10 +59165,10 @@ spec:
                                   description: Vertex configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -59181,7 +59181,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -59262,13 +59262,13 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -59322,10 +59322,10 @@ spec:
                                   description: Vllm configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -59338,7 +59338,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -59385,13 +59385,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -59448,10 +59448,10 @@ spec:
                                   description: Xai configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -59464,7 +59464,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -59511,13 +59511,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -61232,10 +61232,10 @@ spec:
                                   description: Anthropic configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61248,7 +61248,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61295,13 +61295,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -61363,10 +61363,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61379,7 +61379,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61445,13 +61445,13 @@ spec:
                                       maxLength: 253
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -61509,10 +61509,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61525,7 +61525,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61578,13 +61578,13 @@ spec:
                                       - Disabled
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     performanceConfigLatency:
                                       description: Latency performance configuration for the model invocation.
@@ -61652,10 +61652,10 @@ spec:
                                   description: Cerebras configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61668,7 +61668,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61715,13 +61715,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -61784,10 +61784,10 @@ spec:
                                       maxLength: 253
                                       type: string
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61800,7 +61800,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61857,13 +61857,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -61923,10 +61923,10 @@ spec:
                                   description: Dashscope configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -61939,7 +61939,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -61986,7 +61986,7 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     international:
                                       description: Whether to use the international DashScope endpoint.
@@ -61998,7 +61998,7 @@ spec:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62052,10 +62052,10 @@ spec:
                                   description: Databricks configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62068,7 +62068,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62115,13 +62115,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62182,10 +62182,10 @@ spec:
                                   description: Deepseek configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62198,7 +62198,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62245,13 +62245,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62305,10 +62305,10 @@ spec:
                                   description: Gemini configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62321,7 +62321,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62395,13 +62395,13 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62455,10 +62455,10 @@ spec:
                                   description: Huggingface configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62471,7 +62471,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62518,13 +62518,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62590,10 +62590,10 @@ spec:
                                   description: Kimi configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62606,7 +62606,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62653,7 +62653,7 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     international:
                                       description: |-
@@ -62667,7 +62667,7 @@ spec:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62721,10 +62721,10 @@ spec:
                                   description: Llama2 configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62737,7 +62737,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62793,13 +62793,13 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62857,10 +62857,10 @@ spec:
                                   description: Mistral configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -62873,7 +62873,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -62928,13 +62928,13 @@ spec:
                                       minLength: 1
                                       type: string
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -62990,10 +62990,10 @@ spec:
                                   description: Ollama configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63006,7 +63006,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63053,13 +63053,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63113,10 +63113,10 @@ spec:
                                   description: Openai configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63129,7 +63129,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63176,13 +63176,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63262,10 +63262,10 @@ spec:
                                           type: string
                                       type: object
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63278,7 +63278,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63325,13 +63325,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63428,10 +63428,10 @@ spec:
                                   description: Vercel configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63444,7 +63444,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63491,13 +63491,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63551,10 +63551,10 @@ spec:
                                   description: Vertex configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63567,7 +63567,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63648,13 +63648,13 @@ spec:
                                       - projectID
                                       type: object
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63708,10 +63708,10 @@ spec:
                                   description: Vllm configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63724,7 +63724,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63771,13 +63771,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
@@ -63834,10 +63834,10 @@ spec:
                                   description: Xai configuration.
                                   properties:
                                     cacheReadCost:
-                                      description: Cost per cache-read (cached) prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCost:
-                                      description: Cost per cache-write prompt token for billing and cost tracking.
+                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
                                       type: number
                                     cacheWriteCostList:
                                       description: |-
@@ -63850,7 +63850,7 @@ spec:
                                           This feature is currently in beta and is subject to change.
                                         properties:
                                           cost:
-                                            description: Cost per cache-write prompt token for this TTL.
+                                            description: Cost per 1M cache-write prompt tokens for this TTL.
                                             minimum: 0
                                             type: number
                                           ttl:
@@ -63897,13 +63897,13 @@ spec:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
                                     inputCost:
-                                      description: Cost per input token for billing and cost tracking.
+                                      description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
                                     maxTokens:
                                       description: The maximum number of tokens to generate in the response.
                                       type: integer
                                     outputCost:
-                                      description: Cost per output token for billing and cost tracking.
+                                      description: Cost per 1M output tokens for billing and cost tracking.
                                       type: number
                                     serviceTierFactor:
                                       description: |-
