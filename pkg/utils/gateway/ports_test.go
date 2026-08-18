@@ -112,6 +112,41 @@ func TestProtocolPortsFromListeners(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name:      "all HTTP/HTTPS listeners when unfiltered",
+			protocols: []gatewayv1.ProtocolType{gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType},
+			gateway:   gw,
+			expected:  []int32{80, 443, 5000},
+		},
+		{
+			name:        "filtered by sectionName",
+			protocols:   []gatewayv1.ProtocolType{gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType},
+			gateway:     gw,
+			sectionName: newSectionName("http-additional"),
+			expected:    []int32{5000},
+		},
+		{
+			name:        "filtered by sectionName matching HTTPS listener",
+			protocols:   []gatewayv1.ProtocolType{gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType},
+			gateway:     gw,
+			sectionName: newSectionName("https"),
+			expected:    []int32{443},
+		},
+		{
+			name:        "sectionName matching non-HTTP listener returns nil",
+			protocols:   []gatewayv1.ProtocolType{gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType},
+			gateway:     gw,
+			sectionName: newSectionName("tcp"),
+			expected:    nil,
+		},
+		{
+			name:      "no listeners returns nil",
+			protocols: []gatewayv1.ProtocolType{gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType},
+			gateway: &gatewayv1.Gateway{
+				ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+			},
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {

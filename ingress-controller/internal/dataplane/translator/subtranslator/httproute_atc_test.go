@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
 
@@ -1240,7 +1241,7 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 				Priority: tc.priority,
 			}
 
-			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(matchWithPriority, TranslateHTTPRouteRulesToKongRouteOptions{
+			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(store.NewFakeStoreEmpty(), matchWithPriority, TranslateHTTPRouteRulesToKongRouteOptions{
 				SupportRedirectPlugin: tc.supportRedirectPlugin,
 			})
 			if tc.hasError {
@@ -1254,6 +1255,114 @@ func TestKongExpressionRouteFromHTTPRouteMatchWithPriority(t *testing.T) {
 			require.Equal(t, tc.routeExpression, *route.Expression, "Should translate to expected expression")
 			require.Equal(t, tc.priority, *route.Priority, "Should have expected priority")
 			require.ElementsMatch(t, tc.tags, lo.FromSlicePtr(route.Tags), "Tags should be the same")
+		})
+	}
+}
+
+func TestKongExpressionRouteFromHTTPRouteMatchWithPriorityPortScoping(t *testing.T) {
+	singlePortGateway := []*gatewayapi.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+			Spec: gatewayapi.GatewaySpec{
+				Listeners: []gatewayapi.Listener{
+					{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+				},
+			},
+		},
+	}
+	multiPortGateway := []*gatewayapi.Gateway{
+		{
+			ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"},
+			Spec: gatewayapi.GatewaySpec{
+				Listeners: []gatewayapi.Listener{
+					{Name: "http", Protocol: gatewayapi.HTTPProtocolType, Port: 80},
+					{Name: "http-additional", Protocol: gatewayapi.HTTPProtocolType, Port: 5000},
+				},
+			},
+		},
+	}
+
+	testCases := []struct {
+		name            string
+		gateways        []*gatewayapi.Gateway
+		hasParentRef    bool
+		hostname        string
+		routeExpression string
+	}{
+		{
+			name:            "no parentRefs: no port matcher, catch-all expression",
+			gateways:        singlePortGateway,
+			hasParentRef:    false,
+			routeExpression: `(net.protocol == "http") || (net.protocol == "https")`,
+		},
+		{
+			name:            "unresolvable gateway: no port matcher, catch-all expression",
+			gateways:        nil,
+			hasParentRef:    true,
+			routeExpression: `(net.protocol == "http") || (net.protocol == "https")`,
+		},
+		{
+			name:            "single resolvable port without hostname",
+			gateways:        singlePortGateway,
+			hasParentRef:    true,
+			routeExpression: `net.dst.port == 80`,
+		},
+		{
+			name:            "single resolvable port with hostname",
+			gateways:        singlePortGateway,
+			hasParentRef:    true,
+			hostname:        "foo.com",
+			routeExpression: `(http.host == "foo.com") && (net.dst.port == 80)`,
+		},
+		{
+			name:            "multiple listeners with ports (no hostnames)",
+			gateways:        multiPortGateway,
+			hasParentRef:    true,
+			routeExpression: `(net.dst.port == 80) || (net.dst.port == 5000)`,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeStore, err := store.NewFakeStore(store.FakeObjects{
+				Gateways: tc.gateways,
+			})
+			require.NoError(t, err)
+
+			httproute := &gatewayapi.HTTPRoute{
+				ObjectMeta: metav1.ObjectMeta{
+					Namespace: "default",
+					Name:      "route-1",
+				},
+				Spec: gatewayapi.HTTPRouteSpec{
+					Rules: []gatewayapi.HTTPRouteRule{
+						{
+							Matches:     []gatewayapi.HTTPRouteMatch{{}},
+							BackendRefs: builder.NewHTTPBackendRef("svc1").ToSlice(),
+						},
+					},
+				},
+			}
+			if tc.hasParentRef {
+				httproute.Spec.ParentRefs = []gatewayapi.ParentReference{
+					{Name: "test-gateway"},
+				}
+			}
+
+			matchWithPriority := SplitHTTPRouteMatchToKongRoutePriority{
+				Match: SplitHTTPRouteMatch{
+					Match:      httproute.Spec.Rules[0].Matches[0],
+					Source:     httproute,
+					Hostname:   tc.hostname,
+					RuleIndex:  0,
+					MatchIndex: 0,
+				},
+				Priority: 1,
+			}
+
+			route, err := kongExpressionRouteFromHTTPRouteMatchWithPriority(fakeStore, matchWithPriority, TranslateHTTPRouteRulesToKongRouteOptions{})
+			require.NoError(t, err)
+			require.Equal(t, tc.routeExpression, *route.Expression)
 		})
 	}
 }
