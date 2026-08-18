@@ -1470,7 +1470,12 @@ func setDataPlaneDeploymentListenPorts(
 						if address == "" {
 							address = "0.0.0.0"
 						}
-						sslTemplates = append(sslTemplates, streamListenTemplate{address: address, options: ep.Options})
+						// "http2" is unconditionally re-added below via
+						// proxyListenProtocolSettings for every HTTPS proxy listener.
+						// Drop any copy surviving in ep.Options (e.g. read back from a
+						// previous reconcile's own output) so it isn't duplicated.
+						options := lo.Reject(ep.Options, func(o string, _ int) bool { return o == "http2" })
+						sslTemplates = append(sslTemplates, streamListenTemplate{address: address, options: options})
 					}
 				}
 			}
