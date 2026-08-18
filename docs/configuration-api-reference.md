@@ -36,6 +36,7 @@ KongClusterPlugin is the Schema for the kongclusterplugins API.
 | `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `status` _[KongClusterPluginStatus](#configuration-konghq-com-v1-types-kongclusterpluginstatus)_ | Status represents the current status of the KongClusterPlugin resource. |
 
 ### KongConsumer
@@ -79,6 +80,7 @@ KongPlugin is the Schema for the kongplugins API.
 | `protocols` _[][KongProtocol](#configuration-konghq-com-v1-types-kongprotocol)_ | Protocols configures plugin to run on requests received on specific protocols. |
 | `ordering` _*github.com/kong/go-kong/kong.PluginOrdering_ | Ordering overrides the normal plugin execution order. It's only available on Kong Enterprise. `<phase>` is a request processing phase (for example, `access` or `body_filter`) and `<plugin>` is the name of the plugin that will run before or after the KongPlugin. For example, a KongPlugin with `plugin: rate-limiting` and `before.access: ["key-auth"]` will create a rate limiting plugin that limits requests _before_ they are authenticated. |
 | `instance_name` _string_ | InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the same plugin in multiple contexts, for example, on multiple services. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `status` _[KongPluginStatus](#configuration-konghq-com-v1-types-kongpluginstatus)_ | Status represents the current status of the KongPlugin resource. |
 
 ### Types
@@ -3981,6 +3983,7 @@ KongPluginBindingSpec defines specification of a KongPluginBinding.
 | `targets` _[KongPluginBindingTargets](#configuration-konghq-com-v1alpha1-types-kongpluginbindingtargets)_ | Targets contains the targets references. It is possible to set multiple combinations of references, as described in https://docs.konghq.com/gateway/latest/key-concepts/plugins/#precedence The complete set of allowed combinations and their order of precedence for plugins configured to multiple entities is:<br /><br />1. Consumer + route + service 2. Consumer group + service + route 3. Consumer + route 4. Consumer + service 5. Consumer group + route 6. Consumer group + service 7. Route + service 8. Consumer 9. Consumer group 10. Route 11. Service |
 | `controlPlaneRef` _[ControlPlaneRef](#common-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef is a reference to a ControlPlane this KongPluginBinding is associated with. |
 | `scope` _[KongPluginBindingScope](#configuration-konghq-com-v1alpha1-types-kongpluginbindingscope)_ | Scope defines the scope of the plugin binding. |
+| `tags` _[Tags](#common-konghq-com-v1alpha1-types-tags)_ | Tags is an optional set of strings associated with the Target for grouping and filtering. |
 | `adopt` _[AdoptOptions](#common-konghq-com-v1alpha1-types-adoptoptions)_ | Adopt is the options for adopting a plugin instance from an existing plugin in Konnect. |
 
 _Appears in:_

@@ -86,6 +86,11 @@ func (in *KongClusterPlugin) DeepCopyInto(out *KongClusterPlugin) {
 		*out = new(kong.PluginOrdering)
 		(*in).DeepCopyInto(*out)
 	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(v1alpha1.Tags, len(*in))
+		copy(*out, *in)
+	}
 	in.Status.DeepCopyInto(&out.Status)
 }
 
@@ -312,6 +317,11 @@ func (in *KongPlugin) DeepCopyInto(out *KongPlugin) {
 		in, out := &in.Ordering, &out.Ordering
 		*out = new(kong.PluginOrdering)
 		(*in).DeepCopyInto(*out)
+	}
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(v1alpha1.Tags, len(*in))
+		copy(*out, *in)
 	}
 	in.Status.DeepCopyInto(&out.Status)
 }

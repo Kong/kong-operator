@@ -291,6 +291,16 @@ spec:
                 - type
                 x-kubernetes-list-type: map
             type: object
+          tags:
+            description: Tags is an optional set of strings associated with the Target
+              for grouping and filtering.
+            items:
+              type: string
+            maxItems: 20
+            type: array
+            x-kubernetes-validations:
+            - message: tags entries must not be longer than 128 characters
+              rule: self.all(tag, size(tag) >= 1 && size(tag) <= 128)
         required:
         - plugin
         type: object
