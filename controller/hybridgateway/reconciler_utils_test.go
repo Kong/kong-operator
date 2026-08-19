@@ -2693,6 +2693,125 @@ func TestEnforceState_UpstreamGating(t *testing.T) {
 	}
 }
 
+func TestEnforceState_KongRouteRequiresLiveServiceRouteAnnotation(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	s := scheme.Get()
+	ns := "ns"
+	root := gwtypes.HTTPRoute{
+		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
+		ObjectMeta: metav1.ObjectMeta{Name: "httproute-owner", Namespace: ns},
+	}
+	routeRef := ns + "/httproute-owner"
+
+	programmedCondition := metav1.Condition{
+		Type:               "Programmed",
+		Status:             metav1.ConditionTrue,
+		Reason:             "Programmed",
+		LastTransitionTime: metav1.Now(),
+	}
+
+	svcGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+	routeGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongRoute"}
+
+	makeDesiredService := func(name string) unstructured.Unstructured {
+		u := newUnstructured(ns, name, svcGVK, nil)
+		_ = unstructured.SetNestedField(u.Object, "example.com", "spec", "host")
+		_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
+		_ = unstructured.SetNestedField(u.Object, "httproute", "spec", "protocol")
+		u.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns/other-route," + routeRef,
+		})
+		return u
+	}
+	makeDesiredRoute := func(name, serviceName string) unstructured.Unstructured {
+		u := newUnstructured(ns, name, routeGVK, nil)
+		_ = unstructured.SetNestedField(u.Object, map[string]any{
+			"namespacedRef": map[string]any{"name": serviceName},
+		}, "spec", "serviceRef")
+		return u
+	}
+	makeProgrammedService := func(name string, annotation string) *configurationv1alpha1.KongService {
+		svc := &configurationv1alpha1.KongService{}
+		svc.SetName(name)
+		svc.SetNamespace(ns)
+		svc.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: annotation,
+		})
+		svc.Status.Conditions = []metav1.Condition{programmedCondition}
+		return svc
+	}
+
+	desired := []unstructured.Unstructured{
+		makeDesiredService("svc1"),
+		makeDesiredRoute("route1", "svc1"),
+		makeDesiredService("svc2"),
+		makeDesiredRoute("route2", "svc2"),
+	}
+	cl := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(
+			makeProgrammedService("svc1", routeRef),
+			makeProgrammedService("svc2", "ns/other-route"),
+		).
+		Build()
+
+	conv := &fakeHTTPRouteConverter{desired: desired, root: root}
+	applied, waiting, err := enforceState(ctx, cl, newTestTypeConverter(), logger, conv)
+	require.NoError(t, err)
+	assert.True(t, applied)
+	assert.True(t, waiting)
+
+	var svc2 configurationv1alpha1.KongService
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc2"}, &svc2))
+	assert.Equal(t, "ns/other-route,"+routeRef, svc2.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation])
+
+	var route2 configurationv1alpha1.KongRoute
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "route2"}, &route2))
+}
+
+func TestEnsureHybridRouteAnnotationOnKongService_Idempotent(t *testing.T) {
+	ctx := t.Context()
+	s := scheme.Get()
+	ns := "ns"
+	annotationKey := consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation
+	routeRef := ns + "/httproute-owner"
+
+	svc := &configurationv1alpha1.KongService{}
+	svc.SetName("svc1")
+	svc.SetNamespace(ns)
+	svc.SetAnnotations(map[string]string{
+		annotationKey: "ns/other-route",
+	})
+
+	cl := fake.NewClientBuilder().
+		WithScheme(s).
+		WithObjects(svc).
+		Build()
+
+	// First call adds routeRef to the annotation.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, svc, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, svc.GetAnnotations()[annotationKey])
+
+	var got configurationv1alpha1.KongService
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc1"}, &got))
+	assert.Equal(t, "ns/other-route,"+routeRef, got.GetAnnotations()[annotationKey])
+
+	// Second call with the already-annotated object is a no-op: no duplicate
+	// entry, no patch against a stale resourceVersion.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, svc, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, svc.GetAnnotations()[annotationKey])
+
+	// Calling again with a freshly-fetched copy (simulating a re-reconcile)
+	// must also be a no-op and must not error out on the optimistic lock.
+	require.NoError(t, ensureHybridRouteAnnotationOnKongService(ctx, cl, &got, annotationKey, routeRef))
+	assert.Equal(t, "ns/other-route,"+routeRef, got.GetAnnotations()[annotationKey])
+
+	var final configurationv1alpha1.KongService
+	require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: "svc1"}, &final))
+	assert.Equal(t, "ns/other-route,"+routeRef, final.GetAnnotations()[annotationKey])
+}
+
 // fakeHTTPRouteConverterWithHandleErr wraps fakeHTTPRouteConverter and returns an error
 // from HandleOrphanedResource so we can test error propagation in cleanOrphanedResources.
 type fakeHTTPRouteConverterWithHandleErr struct {
@@ -2957,6 +3076,26 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
 					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "TCPRoute returns TCPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesTCPRouteAnnotation,
+			wantRef: "ns/tcp-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.TCPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "tcp-route", Namespace: "ns"},
+				})
+			},
+		},
+		{
+			name:    "UDPRoute returns UDPRoute annotation key and ns/name",
+			wantKey: consts.GatewayOperatorHybridRoutesUDPRouteAnnotation,
+			wantRef: "ns/udp-route",
+			runFn: func() (string, string) {
+				return hybridRouteAnnotationInfo(gwtypes.UDPRoute{
+					ObjectMeta: metav1.ObjectMeta{Name: "udp-route", Namespace: "ns"},
 				})
 			},
 		},
