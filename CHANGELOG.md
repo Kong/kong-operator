@@ -128,6 +128,12 @@
 - Konnect entities: Fix truncating of tags to cut at 128 unicode runes
   (UTF8 code points).
   [#5306](https://github.com/Kong/kong-operator/pull/5306)
+- HTTPRoute: Kong routes generated for HTTPRoutes now carry a restriction
+  derived from the port of the Gateway listener(s) they're attached to.
+  Previously, a Gateway with more than one HTTP/HTTPS listener on different
+  ports (and no distinguishing hostname) could let traffic arriving on one
+  listener's port match a route that was only supposed to be reachable through
+  a different listener. Improved behavior works only for expressions router flavor.
 
 ## [v2.3.0-rc.3]
 
