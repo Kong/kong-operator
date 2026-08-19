@@ -482,3 +482,69 @@ func TestParsePrivateKey(t *testing.T) {
 		})
 	}
 }
+
+func TestIsTLSSecretValidOrVaultRef(t *testing.T) {
+	crt, key := certificate.MustGenerateCertPEMFormat()
+
+	newSecret := func(crt, key []byte) *corev1.Secret {
+		return &corev1.Secret{
+			Data: map[string][]byte{
+				"tls.crt": crt,
+				"tls.key": key,
+			},
+		}
+	}
+
+	tests := []struct {
+		name   string
+		secret *corev1.Secret
+		want   bool
+	}{
+		{
+			name:   "valid PEM cert and key",
+			secret: newSecret(crt, key),
+			want:   true,
+		},
+		{
+			name:   "vault ref key, PEM cert",
+			secret: newSecret(crt, []byte("{vault://my-vault/my-secret}")),
+			want:   true,
+		},
+		{
+			name:   "vault ref cert, PEM key",
+			secret: newSecret([]byte("{vault://my-vault/my-cert}"), key),
+			want:   true,
+		},
+		{
+			name:   "vault ref cert and key",
+			secret: newSecret([]byte("{vault://my-vault/my-cert}"), []byte("{vault://my-vault/my-key}")),
+			want:   true,
+		},
+		{
+			name:   "garbage key is rejected",
+			secret: newSecret(crt, []byte("not a key")),
+			want:   false,
+		},
+		{
+			name:   "malformed vault ref is rejected",
+			secret: newSecret(crt, []byte("vault://my-vault/my-secret")),
+			want:   false,
+		},
+		{
+			name: "missing tls.key",
+			secret: &corev1.Secret{
+				Data: map[string][]byte{"tls.crt": crt},
+			},
+			want: false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, IsTLSSecretValidOrVaultRef(tt.secret))
+		})
+	}
+
+	// IsTLSSecretValid must remain strict: it never accepts a vault reference.
+	assert.False(t, IsTLSSecretValid(newSecret(crt, []byte("{vault://my-vault/my-secret}"))))
+}
