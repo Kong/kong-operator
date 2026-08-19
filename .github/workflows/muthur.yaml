@@ -18,7 +18,7 @@ on:
     types: [created]
 
 env:
-  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.0.4
+  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.3.0
   AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.9.9
   KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.1
 
