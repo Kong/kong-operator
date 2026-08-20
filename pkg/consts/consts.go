@@ -95,13 +95,13 @@ const (
 	// in RFC3339 format as an annotation on the Secret containing the certificate.
 	CertExpiresAtAnnotation = "konghq.com/cert-expires-at"
 
-	// VaultSecretAnnotation, when set on a TLS Secret referenced by a KongCertificate's
-	// secretRef (directly, or via a Gateway API certificateRef), names the KongVault
-	// whose backing Config Store the Secret's tls.key value is pushed to. The
-	// KongCertificate synced to Konnect then holds only a vault:// reference for the
-	// key, never the literal value, so the Secret can be managed by anything (e.g.
+	// VaultSecretAnnotation is the annotation which, when set on a TLS Secret referenced
+	// by a KongCertificate's secretRef (directly, or via a Gateway API certificateRef),
+	// names the KongVault whose backing Config Store the Secret's tls.key value is pushed
+	// to. The KongCertificate synced to Konnect then holds only a vault:// reference for
+	// the key, never the literal value, so the Secret can be managed by anything (e.g.
 	// cert-manager) unaware of Konnect vaults.
-	VaultSecretAnnotation = "konghq.com/vault-secret"
+	VaultSecretAnnotation = "konghq.com/vault-secret" //nolint:gosec // annotation key name, not a credential
 )
 
 // -----------------------------------------------------------------------------
