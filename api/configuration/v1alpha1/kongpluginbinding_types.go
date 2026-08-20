@@ -107,6 +107,10 @@ type KongPluginBindingSpec struct {
 	// +kubebuilder:default:=OnlyTargets
 	Scope KongPluginBindingScope `json:"scope,omitempty"`
 
+	// Tags is an optional set of strings associated with the Target for grouping and filtering.
+	// +optional
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
+
 	// Adopt is the options for adopting a plugin instance from an existing plugin in Konnect.
 	// +optional
 	Adopt *commonv1alpha1.AdoptOptions `json:"adopt,omitempty"`

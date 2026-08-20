@@ -691,4 +691,75 @@ func TestKongPluginBindings(t *testing.T) {
 		}.
 			RunWithConfig(t, cfg, scheme)
 	})
+
+	t.Run("tags field validation", func(t *testing.T) {
+		common.TestCasesGroup[*configurationv1alpha1.KongPluginBinding]{
+			{
+				Name: "tags field with valid tags should succeed",
+				TestObject: &configurationv1alpha1.KongPluginBinding{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongPluginBindingSpec{
+						PluginReference: configurationv1alpha1.PluginRef{
+							Kind: new("KongPlugin"),
+							Name: "my-plugin",
+						},
+						Targets: &configurationv1alpha1.KongPluginBindingTargets{
+							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+								Name:  "test-service",
+								Kind:  "Service",
+								Group: "core",
+							},
+						},
+						ControlPlaneRef: validTestCPRef(),
+						Tags:            []string{"tag1", "tag2"},
+					},
+				},
+			},
+			{
+				Name: "tags field with invalid tag should fail",
+				TestObject: &configurationv1alpha1.KongPluginBinding{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongPluginBindingSpec{
+						PluginReference: configurationv1alpha1.PluginRef{
+							Kind: new("KongPlugin"),
+							Name: "my-plugin",
+						},
+						Targets: &configurationv1alpha1.KongPluginBindingTargets{
+							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+								Name:  "test-service",
+								Kind:  "Service",
+								Group: "core",
+							},
+						},
+						ControlPlaneRef: validTestCPRef(),
+						Tags:            []string{"tag1", "tag2", "a-too-long-tag-that-has-the-length-greater-than-the-maximum-length-of-one-hundred-and-twentyeight-characters-which-is-not-allowed"},
+					},
+				},
+				ExpectedErrorMessage: new("tags entries must not be longer than 128 characters"),
+			},
+			{
+				Name: "tags field with too many tags should fail",
+				TestObject: &configurationv1alpha1.KongPluginBinding{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: configurationv1alpha1.KongPluginBindingSpec{
+						PluginReference: configurationv1alpha1.PluginRef{
+							Kind: new("KongPlugin"),
+							Name: "my-plugin",
+						},
+						Targets: &configurationv1alpha1.KongPluginBindingTargets{
+							ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+								Name:  "test-service",
+								Kind:  "Service",
+								Group: "core",
+							},
+						},
+						ControlPlaneRef: validTestCPRef(),
+						Tags:            []string{"tag1", "tag2", "tag3", "tag4", "tag5", "tag6", "tag7", "tag8", "tag9", "tag10", "tag11", "tag12", "tag13", "tag14", "tag15", "tag16", "tag17", "tag18", "tag19", "tag20", "tag21"},
+					},
+				},
+				ExpectedErrorMessage: new("must have at most 20 items"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
 }
