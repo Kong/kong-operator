@@ -22,6 +22,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
@@ -90,6 +91,7 @@ func TestPluginEssentials(t *testing.T) {
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"status_code": 418}`),
 		},
+		Tags: commonv1alpha1.Tags{"teapot"},
 	}
 	kongclusterplugin := &configurationv1.KongClusterPlugin{
 		ObjectMeta: metav1.ObjectMeta{
@@ -136,6 +138,29 @@ func TestPluginEssentials(t *testing.T) {
 		return resp.StatusCode == http.StatusTeapot
 	}, ingressWait, waitTick)
 
+	t.Logf("validating that the plugin %s has the expected tags", kongplugin.Name)
+	require.Eventually(t, func() bool {
+		kc, err := helpers.NewKongAdminClient(proxyAdminURL, consts.KongTestPassword)
+		require.NoError(t, err, "failed to create Kong client")
+		plugins, err := kc.Plugins.ListAll(ctx)
+		require.NoError(t, err, "failed to list plugins")
+
+		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
+			return p != nil && p.Name != nil && *p.Name == kongplugin.PluginName
+		})
+		if !found {
+			t.Logf("plugin for KongPlugin %s in Kong not found", kongplugin.Name)
+			return false
+		}
+		if plugin.Tags != nil && lo.Contains(plugin.Tags, new("teapot")) {
+			return true
+		}
+		t.Logf("plugin for KongPlugin %s in Kong does not have expected tags, actual tags: %s",
+			kongplugin.Name,
+			strings.Join(lo.Map(plugin.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "_") }), ","))
+		return false
+	}, ingressWait, waitTick)
+
 	t.Logf("updating Ingress to use cluster plugin %s", kongclusterplugin.Name)
 	require.Eventually(t, func() bool {
 		ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns.Name).Get(ctx, ingress.Name, metav1.GetOptions{})
@@ -156,6 +181,29 @@ func TestPluginEssentials(t *testing.T) {
 		}
 		defer resp.Body.Close()
 		return resp.StatusCode == http.StatusUnavailableForLegalReasons
+	}, ingressWait, waitTick)
+
+	t.Logf("validating that the plugin %s has the expected tags", kongclusterplugin.Name)
+	require.Eventually(t, func() bool {
+		kc, err := helpers.NewKongAdminClient(proxyAdminURL, consts.KongTestPassword)
+		require.NoError(t, err, "failed to create Kong client")
+		plugins, err := kc.Plugins.ListAll(ctx)
+		require.NoError(t, err, "failed to list plugins")
+
+		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
+			return p != nil && p.Name != nil && *p.Name == kongclusterplugin.PluginName
+		})
+		if !found {
+			t.Logf("plugin for KongClusterPlugin %s in Kong not found", kongclusterplugin.Name)
+			return false
+		}
+		if plugin.Tags != nil && lo.Contains(plugin.Tags, new("legal")) {
+			return true
+		}
+		t.Logf("plugin for KongClusterPlugin %s in Kong does not have expected tags, actual tags: %s",
+			kongclusterplugin.Name,
+			strings.Join(lo.Map(plugin.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "_") }), ","))
+		return false
 	}, ingressWait, waitTick)
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
