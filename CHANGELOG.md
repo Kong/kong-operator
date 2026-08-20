@@ -91,6 +91,9 @@
   `ConfigStoreRefValid=False` with reason `RefNotPermitted` and is not pushed to
   Konnect.
   [#5221](https://github.com/Kong/kong-operator/pull/5221)
+- HybridGateway: Support GRPCRoute for hybrid
+  [#5139](https://github.com/Kong/kong-operator/pull/5139)
+  [#5141](https://github.com/Kong/kong-operator/pull/5141)
 
 ### Changed
 

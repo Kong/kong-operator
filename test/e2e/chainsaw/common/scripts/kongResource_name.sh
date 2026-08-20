@@ -11,6 +11,7 @@ set -o pipefail
 #   GATEWAY_NAMESPACE: The namespace of the gateway.
 #   HTTP_ROUTE_NAME: (Optional) The name of the HTTPRoute.
 #   HTTP_ROUTE_NAMESPACE: (Optional) The namespace of the HTTPRoute.
+#   ROUTE_ANNOTATION_KEY: (Optional) Annotation key used to match the route reference. Default: gateway-operator.konghq.com/hybrid-routes.
 #   EXPECTED_SERVICE_NAME: (Optional) The KongService name referenced by a KongRoute.
 #   REQUIRED_CONDITION_TYPE: (Optional) Condition type that the resource must have.
 #   REQUIRED_CONDITION_STATUS: (Optional) Required condition status. Default: True.
@@ -23,6 +24,7 @@ GATEWAY_NAME="${GATEWAY_NAME}"
 GATEWAY_NAMESPACE="${GATEWAY_NAMESPACE}"
 HTTP_ROUTE_NAME="${HTTP_ROUTE_NAME:-}"
 HTTP_ROUTE_NAMESPACE="${HTTP_ROUTE_NAMESPACE:-}"
+ROUTE_ANNOTATION_KEY="${ROUTE_ANNOTATION_KEY:-gateway-operator.konghq.com/hybrid-routes}"
 EXPECTED_SERVICE_NAME="${EXPECTED_SERVICE_NAME:-}"
 REQUIRED_CONDITION_TYPE="${REQUIRED_CONDITION_TYPE:-}"
 REQUIRED_CONDITION_STATUS="${REQUIRED_CONDITION_STATUS:-True}"
@@ -84,6 +86,7 @@ EOF
   RESOURCE_INFO=$(echo "$KUBECTL_OUTPUT" | jq -r \
     --arg gw "$EXPECTED_GW" \
     --arg rt "$EXPECTED_RT" \
+    --arg route_annotation_key "$ROUTE_ANNOTATION_KEY" \
     --arg service "$EXPECTED_SERVICE_NAME" \
     --arg condition_type "$REQUIRED_CONDITION_TYPE" \
     --arg condition_status "$REQUIRED_CONDITION_STATUS" '
@@ -91,7 +94,7 @@ EOF
         .items[]
         | select(
           (.metadata.annotations["gateway-operator.konghq.com/hybrid-gateways"] // "" | split(",") | contains([$gw]))
-          and ($rt == "" or (.metadata.annotations["gateway-operator.konghq.com/hybrid-routes"] // "" | split(",") | contains([$rt])))
+          and ($rt == "" or (.metadata.annotations[$route_annotation_key] // "" | split(",") | contains([$rt])))
           and ($service == "" or .spec.serviceRef.namespacedRef.name == $service)
           and (
             $condition_type == ""
@@ -131,6 +134,7 @@ EOF
   "namespace": "$NAMESPACE",
   "expected_gateway": "$EXPECTED_GW",
   "expected_route": "$EXPECTED_RT",
+  "expected_route_annotation_key": "$ROUTE_ANNOTATION_KEY",
   "expected_service_name": "$EXPECTED_SERVICE_NAME",
   "required_condition_type": "$REQUIRED_CONDITION_TYPE",
   "required_condition_status": "$REQUIRED_CONDITION_STATUS",

@@ -25,8 +25,6 @@ var skippedTestsForHybrid = []string{
 	// Core profile.
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
-
-	tests.GRPCRouteWeight.ShortName,
 }
 
 // skippedTestsForConfig returns the list of skipped tests for the given gateway type.

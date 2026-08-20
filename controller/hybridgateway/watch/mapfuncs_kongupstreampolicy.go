@@ -39,3 +39,33 @@ func MapHTTPRouteForKongUpstreamPolicy(cl client.Client) func(ctx context.Contex
 		return requests
 	}
 }
+
+// MapGRPCRouteForKongUpstreamPolicy returns a handler.MapFunc that, given a KongUpstreamPolicy,
+// lists all Services in its namespace that reference it via the konghq.com/upstream-policy
+// annotation, then returns reconcile.Requests for all GRPCRoutes backed by those Services.
+func MapGRPCRouteForKongUpstreamPolicy(cl client.Client) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		policy, ok := obj.(*configurationv1beta1.KongUpstreamPolicy)
+		if !ok {
+			return nil
+		}
+
+		svcList := &corev1.ServiceList{}
+		if err := cl.List(ctx, svcList, client.InNamespace(policy.Namespace)); err != nil {
+			return nil
+		}
+
+		var requests []reconcile.Request
+		for _, svc := range svcList.Items {
+			if svc.Annotations[configurationv1beta1.KongUpstreamPolicyAnnotationKey] != policy.Name {
+				continue
+			}
+			routeRequests, err := listGRPCRoutesForService(ctx, cl, svc.Namespace, svc.Name)
+			if err != nil {
+				continue
+			}
+			requests = append(requests, routeRequests...)
+		}
+		return requests
+	}
+}
