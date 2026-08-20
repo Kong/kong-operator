@@ -19729,8 +19729,8 @@ spec:
                   x-kubernetes-validations:
                   - message: Only 'Secret' kind is supported for 'core' group
                     rule: .self.group != 'core' || .self.kind == 'Secret'
-                  - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore' and 'AIGatewayConsumerGroup' kinds are supported for 'konnect.konghq.com' group
-                    rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore', 'AIGatewayConsumerGroup']
+                  - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore', 'KonnectAIGateway', and 'AIGatewayConsumerGroup' kinds are supported for 'konnect.konghq.com' group
+                    rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore', 'KonnectAIGateway', 'AIGatewayConsumerGroup']
                   - message: Only 'KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate' and 'KongUpstream' kinds are supported for 'configuration.konghq.com' group
                     rule: .self.group != 'configuration.konghq.com' || .self.kind in ['KongPlugin', 'KongService', 'KongCertificate', 'KongCACertificate', 'KongUpstream']
                 maxItems: 16
