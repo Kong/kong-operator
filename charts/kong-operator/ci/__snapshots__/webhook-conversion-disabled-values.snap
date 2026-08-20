@@ -42602,7 +42602,9 @@ spec:
                                       minLength: 1
                                       type: string
                                     namespace:
-                                      description: Namespace is reserved for future cross-namespace support.
+                                      description: |-
+                                        Namespace, if set to a namespace other than the referrer's, must be
+                                        permitted by a KongReferenceGrant in that namespace.
                                       type: string
                                   required:
                                   - name
@@ -42634,7 +42636,9 @@ spec:
                                       minLength: 1
                                       type: string
                                     namespace:
-                                      description: Namespace is reserved for future cross-namespace support.
+                                      description: |-
+                                        Namespace, if set to a namespace other than the referrer's, must be
+                                        permitted by a KongReferenceGrant in that namespace.
                                       type: string
                                   required:
                                   - name
@@ -55320,7 +55324,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -55352,7 +55358,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -59690,7 +59698,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
@@ -59722,7 +59732,9 @@ spec:
                                           minLength: 1
                                           type: string
                                         namespace:
-                                          description: Namespace is reserved for future cross-namespace support.
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
                                           type: string
                                       required:
                                       - name
