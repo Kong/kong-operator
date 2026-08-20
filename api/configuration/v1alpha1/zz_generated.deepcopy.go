@@ -4862,6 +4862,11 @@ func (in *KongPluginBindingSpec) DeepCopyInto(out *KongPluginBindingSpec) {
 		(*in).DeepCopyInto(*out)
 	}
 	in.ControlPlaneRef.DeepCopyInto(&out.ControlPlaneRef)
+	if in.Tags != nil {
+		in, out := &in.Tags, &out.Tags
+		*out = make(commonv1alpha1.Tags, len(*in))
+		copy(*out, *in)
+	}
 	if in.Adopt != nil {
 		in, out := &in.Adopt, &out.Adopt
 		*out = new(commonv1alpha1.AdoptOptions)

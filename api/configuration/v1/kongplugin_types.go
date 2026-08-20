@@ -20,6 +20,8 @@ import (
 	"github.com/kong/go-kong/kong"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 // KongPlugin is the Schema for the kongplugins API.
@@ -100,6 +102,10 @@ type KongPlugin struct {
 	// InstanceName is an optional custom name to identify an instance of the plugin. This is useful when running the
 	// same plugin in multiple contexts, for example, on multiple services.
 	InstanceName string `json:"instance_name,omitempty"`
+
+	// Tags is an optional set of strings associated with the Target for grouping and filtering.
+	// +optional
+	Tags commonv1alpha1.Tags `json:"tags,omitempty"`
 
 	// Status represents the current status of the KongPlugin resource.
 	Status KongPluginStatus `json:"status,omitempty"`
