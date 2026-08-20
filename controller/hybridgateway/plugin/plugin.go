@@ -116,6 +116,8 @@ func PluginsForRule(
 			WithPluginName(plugin.PluginName).
 			WithPluginConfig(plugin.Config.Raw).
 			WithAnnotations(httpRoute, pRef).
+			// Copy the tags annotation from the original plugin to the new plugin copy.
+			WithTagsFromAnnotations(plugin).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)

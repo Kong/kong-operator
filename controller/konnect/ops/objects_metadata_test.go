@@ -284,6 +284,28 @@ func TestGenerateTagsForObject(t *testing.T) {
 			},
 		},
 		{
+			name: "too long tags in additional tags are truncated",
+			obj:  namespacedObject(),
+			additionalTags: []string{
+				"tag1",
+				"tag2",
+				"long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here-and-no-more-things-should-be-preserved",
+			},
+			expectedTags: []string{
+				"k8s-generation:2",
+				"k8s-group:test.objects.io",
+				"k8s-kind:TestObjectKind",
+				"k8s-name:test-object",
+				"k8s-namespace:test-namespace",
+				"k8s-uid:test-uid",
+				"k8s-version:v1",
+				"long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here",
+				"managed-by:kong-operator",
+				"tag1",
+				"tag2",
+			},
+		},
+		{
 			name: "when too many tags in total, last from annotations are discarded",
 			obj: func() testObjectKind {
 				obj := namespacedObject()
