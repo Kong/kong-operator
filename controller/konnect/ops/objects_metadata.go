@@ -60,12 +60,17 @@ func GenerateTagsForObject(obj ObjectWithMetadata, additionalTags ...string) []s
 		annotationTags = append(annotationTags, truncate(tag, maxAllowedTagLength))
 	}
 
+	// Truncate the additional tags to ensure they are within the maximum allowed tag length.
+	truncatedAdditional := make([]string, 0, len(additionalTags))
+	for _, tag := range additionalTags {
+		truncatedAdditional = append(truncatedAdditional, truncate(tag, maxAllowedTagLength))
+	}
 	k8sMetaTags := generateKubernetesMetadataTags(obj)
 
-	// We concatenate the tags in this order to ensure that the k8sMetaTags and additionalTags (from spec) are never
-	// truncated below. CEL rules ensure that the total length of k8sMetaTags and additionalTags never exceeds
-	// the maximum allowed tags count. That means we will only discard tags from annotations.
-	allTags := lo.Uniq(slices.Concat(k8sMetaTags, additionalTags, annotationTags))
+	// We concatenate the tags in this order to ensure that the k8sMetaTags and additionalTags
+	// (from spec or annotation of `KongPlugin` to create plugins for `HTTPRoute` or `GRPCRoute`) are always preserved.
+	// That means we will only discard tags from annotations.
+	allTags := lo.Uniq(slices.Concat(k8sMetaTags, truncatedAdditional, annotationTags))
 
 	// If the total number of tags exceeds the maximum allowed tags counts, we limit the number of tags to the maximum
 	// allowed tags count, discarding the tags from annotations.

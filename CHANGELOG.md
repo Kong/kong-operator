@@ -59,6 +59,11 @@
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
   [#5003](https://github.com/Kong/kong-operator/pull/5003)
+- Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
+  to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
+  tags in `KongPlugin`s' annotation to plugins in Konnect.
+  [#5280](https://github.com/Kong/kong-operator/pull/5280)
+  [#5284](https://github.com/Kong/kong-operator/pull/5284)
 
 ## [v2.1.9]
 
