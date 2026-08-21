@@ -94,6 +94,9 @@
 - HybridGateway: Support GRPCRoute for hybrid
   [#5139](https://github.com/Kong/kong-operator/pull/5139)
   [#5141](https://github.com/Kong/kong-operator/pull/5141)
+- Support using `tags` field in `KongPlugin` and `KongClusterPlugin` to specify
+  tags in generated Kong plugins in on-prem gateways.
+  [#5325](https://github.com/Kong/kong-operator/pull/5325)
 
 ### Changed
 

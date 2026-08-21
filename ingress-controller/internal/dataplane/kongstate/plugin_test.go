@@ -64,6 +64,30 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "basic configuration with tags",
+			args: args{
+				plugin: configurationv1.KongClusterPlugin{
+					Protocols:    []configurationv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"header_name": "foo"}`),
+					},
+					Tags: []string{"example"},
+				},
+			},
+			want: kong.Plugin{
+				Name: new("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+				},
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: new("example"),
+				Tags:         kong.StringSlice("example"),
+			},
+			wantErr: false,
+		},
+		{
 			name: "secret configuration",
 			args: args{
 				plugin: configurationv1.KongClusterPlugin{
@@ -431,6 +455,30 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 			wantErr: false,
 		},
 		{
+			name: "basic configuration with tags",
+			args: args{
+				plugin: configurationv1.KongPlugin{
+					Protocols:    []configurationv1.KongProtocol{"http"},
+					PluginName:   "correlation-id",
+					InstanceName: "example",
+					Config: apiextensionsv1.JSON{
+						Raw: []byte(`{"header_name": "foo"}`),
+					},
+					Tags: []string{"example"},
+				},
+			},
+			want: kong.Plugin{
+				Name: new("correlation-id"),
+				Config: kong.Configuration{
+					"header_name": "foo",
+				},
+				Protocols:    kong.StringSlice("http"),
+				InstanceName: new("example"),
+				Tags:         kong.StringSlice("example"),
+			},
+			wantErr: false,
+		},
+		{
 			name: "secret configuration",
 			args: args{
 				plugin: configurationv1.KongPlugin{
@@ -757,9 +805,17 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 				t.Errorf("kongPluginFromK8SPlugin error = %v, wantErr %v", err, tt.wantErr)
 				return
 			}
-			// don't care about tags in this test
+			// don't care about tags in comparing the plugin, since they are generated based on the KongPlugin object and not part of the plugin spec.
+			// we will check that the tags are generated correctly in the next assertion.
+			gotTags := got.Tags
 			got.Tags = nil
+			tt.want.Tags = nil
 			assert.Equal(tt.want, got.Plugin)
+			if len(tt.args.plugin.Tags) > 0 {
+				for _, tag := range tt.args.plugin.Tags {
+					assert.Contains(gotTags, &tag, "expected tag %s not found in generated tags", tag)
+				}
+			}
 			assert.NotEmpty(t, got.K8sParent)
 		})
 	}
