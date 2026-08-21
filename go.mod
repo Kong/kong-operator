@@ -1,6 +1,6 @@
 module github.com/kong/kong-operator/v2
 
-go 1.25.12
+go 1.25.14
 
 require (
 	cloud.google.com/go/container v1.46.0
