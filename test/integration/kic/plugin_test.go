@@ -106,6 +106,7 @@ func TestPluginEssentials(t *testing.T) {
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"status_code": 451}`),
 		},
+		Tags: commonv1alpha1.Tags{"legal"},
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
 	require.NoError(t, err)
@@ -153,7 +154,8 @@ func TestPluginEssentials(t *testing.T) {
 			t.Logf("plugin for KongPlugin %s in Kong not found", kongplugin.Name)
 			return false
 		}
-		if plugin.Tags != nil && slices.Contains(plugin.Tags, new("teapot")) {
+		tags := lo.Map(plugin.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "_") })
+		if slices.Contains(tags, "teapot") {
 			return true
 		}
 		t.Logf("plugin for KongPlugin %s in Kong does not have expected tags, actual tags: %s",
@@ -198,7 +200,9 @@ func TestPluginEssentials(t *testing.T) {
 			t.Logf("plugin for KongClusterPlugin %s in Kong not found", kongclusterplugin.Name)
 			return false
 		}
-		if plugin.Tags != nil && slices.Contains(plugin.Tags, new("legal")) {
+
+		tags := lo.Map(plugin.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "_") })
+		if slices.Contains(tags, "legal") {
 			return true
 		}
 		t.Logf("plugin for KongClusterPlugin %s in Kong does not have expected tags, actual tags: %s",
