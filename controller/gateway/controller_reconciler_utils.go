@@ -1622,8 +1622,9 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 			}
 
 			if isReferenceGranted && secretExists {
-				// Check if the secret is a valid TLS secret.
-				if !secrets.IsTLSSecretValid(certificateSecret) {
+				// Check if the secret is a valid TLS secret. Either field may instead
+				// hold a Kong vault reference, resolved by Kong Gateway at runtime.
+				if !secrets.IsTLSSecretValidOrVaultRef(certificateSecret) {
 					resolvedRefsCondition.Reason = string(gatewayv1.ListenerReasonInvalidCertificateRef)
 					message = conditionMessage(message, "Referenced secret does not contain a valid TLS certificate")
 				}

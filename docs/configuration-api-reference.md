@@ -3455,10 +3455,29 @@ KongCertificateStatus defines the observed state of KongCertificate.
 | --- | --- |
 | `konnect` _[KonnectEntityStatusWithControlPlaneRef](#konnect-konghq-com-v1alpha2-types-konnectentitystatuswithcontrolplaneref)_ | Konnect contains the Konnect entity status. |
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the Konnect entity. |
+| `vaultSecret` _[KongCertificateVaultSecretStatus](#configuration-konghq-com-v1alpha1-types-kongcertificatevaultsecretstatus)_ | VaultSecret records the Konnect Config Store secret this KongCertificate's tls.key was pushed to, when its source Secret carries the "konghq.com/vault-secret" annotation. It identifies the entry this KongCertificate owns, so later reconciles know to update rather than recreate it, and deletion knows what to remove, even if the source Secret no longer exists by then. |
 
 _Appears in:_
 
 - [KongCertificate](#configuration-konghq-com-v1alpha1-kongcertificate)
+
+#### KongCertificateVaultSecretStatus
+
+
+KongCertificateVaultSecretStatus identifies a secret pushed to a Konnect
+Config Store on behalf of a KongCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the control plane that owns the Config Store. |
+| `configStoreID` _string_ | ConfigStoreID is the Konnect ID of the Config Store holding the secret. |
+| `key` _string_ | Key is the secret's key name within the Config Store. |
+
+_Appears in:_
+
+- [KongCertificateStatus](#configuration-konghq-com-v1alpha1-types-kongcertificatestatus)
 
 #### KongCredentialACLAPISpec
 

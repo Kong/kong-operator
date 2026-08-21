@@ -391,7 +391,7 @@ func TestKongCertificateToCertificateInput(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.clientObjs...).Build()
-			input, err := kongCertificateToCertificateInput(ctx, cl, tt.cert)
+			input, err := kongCertificateToCertificateInput(ctx, cl, nil, tt.cert)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)
@@ -631,7 +631,7 @@ func TestFetchTLSDataFromSecret(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tt.clientObjs...).Build()
-			certData, keyData, err := fetchTLSDataFromSecret(ctx, cl, tt.parentNamespace, tt.secretRef)
+			certData, keyData, _, err := fetchTLSDataFromSecret(ctx, cl, tt.parentNamespace, tt.secretRef)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)
@@ -837,7 +837,7 @@ func TestUpdateCertificate(t *testing.T) {
 			sdk := mocks.NewMockCertificatesSDK(t)
 			tt.setupMock(sdk)
 
-			err := updateCertificate(ctx, cl, sdk, tt.cert)
+			err := updateCertificate(ctx, cl, sdk, nil, tt.cert)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)
@@ -1223,7 +1223,7 @@ func TestCreateCertificate(t *testing.T) {
 			sdk := mocks.NewMockCertificatesSDK(t)
 			tt.setupMock(sdk)
 
-			err := createCertificate(ctx, cl, sdk, tt.cert)
+			err := createCertificate(ctx, cl, sdk, nil, tt.cert)
 
 			if tt.wantErr != "" {
 				require.Error(t, err)
@@ -1286,7 +1286,7 @@ func TestAdoptKongCertificateOverride(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	err := adoptCertificate(ctx, cl, sdk, cert)
+	err := adoptCertificate(ctx, cl, sdk, nil, cert)
 	require.NoError(t, err)
 	assert.Equal(t, "konnect-cert-id", cert.GetKonnectID())
 }
@@ -1339,7 +1339,7 @@ func TestAdoptKongCertificateMatchSuccess(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	err := adoptCertificate(ctx, cl, sdk, cert)
+	err := adoptCertificate(ctx, cl, sdk, nil, cert)
 	require.NoError(t, err)
 	assert.Equal(t, "konnect-cert-id", cert.GetKonnectID())
 }
@@ -1386,7 +1386,7 @@ func TestAdoptKongCertificateMatchMismatch(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	err := adoptCertificate(ctx, cl, sdk, cert)
+	err := adoptCertificate(ctx, cl, sdk, nil, cert)
 	require.Error(t, err)
 	var notMatchErr KonnectEntityAdoptionNotMatchError
 	assert.ErrorAs(t, err, &notMatchErr)
@@ -1436,7 +1436,7 @@ func TestAdoptKongCertificateUIDConflict(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	err := adoptCertificate(ctx, cl, sdk, cert)
+	err := adoptCertificate(ctx, cl, sdk, nil, cert)
 	require.Error(t, err)
 	var uidConflict KonnectEntityAdoptionUIDTagConflictError
 	assert.ErrorAs(t, err, &uidConflict)
@@ -1480,9 +1480,76 @@ func TestAdoptKongCertificateFetchFailure(t *testing.T) {
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-	err := adoptCertificate(ctx, cl, sdk, cert)
+	err := adoptCertificate(ctx, cl, sdk, nil, cert)
 	require.Error(t, err)
 	var fetchErr KonnectEntityAdoptionFetchError
 	assert.ErrorAs(t, err, &fetchErr)
 	assert.Empty(t, cert.GetKonnectID())
+}
+
+func TestDeleteCertificate(t *testing.T) {
+	ctx := t.Context()
+
+	newCert := func(vaultSecret *configurationv1alpha1.KongCertificateVaultSecretStatus) *configurationv1alpha1.KongCertificate {
+		return &configurationv1alpha1.KongCertificate{
+			ObjectMeta: metav1.ObjectMeta{Name: "cert", Namespace: "ns"},
+			Status: configurationv1alpha1.KongCertificateStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "konnect-cert-id"},
+					ControlPlaneID:      "cp-1",
+				},
+				VaultSecret: vaultSecret,
+			},
+		}
+	}
+
+	t.Run("no vault secret to clean up", func(t *testing.T) {
+		sdk := mocks.NewMockCertificatesSDK(t)
+		sdk.EXPECT().DeleteCertificate(mock.Anything, "cp-1", "konnect-cert-id").
+			Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
+		configStoreSecretsSDK := mocks.NewMockConfigStoreSecretsSDK(t) // no calls expected
+
+		err := deleteCertificate(ctx, sdk, configStoreSecretsSDK, newCert(nil))
+		require.NoError(t, err)
+	})
+
+	t.Run("removes the vault secret it owns", func(t *testing.T) {
+		sdk := mocks.NewMockCertificatesSDK(t)
+		sdk.EXPECT().DeleteCertificate(mock.Anything, "cp-1", "konnect-cert-id").
+			Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
+		configStoreSecretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		configStoreSecretsSDK.EXPECT().DeleteConfigStoreSecret(mock.Anything, sdkkonnectops.DeleteConfigStoreSecretRequest{
+			ControlPlaneID: "vault-cp-1",
+			ConfigStoreID:  "vault-store-1",
+			Key:            "vault-key-1",
+		}).Return(&sdkkonnectops.DeleteConfigStoreSecretResponse{}, nil)
+
+		cert := newCert(&configurationv1alpha1.KongCertificateVaultSecretStatus{
+			ControlPlaneID: "vault-cp-1",
+			ConfigStoreID:  "vault-store-1",
+			Key:            "vault-key-1",
+		})
+
+		err := deleteCertificate(ctx, sdk, configStoreSecretsSDK, cert)
+		require.NoError(t, err)
+	})
+
+	t.Run("propagates a Config Store deletion failure", func(t *testing.T) {
+		sdk := mocks.NewMockCertificatesSDK(t)
+		sdk.EXPECT().DeleteCertificate(mock.Anything, "cp-1", "konnect-cert-id").
+			Return(&sdkkonnectops.DeleteCertificateResponse{}, nil)
+		configStoreSecretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		configStoreSecretsSDK.EXPECT().DeleteConfigStoreSecret(mock.Anything, mock.Anything).
+			Return(nil, fmt.Errorf("konnect API error"))
+
+		cert := newCert(&configurationv1alpha1.KongCertificateVaultSecretStatus{
+			ControlPlaneID: "vault-cp-1",
+			ConfigStoreID:  "vault-store-1",
+			Key:            "vault-key-1",
+		})
+
+		err := deleteCertificate(ctx, sdk, configStoreSecretsSDK, cert)
+		require.Error(t, err)
+		require.Contains(t, err.Error(), "vault-key-1")
+	})
 }

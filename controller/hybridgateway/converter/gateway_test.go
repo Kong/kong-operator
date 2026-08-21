@@ -480,6 +480,62 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 		},
 		{
+			name: "successfully processes TLS certificate with vault-referenced key",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{
+					Name:      "test-gateway",
+					Namespace: "default",
+				},
+			},
+			listener: &gwtypes.Listener{
+				Name:     "https",
+				Port:     443,
+				Hostname: new(gatewayv1.Hostname("example.com")),
+			},
+			certRef: gatewayv1.SecretObjectReference{
+				Name: "tls-secret-vault-key",
+			},
+			setupMocks: func(t *testing.T, cl client.Client) {
+				// The private key is never stored in the cluster: only a Kong vault
+				// reference is, resolved by Kong Gateway at runtime.
+				secret := &corev1.Secret{
+					ObjectMeta: metav1.ObjectMeta{
+						Name:      "tls-secret-vault-key",
+						Namespace: "default",
+					},
+					Type: corev1.SecretTypeTLS,
+					Data: map[string][]byte{
+						"tls.crt": cert,
+						"tls.key": []byte("{vault://certvault/my-service-key}"),
+					},
+				}
+				require.NoError(t, cl.Create(context.Background(), secret))
+			},
+			controlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+				KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+					Name: "test-cp",
+				},
+			},
+			expectError: false,
+			validateOutput: func(t *testing.T, objects []client.Object) {
+				require.Len(t, objects, 2)
+				var hasCert, hasSNI bool
+				for _, obj := range objects {
+					switch o := obj.(type) {
+					case *configurationv1alpha1.KongCertificate:
+						hasCert = true
+						require.NotNil(t, o.Spec.SecretRef, "KongCertificate should still reference the Secret, not inline the vault ref")
+						require.Equal(t, "tls-secret-vault-key", o.Spec.SecretRef.Name)
+					case *configurationv1alpha1.KongSNI:
+						hasSNI = true
+					}
+				}
+				require.True(t, hasCert, "should create KongCertificate")
+				require.True(t, hasSNI, "should create KongSNI")
+			},
+		},
+		{
 			name: "skips certificate with unsupported group",
 			gateway: &gwtypes.Gateway{
 				ObjectMeta: metav1.ObjectMeta{
