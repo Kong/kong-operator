@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"maps"
+	"sort"
+	"strings"
 
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -12,6 +14,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
 )
 
 // KongPluginBuilder is a builder for configurationv1.KongPlugin resources.
@@ -98,6 +101,47 @@ func (b *KongPluginBuilder) MustBuild() configurationv1.KongPlugin {
 		panic(fmt.Errorf("failed to build KongPlugin: %w", err))
 	}
 	return plugin
+}
+
+// WithTagsFromAnnotations merges the konghq.com/tags annotation value from the given
+// sources into the KongPlugin being built. This ensures that when the generated
+// KongPlugin copy is later read by the Konnect ops layer (via metadata.ExtractTags),
+// the user-supplied tags are present. Multiple sources are merged and deduplicated.
+func (b *KongPluginBuilder) WithTagsFromAnnotations(sources ...pkgmetadata.ObjectWithAnnotations) *KongPluginBuilder {
+	var allTags []string
+	for _, src := range sources {
+		if src == nil {
+			continue
+		}
+		allTags = append(allTags, pkgmetadata.ExtractTags(src)...)
+	}
+	if len(allTags) == 0 {
+		return b
+	}
+	// Deduplicate while preserving order.
+	seen := make(map[string]struct{}, len(allTags))
+	deduped := make([]string, 0, len(allTags))
+	for _, t := range allTags {
+		// Trim trailing and leading whitespace from each tag to avoid duplicates that differ only by whitespace.
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if _, ok := seen[t]; !ok {
+			seen[t] = struct{}{}
+			deduped = append(deduped, t)
+		}
+	}
+	if len(deduped) == 0 {
+		return b
+	}
+
+	if b.plugin.Annotations == nil {
+		b.plugin.Annotations = make(map[string]string)
+	}
+	sort.Strings(deduped)
+	b.plugin.Annotations[pkgmetadata.AnnotationKeyTags] = strings.Join(deduped, ",")
+	return b
 }
 
 // WithPluginName sets the plugin name for the KongPlugin being built.

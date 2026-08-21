@@ -40,6 +40,7 @@ func RequestTerminationForBackendNotFound(
 		WithNamespace(metadata.NamespaceFromParentRef(httpRoute, pRef)).
 		WithLabels(httpRoute, pRef).
 		WithAnnotations(httpRoute, pRef).
+		WithTagsFromAnnotations(httpRoute).
 		WithPluginName("request-termination").
 		WithPluginConfig(config).
 		Build()
