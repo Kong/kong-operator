@@ -480,11 +480,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              label:
-                                description: The label of the MCP server. This is
-                                  used to filter the exported MCP tools.
-                                maxLength: 253
-                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -2209,11 +2204,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              label:
-                                description: The label of the MCP server. This is
-                                  used to filter the exported MCP tools.
-                                maxLength: 253
-                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -2696,6 +2686,19 @@ spec:
                           - name
                           type: object
                         type: array
+                      sources:
+                        description: |-
+                          The explicit list of source MCP Servers whose tools this listener exposes.
+                          Each entry is the immutable `name` of a `conversion-only` (toolset) or
+                          `upstream-server` (third-party MCP server) MCP Server in the same AI
+                          Gateway.
+                          All of the referenced source's tools are exposed.
+                        items:
+                          description: |-
+                            AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
+                            In some cases, this may be the entity name or ID.
+                          type: string
+                        type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
                         items:
@@ -2937,6 +2940,7 @@ spec:
                     - config
                     - displayName
                     - name
+                    - sources
                     type: object
                   passthrough-listener:
                     description: PassthroughListener configuration.
@@ -3366,11 +3370,6 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
-                                type: string
-                              label:
-                                description: The label of the MCP server. This is
-                                  used to filter the exported MCP tools.
-                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -4459,11 +4458,6 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
-                                type: string
-                              label:
-                                description: The label of the MCP server. This is
-                                  used to filter the exported MCP tools.
-                                maxLength: 253
                                 type: string
                               preserveUpstreamToolNames:
                                 description: |-

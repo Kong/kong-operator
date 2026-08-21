@@ -99,10 +99,6 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Name)
 		}
-	case AIGatewayModelProviderConfigTypeVertex:
-		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
-			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Name)
-		}
 	case AIGatewayModelProviderConfigTypeVllm:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vllm.Name)
