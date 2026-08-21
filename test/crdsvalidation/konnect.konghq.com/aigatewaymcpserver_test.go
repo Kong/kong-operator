@@ -35,6 +35,7 @@ func validAIGatewayMCPServer(ns string) *konnectv1alpha1.AIGatewayMCPServer {
 					Listener: &konnectv1alpha1.AIGatewayMCPServerListener{
 						Name:        "test-mcp-server",
 						DisplayName: "Test MCP Server",
+						Sources:     []konnectv1alpha1.AIGatewayEntityIdentifier{"test-source"},
 						Access: &konnectv1alpha1.AIGatewayMCPServerListenerAccess{
 							AclAttributeType: konnectv1alpha1.AIGatewayMCPServerListenerAccessTypeConsumer,
 							Consumer:         &konnectv1alpha1.AIGatewayMCPServerListenerConsumer{},
