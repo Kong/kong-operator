@@ -452,8 +452,6 @@ apiGroupVersions:
             type: Secret
           - path: spec.apiSpec.gemini.config.auth.gcp.serviceAccountJSON
             type: Secret
-          - path: spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON
-            type: Secret
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayModelProvidersSDK
