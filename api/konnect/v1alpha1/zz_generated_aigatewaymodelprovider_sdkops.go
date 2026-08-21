@@ -363,18 +363,6 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
-			"vertex",
-			"labels",
-		},
-	},
-	{
-		Path: []string{
-			"vertex",
-			"managed_by",
-		},
-	},
-	{
-		Path: []string{
 			"vllm",
 			"labels",
 		},
@@ -483,9 +471,6 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 	case AIGatewayModelProviderConfigTypeXai:
 		selected = payload["xai"]
 		variant = "Xai"
-	case AIGatewayModelProviderConfigTypeVertex:
-		selected = payload["vertex"]
-		variant = "Vertex"
 	case AIGatewayModelProviderConfigTypeSagemaker:
 		selected = payload["sagemaker"]
 		variant = "Sagemaker"
@@ -658,13 +643,6 @@ func (s *AIGatewayModelProviderAPISpec) ToCreateAIGatewayModelProviderRequest() 
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestXai(member)
 		return &target, nil
-	case "Vertex":
-		var member sdkkonnectcomp.AIGatewayModelProviderVertex
-		if err := json.Unmarshal(data, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderVertex: %w", err)
-		}
-		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestVertex(member)
-		return &target, nil
 	case "Sagemaker":
 		var member sdkkonnectcomp.AIGatewayModelProviderSagemaker
 		if err := json.Unmarshal(data, &member); err != nil {
@@ -825,13 +803,6 @@ func (s *AIGatewayModelProviderAPISpec) ToUpdateAIGatewayModelProviderRequest() 
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderXai: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestXai(member)
-		return &target, nil
-	case "Vertex":
-		var member sdkkonnectcomp.AIGatewayModelProviderVertex
-		if err := json.Unmarshal(data, &member); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderVertex: %w", err)
-		}
-		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestVertex(member)
 		return &target, nil
 	case "Sagemaker":
 		var member sdkkonnectcomp.AIGatewayModelProviderSagemaker
@@ -1785,37 +1756,6 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 			}
 		}
 	}
-	// Resolve spec.apiSpec.*.config.auth.basic.headers[].value
-	if apiSpec.AIGatewayModelProviderConfig != nil {
-		if apiSpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic != nil {
-					for i := range apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Headers {
-						src := apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Headers[i].Value
-						if src.Type == SensitiveDataSourceTypeSecretRef {
-							if src.SecretRef == nil {
-								return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.basic.headers[].value")
-							}
-							namespace := obj.GetNamespace()
-							if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-								namespace = *src.SecretRef.Namespace
-							}
-							var secret corev1.Secret
-							if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-								return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-							}
-							secretBytes, ok := secret.Data[src.SecretRef.Key]
-							if !ok {
-								return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-							}
-							resolved := string(secretBytes)
-							apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Headers[i].Value.Value = &resolved
-						}
-					}
-				}
-			}
-		}
-	}
 	// Resolve spec.apiSpec.*.config.auth.basic.params[].value
 	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Azure != nil {
@@ -1940,37 +1880,6 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 			}
 		}
 	}
-	// Resolve spec.apiSpec.*.config.auth.basic.params[].value
-	if apiSpec.AIGatewayModelProviderConfig != nil {
-		if apiSpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic != nil {
-					for i := range apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Params {
-						src := apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Params[i].Value
-						if src.Type == SensitiveDataSourceTypeSecretRef {
-							if src.SecretRef == nil {
-								return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.basic.params[].value")
-							}
-							namespace := obj.GetNamespace()
-							if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-								namespace = *src.SecretRef.Namespace
-							}
-							var secret corev1.Secret
-							if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-								return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-							}
-							secretBytes, ok := secret.Data[src.SecretRef.Key]
-							if !ok {
-								return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-							}
-							resolved := string(secretBytes)
-							apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Params[i].Value.Value = &resolved
-						}
-					}
-				}
-			}
-		}
-	}
 	// Resolve spec.apiSpec.bedrock.config.auth.aws.secretAccessKey
 	if apiSpec.AIGatewayModelProviderConfig != nil {
 		if apiSpec.AIGatewayModelProviderConfig.Bedrock != nil {
@@ -2058,37 +1967,6 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 							}
 							resolved := string(secretBytes)
 							apiSpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.Value = &resolved
-						}
-					}
-				}
-			}
-		}
-	}
-	// Resolve spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON
-	if apiSpec.AIGatewayModelProviderConfig != nil {
-		if apiSpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex != nil {
-					{
-						src := apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON
-						if src.Type == SensitiveDataSourceTypeSecretRef {
-							if src.SecretRef == nil {
-								return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.vertex.config.auth.vertex.serviceAccountJSON")
-							}
-							namespace := obj.GetNamespace()
-							if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
-								namespace = *src.SecretRef.Namespace
-							}
-							var secret corev1.Secret
-							if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
-								return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
-							}
-							secretBytes, ok := secret.Data[src.SecretRef.Key]
-							if !ok {
-								return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
-							}
-							resolved := string(secretBytes)
-							apiSpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.Value = &resolved
 						}
 					}
 				}
@@ -2427,19 +2305,6 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
-		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic != nil {
-					for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Headers {
-						if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-							refs = append(refs, *item.Value.SecretRef)
-						}
-					}
-				}
-			}
-		}
-	}
-	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.Config.Auth != nil {
 				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Azure.Config.Auth.Basic != nil {
@@ -2492,19 +2357,6 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
-		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic != nil {
-					for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Basic.Params {
-						if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
-							refs = append(refs, *item.Value.SecretRef)
-						}
-					}
-				}
-			}
-		}
-	}
-	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock != nil {
 			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.Config.Auth != nil {
 				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Bedrock.Config.Auth.AWS != nil {
@@ -2532,17 +2384,6 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP != nil {
 					if obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef != nil {
 						refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Gemini.Config.Auth.GCP.ServiceAccountJSON.SecretRef)
-					}
-				}
-			}
-		}
-	}
-	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
-		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex != nil {
-			if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth != nil {
-				if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex != nil {
-					if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.Type == SensitiveDataSourceTypeSecretRef && obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.SecretRef != nil {
-						refs = append(refs, *obj.Spec.APISpec.AIGatewayModelProviderConfig.Vertex.Config.Auth.Vertex.ServiceAccountJSON.SecretRef)
 					}
 				}
 			}

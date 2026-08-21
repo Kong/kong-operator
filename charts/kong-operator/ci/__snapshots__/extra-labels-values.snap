@@ -44333,6 +44333,32 @@ spec:
                             items:
                               type: string
                             type: array
+                          principals:
+                            description: |-
+                              Authenticate against Kong Identity instead of local credentials.
+                              Mutually exclusive with identity realms.
+                            properties:
+                              directory:
+                                description: The Kong Identity directory instance to authenticate against.
+                                maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
+                                type: string
+                              enabled:
+                                description: When true, authenticate against Kong Identity instead of local credentials.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              errorOnMiss:
+                                description: |-
+                                  When true (default), reject the request if no matching principal is found in
+                                  Kong Identity.
+                                  When false, allow the request to continue unauthenticated instead.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            type: object
                         type: object
                       displayName:
                         description: The display name for this identity provider instance.
@@ -44599,6 +44625,66 @@ spec:
                             description: Comma-separated hosts that bypass the configured proxies.
                             maxLength: 253
                             type: string
+                          principals:
+                            description: Map a request to a Kong Identity principal after token verification.
+                            properties:
+                              directory:
+                                description: The Kong Identity directory instance to look up against.
+                                maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
+                                type: string
+                              enabled:
+                                description: When true, look up a Kong Identity principal after token verification.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              errorOnMiss:
+                                description: |-
+                                  When true (default), reject the request if no principal is matched in Kong
+                                  Identity after token
+                                  verification.
+                                  When false, the request continues without an authenticated principal set.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              matchConsumer:
+                                description: |-
+                                  If a consumer is attached to the matched principal, load it and set it in
+                                  the request context,
+                                  overriding consumer_by.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              matchConsumerGroups:
+                                description: |-
+                                  If consumer groups are attached to the matched principal, load them,
+                                  overriding consumer_groups_claim.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              principalBy:
+                                description: |-
+                                  Custom identity name for a custom Kong Identity lookup.
+                                  When absent and principal_claim is set,
+                                  a lookup is performed using principal_claim as the claim name instead of the
+                                  default sub claim.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              principalClaim:
+                                description: |-
+                                  Token claim used for the Kong Identity lookup.
+                                  If multiple values are set, the claim is inside a
+                                  nested object of the token payload.
+                                  Used together with, or instead of, principal_by.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           scopes:
                             description: This field is referenceable.
                             items:
@@ -45262,10 +45348,6 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
-                                type: string
-                              label:
-                                description: The label of the MCP server. This is used to filter the exported MCP tools.
-                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -46932,10 +47014,6 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
-                              label:
-                                description: The label of the MCP server. This is used to filter the exported MCP tools.
-                                maxLength: 253
-                                type: string
                               session:
                                 description: |-
                                   Enable managed session when Kong responds as MCP server in listener,
@@ -47398,6 +47476,19 @@ spec:
                           - name
                           type: object
                         type: array
+                      sources:
+                        description: |-
+                          The explicit list of source MCP Servers whose tools this listener exposes.
+                          Each entry is the immutable `name` of a `conversion-only` (toolset) or
+                          `upstream-server` (third-party MCP server) MCP Server in the same AI
+                          Gateway.
+                          All of the referenced source's tools are exposed.
+                        items:
+                          description: |-
+                            AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
+                            In some cases, this may be the entity name or ID.
+                          type: string
+                        type: array
                       tools:
                         description: List of tools exposed by this MCP Server.
                         items:
@@ -47632,6 +47723,7 @@ spec:
                     - config
                     - displayName
                     - name
+                    - sources
                     type: object
                   passthrough-listener:
                     description: PassthroughListener configuration.
@@ -48032,10 +48124,6 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
-                                type: string
-                              label:
-                                description: The label of the MCP server. This is used to filter the exported MCP tools.
-                                maxLength: 253
                                 type: string
                               session:
                                 description: |-
@@ -49086,10 +49174,6 @@ spec:
                                 enum:
                                 - Enabled
                                 - Disabled
-                                type: string
-                              label:
-                                description: The label of the MCP server. This is used to filter the exported MCP tools.
-                                maxLength: 253
                                 type: string
                               preserveUpstreamToolNames:
                                 description: |-
@@ -54123,7 +54207,6 @@ spec:
                     - openai
                     - sagemaker
                     - vercel
-                    - vertex
                     - vllm
                     - xai
                     minLength: 1
@@ -54291,304 +54374,6 @@ spec:
                                   type: object
                                 maxItems: 1
                                 type: array
-                            type: object
-                        required:
-                        - auth
-                        type: object
-                      displayName:
-                        description: The display name for this model provider instance.
-                        maxLength: 256
-                        minLength: 1
-                        type: string
-                      labels:
-                        additionalProperties:
-                          description: PublicLabelsValue is the value type for PublicLabels.
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
-                          type: string
-                        description: |-
-                          Public labels store information about an entity that can be used for
-                          filtering a list of objects.
-
-                          Public labels are intended to store **PUBLIC** metadata.
-
-                          Keys must be of length 1-63 characters, and cannot start with "kong",
-                          "konnect", "mesh", "kic", or "_".
-                        type: object
-                      managedBy:
-                        additionalProperties:
-                          description: ManagedByValue is the value type for ManagedBy.
-                          maxLength: 63
-                          minLength: 1
-                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
-                          type: string
-                        description: |-
-                          Stores information about what manages this entity, such as the tool or
-                          system responsible for its lifecycle (for example, `terraform`).
-
-                          Keys must be 1–63 characters long and start with an alphanumeric
-                          character.
-                        type: object
-                      name:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          A user-defined unique identifier for this model provider instance, used as a
-                          stable human-readable reference.
-                          This value is immutable after creation.
-                        maxLength: 256
-                        minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
-                        type: string
-                    required:
-                    - config
-                    - displayName
-                    - name
-                    type: object
-                  vertex:
-                    description: Vertex configuration.
-                    properties:
-                      config:
-                        description: AIGatewayModelProviderVertexConfig is a type alias.
-                        properties:
-                          auth:
-                            description: |-
-                              AIGatewayModelProviderVertexConfigAuth represents a union type for auth.
-                              Only one of the fields should be set based on the Type.
-                            properties:
-                              basic:
-                                description: Basic configuration.
-                                properties:
-                                  headers:
-                                    items:
-                                      description: AIGatewayModelProviderConfigAuthBasicHeaders is a type alias.
-                                      properties:
-                                        name:
-                                          description: |-
-                                            The name of the header used for authentication.
-                                            This field is
-                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        value:
-                                          description: |-
-                                            The auth header value for ‘header_name’, for example ‘Bearer
-                                            key...’.
-                                            This field is
-                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                          properties:
-                                            secretRef:
-                                              description: |-
-                                                SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-                                                Required when type is 'secretRef'.
-                                              properties:
-                                                key:
-                                                  description: Key is the data key within the Secret.
-                                                  maxLength: 253
-                                                  minLength: 1
-                                                  type: string
-                                                name:
-                                                  description: Name is the name of the referred resource.
-                                                  maxLength: 253
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  description: |-
-                                                    Namespace is the namespace of the referred resource.
-
-                                                    For namespace-scoped resources if no Namespace is provided then the
-                                                    namespace of the parent object MUST be used.
-
-                                                    This field MUST not be set when referring to cluster-scoped resources.
-                                                  maxLength: 253
-                                                  type: string
-                                              required:
-                                              - key
-                                              - name
-                                              type: object
-                                            type:
-                                              default: inline
-                                              description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
-                                              enum:
-                                              - inline
-                                              - secretRef
-                                              type: string
-                                            value:
-                                              description: |-
-                                                Value contains the sensitive data provided inline.
-                                                Required when type is 'inline'.
-                                              maxLength: 4096
-                                              type: string
-                                          required:
-                                          - type
-                                          type: object
-                                          x-kubernetes-validations:
-                                          - message: value required when type=inline; secretRef required when type=secretRef
-                                            rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
-                                      required:
-                                      - name
-                                      type: object
-                                    maxItems: 1
-                                    type: array
-                                  params:
-                                    items:
-                                      description: AIGatewayModelProviderConfigAuthBasicParams is a type alias.
-                                      properties:
-                                        location:
-                                          description: |-
-                                            Specify whether the param name and value options go in a query string, or
-                                            the POST form/JSON body.
-                                          enum:
-                                          - body
-                                          - query
-                                          maxLength: 253
-                                          type: string
-                                        name:
-                                          description: |-
-                                            This field is
-                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        value:
-                                          description: |-
-                                            This field is
-                                            [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                          properties:
-                                            secretRef:
-                                              description: |-
-                                                SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-                                                Required when type is 'secretRef'.
-                                              properties:
-                                                key:
-                                                  description: Key is the data key within the Secret.
-                                                  maxLength: 253
-                                                  minLength: 1
-                                                  type: string
-                                                name:
-                                                  description: Name is the name of the referred resource.
-                                                  maxLength: 253
-                                                  minLength: 1
-                                                  type: string
-                                                namespace:
-                                                  description: |-
-                                                    Namespace is the namespace of the referred resource.
-
-                                                    For namespace-scoped resources if no Namespace is provided then the
-                                                    namespace of the parent object MUST be used.
-
-                                                    This field MUST not be set when referring to cluster-scoped resources.
-                                                  maxLength: 253
-                                                  type: string
-                                              required:
-                                              - key
-                                              - name
-                                              type: object
-                                            type:
-                                              default: inline
-                                              description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
-                                              enum:
-                                              - inline
-                                              - secretRef
-                                              type: string
-                                            value:
-                                              description: |-
-                                                Value contains the sensitive data provided inline.
-                                                Required when type is 'inline'.
-                                              maxLength: 4096
-                                              type: string
-                                          required:
-                                          - type
-                                          type: object
-                                          x-kubernetes-validations:
-                                          - message: value required when type=inline; secretRef required when type=secretRef
-                                            rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
-                                      required:
-                                      - name
-                                      type: object
-                                    maxItems: 1
-                                    type: array
-                                type: object
-                              type:
-                                description: Type designates the type of configuration.
-                                enum:
-                                - basic
-                                - vertex
-                                minLength: 1
-                                type: string
-                              vertex:
-                                description: Vertex configuration.
-                                properties:
-                                  serviceAccountJSON:
-                                    description: |-
-                                      Full JSON string of the GCP service account to authenticate.
-                                      If not set, the service account JSON will be from the environment variable
-                                      GCP_SERVICE_ACCOUNT.
-                                      This field is
-                                      [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-                                    properties:
-                                      secretRef:
-                                        description: |-
-                                          SecretRef is a reference to a Kubernetes Secret containing the sensitive data.
-                                          Required when type is 'secretRef'.
-                                        properties:
-                                          key:
-                                            description: Key is the data key within the Secret.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                          name:
-                                            description: Name is the name of the referred resource.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                          namespace:
-                                            description: |-
-                                              Namespace is the namespace of the referred resource.
-
-                                              For namespace-scoped resources if no Namespace is provided then the
-                                              namespace of the parent object MUST be used.
-
-                                              This field MUST not be set when referring to cluster-scoped resources.
-                                            maxLength: 253
-                                            type: string
-                                        required:
-                                        - key
-                                        - name
-                                        type: object
-                                      type:
-                                        default: inline
-                                        description: 'Type indicates the source of the sensitive data: ''inline'' or ''secretRef''.'
-                                        enum:
-                                        - inline
-                                        - secretRef
-                                        type: string
-                                      value:
-                                        description: |-
-                                          Value contains the sensitive data provided inline.
-                                          Required when type is 'inline'.
-                                        maxLength: 4096
-                                        type: string
-                                    required:
-                                    - type
-                                    type: object
-                                    x-kubernetes-validations:
-                                    - message: value required when type=inline; secretRef required when type=secretRef
-                                      rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
-                                  useGcpServiceAccount:
-                                    description: |-
-                                      Use the Google Cloud Service Account (or user-assigned identity) to
-                                      authenticate with Vertex-provider models.
-                                    enum:
-                                    - Enabled
-                                    - Disabled
-                                    type: string
-                                type: object
-                            required:
-                            - type
                             type: object
                         required:
                         - auth
@@ -55991,44 +55776,8 @@ spec:
                                             - mistral
                                             - ollama
                                             - openai
-                                            - vertex
                                             minLength: 1
                                             type: string
-                                          vertex:
-                                            description: Vertex configuration.
-                                            properties:
-                                              gcpEnvironment:
-                                                description: |-
-                                                  **Pre-release Feature**
-                                                  This feature is currently in beta and is subject to change.
-
-                                                  Configuration for a model hosted on Google Cloud Project.
-                                                properties:
-                                                  apiEndpoint:
-                                                    description: The custom API endpoint for the Gemini model.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                  locationID:
-                                                    description: The Google Cloud location ID for the model endpoint.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                  projectID:
-                                                    description: The Google Cloud project ID for the model endpoint.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                required:
-                                                - apiEndpoint
-                                                - locationID
-                                                - projectID
-                                                type: object
-                                              upstreamURL:
-                                                description: The URL of the embeddings model.
-                                                maxLength: 253
-                                                type: string
-                                            type: object
                                         required:
                                         - type
                                         type: object
@@ -56811,7 +56560,6 @@ spec:
                               - gemini
                               - huggingface
                               - openai
-                              - vertex
                               maxLength: 253
                               type: string
                           type: object
@@ -59094,7 +58842,6 @@ spec:
                                   - openai
                                   - sagemaker
                                   - vercel
-                                  - vertex
                                   - vllm
                                   - xai
                                   minLength: 1
@@ -59165,163 +58912,6 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
-                                    inputCost:
-                                      description: Cost per 1M input tokens for billing and cost tracking.
-                                      type: number
-                                    maxTokens:
-                                      description: The maximum number of tokens to generate in the response.
-                                      type: integer
-                                    outputCost:
-                                      description: Cost per 1M output tokens for billing and cost tracking.
-                                      type: number
-                                    serviceTierFactor:
-                                      description: |-
-                                        Multiplier applied to the whole request for a service tier.
-                                        The default factor is 1.0 when no tier matches.
-                                      items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          factor:
-                                            description: Multiplier applied to the whole request for this service tier.
-                                            minimum: 0
-                                            type: number
-                                          tier:
-                                            description: |-
-                                              Matched case-insensitively as a substring of the vendor's reported service
-                                              tier (e.g.
-                                              "priority", "flex", "throughput").
-                                              When more than one entry matches, the longest (most specific) tier wins;
-                                              array order does not matter.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                        required:
-                                        - factor
-                                        - tier
-                                        type: object
-                                      type: array
-                                    temperature:
-                                      description: |-
-                                        Controls randomness in the model output.
-                                        Higher values produce more varied responses.
-                                      type: number
-                                    topK:
-                                      description: |-
-                                        Limits the number of highest-probability tokens considered during
-                                        generation.
-                                      type: integer
-                                    topP:
-                                      description: |-
-                                        Nucleus sampling probability mass.
-                                        Tokens with cumulative probability up to top_p are considered.
-                                      type: number
-                                    upstreamURL:
-                                      description: The upstream URL for the model endpoint.
-                                      maxLength: 253
-                                      type: string
-                                  type: object
-                                vertex:
-                                  description: Vertex configuration.
-                                  properties:
-                                    cacheReadCost:
-                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
-                                      type: number
-                                    cacheWriteCost:
-                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
-                                      type: number
-                                    cacheWriteCostList:
-                                      description: |-
-                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
-                                        Configure this when the upstream provider charges differently for different
-                                        cache TTLs.
-                                      items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          cost:
-                                            description: Cost per 1M cache-write prompt tokens for this TTL.
-                                            minimum: 0
-                                            type: number
-                                          ttl:
-                                            description: Cache TTL this price applies to, e.g. "5m" or "1h".
-                                            maxLength: 253
-                                            minLength: 1
-                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
-                                            type: string
-                                        required:
-                                        - cost
-                                        - ttl
-                                        type: object
-                                      type: array
-                                    contextWindowFactor:
-                                      description: |-
-                                        Above an input-token threshold, scale input and output pricing by the
-                                        corresponding factor.
-                                      items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          above:
-                                            description: Input-token threshold above which the factors apply, e.g. "128k" or "1m".
-                                            maxLength: 253
-                                            minLength: 1
-                                            pattern: ^[0-9]+\.?[0-9]*[km]$
-                                            type: string
-                                          inputFactor:
-                                            description: Multiplier applied to input pricing above the threshold.
-                                            minimum: 0
-                                            type: number
-                                          outputFactor:
-                                            description: Multiplier applied to output pricing above the threshold.
-                                            minimum: 0
-                                            type: number
-                                        required:
-                                        - above
-                                        - inputFactor
-                                        - outputFactor
-                                        type: object
-                                      type: array
-                                    embeddingsDimensions:
-                                      description: The number of dimensions for embedding outputs.
-                                      type: integer
-                                    gcpEnvironment:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
-
-                                        Configuration for a model hosted on Google Cloud Project.
-                                      properties:
-                                        apiEndpoint:
-                                          description: The custom API endpoint for the Gemini model.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        endpointID:
-                                          description: |-
-                                            The endpoint ID for the model.
-                                            This must be set when running a target model on Gemini on Vertex Model
-                                            Garden.
-                                          maxLength: 253
-                                          type: string
-                                        locationID:
-                                          description: The Google Cloud location ID for the model endpoint.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        projectID:
-                                          description: The Google Cloud project ID for the model endpoint.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                      required:
-                                      - apiEndpoint
-                                      - locationID
-                                      - projectID
-                                      type: object
                                     inputCost:
                                       description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number
@@ -60365,44 +59955,8 @@ spec:
                                             - mistral
                                             - ollama
                                             - openai
-                                            - vertex
                                             minLength: 1
                                             type: string
-                                          vertex:
-                                            description: Vertex configuration.
-                                            properties:
-                                              gcpEnvironment:
-                                                description: |-
-                                                  **Pre-release Feature**
-                                                  This feature is currently in beta and is subject to change.
-
-                                                  Configuration for a model hosted on Google Cloud Project.
-                                                properties:
-                                                  apiEndpoint:
-                                                    description: The custom API endpoint for the Gemini model.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                  locationID:
-                                                    description: The Google Cloud location ID for the model endpoint.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                  projectID:
-                                                    description: The Google Cloud project ID for the model endpoint.
-                                                    maxLength: 253
-                                                    minLength: 1
-                                                    type: string
-                                                required:
-                                                - apiEndpoint
-                                                - locationID
-                                                - projectID
-                                                type: object
-                                              upstreamURL:
-                                                description: The URL of the embeddings model.
-                                                maxLength: 253
-                                                type: string
-                                            type: object
                                         required:
                                         - type
                                         type: object
@@ -61201,7 +60755,6 @@ spec:
                               - gemini
                               - huggingface
                               - openai
-                              - vertex
                               maxLength: 253
                               type: string
                           type: object
@@ -63484,7 +63037,6 @@ spec:
                                   - openai
                                   - sagemaker
                                   - vercel
-                                  - vertex
                                   - vllm
                                   - xai
                                   minLength: 1
@@ -63555,163 +63107,6 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding outputs.
                                       type: integer
-                                    inputCost:
-                                      description: Cost per 1M input tokens for billing and cost tracking.
-                                      type: number
-                                    maxTokens:
-                                      description: The maximum number of tokens to generate in the response.
-                                      type: integer
-                                    outputCost:
-                                      description: Cost per 1M output tokens for billing and cost tracking.
-                                      type: number
-                                    serviceTierFactor:
-                                      description: |-
-                                        Multiplier applied to the whole request for a service tier.
-                                        The default factor is 1.0 when no tier matches.
-                                      items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          factor:
-                                            description: Multiplier applied to the whole request for this service tier.
-                                            minimum: 0
-                                            type: number
-                                          tier:
-                                            description: |-
-                                              Matched case-insensitively as a substring of the vendor's reported service
-                                              tier (e.g.
-                                              "priority", "flex", "throughput").
-                                              When more than one entry matches, the longest (most specific) tier wins;
-                                              array order does not matter.
-                                            maxLength: 253
-                                            minLength: 1
-                                            type: string
-                                        required:
-                                        - factor
-                                        - tier
-                                        type: object
-                                      type: array
-                                    temperature:
-                                      description: |-
-                                        Controls randomness in the model output.
-                                        Higher values produce more varied responses.
-                                      type: number
-                                    topK:
-                                      description: |-
-                                        Limits the number of highest-probability tokens considered during
-                                        generation.
-                                      type: integer
-                                    topP:
-                                      description: |-
-                                        Nucleus sampling probability mass.
-                                        Tokens with cumulative probability up to top_p are considered.
-                                      type: number
-                                    upstreamURL:
-                                      description: The upstream URL for the model endpoint.
-                                      maxLength: 253
-                                      type: string
-                                  type: object
-                                vertex:
-                                  description: Vertex configuration.
-                                  properties:
-                                    cacheReadCost:
-                                      description: Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
-                                      type: number
-                                    cacheWriteCost:
-                                      description: Cost per 1M cache-write prompt tokens for billing and cost tracking.
-                                      type: number
-                                    cacheWriteCostList:
-                                      description: |-
-                                        Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
-                                        Configure this when the upstream provider charges differently for different
-                                        cache TTLs.
-                                      items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          cost:
-                                            description: Cost per 1M cache-write prompt tokens for this TTL.
-                                            minimum: 0
-                                            type: number
-                                          ttl:
-                                            description: Cache TTL this price applies to, e.g. "5m" or "1h".
-                                            maxLength: 253
-                                            minLength: 1
-                                            pattern: ^[0-9]+\.?[0-9]*[hm]$
-                                            type: string
-                                        required:
-                                        - cost
-                                        - ttl
-                                        type: object
-                                      type: array
-                                    contextWindowFactor:
-                                      description: |-
-                                        Above an input-token threshold, scale input and output pricing by the
-                                        corresponding factor.
-                                      items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-                                        properties:
-                                          above:
-                                            description: Input-token threshold above which the factors apply, e.g. "128k" or "1m".
-                                            maxLength: 253
-                                            minLength: 1
-                                            pattern: ^[0-9]+\.?[0-9]*[km]$
-                                            type: string
-                                          inputFactor:
-                                            description: Multiplier applied to input pricing above the threshold.
-                                            minimum: 0
-                                            type: number
-                                          outputFactor:
-                                            description: Multiplier applied to output pricing above the threshold.
-                                            minimum: 0
-                                            type: number
-                                        required:
-                                        - above
-                                        - inputFactor
-                                        - outputFactor
-                                        type: object
-                                      type: array
-                                    embeddingsDimensions:
-                                      description: The number of dimensions for embedding outputs.
-                                      type: integer
-                                    gcpEnvironment:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
-
-                                        Configuration for a model hosted on Google Cloud Project.
-                                      properties:
-                                        apiEndpoint:
-                                          description: The custom API endpoint for the Gemini model.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        endpointID:
-                                          description: |-
-                                            The endpoint ID for the model.
-                                            This must be set when running a target model on Gemini on Vertex Model
-                                            Garden.
-                                          maxLength: 253
-                                          type: string
-                                        locationID:
-                                          description: The Google Cloud location ID for the model endpoint.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                        projectID:
-                                          description: The Google Cloud project ID for the model endpoint.
-                                          maxLength: 253
-                                          minLength: 1
-                                          type: string
-                                      required:
-                                      - apiEndpoint
-                                      - locationID
-                                      - projectID
-                                      type: object
                                     inputCost:
                                       description: Cost per 1M input tokens for billing and cost tracking.
                                       type: number

@@ -177,6 +177,34 @@ spec:
                             items:
                               type: string
                             type: array
+                          principals:
+                            description: |-
+                              Authenticate against Kong Identity instead of local credentials.
+                              Mutually exclusive with identity realms.
+                            properties:
+                              directory:
+                                description: The Kong Identity directory instance
+                                  to authenticate against.
+                                maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
+                                type: string
+                              enabled:
+                                description: When true, authenticate against Kong
+                                  Identity instead of local credentials.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              errorOnMiss:
+                                description: |-
+                                  When true (default), reject the request if no matching principal is found in
+                                  Kong Identity.
+                                  When false, allow the request to continue unauthenticated instead.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            type: object
                         type: object
                       displayName:
                         description: The display name for this identity provider instance.
@@ -459,6 +487,69 @@ spec:
                               proxies.
                             maxLength: 253
                             type: string
+                          principals:
+                            description: Map a request to a Kong Identity principal
+                              after token verification.
+                            properties:
+                              directory:
+                                description: The Kong Identity directory instance
+                                  to look up against.
+                                maxLength: 253
+                                pattern: ^[a-zA-Z0-9_-]+$
+                                type: string
+                              enabled:
+                                description: When true, look up a Kong Identity principal
+                                  after token verification.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              errorOnMiss:
+                                description: |-
+                                  When true (default), reject the request if no principal is matched in Kong
+                                  Identity after token
+                                  verification.
+                                  When false, the request continues without an authenticated principal set.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              matchConsumer:
+                                description: |-
+                                  If a consumer is attached to the matched principal, load it and set it in
+                                  the request context,
+                                  overriding consumer_by.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              matchConsumerGroups:
+                                description: |-
+                                  If consumer groups are attached to the matched principal, load them,
+                                  overriding consumer_groups_claim.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              principalBy:
+                                description: |-
+                                  Custom identity name for a custom Kong Identity lookup.
+                                  When absent and principal_claim is set,
+                                  a lookup is performed using principal_claim as the claim name instead of the
+                                  default sub claim.
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              principalClaim:
+                                description: |-
+                                  Token claim used for the Kong Identity lookup.
+                                  If multiple values are set, the claim is inside a
+                                  nested object of the token payload.
+                                  Used together with, or instead of, principal_by.
+                                items:
+                                  type: string
+                                type: array
+                            type: object
                           scopes:
                             description: This field is referenceable.
                             items:

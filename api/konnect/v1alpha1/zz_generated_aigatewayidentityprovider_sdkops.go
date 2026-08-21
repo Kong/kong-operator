@@ -54,6 +54,24 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 		},
 	},
 	{
+		Label: "key-auth.config.principals.enabled",
+		Path: []string{
+			"key-auth",
+			"config",
+			"principals",
+			"enabled",
+		},
+	},
+	{
+		Label: "key-auth.config.principals.error_on_miss",
+		Path: []string{
+			"key-auth",
+			"config",
+			"principals",
+			"error_on_miss",
+		},
+	},
+	{
 		Label: "openid-connect.config.cache_introspection",
 		Path: []string{
 			"openid-connect",
@@ -91,6 +109,42 @@ var AIGatewayIdentityProviderSDKOpsBoolFields = []AIGatewayIdentityProviderSDKOp
 			"openid-connect",
 			"config",
 			"keepalive",
+		},
+	},
+	{
+		Label: "openid-connect.config.principals.enabled",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"principals",
+			"enabled",
+		},
+	},
+	{
+		Label: "openid-connect.config.principals.error_on_miss",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"principals",
+			"error_on_miss",
+		},
+	},
+	{
+		Label: "openid-connect.config.principals.match_consumer",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"principals",
+			"match_consumer",
+		},
+	},
+	{
+		Label: "openid-connect.config.principals.match_consumer_groups",
+		Path: []string{
+			"openid-connect",
+			"config",
+			"principals",
+			"match_consumer_groups",
 		},
 	},
 	{
