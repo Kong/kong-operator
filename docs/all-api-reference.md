@@ -9759,7 +9759,6 @@ _Appears in:_
 - [AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
 - [AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
-- [AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)
 - [AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
 
@@ -9973,7 +9972,6 @@ _Appears in:_
 - [AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
 - [AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
-- [AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)
 - [AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
 
@@ -10020,7 +10018,6 @@ Allowed values:
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
-| `vertex` |  |
 
 #### AIGatewayEntityIdentifier
 
@@ -10064,7 +10061,6 @@ _Appears in:_
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
-- [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
@@ -10195,10 +10191,30 @@ properties
 | `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
 | `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
 | `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
+| `principals` _[AIGatewayIdentityProviderKeyAuthConfigPrincipals](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfigprincipals)_ | Authenticate against Kong Identity instead of local credentials. Mutually exclusive with identity realms. |
 
 _Appears in:_
 
 - [AIGatewayIdentityProviderKeyAuth](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
+
+#### AIGatewayIdentityProviderKeyAuthConfigPrincipals
+
+
+AIGatewayIdentityProviderKeyAuthConfigPrincipals Authenticate against Kong
+Identity instead of local credentials.
+Mutually exclusive with identity realms.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | The Kong Identity directory instance to authenticate against. |
+| `enabled` _string_ | When true, authenticate against Kong Identity instead of local credentials. |
+| `errorOnMiss` _string_ | When true (default), reject the request if no matching principal is found in Kong Identity. When false, allow the request to continue unauthenticated instead. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderKeyAuthConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfig)
 
 #### AIGatewayIdentityProviderOpenIDConnect
 
@@ -10261,6 +10277,7 @@ list of properties
 | `leeway` _int_ | Leeway, in seconds, for validating token time claims. |
 | `mtlsIntrospectionEndpoint` _string_ | mTLS alias for the introspection endpoint. |
 | `noProxy` _string_ | Comma-separated hosts that bypass the configured proxies. |
+| `principals` _[AIGatewayIdentityProviderOpenIDConnectConfigPrincipals](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfigprincipals)_ | Map a request to a Kong Identity principal after token verification. |
 | `scopes` _[]string_ | This field is referenceable. |
 | `sslVerify` _string_ |  |
 | `timeout` _int_ | Network I/O timeout, in milliseconds, for identity provider requests. |
@@ -10269,6 +10286,28 @@ list of properties
 _Appears in:_
 
 - [AIGatewayIdentityProviderOpenIDConnect](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
+
+#### AIGatewayIdentityProviderOpenIDConnectConfigPrincipals
+
+
+AIGatewayIdentityProviderOpenIDConnectConfigPrincipals Map a request to a
+Kong Identity principal after token verification.
+
+
+
+| Field | Description |
+| --- | --- |
+| `directory` _string_ | The Kong Identity directory instance to look up against. |
+| `enabled` _string_ | When true, look up a Kong Identity principal after token verification. |
+| `errorOnMiss` _string_ | When true (default), reject the request if no principal is matched in Kong Identity after token verification. When false, the request continues without an authenticated principal set. |
+| `matchConsumer` _string_ | If a consumer is attached to the matched principal, load it and set it in the request context, overriding consumer_by. |
+| `matchConsumerGroups` _string_ | If consumer groups are attached to the matched principal, load them, overriding consumer_groups_claim. |
+| `principalBy` _string_ | Custom identity name for a custom Kong Identity lookup. When absent and principal_claim is set, a lookup is performed using principal_claim as the claim name instead of the default sub claim. |
+| `principalClaim` _[]string_ | Token claim used for the Kong Identity lookup. If multiple values are set, the claim is inside a nested object of the token payload. Used together with, or instead of, principal_by. |
+
+_Appears in:_
+
+- [AIGatewayIdentityProviderOpenIDConnectConfig](#konnect-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
 
 #### AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders
 
@@ -10658,6 +10697,7 @@ This feature is currently in beta and is subject to change.
 | `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
+| `sources` _[][AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
 | `tools` _[][AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
@@ -10881,7 +10921,6 @@ This feature is currently in beta and is subject to change.<br /><br />Server-si
 | Field | Description |
 | --- | --- |
 | `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
-| `label` _string_ | The label of the MCP server. This is used to filter the exported MCP tools. |
 | `session` _[AIGatewayMCPServerServerConfigBaseSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
 | `timeout` _int_ | The timeout for calling the tools in milliseconds. |
 
@@ -11075,7 +11114,6 @@ specific to `upstream-server` mode.
 | Field | Description |
 | --- | --- |
 | `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
-| `label` _string_ | The label of the MCP server. This is used to filter the exported MCP tools. |
 | `preserveUpstreamToolNames` _string_ | If enabled, the original upstream tool names are preserved as-is when Kong acts as an MCP server. If disabled (`false`), the service name will be prepended to the MCP tool names to avoid name collisions when multiple services are used. |
 | `session` _[AIGatewayMCPServerUpstreamServerServerConfigSession](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
 | `timeout` _int_ | The timeout for calling the tools in milliseconds. |
@@ -11988,7 +12026,6 @@ Only one of the fields should be set based on the Type.
 | `mistral` _[AIGatewayMistralEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymistralembeddingsmodelconfig)_ | Mistral configuration. |
 | `ollama` _[AIGatewayOllamaEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayollamaembeddingsmodelconfig)_ | Ollama configuration. |
 | `openai` _[AIGatewayOpenaiEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayopenaiembeddingsmodelconfig)_ | Openai configuration. |
-| `vertex` _[AIGatewayVertexEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvertexembeddingsmodelconfig)_ | Vertex configuration. |
 
 _Appears in:_
 
@@ -12018,7 +12055,6 @@ Allowed values:
 | `mistral` |  |
 | `ollama` |  |
 | `openai` |  |
-| `vertex` |  |
 
 #### AIGatewayModelBalancerSemanticConfigVectordb
 
@@ -12537,7 +12573,6 @@ Only one of the fields should be set based on the Type.
 | `openai` _[AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)_ | Openai configuration. |
 | `sagemaker` _[AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)_ | Sagemaker configuration. |
 | `vercel` _[AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)_ | Vercel configuration. |
-| `vertex` _[AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)_ | Vertex configuration. |
 | `vllm` _[AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)_ | Vllm configuration. |
 | `xai` _[AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)_ | Xai configuration. |
 
@@ -12618,7 +12653,6 @@ _Appears in:_
 - [AIGatewayModelProviderOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenaiconfig)
 - [AIGatewayModelProviderSagemakerConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfigauth)
 - [AIGatewayModelProviderVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercelconfig)
-- [AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)
 - [AIGatewayModelProviderVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllmconfig)
 - [AIGatewayModelProviderXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxaiconfig)
 
@@ -12707,23 +12741,6 @@ _Appears in:_
 
 - [AIGatewayModelProviderConfigAuthSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthsagemaker)
 
-#### AIGatewayModelProviderConfigAuthVertex
-
-
-AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for Vertex model provider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `serviceAccountJSON` _[SensitiveDataSource](#konnect-konghq-com-v1alpha1-types-sensitivedatasource)_ | Full JSON string of the GCP service account to authenticate. If not set, the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
-| `useGcpServiceAccount` _string_ | Use the Google Cloud Service Account (or user-assigned identity) to authenticate with Vertex-provider models. |
-
-_Appears in:_
-
-- [AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)
-
 #### AIGatewayModelProviderConfigType
 
 _Underlying type:_ `string`
@@ -12758,7 +12775,6 @@ Allowed values:
 | `openai` |  |
 | `sagemaker` |  |
 | `vercel` |  |
-| `vertex` |  |
 | `vllm` |  |
 | `xai` |  |
 
@@ -13323,79 +13339,6 @@ AIGatewayModelProviderVercelConfig Configuration for the model provider.
 _Appears in:_
 
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
-
-#### AIGatewayModelProviderVertex
-
-
-AIGatewayModelProviderVertex **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for Vertex model provider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `config` _[AIGatewayModelProviderVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfig)_ |  |
-| `displayName` _string_ | The display name for this model provider instance. |
-| `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `managedBy` _[ManagedBy](#konnect-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
-
-_Appears in:_
-
-- [AIGatewayModelProviderConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfig)
-
-#### AIGatewayModelProviderVertexConfig
-
-
-AIGatewayModelProviderVertexConfig is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `auth` _[AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)_ |  |
-
-_Appears in:_
-
-- [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
-
-#### AIGatewayModelProviderVertexConfigAuth
-
-
-AIGatewayModelProviderVertexConfigAuth represents a union type for auth.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[AIGatewayModelProviderVertexConfigAuthType](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauthtype)_ | Type designates the type of configuration. |
-| `basic` _[AIGatewayModelProviderConfigAuthBasic](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic configuration. |
-| `vertex` _[AIGatewayModelProviderConfigAuthVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthvertex)_ | Vertex configuration. |
-
-_Appears in:_
-
-- [AIGatewayModelProviderVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfig)
-
-#### AIGatewayModelProviderVertexConfigAuthType
-
-_Underlying type:_ `string`
-
-AIGatewayModelProviderVertexConfigAuthType represents the type of auth.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayModelProviderVertexConfigAuth](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertexconfigauth)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `basic` |  |
-| `vertex` |  |
 
 #### AIGatewayModelProviderVllm
 
@@ -14428,7 +14371,6 @@ _Appears in:_
 - [AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)
 - [AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)
 - [AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)
-- [AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)
 - [AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
 
@@ -14633,7 +14575,6 @@ Only one of the fields should be set based on the Type.
 | `openai` _[AIGatewayTargetOpenaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetopenaiconfig)_ | Openai configuration. |
 | `sagemaker` _[AIGatewayTargetSagemakerConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfig)_ | Sagemaker configuration. |
 | `vercel` _[AIGatewayTargetVercelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvercelconfig)_ | Vercel configuration. |
-| `vertex` _[AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)_ | Vertex configuration. |
 | `vllm` _[AIGatewayTargetVllmConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)_ | Vllm configuration. |
 | `xai` _[AIGatewayTargetXaiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)_ | Xai configuration. |
 
@@ -14675,7 +14616,6 @@ Allowed values:
 | `openai` |  |
 | `sagemaker` |  |
 | `vercel` |  |
-| `vertex` |  |
 | `vllm` |  |
 | `xai` |  |
 
@@ -15061,54 +15001,6 @@ _Appears in:_
 
 - [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
 
-#### AIGatewayTargetVertexConfig
-
-
-AIGatewayTargetVertexConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Google Vertex-specific configuration for a model.
-
-
-
-| Field | Description |
-| --- | --- |
-| `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
-| `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
-| `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#konnect-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
-| `contextWindowFactor` _[][AIGatewayContextWindowFactor](#konnect-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
-| `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `gcpEnvironment` _[AIGatewayTargetVertexConfigGcpEnvironment](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfiggcpenvironment)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
-| `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
-| `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
-| `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
-| `serviceTierFactor` _[][AIGatewayServiceTierFactor](#konnect-konghq-com-v1alpha1-types-aigatewayservicetierfactor)_ | Multiplier applied to the whole request for a service tier. The default factor is 1.0 when no tier matches. |
-| `temperature` _float64_ | Controls randomness in the model output. Higher values produce more varied responses. |
-| `topK` _int_ | Limits the number of highest-probability tokens considered during generation. |
-| `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
-| `upstreamURL` _string_ | The upstream URL for the model endpoint. |
-
-_Appears in:_
-
-- [AIGatewayTargetConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetconfig)
-
-#### AIGatewayTargetVertexConfigGcpEnvironment
-
-
-AIGatewayTargetVertexConfigGcpEnvironment **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project.
-
-
-
-| Field | Description |
-| --- | --- |
-| `apiEndpoint` _string_ | The custom API endpoint for the Gemini model. |
-| `endpointID` _string_ | The endpoint ID for the model. This must be set when running a target model on Gemini on Vertex Model Garden. |
-| `locationID` _string_ | The Google Cloud location ID for the model endpoint. |
-| `projectID` _string_ | The Google Cloud project ID for the model endpoint. |
-
-_Appears in:_
-
-- [AIGatewayTargetVertexConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetvertexconfig)
-
 #### AIGatewayTargetVllmConfig
 
 
@@ -15243,24 +15135,6 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `aws` |  |
-
-#### AIGatewayVertexEmbeddingsModelConfig
-
-
-AIGatewayVertexEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Google Vertex-specific configuration for a model.
-
-
-
-| Field | Description |
-| --- | --- |
-| `gcpEnvironment` _[GCPModelConfig](#konnect-konghq-com-v1alpha1-types-gcpmodelconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
-| `upstreamURL` _string_ | The URL of the embeddings model. |
-
-_Appears in:_
-
-- [AIGatewayEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
-- [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#konnect-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
 
 
@@ -15570,7 +15444,6 @@ _Appears in:_
 
 - [AIGatewayGeminiEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewaygeminiembeddingsmodelconfig)
 - [AIGatewayTargetGeminiConfig](#konnect-konghq-com-v1alpha1-types-aigatewaytargetgeminiconfig)
-- [AIGatewayVertexEmbeddingsModelConfig](#konnect-konghq-com-v1alpha1-types-aigatewayvertexembeddingsmodelconfig)
 
 #### GatewayDescription
 
@@ -16399,7 +16272,6 @@ _Appears in:_
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
-- [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
@@ -17215,7 +17087,6 @@ _Appears in:_
 - [AIGatewayModelProviderOpenai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovideropenai)
 - [AIGatewayModelProviderSagemaker](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemaker)
 - [AIGatewayModelProviderVercel](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervercel)
-- [AIGatewayModelProviderVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervertex)
 - [AIGatewayModelProviderVllm](#konnect-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
@@ -17337,7 +17208,6 @@ _Appears in:_
 - [AIGatewayModelProviderConfigAuthBasicHeaders](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)
 - [AIGatewayModelProviderConfigAuthBasicParams](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicparams)
 - [AIGatewayModelProviderConfigAuthGCP](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
-- [AIGatewayModelProviderConfigAuthVertex](#konnect-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthvertex)
 
 #### SensitiveDataSourceType
 

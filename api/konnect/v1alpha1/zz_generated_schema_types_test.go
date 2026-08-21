@@ -800,19 +800,6 @@ func TestAIGatewayModelProviderConfigAuthSagemaker_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayModelProviderConfigAuthVertex_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelProviderConfigAuthVertex
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayModelProviderDashscope_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -960,19 +947,6 @@ func TestAIGatewayModelProviderVercel_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayModelProviderVercel
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayModelProviderVertex_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayModelProviderVertex
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1424,19 +1398,6 @@ func TestAIGatewayTargetVercelConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayTargetVertexConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayTargetVertexConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
 func TestAIGatewayTargetVllmConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1480,19 +1441,6 @@ func TestAIGatewayUpstreamConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayUpstreamConfig
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayVertexEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayVertexEmbeddingsModelConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1648,7 +1596,6 @@ func TestAIGatewayEmbeddingsModelConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "mistral", payload: []byte("{\"type\":\"mistral\",\"mistral\":{}}")},
 		{name: "ollama", payload: []byte("{\"type\":\"ollama\",\"ollama\":{}}")},
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
-		{name: "vertex", payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -2185,7 +2132,6 @@ func TestAIGatewayTargetConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
-		{name: "vertex", payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
 		{name: "xai", payload: []byte("{\"type\":\"xai\",\"xai\":{}}")},
 	}
@@ -3439,22 +3385,6 @@ func TestAIGatewayTargetUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 				}
 				if target.Config.Vercel == nil {
 					t.Fatalf("Config.Vercel should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Config/vertex",
-			payload: []byte("{\"config\":{\"type\":\"vertex\",\"vertex\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayTarget) {
-				t.Helper()
-				if target.Config == nil {
-					t.Fatalf("Config should be allocated")
-				}
-				if got, want := target.Config.Type, AIGatewayTargetConfigTypeVertex; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Config.Vertex == nil {
-					t.Fatalf("Config.Vertex should be allocated")
 				}
 			},
 		},

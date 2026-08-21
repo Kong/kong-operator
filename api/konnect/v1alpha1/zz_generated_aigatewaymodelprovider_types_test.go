@@ -44,7 +44,6 @@ func TestAIGatewayModelProviderConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 		{name: "openai", payload: []byte("{\"type\":\"openai\",\"openai\":{}}")},
 		{name: "sagemaker", payload: []byte("{\"type\":\"sagemaker\",\"sagemaker\":{}}")},
 		{name: "vercel", payload: []byte("{\"type\":\"vercel\",\"vercel\":{}}")},
-		{name: "vertex", payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}")},
 		{name: "vllm", payload: []byte("{\"type\":\"vllm\",\"vllm\":{}}")},
 		{name: "xai", payload: []byte("{\"type\":\"xai\",\"xai\":{}}")},
 	}
@@ -359,22 +358,6 @@ func TestAIGatewayModelProviderAPISpecUnmarshalJSON_DecodesUnionFields(t *testin
 				}
 				if target.AIGatewayModelProviderConfig.Vercel == nil {
 					t.Fatalf("AIGatewayModelProviderConfig.Vercel should be allocated")
-				}
-			},
-		},
-		{
-			name:    "AIGatewayModelProviderConfig/vertex",
-			payload: []byte("{\"type\":\"vertex\",\"vertex\":{}}"),
-			assert: func(t *testing.T, target AIGatewayModelProviderAPISpec) {
-				t.Helper()
-				if target.AIGatewayModelProviderConfig == nil {
-					t.Fatalf("AIGatewayModelProviderConfig should be allocated")
-				}
-				if got, want := target.AIGatewayModelProviderConfig.Type, AIGatewayModelProviderConfigTypeVertex; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.AIGatewayModelProviderConfig.Vertex == nil {
-					t.Fatalf("AIGatewayModelProviderConfig.Vertex should be allocated")
 				}
 			},
 		},

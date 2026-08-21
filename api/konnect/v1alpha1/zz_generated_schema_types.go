@@ -282,7 +282,7 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai
 	Type AIGatewayEmbeddingsModelConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -313,10 +313,6 @@ type AIGatewayEmbeddingsModelConfig struct {
 	//
 	// +optional
 	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
-	// Vertex configuration.
-	//
-	// +optional
-	Vertex *AIGatewayVertexEmbeddingsModelConfig `json:"vertex,omitempty"`
 }
 
 // AIGatewayEmbeddingsModelConfigType represents the type of AIGatewayEmbeddingsModelConfig.
@@ -331,7 +327,6 @@ const (
 	AIGatewayEmbeddingsModelConfigTypeMistral     AIGatewayEmbeddingsModelConfigType = "mistral"
 	AIGatewayEmbeddingsModelConfigTypeOllama      AIGatewayEmbeddingsModelConfigType = "ollama"
 	AIGatewayEmbeddingsModelConfigTypeOpenai      AIGatewayEmbeddingsModelConfigType = "openai"
-	AIGatewayEmbeddingsModelConfigTypeVertex      AIGatewayEmbeddingsModelConfigType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -398,14 +393,6 @@ func (u AIGatewayEmbeddingsModelConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
 			}
 			m["openai"] = raw
-		}
-	case AIGatewayEmbeddingsModelConfigTypeVertex:
-		if u.Vertex != nil {
-			raw, err := json.Marshal(u.Vertex)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayEmbeddingsModelConfig vertex: %w", err)
-			}
-			m["vertex"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -498,16 +485,6 @@ func (u *AIGatewayEmbeddingsModelConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig openai: %w", err)
 		}
 		u.Openai = &val
-	case "vertex":
-		payload, ok := raw["vertex"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayVertexEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayEmbeddingsModelConfig vertex: %w", err)
-		}
-		u.Vertex = &val
 	}
 	return nil
 }
@@ -656,6 +633,37 @@ type AIGatewayIdentityProviderKeyAuthConfig struct {
 	//
 	// +optional
 	KeyNames []string `json:"keyNames,omitempty"`
+	// Authenticate against Kong Identity instead of local credentials.
+	// Mutually exclusive with identity realms.
+	//
+	//
+	// +optional
+	Principals AIGatewayIdentityProviderKeyAuthConfigPrincipals `json:"principals,omitzero"`
+}
+
+// AIGatewayIdentityProviderKeyAuthConfigPrincipals Authenticate against Kong
+// Identity instead of local credentials.
+// Mutually exclusive with identity realms.
+type AIGatewayIdentityProviderKeyAuthConfigPrincipals struct {
+	// The Kong Identity directory instance to authenticate against.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
+	Directory string `json:"directory,omitzero"`
+	// When true, authenticate against Kong Identity instead of local credentials.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// When true (default), reject the request if no matching principal is found in
+	// Kong Identity.
+	// When false, allow the request to continue unauthenticated instead.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
 }
 
 // AIGatewayIdentityProviderOpenIDConnect **Pre-release Feature**
@@ -867,6 +875,10 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	NoProxy string `json:"noProxy,omitzero"`
+	// Map a request to a Kong Identity principal after token verification.
+	//
+	// +optional
+	Principals AIGatewayIdentityProviderOpenIDConnectConfigPrincipals `json:"principals,omitzero"`
 	// This field is referenceable.
 	//
 	//
@@ -886,6 +898,64 @@ type AIGatewayIdentityProviderOpenIDConnectConfig struct {
 	//
 	// +optional
 	UpstreamHeaders []AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders `json:"upstreamHeaders,omitempty"`
+}
+
+// AIGatewayIdentityProviderOpenIDConnectConfigPrincipals Map a request to a
+// Kong Identity principal after token verification.
+type AIGatewayIdentityProviderOpenIDConnectConfigPrincipals struct {
+	// The Kong Identity directory instance to look up against.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^[a-zA-Z0-9_-]+$`
+	Directory string `json:"directory,omitzero"`
+	// When true, look up a Kong Identity principal after token verification.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// When true (default), reject the request if no principal is matched in Kong
+	// Identity after token
+	// verification.
+	// When false, the request continues without an authenticated principal set.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ErrorOnMiss string `json:"errorOnMiss,omitzero"`
+	// If a consumer is attached to the matched principal, load it and set it in
+	// the request context,
+	// overriding consumer_by.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	MatchConsumer string `json:"matchConsumer,omitzero"`
+	// If consumer groups are attached to the matched principal, load them,
+	// overriding consumer_groups_claim.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	MatchConsumerGroups string `json:"matchConsumerGroups,omitzero"`
+	// Custom identity name for a custom Kong Identity lookup.
+	// When absent and principal_claim is set,
+	// a lookup is performed using principal_claim as the claim name instead of the
+	// default sub claim.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	PrincipalBy string `json:"principalBy,omitzero"`
+	// Token claim used for the Kong Identity lookup.
+	// If multiple values are set, the claim is inside a
+	// nested object of the token payload.
+	// Used together with, or instead of, principal_by.
+	//
+	//
+	// +optional
+	PrincipalClaim []string `json:"principalClaim,omitempty"`
 }
 
 // AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders Map token claims
@@ -1527,6 +1597,15 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
+	// The explicit list of source MCP Servers whose tools this listener exposes.
+	// Each entry is the immutable `name` of a `conversion-only` (toolset) or
+	// `upstream-server` (third-party MCP server) MCP Server in the same AI
+	// Gateway.
+	// All of the referenced source's tools are exposed.
+	//
+	//
+	// +required
+	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
 	// +optional
@@ -2010,11 +2089,6 @@ type AIGatewayMCPServerServerConfigBase struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
-	// The label of the MCP server. This is used to filter the exported MCP tools.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Label string `json:"label,omitzero"`
 	// Enable managed session when Kong responds as MCP server in listener,
 	// conversion-listener, or upstream-server modes.
 	// This doesn't affect the passthrough-listener mode as the state in that mode
@@ -2348,11 +2422,6 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
-	// The label of the MCP server. This is used to filter the exported MCP tools.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Label string `json:"label,omitzero"`
 	// If enabled, the original upstream tool names are preserved as-is when Kong
 	// acts as an MCP server.
 	// If disabled (`false`), the service name will be prepended to the MCP tool
@@ -4550,7 +4619,7 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai;vertex
+	// +kubebuilder:validation:Enum=azure;bedrock;gemini;huggingface;mistral;ollama;openai
 	Type AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType `json:"type,omitempty"`
 
 	// Azure configuration.
@@ -4581,10 +4650,6 @@ type AIGatewayModelBalancerSemanticConfigEmbeddingsConfig struct {
 	//
 	// +optional
 	Openai *AIGatewayOpenaiEmbeddingsModelConfig `json:"openai,omitempty"`
-	// Vertex configuration.
-	//
-	// +optional
-	Vertex *AIGatewayVertexEmbeddingsModelConfig `json:"vertex,omitempty"`
 }
 
 // AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType represents the type of config.
@@ -4599,7 +4664,6 @@ const (
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeMistral     AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "mistral"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOllama      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "ollama"
 	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeOpenai      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "openai"
-	AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex      AIGatewayModelBalancerSemanticConfigEmbeddingsConfigType = "vertex"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -4666,14 +4730,6 @@ func (u AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) MarshalJSON() ([]b
 				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
 			}
 			m["openai"] = raw
-		}
-	case AIGatewayModelBalancerSemanticConfigEmbeddingsConfigTypeVertex:
-		if u.Vertex != nil {
-			raw, err := json.Marshal(u.Vertex)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vertex: %w", err)
-			}
-			m["vertex"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -4766,16 +4822,6 @@ func (u *AIGatewayModelBalancerSemanticConfigEmbeddingsConfig) UnmarshalJSON(dat
 			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig openai: %w", err)
 		}
 		u.Openai = &val
-	case "vertex":
-		payload, ok := raw["vertex"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayVertexEmbeddingsModelConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddingsConfig vertex: %w", err)
-		}
-		u.Vertex = &val
 	}
 	return nil
 }
@@ -4791,7 +4837,7 @@ func (s *AIGatewayModelBalancerSemanticConfigEmbeddings) UnmarshalJSON(data []by
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayModelBalancerSemanticConfigEmbeddings: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Vertex == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayModelBalancerSemanticConfigEmbeddings(aux)
@@ -4921,7 +4967,7 @@ type AIGatewayModelFormat struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai;vertex
+	// +kubebuilder:validation:Enum=anthropic;bedrock;cohere;gemini;huggingface;openai
 	Type string `json:"type,omitzero"`
 }
 
@@ -6100,28 +6146,6 @@ type AIGatewayModelProviderConfigAuthSagemakerAws struct {
 	SessionToken string `json:"sessionToken,omitzero"`
 }
 
-// AIGatewayModelProviderConfigAuthVertex **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Configuration for Vertex model provider.
-type AIGatewayModelProviderConfigAuthVertex struct {
-	// Full JSON string of the GCP service account to authenticate.
-	// If not set, the service account JSON will be from the environment variable
-	// GCP_SERVICE_ACCOUNT.
-	// This field is
-	// [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
-	//
-	//
-	// +optional
-	ServiceAccountJSON SensitiveDataSource `json:"serviceAccountJSON,omitzero"`
-	// Use the Google Cloud Service Account (or user-assigned identity) to
-	// authenticate with Vertex-provider models.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	UseGcpServiceAccount string `json:"useGcpServiceAccount,omitzero"`
-}
-
 // AIGatewayModelProviderDashscope **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayModelProviderDashscope struct {
@@ -7078,182 +7102,6 @@ type AIGatewayModelProviderVercelConfig struct {
 	//
 	// +required
 	Auth AIGatewayModelProviderConfigAuthBasic `json:"auth,omitzero"`
-}
-
-// AIGatewayModelProviderVertex **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Config for Vertex model provider.
-type AIGatewayModelProviderVertex struct {
-	//
-	//
-	// +required
-	Config AIGatewayModelProviderVertexConfig `json:"config,omitzero"`
-	// The display name for this model provider instance.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	DisplayName string `json:"displayName,omitzero"`
-	// Public labels store information about an entity that can be used for
-	// filtering a list of objects.
-	//
-	// Public labels are intended to store **PUBLIC** metadata.
-	//
-	// Keys must be of length 1-63 characters, and cannot start with "kong",
-	// "konnect", "mesh", "kic", or "_".
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=50
-	Labels PublicLabels `json:"labels,omitzero"`
-	// Stores information about what manages this entity, such as the tool or
-	// system responsible for its lifecycle (for example, `terraform`).
-	//
-	// Keys must be 1–63 characters long and start with an alphanumeric
-	// character.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxProperties=5
-	ManagedBy ManagedBy `json:"managedBy,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// A user-defined unique identifier for this model provider instance, used as a
-	// stable human-readable reference.
-	// This value is immutable after creation.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
-	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
-}
-
-// AIGatewayModelProviderVertexConfig is a type alias.
-type AIGatewayModelProviderVertexConfig struct {
-	//
-	//
-	// +required
-	Auth *AIGatewayModelProviderVertexConfigAuth `json:"auth,omitempty"`
-}
-
-// AIGatewayModelProviderVertexConfigAuth represents a union type for auth.
-// Only one of the fields should be set based on the Type.
-type AIGatewayModelProviderVertexConfigAuth struct {
-	// Type designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=basic;vertex
-	Type AIGatewayModelProviderVertexConfigAuthType `json:"type,omitempty"`
-
-	// Basic configuration.
-	//
-	// +optional
-	Basic *AIGatewayModelProviderConfigAuthBasic `json:"basic,omitempty"`
-	// Vertex configuration.
-	//
-	// +optional
-	Vertex *AIGatewayModelProviderConfigAuthVertex `json:"vertex,omitempty"`
-}
-
-// AIGatewayModelProviderVertexConfigAuthType represents the type of auth.
-type AIGatewayModelProviderVertexConfigAuthType string
-
-// AIGatewayModelProviderVertexConfigAuthType values.
-const (
-	AIGatewayModelProviderVertexConfigAuthTypeBasic  AIGatewayModelProviderVertexConfigAuthType = "basic"
-	AIGatewayModelProviderVertexConfigAuthTypeVertex AIGatewayModelProviderVertexConfigAuthType = "vertex"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayModelProviderVertexConfigAuth) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.Type))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth type: %w", err)
-	}
-	m["type"] = typeBytes
-	switch u.Type {
-	case AIGatewayModelProviderVertexConfigAuthTypeBasic:
-		if u.Basic != nil {
-			raw, err := json.Marshal(u.Basic)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
-			}
-			m["basic"] = raw
-		}
-	case AIGatewayModelProviderVertexConfigAuthTypeVertex:
-		if u.Vertex != nil {
-			raw, err := json.Marshal(u.Vertex)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
-			}
-			m["vertex"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayModelProviderVertexConfigAuth) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth: nil receiver")
-	}
-	var probe struct {
-		Type string `json:"type"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.Type = AIGatewayModelProviderVertexConfigAuthType(probe.Type)
-	switch probe.Type {
-	case "basic":
-		payload, ok := raw["basic"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelProviderConfigAuthBasic
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth basic: %w", err)
-		}
-		u.Basic = &val
-	case "vertex":
-		payload, ok := raw["vertex"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayModelProviderConfigAuthVertex
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfigAuth vertex: %w", err)
-		}
-		u.Vertex = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayModelProviderVertexConfig) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: nil receiver")
-	}
-	type alias AIGatewayModelProviderVertexConfig
-	aux := alias{}
-	aux.Auth = &AIGatewayModelProviderVertexConfigAuth{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayModelProviderVertexConfig: %w", err)
-	}
-	if aux.Auth != nil && aux.Auth.Type == "" && aux.Auth.Basic == nil && aux.Auth.Vertex == nil {
-		aux.Auth = nil
-	}
-	*s = AIGatewayModelProviderVertexConfig(aux)
-	return nil
 }
 
 // AIGatewayModelProviderVllm **Pre-release Feature**
@@ -9090,7 +8938,7 @@ func (s *AIGatewayTarget) UnmarshalJSON(data []byte) error {
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling AIGatewayTarget: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Vercel == nil && aux.Config.Vertex == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.Anthropic == nil && aux.Config.Azure == nil && aux.Config.Bedrock == nil && aux.Config.Cerebras == nil && aux.Config.Cohere == nil && aux.Config.Dashscope == nil && aux.Config.Databricks == nil && aux.Config.Deepseek == nil && aux.Config.Gemini == nil && aux.Config.Huggingface == nil && aux.Config.Kimi == nil && aux.Config.Llama2 == nil && aux.Config.Mistral == nil && aux.Config.Ollama == nil && aux.Config.Openai == nil && aux.Config.Sagemaker == nil && aux.Config.Vercel == nil && aux.Config.Vllm == nil && aux.Config.Xai == nil {
 		aux.Config = nil
 	}
 	*s = AIGatewayTarget(aux)
@@ -9514,7 +9362,7 @@ type AIGatewayTargetConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;vercel;vertex;vllm;xai
+	// +kubebuilder:validation:Enum=anthropic;azure;bedrock;cerebras;cohere;dashscope;databricks;deepseek;gemini;huggingface;kimi;llama2;mistral;ollama;openai;sagemaker;vercel;vllm;xai
 	Type AIGatewayTargetConfigType `json:"type,omitempty"`
 
 	// Anthropic configuration.
@@ -9585,10 +9433,6 @@ type AIGatewayTargetConfig struct {
 	//
 	// +optional
 	Vercel *AIGatewayTargetVercelConfig `json:"vercel,omitempty"`
-	// Vertex configuration.
-	//
-	// +optional
-	Vertex *AIGatewayTargetVertexConfig `json:"vertex,omitempty"`
 	// Vllm configuration.
 	//
 	// +optional
@@ -9621,7 +9465,6 @@ const (
 	AIGatewayTargetConfigTypeOpenai      AIGatewayTargetConfigType = "openai"
 	AIGatewayTargetConfigTypeSagemaker   AIGatewayTargetConfigType = "sagemaker"
 	AIGatewayTargetConfigTypeVercel      AIGatewayTargetConfigType = "vercel"
-	AIGatewayTargetConfigTypeVertex      AIGatewayTargetConfigType = "vertex"
 	AIGatewayTargetConfigTypeVllm        AIGatewayTargetConfigType = "vllm"
 	AIGatewayTargetConfigTypeXai         AIGatewayTargetConfigType = "xai"
 )
@@ -9770,14 +9613,6 @@ func (u AIGatewayTargetConfig) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig vercel: %w", err)
 			}
 			m["vercel"] = raw
-		}
-	case AIGatewayTargetConfigTypeVertex:
-		if u.Vertex != nil {
-			raw, err := json.Marshal(u.Vertex)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayTargetConfig vertex: %w", err)
-			}
-			m["vertex"] = raw
 		}
 	case AIGatewayTargetConfigTypeVllm:
 		if u.Vllm != nil {
@@ -9986,16 +9821,6 @@ func (u *AIGatewayTargetConfig) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling AIGatewayTargetConfig vercel: %w", err)
 		}
 		u.Vercel = &val
-	case "vertex":
-		payload, ok := raw["vertex"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayTargetVertexConfig
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayTargetConfig vertex: %w", err)
-		}
-		u.Vertex = &val
 	case "vllm":
 		payload, ok := raw["vllm"]
 		if !ok || len(payload) == 0 {
@@ -10930,113 +10755,6 @@ type AIGatewayTargetVercelConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
-// AIGatewayTargetVertexConfig **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Google Vertex-specific configuration for a model.
-type AIGatewayTargetVertexConfig struct {
-	// Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking.
-	//
-	// +optional
-	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
-	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
-	//
-	// +optional
-	CacheWriteCost float64 `json:"cacheWriteCost,omitzero"`
-	// Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL.
-	// Configure this when the upstream provider charges differently for different
-	// cache TTLs.
-	//
-	// +optional
-	CacheWriteCostList []AIGatewayCacheWriteCost `json:"cacheWriteCostList,omitempty"`
-	// Above an input-token threshold, scale input and output pricing by the
-	// corresponding factor.
-	//
-	// +optional
-	ContextWindowFactor []AIGatewayContextWindowFactor `json:"contextWindowFactor,omitempty"`
-	// The number of dimensions for embedding outputs.
-	//
-	// +optional
-	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Configuration for a model hosted on Google Cloud Project.
-	//
-	// +optional
-	GcpEnvironment AIGatewayTargetVertexConfigGcpEnvironment `json:"gcpEnvironment,omitzero"`
-	// Cost per 1M input tokens for billing and cost tracking.
-	//
-	// +optional
-	InputCost float64 `json:"inputCost,omitzero"`
-	// The maximum number of tokens to generate in the response.
-	//
-	// +optional
-	MaxTokens int `json:"maxTokens,omitzero"`
-	// Cost per 1M output tokens for billing and cost tracking.
-	//
-	// +optional
-	OutputCost float64 `json:"outputCost,omitzero"`
-	// Multiplier applied to the whole request for a service tier.
-	// The default factor is 1.0 when no tier matches.
-	//
-	// +optional
-	ServiceTierFactor []AIGatewayServiceTierFactor `json:"serviceTierFactor,omitempty"`
-	// Controls randomness in the model output.
-	// Higher values produce more varied responses.
-	//
-	// +optional
-	Temperature float64 `json:"temperature,omitzero"`
-	// Limits the number of highest-probability tokens considered during
-	// generation.
-	//
-	// +optional
-	TopK int `json:"topK,omitzero"`
-	// Nucleus sampling probability mass.
-	// Tokens with cumulative probability up to top_p are considered.
-	//
-	// +optional
-	TopP float64 `json:"topP,omitzero"`
-	// The upstream URL for the model endpoint.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
-}
-
-// AIGatewayTargetVertexConfigGcpEnvironment **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Configuration for a model hosted on Google Cloud Project.
-type AIGatewayTargetVertexConfigGcpEnvironment struct {
-	// The custom API endpoint for the Gemini model.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	APIEndpoint string `json:"apiEndpoint,omitzero"`
-	// The endpoint ID for the model.
-	// This must be set when running a target model on Gemini on Vertex Model
-	// Garden.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	EndpointID string `json:"endpointID,omitzero"`
-	// The Google Cloud location ID for the model endpoint.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	LocationID string `json:"locationID,omitzero"`
-	// The Google Cloud project ID for the model endpoint.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	ProjectID string `json:"projectID,omitzero"`
-}
-
 // AIGatewayTargetVllmConfig **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
@@ -11340,25 +11058,6 @@ func (s *AIGatewayUpstreamConfig) UnmarshalJSON(data []byte) error {
 	}
 	*s = AIGatewayUpstreamConfig(aux)
 	return nil
-}
-
-// AIGatewayVertexEmbeddingsModelConfig **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Google Vertex-specific configuration for a model.
-type AIGatewayVertexEmbeddingsModelConfig struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Configuration for a model hosted on Google Cloud Project.
-	//
-	// +optional
-	GcpEnvironment GCPModelConfig `json:"gcpEnvironment,omitzero"`
-	// The URL of the embeddings model.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
 // CreatePortalCustomDomainSSL is a type alias.
