@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -152,7 +153,7 @@ func TestPluginEssentials(t *testing.T) {
 			t.Logf("plugin for KongPlugin %s in Kong not found", kongplugin.Name)
 			return false
 		}
-		if plugin.Tags != nil && lo.Contains(plugin.Tags, new("teapot")) {
+		if plugin.Tags != nil && slices.Contains(plugin.Tags, new("teapot")) {
 			return true
 		}
 		t.Logf("plugin for KongPlugin %s in Kong does not have expected tags, actual tags: %s",
@@ -197,7 +198,7 @@ func TestPluginEssentials(t *testing.T) {
 			t.Logf("plugin for KongClusterPlugin %s in Kong not found", kongclusterplugin.Name)
 			return false
 		}
-		if plugin.Tags != nil && lo.Contains(plugin.Tags, new("legal")) {
+		if plugin.Tags != nil && slices.Contains(plugin.Tags, new("legal")) {
 			return true
 		}
 		t.Logf("plugin for KongClusterPlugin %s in Kong does not have expected tags, actual tags: %s",
