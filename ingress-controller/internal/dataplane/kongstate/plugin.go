@@ -7,6 +7,7 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	"github.com/kong/go-kong/kong"
+	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	"sigs.k8s.io/yaml"
@@ -78,6 +79,13 @@ func kongPluginFromK8SClusterPlugin(
 		}
 	}
 
+	specTags := lo.Map(k8sPlugin.Tags, func(tag string, _ int) util.KongTag {
+		return util.KongTag{
+			// The tag should be propagated to Kong as-is, without any prefixing or suffixing.
+			Value: tag,
+		}
+	})
+
 	return Plugin{
 		Plugin: plugin{
 			Name:   k8sPlugin.PluginName,
@@ -88,7 +96,7 @@ func kongPluginFromK8SClusterPlugin(
 			InstanceName: k8sPlugin.InstanceName,
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
-			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+			Tags:         util.GenerateTagsForObject(&k8sPlugin, specTags...),
 		}.toKongPlugin(),
 		K8sParent: &k8sPlugin,
 	}, nil
@@ -132,6 +140,13 @@ func kongPluginFromK8SPlugin(
 		}
 	}
 
+	specTags := lo.Map(k8sPlugin.Tags, func(tag string, _ int) util.KongTag {
+		return util.KongTag{
+			// The tag should be propagated to Kong as-is, without any prefixing or suffixing.
+			Value: tag,
+		}
+	})
+
 	return Plugin{
 		Plugin: plugin{
 			Name:   k8sPlugin.PluginName,
@@ -142,7 +157,7 @@ func kongPluginFromK8SPlugin(
 			InstanceName: k8sPlugin.InstanceName,
 			Disabled:     k8sPlugin.Disabled,
 			Protocols:    protocolsToStrings(k8sPlugin.Protocols),
-			Tags:         util.GenerateTagsForObject(&k8sPlugin),
+			Tags:         util.GenerateTagsForObject(&k8sPlugin, specTags...),
 		}.toKongPlugin(),
 		K8sParent: &k8sPlugin,
 	}, nil
