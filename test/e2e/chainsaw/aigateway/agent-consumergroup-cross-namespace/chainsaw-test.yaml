@@ -1,0 +1,313 @@
+# AIGatewayAgent -> AIGatewayConsumerGroup cross-namespace ACL reference test.
+#
+# AIGatewayAgent.spec.apiSpec.access.acls.allow.allow[] (an AIGatewayACLRef,
+# targeting AIGatewayConsumerGroup) supports cross-namespace references gated
+# by KongReferenceGrant. This test proves it end-to-end against real Konnect:
+#
+# 1. Create an AIGatewayConsumerGroup (in the test namespace) and verify it
+#    becomes Programmed with a Konnect ID.
+# 2. Create an AIGatewayAgent in a SEPARATE namespace, referencing the
+#    ConsumerGroup cross-namespace in spec.apiSpec.access.acls.allow.allow[0].
+#    The Agent's own aiGatewayRef also crosses into the test namespace (to
+#    reach the same KonnectAIGateway the ConsumerGroup belongs to, since ACL
+#    references must stay within the same AI Gateway) — both cross-namespace
+#    references are covered by a single KongReferenceGrant in the test
+#    namespace with two `to` entries.
+# 3. Assert that, with only the parent-ref (aiGatewayRef) target granted, the
+#    Agent's ResolvedRefs condition is True but its KonnectReferencesResolved
+#    condition (the one gating the ACL sibling reference) is still
+#    False/ReferenceNotPermitted — isolating that the sibling-ref grant check
+#    is what's blocking it, independent of the parent ref.
+# 4. Grow the grant to also cover AIGatewayConsumerGroup; assert both
+#    conditions become True, Programmed becomes True, and the Agent has a
+#    Konnect ID and gateway ID set.
+# 5. Shrink the grant back down (drop the AIGatewayConsumerGroup entry);
+#    assert KonnectReferencesResolved reverts to False/ReferenceNotPermitted
+#    while ResolvedRefs stays True, proving the KongReferenceGrant watch
+#    re-triggers reconciliation of the referrer.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-agent-consumergroup-cross-namespace
+spec:
+  description: |
+    Creates an AIGatewayConsumerGroup and a KonnectAIGateway in the test
+    namespace, then an AIGatewayAgent in a separate namespace that references
+    the ConsumerGroup cross-namespace in its ACL allow-list. Verifies the
+    ACL reference is rejected until a KongReferenceGrant permits it, and that
+    it resolves (Programmed=True, Konnect ID set) once granted, and reverts
+    once the grant is narrowed again.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: consumer_group_name
+      value: (join('-', [($test_name), 'consumer-group']))
+    - name: agent_namespace
+      value: (join('-', [$namespace, 'agent']))
+    - name: agent_name
+      value: (join('-', [($test_name), 'agent']))
+    - name: kong_reference_grant_name
+      value: (join('-', [($test_name), 'agent-to-cp-and-consumergroup']))
+
+  steps:
+    - name: 1-create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+
+    - name: 2-create-konnect-aigateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: 3-create-consumer-group
+      description: Create the AIGatewayConsumerGroup in the test namespace; verify Programmed=True and a Konnect ID is assigned.
+      bindings:
+        - name: policies
+          value: []
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
+
+    - name: 4-create-agent-namespace
+      bindings:
+        - name: namespace_name
+          value: ($agent_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 5-create-grant-for-parent-ref-only
+      description: |
+        Grant the Agent's own aiGatewayRef access to the KonnectAIGateway,
+        but deliberately not yet to the AIGatewayConsumerGroup, so the next
+        step can isolate the sibling-ref (ACL) grant check from the
+        parent-ref grant check.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($kong_reference_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: AIGatewayAgent
+              namespace: ($agent_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAIGateway
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 6-create-agent-referencing-consumergroup-cross-namespace
+      description: Create the AIGatewayAgent in a separate namespace, ACL-referencing the ConsumerGroup cross-namespace.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($agent_namespace)
+              spec:
+                aiGatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                    namespace: ($namespace)
+                apiSpec:
+                  name: ($agent_name)
+                  displayName: ($agent_name)
+                  type: http
+                  enabled: Enabled
+                  access:
+                    acls:
+                      type: allow
+                      allow:
+                        allow:
+                          - kind: AIGatewayConsumerGroup
+                            name: ($consumer_group_name)
+                            namespace: ($namespace)
+                  config:
+                    url: https://my-upstream-agent.example.com
+                    route:
+                      paths:
+                        - (join('', ['/', ($agent_name)]))
+                      methods:
+                        - GET
+                        - POST
+                      protocols:
+                        - http
+                        - https
+                      stripPath: Enabled
+
+    - name: 7-assert-acl-ref-not-permitted-while-parent-ref-resolved
+      description: |
+        The Agent's parent ref (aiGatewayRef) is already granted, so
+        ResolvedRefs is True. The ACL reference to the ConsumerGroup is not
+        yet granted, so KonnectReferencesResolved must still be False,
+        isolating that the sibling-ref grant is specifically what's gating it.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($agent_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'False'
+                    reason: ReferenceNotPermitted
+
+    - name: 8-grow-grant-to-cover-consumergroup
+      description: Grow the grant to also permit the Agent's ACL reference to the AIGatewayConsumerGroup.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($kong_reference_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: AIGatewayAgent
+              namespace: ($agent_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAIGateway
+            - group: konnect.konghq.com
+              kind: AIGatewayConsumerGroup
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 9-assert-agent-programmed
+      description: Both references are now granted; assert the Agent is fully Programmed with a Konnect ID and gateway ID.
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($agent_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'True'
+                    reason: Resolved
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                    reason: Programmed
+                (id != null): true
+                (gatewayID.id != null): true
+
+    - name: 10-shrink-grant-and-assert-acl-ref-reverts
+      description: |
+        Narrow the grant back down to only the parent-ref target. Assert
+        KonnectReferencesResolved reverts to False/ReferenceNotPermitted
+        while ResolvedRefs stays True, proving the KongReferenceGrant watch
+        re-triggers reconciliation of the referrer.
+      bindings:
+        - name: kong_reference_grant_name
+          value: ($kong_reference_grant_name)
+        - name: kong_reference_grant_namespace
+          value: ($namespace)
+        - name: from
+          value:
+            - group: konnect.konghq.com
+              kind: AIGatewayAgent
+              namespace: ($agent_namespace)
+        - name: to
+          value:
+            - group: konnect.konghq.com
+              kind: KonnectAIGateway
+      use:
+        template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
+
+    - name: 11-assert-acl-ref-reverted-to-not-permitted
+      try:
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($agent_namespace)
+              status:
+                (conditions[?type == 'ResolvedRefs']):
+                  - status: 'True'
+                    reason: ResolvedRefs
+                (conditions[?type == 'KonnectReferencesResolved']):
+                  - status: 'False'
+                    reason: ReferenceNotPermitted
+
+    - name: 12-cleanup
+      description: |
+        Regrant full access so the Agent can deprovision cleanly from Konnect,
+        then delete the Agent and wait for it to be gone before deleting the
+        grant. Rely on namespace teardown for the rest.
+      try:
+        - apply:
+            resource:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              metadata:
+                name: ($kong_reference_grant_name)
+                namespace: ($namespace)
+              spec:
+                from:
+                  - group: konnect.konghq.com
+                    kind: AIGatewayAgent
+                    namespace: ($agent_namespace)
+                to:
+                  - group: konnect.konghq.com
+                    kind: KonnectAIGateway
+                  - group: konnect.konghq.com
+                    kind: AIGatewayConsumerGroup
+        - delete:
+            ref:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              name: ($agent_name)
+              namespace: ($agent_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: AIGatewayAgent
+              metadata:
+                name: ($agent_name)
+                namespace: ($agent_namespace)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: KongReferenceGrant
+              name: ($kong_reference_grant_name)
+              namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-agent-consumergroup-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ADDITIONAL_NAMESPACES
+            value: ($agent_namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -126,7 +126,8 @@ type AIGatewayACLRef struct {
 	// +kubebuilder:validation:MinLength=1
 	Name string `json:"name"`
 
-	// Namespace is reserved for future cross-namespace support.
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
 	//
 	// +optional
 	Namespace string `json:"namespace,omitempty"`

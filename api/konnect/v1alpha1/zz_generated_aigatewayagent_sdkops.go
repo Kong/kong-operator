@@ -9,6 +9,7 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -268,10 +269,6 @@ func resolveAIGatewayAgentAccessAclsAllowAllow(ctx context.Context, cl client.Cl
 		if kind == "" {
 			kind = "AIGatewayConsumerGroup"
 		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -323,10 +320,6 @@ func resolveAIGatewayAgentAccessAclsDenyDeny(ctx context.Context, cl client.Clie
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayConsumerGroup"
-		}
-		if ns != obj.GetNamespace() {
-			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
-			continue
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -428,6 +421,46 @@ func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl clie
 // calling ResolveKonnectReferences.
 func (obj *AIGatewayAgent) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
 	var checks []CrossNamespaceReferenceCheck
+	for _, ref := range RefsAtAIGatewayAgentAccessAclsAllowAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayAgentAccessAclsDenyDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayAgent"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 

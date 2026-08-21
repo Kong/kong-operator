@@ -157,12 +157,13 @@ spec:
                     rule: .self.group != 'core' || .self.kind == 'Secret'
                   - message: Only 'KonnectGatewayControlPlane', 'KonnectAPIAuthConfiguration',
                       'Portal', 'KonnectEventGateway', 'EventGatewayBackendCluster',
-                      'EventGatewayListener', 'EventGatewayVirtualCluster' and 'KonnectConfigStore'
-                      kinds are supported for 'konnect.konghq.com' group
+                      'EventGatewayListener', 'EventGatewayVirtualCluster', 'KonnectConfigStore',
+                      'KonnectAIGateway', and 'AIGatewayConsumerGroup' kinds are supported
+                      for 'konnect.konghq.com' group
                     rule: .self.group != 'konnect.konghq.com' || .self.kind in ['KonnectGatewayControlPlane',
                       'KonnectAPIAuthConfiguration', 'Portal', 'KonnectEventGateway',
                       'EventGatewayBackendCluster', 'EventGatewayListener', 'EventGatewayVirtualCluster',
-                      'KonnectConfigStore']
+                      'KonnectConfigStore', 'KonnectAIGateway', 'AIGatewayConsumerGroup']
                   - message: Only 'KongPlugin', 'KongService', 'KongCertificate',
                       'KongCACertificate' and 'KongUpstream' kinds are supported for
                       'configuration.konghq.com' group

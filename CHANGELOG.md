@@ -94,6 +94,9 @@
 - HybridGateway: Support GRPCRoute for hybrid
   [#5139](https://github.com/Kong/kong-operator/pull/5139)
   [#5141](https://github.com/Kong/kong-operator/pull/5141)
+- AIGateway: Support referring to `AIGatewayConsumerGroup`s in ACL allow/deny
+  lists in `AIGatewayAgent` and `AIGatewayModel`.
+  [#5307](https://github.com/Kong/kong-operator/pull/5307)
 
 ### Changed
 
