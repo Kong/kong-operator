@@ -5,11 +5,15 @@ metadata:
 spec:
   description: |
     AIGatewayModel route selectors. Stands up a Konnect AIGateway
-    control plane, a shared OpenAI-compatible provider, and three AIGatewayModel
-    resources - one per `config.route.model` selector type (headers, body, path) -
-    then drives real chat-completions traffic to verify each selector type routes
-    requests to the correct target based on its configured alias `values`, and
-    that a non-matching alias is consistently rejected.
+    control plane, a shared OpenAI-compatible provider, and four AIGatewayModel
+    resources - one per `config.route.model` selector type (headers, body, path)
+    plus one with no selector configured at all - then drives real
+    chat-completions traffic to verify each selector type routes requests to
+    the correct target based on its configured alias `values`, that a
+    non-matching alias is consistently rejected, and that the model with no
+    selector configured falls back to the format's default selector (the
+    request body's "model" field for `openai`) as documented on
+    `AIGatewayModelSelectorConfig`.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -62,7 +66,12 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
     - name: 6-Verify-headers-selector-routes-matching-alias
-      description: A request carrying the configured header alias is routed to the model.
+      description: |
+        A request carrying the configured header alias is routed to the model.
+        The body's `model` field is deliberately omitted (INCLUDE_BODY_MODEL:
+        'false') so this exercises `headerParam` alone rather than the
+        OpenAI-format body fallback every model with any `route.model`
+        selector also accepts.
       try:
         - script:
             env:
@@ -74,10 +83,15 @@ spec:
                 value: /model-route/headers/chat
               - name: MODEL_ALIAS
                 value: qwen2.5:0.5b
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
     - name: 7-Verify-headers-selector-rejects-non-matching-alias
-      description: A request carrying an alias absent from the selector's `values` never resolves to the model.
+      description: |
+        A request carrying an alias absent from the selector's `values` never
+        resolves to the model. Body `model` field omitted for the same reason
+        as step 6.
       try:
         - script:
             env:
@@ -89,12 +103,17 @@ spec:
                 value: /model-route/headers/chat
               - name: MODEL_ALIAS
                 value: headers-alias-wrong
-              - name: EXPECT_SUCCESS
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
     - name: 8-Verify-body-selector-routes-matching-alias
-      description: A request carrying the configured body property alias is routed to the model.
+      description: |
+        A request carrying the configured body property alias is routed to
+        the model. The X-Kong-LLM-Model header is deliberately omitted
+        (INCLUDE_HEADER: 'false') so this exercises `bodyParam` alone.
       try:
         - script:
             env:
@@ -106,10 +125,43 @@ spec:
                 value: /model-route/body/chat
               - name: MODEL_ALIAS
                 value: gemma3:270m
+              - name: INCLUDE_HEADER
+                value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
-    - name: 9-Verify-path-selector-routes-matching-alias
-      description: A request whose path segment matches the selector's `values` is routed to the model.
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+    - name: 9-Verify-no-selector-model-routes-via-format-default
+      description: |
+        A model with no `route.model` selector configured falls back to the
+        format's default selector (the request body's "model" field for
+        `openai`), per the doc comment on `AIGatewayModelSelectorConfig`. The
+        X-Kong-LLM-Model header is deliberately omitted (INCLUDE_HEADER:
+        'false') so this exercises the format-default fallback alone. Runs
+        before the pathParam steps below so it still executes even while
+        pathParam routing is broken.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /model-route/no-selector/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+            content: |
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+    - name: 10-Verify-path-selector-routes-matching-alias
+      description: |
+        A request whose path segment matches the selector's `values` is
+        routed to the model. Both the X-Kong-LLM-Model header and the body
+        `model` field are deliberately omitted (INCLUDE_HEADER,
+        INCLUDE_BODY_MODEL: 'false') so this exercises `pathParam` alone —
+        AI Gateway resolves the model alias from whichever of header, body,
+        or path carries it, so leaving either of the other two enabled would
+        let this step pass even if the path-based capture were broken.
       try:
         - script:
             env:
@@ -121,10 +173,17 @@ spec:
                 value: /model-route/path/qwen2.5:0.5b/chat
               - name: MODEL_ALIAS
                 value: qwen2.5:0.5b
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
+                value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
-    - name: 10-Verify-body-selector-rejects-non-matching-alias
-      description: A request carrying a body property alias absent from the selector's `values` never resolves to the model.
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+    - name: 11-Verify-body-selector-rejects-non-matching-alias
+      description: |
+        A request carrying a body property alias absent from the selector's
+        `values` never resolves to the model. Header omitted for the same
+        reason as step 8.
       try:
         - script:
             env:
@@ -136,12 +195,17 @@ spec:
                 value: /model-route/body/chat
               - name: MODEL_ALIAS
                 value: body-alias-wrong
-              - name: EXPECT_SUCCESS
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_HEADER
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
-    - name: 11-Verify-path-selector-rejects-non-matching-alias
-      description: A request whose path segment is absent from the selector's `values` never resolves to the model.
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+    - name: 12-Verify-path-selector-rejects-non-matching-alias
+      description: |
+        A request whose path segment is absent from the selector's `values`
+        never resolves to the model. Header and body `model` field omitted
+        for the same reason as step 10.
       try:
         - script:
             env:
@@ -153,10 +217,14 @@ spec:
                 value: /model-route/path/path-alias-wrong/chat
               - name: MODEL_ALIAS
                 value: path-alias-wrong
-              - name: EXPECT_SUCCESS
+              - name: EXPECTED_SUCCESS
+                value: 'false'
+              - name: INCLUDE_HEADER
+                value: 'false'
+              - name: INCLUDE_BODY_MODEL
                 value: 'false'
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
   catch:
     - description: Capture debug snapshot on test failure.
       script:
