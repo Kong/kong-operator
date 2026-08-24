@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -142,6 +143,12 @@ func (b *KongPluginBuilder) WithTagsFromAnnotations(sources ...pkgmetadata.Objec
 	}
 	sort.Strings(deduped)
 	b.plugin.Annotations[pkgmetadata.AnnotationKeyTags] = strings.Join(deduped, ",")
+	return b
+}
+
+// WithTags sets the spec.Tags field for the KongPlugin being built.
+func (b *KongPluginBuilder) WithTags(tags commonv1alpha1.Tags) *KongPluginBuilder {
+	b.plugin.Tags = tags
 	return b
 }
 

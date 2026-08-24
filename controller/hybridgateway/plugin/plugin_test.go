@@ -14,6 +14,7 @@ import (
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -463,4 +464,54 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, "plugin-tag,route-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
+}
+
+func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+		},
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+
+	referencedPlugin := &configurationv1.KongPlugin{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "referenced-plugin",
+			Namespace: "test-namespace",
+		},
+		PluginName: "rate-limiting",
+		Tags:       commonv1alpha1.Tags{"team-payments", "env-prod"},
+	}
+
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(referencedPlugin).
+		Build()
+
+	plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+
+	assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugins[0].Tags)
 }

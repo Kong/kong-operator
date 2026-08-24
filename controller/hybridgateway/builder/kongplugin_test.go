@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -172,6 +173,47 @@ func TestKongPluginBuilder_WithPluginConfig(t *testing.T) {
 	plugin, err := builder.Build()
 	require.NoError(t, err)
 	assert.JSONEq(t, string(config), string(plugin.Config.Raw))
+}
+
+func TestKongPluginBuilder_WithTags(t *testing.T) {
+	t.Run("sets tags", func(t *testing.T) {
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTags(commonv1alpha1.Tags{"team-payments", "env-prod"}).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugin.Tags)
+	})
+
+	t.Run("nil tags", func(t *testing.T) {
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTags(nil).
+			Build()
+		require.NoError(t, err)
+		assert.Empty(t, plugin.Tags)
+	})
+
+	t.Run("composes with WithTagsFromAnnotations", func(t *testing.T) {
+		sourcePlugin := &configurationv1.KongPlugin{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: "user-plugin",
+				Annotations: map[string]string{
+					"konghq.com/tags": "annotation-tag",
+				},
+			},
+			Tags: commonv1alpha1.Tags{"spec-tag"},
+		}
+
+		plugin, err := NewKongPlugin().
+			WithName("test-plugin").
+			WithTagsFromAnnotations(sourcePlugin).
+			WithTags(sourcePlugin.Tags).
+			Build()
+		require.NoError(t, err)
+		assert.Equal(t, "annotation-tag", plugin.Annotations["konghq.com/tags"])
+		assert.Equal(t, commonv1alpha1.Tags{"spec-tag"}, plugin.Tags)
+	})
 }
 
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
