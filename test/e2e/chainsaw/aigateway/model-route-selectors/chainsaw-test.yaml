@@ -3,6 +3,8 @@ kind: Test
 metadata:
   name: aigateway-model-route-selectors
 spec:
+  # Skipping this test: the path-selector case fails server-side.
+  skip: true
   description: |
     AIGatewayModel route selectors. Stands up a Konnect AIGateway
     control plane, a shared OpenAI-compatible provider, and three AIGatewayModel
