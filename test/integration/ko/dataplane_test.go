@@ -443,7 +443,7 @@ func TestDataPlaneUpdate(t *testing.T) {
 		}
 	}
 
-	t.Run("dataplane is not Ready when the underlying deployment changes state to not Ready", func(t *testing.T) {
+	t.Run("dataplane does not report the Deployment as rolled out for a generation that can not roll out", func(t *testing.T) {
 		require.Eventually(t,
 			testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 				container := k8sutils.GetPodContainerByName(&dp.Spec.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
@@ -470,15 +470,41 @@ func TestDataPlaneUpdate(t *testing.T) {
 		dataplane, err := clients.OperatorClient.GatewayOperatorV1beta1().DataPlanes(dataplaneName.Namespace).Get(ctx, dataplane.Name, metav1.GetOptions{})
 		require.NoError(t, err)
 
-		isNotReady := dataPlaneConditionPredicate(t, &metav1.Condition{
+		// The rollout of this generation can never complete (readiness probe always
+		// fails on the new replica), but the old replica keeps serving, so Ready.status
+		// must not flap to False for it -- it genuinely reports the current generation,
+		// since the DataPlane is serving traffic. DeploymentRolledOut is the condition
+		// that must never report this generation as rolled out, since it never was.
+		isReady := dataPlaneConditionPredicate(t, &metav1.Condition{
 			Type:               string(kcfgdataplane.ReadyType),
-			Status:             metav1.ConditionFalse,
-			Reason:             string(kcfgdataplane.WaitingToBecomeReadyReason),
+			Status:             metav1.ConditionTrue,
+			Reason:             string(kcfgdataplane.ResourceReadyReason),
 			ObservedGeneration: dataplane.Generation,
 		})
 		require.Eventually(t,
-			testutils.DataPlanePredicate(t, ctx, dataplaneName, isNotReady, integration.GetClients().OperatorClient),
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, isReady, integration.GetClients().OperatorClient),
 			testutils.DataPlaneCondDeadline, testutils.DataPlaneCondTick,
+		)
+
+		// Now that Ready has settled to True, prove both anti-flap properties hold
+		// for the rest of the stuck rollout: Ready never flaps back to False (the
+		// old replica keeps serving), and DeploymentRolledOut never claims this
+		// generation rolled out (it never did).
+		badState := func(dp *operatorv1beta1.DataPlane) bool {
+			if ready, ok := k8sutils.GetCondition(kcfgdataplane.ReadyType, dp); ok && ready.Status == metav1.ConditionFalse {
+				t.Logf("DataPlane %q Ready flapped to False: reason=%q message=%q", dp.Name, ready.Reason, ready.Message)
+				return true
+			}
+			if rolledOut, ok := k8sutils.GetCondition(kcfgdataplane.DeploymentRolledOutType, dp); ok &&
+				rolledOut.Status == metav1.ConditionTrue && rolledOut.ObservedGeneration == dataplane.Generation {
+				t.Logf("DataPlane %q DeploymentRolledOut reported generation %d as rolled out", dp.Name, dataplane.Generation)
+				return true
+			}
+			return false
+		}
+		require.Never(t,
+			testutils.DataPlanePredicate(t, ctx, dataplaneName, badState, integration.GetClients().OperatorClient),
+			30*time.Second, testutils.DataPlaneCondTick,
 		)
 	})
 	t.Run("dataplane gets Ready when the underlying deployment changes state to Ready", func(t *testing.T) {

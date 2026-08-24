@@ -47,6 +47,27 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// DataPlane - DeploymentRolledOut Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// DeploymentRolledOutType indicates whether the DataPlane's live Deployment
+	// has fully rolled out the generation reported in the condition's
+	// observedGeneration.
+	// It is separate from ReadyType: a DataPlane keeps serving traffic from the
+	// previous generation's replicas while a rolling update is in progress, so
+	// it stays Ready while DeploymentRolledOut is False.
+	DeploymentRolledOutType consts.ConditionType = "DeploymentRolledOut"
+
+	// DeploymentRolloutCompleteReason indicates all replicas run the current generation.
+	DeploymentRolloutCompleteReason consts.ConditionReason = "RolloutComplete"
+	// DeploymentRolloutProgressingReason indicates a rollout is still in progress.
+	DeploymentRolloutProgressingReason consts.ConditionReason = "Progressing"
+	// DeploymentRolloutStalledReason indicates Kubernetes gave up on the rollout.
+	DeploymentRolloutStalledReason consts.ConditionReason = "ProgressDeadlineExceeded"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - BlueGreen Condition Constants
 // -----------------------------------------------------------------------------
 

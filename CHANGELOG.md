@@ -139,6 +139,20 @@
   tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
+- `DataPlane`: the `Ready` status condition no longer flaps to `False` while a
+  rolling update is in progress and the old `Deployment` replicas are still
+  serving. A new `DeploymentRolledOut` status condition reports separately
+  whether the live `Deployment` has fully rolled out the generation reported
+  in its `observedGeneration`, and is set to `False` with reason
+  `ProgressDeadlineExceeded` if Kubernetes reports the rollout as stalled.
+  `Ready.observedGeneration` always reports the generation it was computed
+  for; it no longer lags to signal an in-progress rollout. Consumers that
+  previously waited for `Ready=True && observedGeneration==metadata.generation`
+  to mean "the current spec has fully rolled out" should switch to
+  `DeploymentRolledOut=True && observedGeneration==metadata.generation`
+  instead, which can take up to `progressDeadlineSeconds` (Kubernetes default
+  600s) to resolve if the rollout stalls.
+  [#3909](https://github.com/Kong/kong-operator/pull/3909)
 
 ## [v2.3.0-rc.3]
 

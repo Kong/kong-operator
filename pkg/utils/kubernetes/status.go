@@ -256,12 +256,16 @@ func SetAcceptedConditionOnGateway(resource ConditionsAndListenerConditionsAndGe
 }
 
 // AreAllConditionsHaveTrueStatus checks if all the conditions on the resource are in the True state.
-// It skips the Programmed condition as that particular condition will be set based on
-// the return value of this function.
+// It skips Ready and Programmed, because those conditions are set from the return
+// value of this function.
+// It also skips DeploymentRolledOut, which reports rollout
+// progress only and must not make the resource not Ready.
 func AreAllConditionsHaveTrueStatus(resource ConditionsAware) bool {
 	for _, condition := range resource.GetConditions() {
 		switch condition.Type {
-		case string(kcfgdataplane.ReadyType), string(gatewayv1.GatewayConditionProgrammed):
+		case string(kcfgdataplane.ReadyType),
+			string(kcfgdataplane.DeploymentRolledOutType),
+			string(gatewayv1.GatewayConditionProgrammed):
 			continue
 		default:
 			if condition.Status != metav1.ConditionTrue {
