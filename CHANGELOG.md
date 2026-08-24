@@ -184,6 +184,12 @@
   Deployment rollout instead of flipping `True` as soon as any pod (old or
   new) was ready.
   [#5365](https://github.com/Kong/kong-operator/pull/5365)
+- `KegDataPlane`: the `Ready` condition no longer flips `True` mid-rollout.
+  Previously it became `True` as soon as any replica was ready, even while an
+  old pod was still being replaced. It now uses `DeploymentRolloutComplete`,
+  which requires the controller to have observed the current generation and all
+  desired replicas to be updated and available.
+  [#5425](https://github.com/Kong/kong-operator/pull/5425)
 
 ## [v2.3.0-rc.3]
 

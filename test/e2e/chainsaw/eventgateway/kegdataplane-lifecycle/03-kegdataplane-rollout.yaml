@@ -1,0 +1,24 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+  namespace: ($namespace)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($keg_cp_name)
+  deployment:
+    replicas: 1
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: keg
+            image: ($keg_dp_image)
+            readinessProbe:
+              initialDelaySeconds: 30
+            # New env var changes the pod template hash, forcing a real
+            # rolling update (new ReplicaSet + new pod).
+            env:
+              - name: ROLLOUT_TRIGGER
+                value: "v2"

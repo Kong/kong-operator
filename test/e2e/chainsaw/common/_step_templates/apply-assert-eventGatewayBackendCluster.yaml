@@ -1,0 +1,50 @@
+# Template for creating and asserting an EventGatewayBackendCluster pointing
+# at an in-namespace Kafka cluster (e.g. the one deployed by
+# apply-assert-kafka-cluster.yaml), with anonymous/no-TLS authentication.
+#
+# Required bindings:
+#   - backend_cluster_name: Name of the EventGatewayBackendCluster to create.
+#   - namespace: Namespace where the EventGatewayBackendCluster will be
+#     created, and where the target Kafka cluster's bootstrap Service
+#     (kafka-bootstrap) lives.
+#   - keg_cp_name: Name of the KonnectEventGateway it attaches to (same
+#     namespace).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-event-gateway-backend-cluster
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayBackendCluster
+          metadata:
+            name: ($backend_cluster_name)
+            namespace: ($namespace)
+          spec:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: ($backend_cluster_name)
+              description: chainsaw e2e backend cluster (in-namespace Kafka)
+              bootstrapServers:
+                - (join('', ['kafka-bootstrap.', ($namespace), '.svc:9092']))
+              authentication:
+                type: anonymous
+                anonymous: {}
+              insecureAllowAnonymousVirtualClusterAuth: Enabled
+              tls:
+                enabled: Disabled
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayBackendCluster
+          metadata:
+            name: ($backend_cluster_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'

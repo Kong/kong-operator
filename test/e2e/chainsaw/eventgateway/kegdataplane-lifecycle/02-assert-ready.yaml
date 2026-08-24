@@ -1,0 +1,13 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'KonnectEventGatewayResolved']):
+    - status: 'True'
+      reason: Resolved
+  (conditions[?type == 'Ready']):
+    - status: 'True'
+      reason: Ready
+  (readyReplicas > `0`): true

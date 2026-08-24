@@ -286,7 +286,13 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(&deployList.Items[0]), deploy)) {
 				return
 			}
-			deploy.Status = appsv1.DeploymentStatus{Replicas: 1, ReadyReplicas: 1, AvailableReplicas: 1}
+			deploy.Status = appsv1.DeploymentStatus{
+				ObservedGeneration: deploy.Generation,
+				Replicas:           1,
+				UpdatedReplicas:    1,
+				ReadyReplicas:      1,
+				AvailableReplicas:  1,
+			}
 			assert.NoError(ct, cl.Status().Update(ctx, deploy))
 		}, waitTime, tickTime)
 

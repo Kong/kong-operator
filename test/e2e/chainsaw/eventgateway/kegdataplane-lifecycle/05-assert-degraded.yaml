@@ -1,0 +1,12 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'KonnectEventGatewayResolved']):
+    - status: 'False'
+      reason: NotFound
+  (conditions[?type == 'Ready']):
+    - status: 'False'
+      reason: DependenciesNotReady
