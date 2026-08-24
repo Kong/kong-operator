@@ -190,10 +190,16 @@ TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(T
 download.telepresence: mise ## Download telepresence locally if necessary.
 	$(MAKE) mise-install TOOL_BIN=$(TELEPRESENCE) DEP_VER=github:telepresenceio/telepresence
 
+NODE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["node"]' < $(MISE_FILE))
+NODE = $(PROJECT_DIR)/bin/installs/node/$(NODE_VERSION)/bin/node
+.PHONY: download.node
+download.node: mise ## Download node locally if necessary.
+	$(MAKE) mise-install TOOL_BIN=$(NODE) DEP_VER=node@$(NODE_VERSION)
+
 MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["markdownlint-cli2"].version' < $(MISE_FILE))
 MARKDOWNLINT = $(PROJECT_DIR)/bin/installs/markdownlint-cli2/$(MARKDOWNLINT_VERSION)/node_modules/.bin/markdownlint-cli2
 .PHONY: download.markdownlint-cli2
-download.markdownlint-cli2: mise ## Download markdownlint-cli2 locally if necessary.
+download.markdownlint-cli2: mise download.node ## Download markdownlint-cli2 locally if necessary.
 	$(MAKE) mise-install TOOL_BIN=$(MARKDOWNLINT) DEP_VER=markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
