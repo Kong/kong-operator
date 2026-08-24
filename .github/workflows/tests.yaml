@@ -137,7 +137,8 @@ jobs:
 
     - uses: ./.github/actions/setup-mise
       with:
-        install: false
+        install: true
+        install_args: node
 
     - name: run lint.markdownlint
       run: make lint.markdownlint
