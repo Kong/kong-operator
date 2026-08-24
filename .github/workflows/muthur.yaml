@@ -20,7 +20,6 @@ on:
 env:
   CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.3.1
   AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.17.5
-  KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.1
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
@@ -113,7 +112,6 @@ jobs:
       # kreview plugin checkout to its own ref: ksai_ref pins the plugin explicitly instead.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
-          ksai_ref: ${{ env.KREVIEW_PLUGIN_REF }}
           trigger_phrase: "/muthur"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
