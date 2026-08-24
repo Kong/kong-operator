@@ -18,7 +18,7 @@ on:
     types: [created]
 
 env:
-  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.3.1
+  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.3.2
   AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.17.5
 
 jobs:
