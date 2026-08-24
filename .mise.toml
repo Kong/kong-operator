@@ -18,7 +18,7 @@ version = "0.21.0"
 
 [tools."github:golangci/golangci-lint"]
 # renovate: datasource=github-releases depName=golangci/golangci-lint
-version = "2.12.2"
+version = "2.13.1"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime

@@ -165,6 +165,7 @@ func Test_toUnstructuredWithoutStatus(t *testing.T) {
 }
 
 func Test_ownedFieldSetForSubresource(t *testing.T) {
+
 	tests := []struct {
 		name            string
 		obj             client.Object
@@ -180,7 +181,7 @@ func Test_ownedFieldSetForSubresource(t *testing.T) {
 					Manager:     testFieldManager,
 					Operation:   metav1.ManagedFieldsOperationApply,
 					Subresource: "status",
-					FieldsV1:    &metav1.FieldsV1{Raw: []byte("{}")},
+					FieldsV1:    FieldsWithRawBytes([]byte("{}")),
 				}})
 				return u
 			}(),
@@ -195,7 +196,7 @@ func Test_ownedFieldSetForSubresource(t *testing.T) {
 					Manager:     testFieldManager,
 					Operation:   metav1.ManagedFieldsOperationApply,
 					Subresource: "status",
-					FieldsV1:    &metav1.FieldsV1{Raw: []byte("{}")},
+					FieldsV1:    FieldsWithRawBytes([]byte("{}")),
 				}})
 				return u
 			}(),
@@ -208,7 +209,7 @@ func Test_ownedFieldSetForSubresource(t *testing.T) {
 				Manager:     testFieldManager,
 				Operation:   metav1.ManagedFieldsOperationApply,
 				Subresource: "status",
-				FieldsV1:    &metav1.FieldsV1{Raw: []byte("{not-json")},
+				FieldsV1:    FieldsWithRawBytes([]byte("{not-json}")),
 			}}}},
 			manager:         testFieldManager,
 			subresource:     "status",
@@ -305,7 +306,7 @@ func Test_ApplyIfChanged(t *testing.T) {
 					Operation:  metav1.ManagedFieldsOperationApply,
 					APIVersion: kongServiceGVK.GroupVersion().String(),
 					FieldsType: "FieldsV1",
-					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(t, tc, u)},
+					FieldsV1:   FieldsWithRawBytes(ownedFieldsRaw(t, tc, u)),
 				}})
 				return u
 			}()},

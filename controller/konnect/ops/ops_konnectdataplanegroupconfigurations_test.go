@@ -82,7 +82,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 						Autoscale: new(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
-								MaxRps:  &maxRps,
+								MaxRps:  &maxRps, //nolint:staticcheck
 							},
 						)),
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{
@@ -164,7 +164,7 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 						Autoscale: new(sdkkonnectcomp.CreateConfigurationDataPlaneGroupAutoscaleConfigurationDataPlaneGroupAutoscaleAutopilot(
 							sdkkonnectcomp.ConfigurationDataPlaneGroupAutoscaleAutopilot{
 								BaseRps: 100,
-								MaxRps:  &maxRps,
+								MaxRps:  &maxRps, //nolint:staticcheck
 							},
 						)),
 						Environment: []sdkkonnectcomp.ConfigurationDataPlaneGroupEnvironmentField{

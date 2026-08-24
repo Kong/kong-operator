@@ -880,7 +880,7 @@ func (g *Generator) reconcilerEntityMetadata(
 }
 
 func apiGroupPackagePathAndAlias(apiGroup, apiVersion string) (string, string) {
-	groupPrefix := strings.Split(apiGroup, ".")[0]
+	groupPrefix, _, _ := strings.Cut(apiGroup, ".")
 	return fmt.Sprintf("github.com/kong/kong-operator/v2/api/%s/%s", groupPrefix, apiVersion),
 		strings.ReplaceAll(groupPrefix, "-", "") + apiVersion
 }

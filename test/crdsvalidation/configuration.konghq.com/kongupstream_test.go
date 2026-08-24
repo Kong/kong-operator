@@ -637,7 +637,7 @@ func TestKongUpstream(t *testing.T) {
 							},
 						},
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-							ClientCertificate: &sdkkonnectcomp.UpstreamClientCertificate{
+							ClientCertificate: &sdkkonnectcomp.UpstreamClientCertificate{ //nolint:staticcheck
 								ID: new("some-konnect-id"),
 							},
 							ClientCertificateRef: &commonv1alpha1.NamespacedRef{
