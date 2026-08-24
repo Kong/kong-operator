@@ -139,6 +139,10 @@
   tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
+- AIGatewayDataPlane: fix the `Ready` condition to reflect a fully completed
+  Deployment rollout instead of flipping `True` as soon as any pod (old or
+  new) was ready.
+  [#5365](https://github.com/Kong/kong-operator/pull/5365)
 
 ## [v2.3.0-rc.3]
 

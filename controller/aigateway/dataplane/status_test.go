@@ -35,12 +35,20 @@ func Test_ensureReadyStatus(t *testing.T) {
 		}
 	}
 
-	deploy := func(ready, total int32) *appsv1.Deployment {
+	// deploy builds a Deployment with the given generation/replica counts so
+	// tests can control DeploymentRolloutComplete's inputs precisely.
+	deploy := func(generation, observedGeneration int64, specReplicas, replicas, updatedReplicas, availableReplicas, readyReplicas int32) *appsv1.Deployment {
 		d := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testDPName},
+			ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testDPName, Generation: generation},
+			Spec:       appsv1.DeploymentSpec{Replicas: new(specReplicas)},
 		}
-		d.Status.Replicas = total
-		d.Status.ReadyReplicas = ready
+		d.Status = appsv1.DeploymentStatus{
+			ObservedGeneration: observedGeneration,
+			Replicas:           replicas,
+			UpdatedReplicas:    updatedReplicas,
+			AvailableReplicas:  availableReplicas,
+			ReadyReplicas:      readyReplicas,
+		}
 		return d
 	}
 
@@ -62,24 +70,45 @@ func Test_ensureReadyStatus(t *testing.T) {
 		},
 		{
 			name:              "deployment exists but zero ready: Ready=False",
-			objects:           []client.Object{deploy(0, 2)},
+			objects:           []client.Object{deploy(1, 1, 2, 2, 0, 0, 0)},
 			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
 			wantReplicas:      2,
 			wantReadyReplicas: 0,
 		},
 		{
-			name:              "deployment has ready replicas: Ready=True",
-			objects:           []client.Object{deploy(2, 2)},
+			name:              "deployment fully rolled out: Ready=True",
+			objects:           []client.Object{deploy(1, 1, 2, 2, 2, 2, 2)},
 			wantReadyStatus:   metav1.ConditionTrue,
 			wantReplicas:      2,
 			wantReadyReplicas: 2,
 		},
 		{
-			name:              "rolling update: some ready replicas: stays Ready=True",
-			objects:           []client.Object{deploy(1, 2)},
-			wantReadyStatus:   metav1.ConditionTrue,
+			name:              "rolling update in progress: some ready replicas: Ready=False until rollout completes",
+			objects:           []client.Object{deploy(1, 1, 2, 2, 1, 1, 1)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
 			wantReplicas:      2,
 			wantReadyReplicas: 1,
+		},
+		{
+			name:              "stale observed generation: Ready=False even though replica counts look complete",
+			objects:           []client.Object{deploy(2, 1, 2, 2, 2, 2, 2)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      2,
+			wantReadyReplicas: 2,
+		},
+		{
+			// spec.deployment.replicas=0 is a valid, explicit scale-down. Every
+			// counter trivially matches (0 == 0), but there are no pods serving
+			// traffic, so this must not report Ready=True.
+			name:              "spec.replicas=0: Ready=False even though every counter is 0",
+			objects:           []client.Object{deploy(1, 1, 0, 0, 0, 0, 0)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      0,
+			wantReadyReplicas: 0,
 		},
 		{
 			name: "GET error propagated",

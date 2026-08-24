@@ -36,7 +36,9 @@ import (
 // ensureReadyStatus computes the Ready condition for an AIGatewayDataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets
 // Ready=False immediately without fetching the Deployment. Otherwise it reads
-// the owned Deployment's replica counts and sets Ready based on readyReplicas.
+// the owned Deployment and sets Ready based on DeploymentRolloutComplete,
+// which requires the controller to have observed the current generation and
+// all desired replicas to be updated and available.
 // Status is not patched here; the caller flushes via applyStatus.
 func ensureReadyStatus(
 	ctx context.Context,
@@ -78,15 +80,14 @@ func ensureReadyStatus(
 	aigwdp.Status.Replicas = deployment.Status.Replicas
 	aigwdp.Status.ReadyReplicas = deployment.Status.ReadyReplicas
 
-	// Mark Not Ready only when zero pods are serving traffic.
-	// During a rolling update some replicas are still ready, so we stay Ready
-	// throughout the rollout and only flip to False when there is nothing left to serve.
-	if deployment.Status.ReadyReplicas == 0 {
+	// Ready only once the current generation has been fully rolled out, not
+	// merely once some pods happen to be ready.
+	if !k8sutils.DeploymentRolloutComplete(deployment) {
 		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
 			Type:               string(aigatewayv1alpha1.ReadyType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(aigatewayv1alpha1.DependenciesNotReadyReason),
-			Message:            aigatewayv1alpha1.DependenciesNotReadyMessage,
+			Reason:             string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			Message:            aigatewayv1alpha1.WaitingToBecomeReadyMessage,
 			ObservedGeneration: aigwdp.Generation,
 		})
 	} else {

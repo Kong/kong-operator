@@ -5,10 +5,15 @@ metadata:
 spec:
   description: |
     Lifecycle test for AIGatewayDataPlane cross-reference, condition correctness,
-    and watch reconciliation.
+    watch reconciliation, and rollout-readiness (issue #5340).
     1. Creates DataPlane before its KonnectAIGateway → asserts KonnectAIGatewayResolved=False/NotFound.
     2. Creates KonnectAIGateway → asserts watch fires → DataPlane reaches Ready=True.
-    3. Deletes KonnectAIGateway → asserts DataPlane conditions degrade
+    3. Triggers a second rollout (podTemplateSpec change) → while the new pod
+       is still starting up (and the old pod is still serving), asserts
+       Ready=False/WaitingToBecomeReady.
+    4. Once the new pod passes its (delayed) probe and the old pod is scaled
+       down, asserts Ready=True again.
+    5. Deletes KonnectAIGateway → asserts DataPlane conditions degrade
   bindings:
     - name: test_name
       value: ($namespace)
@@ -52,6 +57,23 @@ spec:
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
     - name: Assert-watch-fired
+      try:
+        - assert:
+            file: 05-assert-ready.yaml
+    - name: Trigger-second-rollout
+      description: |
+        Apply an updated podTemplateSpec (new env var) so the Deployment gets
+        a new pod template hash and a real rolling update starts. The old pod
+        keeps serving (default maxUnavailable=0/maxSurge=1 for replicas=1)
+        while the new pod is created and starts its 30s-delayed readiness
+        probe, giving a wide, deterministic window in which Ready must be
+        False.
+      try:
+        - apply:
+            file: 06-aigatewaydataplane-rollout.yaml
+        - assert:
+            file: 06-assert-rolling.yaml
+    - name: Assert-rollout-completes
       try:
         - assert:
             file: 05-assert-ready.yaml
