@@ -459,7 +459,7 @@ func TestResolveUpstreamClientCertificate(t *testing.T) {
 			upstream: &configurationv1alpha1.KongUpstream{
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
-						ClientCertificate: deprecatedCert,
+						ClientCertificate: deprecatedCert, //nolint:staticcheck // testing deprecated field
 					},
 				},
 			},

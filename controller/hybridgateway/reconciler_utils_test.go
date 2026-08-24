@@ -38,6 +38,7 @@ import (
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
 	hgerrors "github.com/kong/kong-operator/v2/controller/hybridgateway/errors"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
+	"github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -457,7 +458,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					Operation:  metav1.ManagedFieldsOperationApply,
 					APIVersion: kongServiceGVK.GroupVersion().String(),
 					FieldsType: "FieldsV1",
-					FieldsV1:   &metav1.FieldsV1{Raw: ownedFieldsRaw(&u)},
+					FieldsV1:   ssa.FieldsWithRawBytes(ownedFieldsRaw(&u)),
 				}})
 				return &u
 			}()},

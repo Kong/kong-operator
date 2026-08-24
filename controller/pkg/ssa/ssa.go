@@ -41,7 +41,6 @@ import (
 
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // FieldManager is the field manager name used by the operator for
@@ -347,7 +346,7 @@ func ApplyStatusIfChanged(
 // "status" for the status subresource). Returns an empty set if the manager
 // has no entry yet (e.g. before the first apply).
 func ownedFieldSetForSubresource(obj client.Object, fieldManager, subresource string) (*fieldpath.Set, error) {
-	entry, ok := k8sutils.FindManagedFieldsEntry(obj, fieldManager, subresource)
+	entry, ok := FindManagedFieldsEntry(obj, fieldManager, subresource)
 	if !ok || entry.FieldsV1 == nil {
 		return &fieldpath.Set{}, nil
 	}
