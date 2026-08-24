@@ -675,6 +675,10 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Name:  "KONG_PORT_MAPS",
 					Value: "80:8000,443:8443",
 				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384,0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
 			},
 			expectedPortMap: map[int]int{
 				80:  8000,
@@ -708,6 +712,10 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					Name:  "KONG_STREAM_LISTEN",
 					Value: "0.0.0.0:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -744,6 +752,10 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Name:  "KONG_STREAM_LISTEN",
 					Value: "0.0.0.0:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport",
 				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384",
+				},
 			},
 			expectedPortMap: map[int]int{
 				80:   8000,
@@ -773,6 +785,10 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					Name:  "KONG_STREAM_LISTEN",
 					Value: "0.0.0.0:16384 ssl reuseport",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -989,6 +1005,10 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					Name:  "KONG_STREAM_LISTEN",
 					Value: "0.0.0.0:8888 reuseport",
 				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384,0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
 			},
 			expectedPortMap: map[int]int{
 				80:   8000,
@@ -1047,6 +1067,90 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			expectedPortMap: map[int]int{
 				9000: 9000,
 				9443: 9443,
+			},
+		},
+		{
+			name: "HTTP listener uses non-standard, non-privileged port directly",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(8080),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8080:8080",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8080 reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8080: 8080,
+			},
+		},
+		{
+			name: "second HTTP listener on a known port overflows to the assigned pool once fallback is taken",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http-1",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(80),
+				},
+				{
+					Name:     "http-2",
+					Protocol: gatewayv1.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(81),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "80:8000,81:16384",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8000 reuseport backlog=16384,0.0.0.0:16384 reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				80: 8000,
+				81: 16384,
+			},
+		},
+		{
+			// Regression test: re-reconciling a KONG_PROXY_LISTEN the controller
+			// itself already wrote (which always carries "http2" for HTTPS
+			// listeners) must not duplicate "http2" on every pass.
+			name: "re-reconciling own previous KONG_PROXY_LISTEN output does not duplicate http2",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(8443),
+				},
+			},
+			existingEnv: []corev1.EnvVar{
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "8443:8443",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				8443: 8443,
 			},
 		},
 	}
@@ -1125,7 +1229,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(9443),
 				},
 			},
-			portMap: map[int]int{9443: 9443},
+			portMap: map[int]int{80: 8000, 443: 8443, 9443: 9443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -1148,6 +1252,25 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 			},
 		},
 		{
+			name: "HTTP listener uses non-standard port as target port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "http",
+					Protocol: gwtypes.HTTPProtocolType,
+					Port:     gatewayv1.PortNumber(8080),
+				},
+			},
+			portMap: map[int]int{8080: 8080},
+			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
+				{
+					Name:       "http",
+					Port:       8080,
+					Protocol:   corev1.ProtocolTCP,
+					TargetPort: intstr.FromInt(8080),
+				},
+			},
+		},
+		{
 			name: "UDP listener supported",
 			listeners: []gwtypes.Listener{
 				{
@@ -1161,7 +1284,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					Port:     gatewayv1.PortNumber(8899),
 				},
 			},
-			portMap: map[int]int{8899: 8899},
+			portMap: map[int]int{80: 8000, 8899: 8899},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -1197,6 +1320,7 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 					NodePort: int32(30080),
 				},
 			},
+			portMap: map[int]int{80: 8000, 443: 8443},
 			expectedPorts: []operatorv1beta1.DataPlaneServicePort{
 				{
 					Name:       "http",
@@ -1240,12 +1364,19 @@ func TestSetDataPlaneIngressServicePorts(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			err := setDataPlaneIngressServicePorts(&operatorv1beta1.DataPlaneOptions{}, tc.listeners, tc.listenersOptions, tc.portMap)
-			if tc.expectedError == nil {
-				require.NoError(t, err)
-			} else {
+			opts := &operatorv1beta1.DataPlaneOptions{}
+			err := setDataPlaneIngressServicePorts(opts, tc.listeners, tc.listenersOptions, tc.portMap)
+			if tc.expectedError != nil {
 				require.EqualError(t, err, tc.expectedError.Error())
+				return
 			}
+			require.NoError(t, err)
+
+			var actualPorts []operatorv1beta1.DataPlaneServicePort
+			if opts.Network.Services != nil && opts.Network.Services.Ingress != nil {
+				actualPorts = opts.Network.Services.Ingress.Ports
+			}
+			require.Equal(t, tc.expectedPorts, actualPorts)
 		})
 	}
 }
