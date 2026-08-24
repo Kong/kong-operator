@@ -19,7 +19,7 @@ on:
 
 env:
   CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.3.1
-  AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.14.3
+  AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.17.5
   KREVIEW_PLUGIN_REF: plugins/kreview/v0.9.1
 
 jobs:
