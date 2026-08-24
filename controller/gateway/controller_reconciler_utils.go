@@ -1358,8 +1358,14 @@ func setDataPlaneDeploymentListenPorts(
 
 	// assignPort resolves the Kong-side port for a listener's port: the listener's own
 	// port if usable (not privileged, not occupied); otherwise preferredFallback if set
-	// and free, otherwise the next free port from the assigned pool.
+	// and free, otherwise the next free port from the assigned pool. It is idempotent
+	// per portNumber so that multiple listeners sharing the same port (e.g. several
+	// HTTPS listeners on 443 differentiated by hostname/SNI) all resolve to the single
+	// Kong port assigned to the first one, instead of each claiming a distinct fallback.
 	assignPort := func(i int, portNumber int, preferredFallback int) {
+		if _, alreadyAssigned := listenerPortToKongListenPort[portNumber]; alreadyAssigned {
+			return
+		}
 		if _, occupied := kongPortOccupied[portNumber]; !isKnownPort(portNumber) && !occupied {
 			listenerPortToKongListenPort[portNumber] = portNumber
 			kongPortOccupied[portNumber] = struct{}{}
@@ -1390,21 +1396,27 @@ func setDataPlaneDeploymentListenPorts(
 	// ports are reserved away from stream listeners below.
 	for i, l := range listeners {
 		portNumber := int(l.Port)
+		// Listeners sharing a port (e.g. multiple HTTPS listeners on 443 differentiated
+		// by hostname/SNI) all resolve to the Kong port assigned to the first one; only
+		// that first listener should contribute an entry to proxyPorts.
+		_, alreadyAssigned := listenerPortToKongListenPort[portNumber]
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType:
-			// TODO: support multiple listeners using the same port:
-			// https://github.com/Kong/kong-operator/issues/3511
 			assignPort(i, portNumber, consts.DataPlaneProxyPort)
-			proxyPorts = append(proxyPorts, proxyListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.HTTPProtocolType,
-			})
+			if !alreadyAssigned {
+				proxyPorts = append(proxyPorts, proxyListenPort{
+					kongPort: listenerPortToKongListenPort[portNumber],
+					protocol: gatewayv1.HTTPProtocolType,
+				})
+			}
 		case gatewayv1.HTTPSProtocolType:
 			assignPort(i, portNumber, consts.DataPlaneProxySSLPort)
-			proxyPorts = append(proxyPorts, proxyListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.HTTPSProtocolType,
-			})
+			if !alreadyAssigned {
+				proxyPorts = append(proxyPorts, proxyListenPort{
+					kongPort: listenerPortToKongListenPort[portNumber],
+					protocol: gatewayv1.HTTPSProtocolType,
+				})
+			}
 		case gatewayv1.TLSProtocolType, gatewayv1.TCPProtocolType, gatewayv1.UDPProtocolType:
 			// Handled in phase 2 below.
 		default:
@@ -1420,27 +1432,36 @@ func setDataPlaneDeploymentListenPorts(
 	// Phase 2: stream (TLS/TCP/UDP) listeners.
 	for i, l := range listeners {
 		portNumber := int(l.Port)
+		// See the equivalent comment in phase 1: listeners sharing a port all resolve
+		// to the first one's Kong port, so only that first listener is added to streamPorts.
+		_, alreadyAssigned := listenerPortToKongListenPort[portNumber]
 		switch l.Protocol {
 		case gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType:
 			// Already handled in phase 1.
 		case gatewayv1.TLSProtocolType:
 			assignPort(i, portNumber, 0)
-			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.TLSProtocolType,
-			})
+			if !alreadyAssigned {
+				streamPorts = append(streamPorts, streamListenPort{
+					kongPort: listenerPortToKongListenPort[portNumber],
+					protocol: gatewayv1.TLSProtocolType,
+				})
+			}
 		case gatewayv1.UDPProtocolType:
 			assignPort(i, portNumber, 0)
-			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.UDPProtocolType,
-			})
+			if !alreadyAssigned {
+				streamPorts = append(streamPorts, streamListenPort{
+					kongPort: listenerPortToKongListenPort[portNumber],
+					protocol: gatewayv1.UDPProtocolType,
+				})
+			}
 		case gatewayv1.TCPProtocolType:
 			assignPort(i, portNumber, 0)
-			streamPorts = append(streamPorts, streamListenPort{
-				kongPort: listenerPortToKongListenPort[portNumber],
-				protocol: gatewayv1.TCPProtocolType,
-			})
+			if !alreadyAssigned {
+				streamPorts = append(streamPorts, streamListenPort{
+					kongPort: listenerPortToKongListenPort[portNumber],
+					protocol: gatewayv1.TCPProtocolType,
+				})
+			}
 		default:
 			errs = errors.Join(errs, fmt.Errorf("listener %d uses unsupported protocol %s", i, l.Protocol))
 		}

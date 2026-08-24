@@ -1125,6 +1125,51 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			},
 		},
 		{
+			// Regression test: multiple HTTPS listeners sharing the same port number
+			// (differentiated by hostname/SNI, e.g. Gateway API conformance's
+			// gateway-conformance-infra Gateway) must all resolve to the single Kong
+			// port assigned to the first one, not each claim a distinct fallback port.
+			name: "multiple HTTPS listeners on the same port resolve to a single Kong port",
+			listeners: []gwtypes.Listener{
+				{
+					Name:     "https",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+				},
+				{
+					Name:     "https-with-hostname",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+					Hostname: new(gatewayv1.Hostname("second-example.org")),
+				},
+				{
+					Name:     "https-with-wildcard-hostname",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+					Hostname: new(gatewayv1.Hostname("*.wildcard.org")),
+				},
+				{
+					Name:     "https-with-hostname-matching-wildcard",
+					Protocol: gatewayv1.HTTPSProtocolType,
+					Port:     gatewayv1.PortNumber(443),
+					Hostname: new(gatewayv1.Hostname("fourth-example.wildcard.org")),
+				},
+			},
+			expectedEnvs: []corev1.EnvVar{
+				{
+					Name:  "KONG_PORT_MAPS",
+					Value: "443:8443",
+				},
+				{
+					Name:  "KONG_PROXY_LISTEN",
+					Value: "0.0.0.0:8443 http2 ssl reuseport backlog=16384",
+				},
+			},
+			expectedPortMap: map[int]int{
+				443: 8443,
+			},
+		},
+		{
 			// Regression test: re-reconciling a KONG_PROXY_LISTEN the controller
 			// itself already wrote (which always carries "http2" for HTTPS
 			// listeners) must not duplicate "http2" on every pass.
