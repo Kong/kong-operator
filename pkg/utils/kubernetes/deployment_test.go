@@ -89,6 +89,20 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 			deployment: &appsv1.Deployment{},
 			want:       false,
 		},
+		{
+			name: "explicit spec.replicas=0: not complete even though every counter matches",
+			deployment: &appsv1.Deployment{
+				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(0))},
+				Status: appsv1.DeploymentStatus{
+					ObservedGeneration: 1,
+					Replicas:           0,
+					UpdatedReplicas:    0,
+					AvailableReplicas:  0,
+				},
+			},
+			want: false,
+		},
 	}
 
 	for _, tc := range tests {

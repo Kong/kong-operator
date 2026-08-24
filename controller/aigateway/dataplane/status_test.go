@@ -100,6 +100,17 @@ func Test_ensureReadyStatus(t *testing.T) {
 			wantReadyReplicas: 2,
 		},
 		{
+			// spec.deployment.replicas=0 is a valid, explicit scale-down. Every
+			// counter trivially matches (0 == 0), but there are no pods serving
+			// traffic, so this must not report Ready=True.
+			name:              "spec.replicas=0: Ready=False even though every counter is 0",
+			objects:           []client.Object{deploy(1, 1, 0, 0, 0, 0, 0)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      0,
+			wantReadyReplicas: 0,
+		},
+		{
 			name: "GET error propagated",
 			buildClient: func(base client.WithWatch) client.Client {
 				return interceptor.NewClient(base, interceptor.Funcs{

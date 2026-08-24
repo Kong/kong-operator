@@ -36,7 +36,9 @@ import (
 // ensureReadyStatus computes the Ready condition for an AIGatewayDataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets
 // Ready=False immediately without fetching the Deployment. Otherwise it reads
-// the owned Deployment's replica counts and sets Ready based on readyReplicas.
+// the owned Deployment and sets Ready based on DeploymentRolloutComplete,
+// which requires the controller to have observed the current generation and
+// all desired replicas to be updated and available.
 // Status is not patched here; the caller flushes via applyStatus.
 func ensureReadyStatus(
 	ctx context.Context,
