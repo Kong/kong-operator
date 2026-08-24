@@ -41,6 +41,11 @@ spec:
       name: flights-mcp-server-listener
       displayName: KongAir Flights MCP Server (listener)
       enabled: Enabled
+      # Names of conversion-only/upstream-server MCP Servers whose tools this
+      # listener exposes.
+      sources:
+        - flights-mcp-server-conversion-only
+        - flights-mcp-server-upstream-server
       access:
         aclAttributeType: consumer
       config:

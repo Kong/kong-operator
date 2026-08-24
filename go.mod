@@ -5,7 +5,7 @@ go 1.26.6
 require (
 	cloud.google.com/go/container v1.53.1
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.60.0
+	github.com/Kong/sdk-konnect-go v0.62.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.1
@@ -41,7 +41,7 @@ require (
 	github.com/prometheus/common v0.70.1
 	github.com/samber/lo v1.53.0
 	github.com/samber/mo v1.17.0
-	github.com/stretchr/testify v1.12.0
+	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.44.0
 	github.com/tidwall/gjson v1.19.0
@@ -282,7 +282,7 @@ require (
 	go.opentelemetry.io/proto/otlp v1.9.0 // indirect
 	go.uber.org/multierr v1.11.0 // indirect
 	go.yaml.in/yaml/v2 v2.4.4 // indirect
-	go.yaml.in/yaml/v3 v3.0.4 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go4.org/netipx v0.0.0-20231129151722-fdeea329fbba // indirect
 	golang.org/x/crypto v0.55.0 // indirect
 	golang.org/x/exp v0.0.0-20260312153236-7ab1446f8b90 // indirect
