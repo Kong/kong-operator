@@ -15,10 +15,13 @@ spec:
         containers:
           - name: aigw
             image: ($aigw_dp_image)
-            # Deliberately slow: gives a wide, deterministic window during a
-            # later rollout in which the new pod exists but is not yet Ready.
             readinessProbe:
               initialDelaySeconds: 30
+            # New env var changes the pod template hash, forcing a real
+            # rolling update (new ReplicaSet + new pod).
+            env:
+              - name: ROLLOUT_TRIGGER
+                value: "v2"
   network:
     services:
       ingress:
