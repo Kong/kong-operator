@@ -6,12 +6,8 @@ import (
 	"github.com/kong/kong-operator/v2/test"
 )
 
-var skippedTestsShared = []string{
-	// skip it until FTI-7663 released
-	tests.GRPCExactMethodMatching.ShortName,
-	tests.GRPCRouteHeaderMatching.ShortName,
-	tests.GRPCRouteListenerHostnameMatching.ShortName,
-}
+// skippedTestsShared are ShortNames of tests need to be skipped for both Standard and Hybrid.
+var skippedTestsShared = []string{}
 
 var skippedTestsForStandard = []string{
 	// TODO: https://github.com/kubernetes-sigs/gateway-api/issues/5121
