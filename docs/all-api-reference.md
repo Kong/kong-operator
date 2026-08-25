@@ -70,7 +70,7 @@ AIGatewayDataPlaneStatus defines the observed state of AIGatewayDataPlane.
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the AIGatewayDataPlane. |
 | `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
 | `replicas` _int32_ | Replicas indicates how many replicas have been set for the AIGatewayDataPlane. |
-| `addresses` _[][Address](#aigateway-konghq-com-v1alpha1-types-address)_ | Addresses lists the addresses of the ingress Service. For LoadBalancer-type Services this includes the externally-reachable hostname or IP once allocated; for other Service types it includes the ClusterIP(s). |
+| `addresses` _[][Address](#aigateway-konghq-com-v1alpha1-types-address)_ | Addresses lists the addresses of the ingress Service. For LoadBalancer-type Services the list holds the externally-reachable hostname or IP once allocated, plus the ClusterIP(s). For other Service types it holds the ClusterIP(s) only. |
 
 _Appears in:_
 

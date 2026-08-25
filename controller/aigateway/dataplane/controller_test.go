@@ -484,9 +484,9 @@ func TestIngressServiceIsReady(t *testing.T) {
 
 func TestEnsureServiceReadyCondition(t *testing.T) {
 	r := &Reconciler{}
-	aigwdp := newReconcileAIGWDP()
 
 	t.Run("ClusterIP sets ServiceReady=True and no addresses", func(t *testing.T) {
+		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{
 			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},
 		}
@@ -501,7 +501,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 	})
 
 	t.Run("LoadBalancer with no ingress sets ServiceReady=False", func(t *testing.T) {
-		aigwdp.Status.Conditions = nil
+		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
 		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
 
@@ -513,7 +513,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 	})
 
 	t.Run("LoadBalancer with IP sets ServiceReady=True and populates addresses", func(t *testing.T) {
-		aigwdp.Status.Conditions = nil
+		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{
 			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
 			Status: corev1.ServiceStatus{

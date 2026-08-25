@@ -322,9 +322,9 @@ type AIGatewayDataPlaneStatus struct {
 	Replicas int32 `json:"replicas"`
 
 	// Addresses lists the addresses of the ingress Service.
-	// For LoadBalancer-type Services this includes the externally-reachable
-	// hostname or IP once allocated; for other Service types it includes
-	// the ClusterIP(s).
+	// For LoadBalancer-type Services the list holds the externally-reachable
+	// hostname or IP once allocated, plus the ClusterIP(s). For other Service
+	// types it holds the ClusterIP(s) only.
 	//
 	// +optional
 	// +listType=map
@@ -362,7 +362,7 @@ type Address struct {
 
 // AddressType defines how a network address is represented as a text string.
 //
-// +kubebuilder:validation:Pattern=`^IPAddress|Hostname$`
+// +kubebuilder:validation:Enum=IPAddress;Hostname
 type AddressType string
 
 const (
@@ -375,7 +375,7 @@ const (
 
 // AddressSourceType defines the type of source an address represents.
 //
-// +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
+// +kubebuilder:validation:Enum=PublicLoadBalancer;PrivateLoadBalancer;PublicIP;PrivateIP
 type AddressSourceType string
 
 const (

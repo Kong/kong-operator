@@ -9501,24 +9501,30 @@ spec:
               addresses:
                 description: |-
                   Addresses lists the addresses of the ingress Service.
-                  For LoadBalancer-type Services this includes the externally-reachable
-                  hostname or IP once allocated; for other Service types it includes
-                  the ClusterIP(s).
+                  For LoadBalancer-type Services the list holds the externally-reachable
+                  hostname or IP once allocated, plus the ClusterIP(s). For other Service
+                  types it holds the ClusterIP(s) only.
                 items:
                   description: Address describes a reachable address of the ingress
                     Service.
                   properties:
                     sourceType:
                       description: SourceType of the address.
+                      enum:
+                      - PublicLoadBalancer
+                      - PrivateLoadBalancer
+                      - PublicIP
+                      - PrivateIP
                       maxLength: 253
                       minLength: 1
-                      pattern: ^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$
                       type: string
                     type:
                       default: IPAddress
                       description: Type of the address.
+                      enum:
+                      - IPAddress
+                      - Hostname
                       maxLength: 253
-                      pattern: ^IPAddress|Hostname$
                       type: string
                     value:
                       description: |-

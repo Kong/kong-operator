@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -365,6 +366,18 @@ func Test_ensureIngressService(t *testing.T) {
 			},
 			wantErr:   true,
 			wantEvent: "ServiceFailed",
+		},
+		{
+			name: "Get returns NotFound after apply: returns nil, nil (cache lag)",
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return apierrors.NewNotFound(corev1.Resource("services"), key.Name)
+					},
+				})
+			},
+			wantErr:   false,
+			wantEvent: "ServiceCreated",
 		},
 	}
 
