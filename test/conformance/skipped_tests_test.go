@@ -6,6 +6,7 @@ import (
 	"github.com/kong/kong-operator/v2/test"
 )
 
+// skippedTestsShared are ShortNames of tests need to be skipped for both Standard and Hybrid.
 var skippedTestsShared = []string{}
 
 var skippedTestsForStandard = []string{
