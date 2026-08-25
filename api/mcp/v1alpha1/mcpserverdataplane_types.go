@@ -17,6 +17,7 @@ limitations under the License.
 package v1alpha1
 
 import (
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -104,13 +105,50 @@ type DeploymentOptions struct {
 	PodTemplateSpec MCPServerDataPlanePodTemplateSpec `json:"podTemplateSpec,omitzero"`
 }
 
-// MCPServerDataPlanePodTemplateSpec defines the pod template spec for the
-// Deployment managed by the MCPServerDataPlane controller.
+// MCPServerDataPlanePodTemplateSpec specifies available options for the Deployments
+// (similarly as in the Kubernetes resource "Deployment") which are created and managed
+// for the MCPServerDataPlane resource.
 type MCPServerDataPlanePodTemplateSpec struct {
 	// Metadata is the metadata of the pod template spec.
 	//
 	// +optional
 	Metadata MCPServerDataPlanePodTemplateSpecMetadata `json:"metadata,omitzero"`
+
+	// Specification of the desired behavior of the pod.
+	// +optional
+	Spec MCPServerDataPlanePodSpec `json:"spec,omitzero"`
+}
+
+// MCPServerDataPlanePodSpec describes the data a pod should have when created from a template.
+type MCPServerDataPlanePodSpec struct {
+	// List of containers belonging to the pod to patch.
+	// A container is patched by name.
+	//
+	// +patchMergeKey=name
+	// +patchStrategy=merge
+	// +listType=map
+	// +listMapKey=name
+	// +kubebuilder:validation:MaxItems=16
+	// +optional
+	Containers []MCPServerDataPlaneContainer `json:"containers"`
+}
+
+// MCPServerDataPlaneContainer describes a single container that
+// you want to run within a pod, exposes fields supported by the
+// MCPServerDataPlane.
+type MCPServerDataPlaneContainer struct {
+	// Name of the container. Must match the name of a container in the Pod
+	// managed by the MCPServerDataPlane controller (e.g. "mcp-server").
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitempty"`
+
+	// Resources specifies the compute resource requirements for the container.
+	//
+	// +optional
+	Resources corev1.ResourceRequirements `json:"resources,omitempty"`
 }
 
 // MCPServerDataPlanePodTemplateSpecMetadata defines the metadata of the pod template spec
