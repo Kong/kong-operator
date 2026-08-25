@@ -412,57 +412,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "listener.tools.[].annotations.destructive_hint",
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"annotations",
-			"destructive_hint",
-		},
-	},
-	{
-		Label: "listener.tools.[].annotations.idempotent_hint",
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"annotations",
-			"idempotent_hint",
-		},
-	},
-	{
-		Label: "listener.tools.[].annotations.open_world_hint",
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"annotations",
-			"open_world_hint",
-		},
-	},
-	{
-		Label: "listener.tools.[].annotations.read_only_hint",
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"annotations",
-			"read_only_hint",
-		},
-	},
-	{
-		Label: "listener.tools.[].parameters.[].required",
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"required",
-		},
-	},
-	{
 		Label: "passthrough-listener.config.logging.audits",
 		Path: []string{
 			"passthrough-listener",
@@ -1027,48 +976,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"listener",
 			"managed_by",
-		},
-	},
-	{
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"headers",
-		},
-	},
-	{
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"schema",
-		},
-	},
-	{
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"query",
-		},
-	},
-	{
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"request_body",
-		},
-	},
-	{
-		Path: []string{
-			"listener",
-			"tools",
-			"[]",
-			"responses",
 		},
 	},
 	{

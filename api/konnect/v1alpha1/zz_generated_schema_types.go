@@ -26,9 +26,18 @@ type AIGatewayAgentAccess struct {
 	//
 	// +optional
 	Acls *AIGatewayAgentAccessAcls `json:"acls,omitempty"`
+	// List of auth strategies for granting access to the agent.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
 	// List of identity providers for granting access to the agent.
 	// At most 1 identity provider of each identity provider type can be
 	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
 	//
 	//
 	// +optional
@@ -162,6 +171,10 @@ type AIGatewayAllowACL struct {
 	// +required
 	Allow []AIGatewayACLRef `json:"allow,omitempty"`
 }
+
+// AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+// name.
+type AIGatewayAuthStrategyReference string
 
 // AIGatewayAzureEmbeddingsModelConfig **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
@@ -1606,10 +1619,6 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +required
 	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
-	// List of tools exposed by this MCP Server.
-	//
-	// +optional
-	Tools []AIGatewayMCPToolBase `json:"tools,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -1732,7 +1741,7 @@ func (u *AIGatewayMCPServerListenerAccess) UnmarshalJSON(data []byte) error {
 // AIGatewayMCPServerListenerConsumer **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
-// Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+// Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
 // for granting access to an MCP server.
 type AIGatewayMCPServerListenerConsumer struct {
 	// **Pre-release Feature**
@@ -1742,6 +1751,13 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// List of auth strategies for granting access to the MCP server.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -1753,6 +1769,8 @@ type AIGatewayMCPServerListenerConsumer struct {
 	// List of identity providers for granting access to the MCP server.
 	// At most 1 identity provider of each identity provider type can be
 	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
 	//
 	//
 	// +optional
@@ -1767,7 +1785,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 // AIGatewayMCPServerListenerOauth **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
-// Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+// Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
 // for granting access to an MCP server.
 type AIGatewayMCPServerListenerOauth struct {
 	// The claim in the OAuth2 access token to use as the subject for ACL
@@ -1787,6 +1805,13 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+	// List of auth strategies for granting access to the MCP server.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxItems=1
+	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -1798,6 +1823,8 @@ type AIGatewayMCPServerListenerOauth struct {
 	// List of identity providers for granting access to the MCP server.
 	// At most 1 identity provider of each identity provider type can be
 	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
 	//
 	//
 	// +optional
@@ -1824,6 +1851,8 @@ type AIGatewayMCPServerNoUpstreamConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -2100,6 +2129,8 @@ type AIGatewayMCPServerServerConfigBase struct {
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	Timeout int `json:"timeout,omitzero"`
 }
 
@@ -2128,6 +2159,8 @@ type AIGatewayMCPServerServerConfigBaseSession struct {
 	// The time-to-live (TTL) for each session in seconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	SessionTtl int `json:"sessionTtl,omitzero"`
 	// The strategy for the session.
 	// If the value is 'client', the session is encrypted into MCP session id
@@ -2356,6 +2389,8 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -2443,6 +2478,8 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	Timeout int `json:"timeout,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -2478,6 +2515,8 @@ type AIGatewayMCPServerUpstreamServerServerConfigSession struct {
 	// The time-to-live (TTL) for each session in seconds.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	SessionTtl int `json:"sessionTtl,omitzero"`
 	// The strategy for the session.
 	// If the value is 'client', the session is encrypted into MCP session id
@@ -2827,6 +2866,8 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -2899,6 +2940,8 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -3504,6 +3547,8 @@ type AIGatewayModelAPIConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -3769,9 +3814,17 @@ type AIGatewayModelAccess struct {
 	//
 	// +optional
 	Acls *AIGatewayModelAccessAcls `json:"acls,omitempty"`
+	// List of auth strategies for granting access to the model.
+	// At most 1 auth strategy of each auth strategy type can be referenced.
+	//
+	//
+	// +optional
+	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
 	// List of identity providers for granting access to the model.
 	// At most 1 identity provider of each identity provider type can be
 	// referenced.
+	//
+	// Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
 	//
 	//
 	// +optional
@@ -4116,14 +4169,14 @@ type AIGatewayModelBalancerConsistentHashingConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4155,7 +4208,7 @@ type AIGatewayModelBalancerConsistentHashingConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4173,7 +4226,7 @@ type AIGatewayModelBalancerConsistentHashingConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4184,14 +4237,14 @@ type AIGatewayModelBalancerLeastConnectionsConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4218,7 +4271,7 @@ type AIGatewayModelBalancerLeastConnectionsConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4236,7 +4289,7 @@ type AIGatewayModelBalancerLeastConnectionsConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4247,14 +4300,14 @@ type AIGatewayModelBalancerLowestLatencyConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4289,7 +4342,7 @@ type AIGatewayModelBalancerLowestLatencyConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4307,7 +4360,7 @@ type AIGatewayModelBalancerLowestLatencyConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4318,14 +4371,14 @@ type AIGatewayModelBalancerLowestUsageConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4352,7 +4405,7 @@ type AIGatewayModelBalancerLowestUsageConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4377,7 +4430,7 @@ type AIGatewayModelBalancerLowestUsageConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4388,14 +4441,14 @@ type AIGatewayModelBalancerPriorityConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4422,7 +4475,7 @@ type AIGatewayModelBalancerPriorityConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4440,7 +4493,7 @@ type AIGatewayModelBalancerPriorityConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4451,14 +4504,14 @@ type AIGatewayModelBalancerRoundRobinConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// The period of time (in milliseconds) the target will be considered
 	// unavailable after the number of unsuccessful attempts reaches `max_fails`.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4485,7 +4538,7 @@ type AIGatewayModelBalancerRoundRobinConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4503,7 +4556,7 @@ type AIGatewayModelBalancerRoundRobinConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -4514,7 +4567,7 @@ type AIGatewayModelBalancerSemanticConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// Embeddings model configuration for this model.
 	//
@@ -4525,7 +4578,7 @@ type AIGatewayModelBalancerSemanticConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	FailTimeout int `json:"failTimeout,omitzero"`
 	// Specifies in which cases an upstream response should be failover to the next
 	// target.
@@ -4552,7 +4605,7 @@ type AIGatewayModelBalancerSemanticConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// The number of retries to execute upon failure to proxy.
 	//
@@ -4577,7 +4630,7 @@ type AIGatewayModelBalancerSemanticConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	WriteTimeout int `json:"writeTimeout,omitzero"`
 }
 
@@ -5070,6 +5123,8 @@ type AIGatewayModelModelConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -7252,6 +7307,8 @@ type AIGatewayModelRouteConfig struct {
 	// `https` protocol.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=599
 	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
 	// A list of HTTP methods that match this route.
 	//
@@ -7292,6 +7349,8 @@ type AIGatewayModelRouteConfig struct {
 	// routes are matched before shorter ones).
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=-2147483648
+	// +kubebuilder:validation:Maximum=2147483647
 	RegexPriority int `json:"regexPriority,omitzero"`
 	// Whether to enable request body buffering or not.
 	// With HTTP 1.1, it may make sense to turn this off on services that receive
@@ -7488,6 +7547,8 @@ type AIGatewayModelVectorDBConfigPgVector struct {
 	// the port of the pgvector database
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=65535
 	Port int `json:"port,omitzero"`
 	//
 	//
@@ -7566,7 +7627,7 @@ type AIGatewayModelVectorDBConfigRedis struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// If the connection to Redis is proxied (e.g.
 	// Envoy), set it `true`.
@@ -7578,6 +7639,8 @@ type AIGatewayModelVectorDBConfigRedis struct {
 	// Database to use for the Redis connection when using the `redis` strategy
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	Database int `json:"database,omitzero"`
 	// the desired dimensionality for the vectors
 	//
@@ -7623,14 +7686,14 @@ type AIGatewayModelVectorDBConfigRedis struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	SendTimeout int `json:"sendTimeout,omitzero"`
 	// Configuration for Redis Sentinel.
 	//
@@ -7683,6 +7746,8 @@ type AIGatewayModelVectorDBConfigRedisCluster struct {
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRedirections int `json:"maxRedirections,omitzero"`
 	// Cluster addresses to use for Redis connections when the `redis` strategy is
 	// defined.
@@ -7726,7 +7791,7 @@ type AIGatewayModelVectorDBConfigRedisKeepalive struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	Backlog int `json:"backlog,omitzero"`
 	// The size limit for every cosocket connection pool associated with every
 	// remote server, per worker process.
@@ -7738,7 +7803,7 @@ type AIGatewayModelVectorDBConfigRedisKeepalive struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	PoolSize int `json:"poolSize,omitzero"`
 }
 
@@ -8289,7 +8354,7 @@ type AIGatewayRedisCloudConfiguration struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ConnectTimeout int `json:"connectTimeout,omitzero"`
 	// If the connection to Redis is proxied (e.g.
 	// Envoy), set it `true`.
@@ -8301,6 +8366,8 @@ type AIGatewayRedisCloudConfiguration struct {
 	// Database to use for the Redis connection when using the `redis` strategy
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	Database int `json:"database,omitzero"`
 	// A string representing a host name, such as example.com.
 	// This field is
@@ -8335,14 +8402,14 @@ type AIGatewayRedisCloudConfiguration struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	ReadTimeout int `json:"readTimeout,omitzero"`
 	// An integer representing a timeout in milliseconds.
 	// Must be between 0 and 2^31-2.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	SendTimeout int `json:"sendTimeout,omitzero"`
 	// Configuration for Redis Sentinel.
 	//
@@ -8389,6 +8456,8 @@ type AIGatewayRedisCloudConfigurationCluster struct {
 	// Maximum retry attempts for redirection.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRedirections int `json:"maxRedirections,omitzero"`
 	// Cluster addresses to use for Redis connections when the `redis` strategy is
 	// defined.
@@ -8432,7 +8501,7 @@ type AIGatewayRedisCloudConfigurationKeepalive struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	Backlog int `json:"backlog,omitzero"`
 	// The size limit for every cosocket connection pool associated with every
 	// remote server, per worker process.
@@ -8444,7 +8513,7 @@ type AIGatewayRedisCloudConfigurationKeepalive struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=1
-	// +kubebuilder:validation:Maximum=2.147483646e+09
+	// +kubebuilder:validation:Maximum=2147483646
 	PoolSize int `json:"poolSize,omitzero"`
 }
 
@@ -8802,6 +8871,8 @@ type AIGatewayRouteConfig struct {
 	// `https` protocol.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=599
 	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
 	// A list of HTTP methods that match this route.
 	//
@@ -8835,6 +8906,8 @@ type AIGatewayRouteConfig struct {
 	// routes are matched before shorter ones).
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=-2147483648
+	// +kubebuilder:validation:Maximum=2147483647
 	RegexPriority int `json:"regexPriority,omitzero"`
 	// Whether to enable request body buffering or not.
 	// With HTTP 1.1, it may make sense to turn this off on services that receive
@@ -8972,6 +9045,8 @@ type AIGatewayTargetAnthropicConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -8980,6 +9055,8 @@ type AIGatewayTargetAnthropicConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -8999,6 +9076,8 @@ type AIGatewayTargetAnthropicConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9056,6 +9135,8 @@ type AIGatewayTargetAzureConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// The API path prefix for the Azure AI Foundry endpoint, selecting the model's
 	// API surface.
@@ -9076,6 +9157,8 @@ type AIGatewayTargetAzureConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9095,6 +9178,8 @@ type AIGatewayTargetAzureConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9140,6 +9225,8 @@ type AIGatewayTargetBedrockConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Whether to normalize embedding vectors in the response.
 	//
@@ -9153,6 +9240,8 @@ type AIGatewayTargetBedrockConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9184,6 +9273,8 @@ type AIGatewayTargetBedrockConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9229,6 +9320,8 @@ type AIGatewayTargetCerebrasConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -9237,6 +9330,8 @@ type AIGatewayTargetCerebrasConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9256,6 +9351,8 @@ type AIGatewayTargetCerebrasConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9310,6 +9407,8 @@ type AIGatewayTargetCohereConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -9318,6 +9417,8 @@ type AIGatewayTargetCohereConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9337,6 +9438,8 @@ type AIGatewayTargetCohereConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9872,6 +9975,8 @@ type AIGatewayTargetDashscopeConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -9885,6 +9990,8 @@ type AIGatewayTargetDashscopeConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9904,6 +10011,8 @@ type AIGatewayTargetDashscopeConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -9944,6 +10053,8 @@ type AIGatewayTargetDatabricksConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -9952,6 +10063,8 @@ type AIGatewayTargetDatabricksConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -9971,6 +10084,8 @@ type AIGatewayTargetDatabricksConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10017,6 +10132,8 @@ type AIGatewayTargetDeepseekConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10025,6 +10142,8 @@ type AIGatewayTargetDeepseekConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10044,6 +10163,8 @@ type AIGatewayTargetDeepseekConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10084,6 +10205,8 @@ type AIGatewayTargetGeminiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
@@ -10099,6 +10222,8 @@ type AIGatewayTargetGeminiConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10118,6 +10243,8 @@ type AIGatewayTargetGeminiConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10158,6 +10285,8 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10166,6 +10295,8 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10185,6 +10316,8 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10235,6 +10368,8 @@ type AIGatewayTargetKimiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10250,6 +10385,8 @@ type AIGatewayTargetKimiConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10269,6 +10406,8 @@ type AIGatewayTargetKimiConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10309,6 +10448,8 @@ type AIGatewayTargetLlama2Config struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// The request format to use when communicating with the Llama2 model.
 	//
@@ -10324,6 +10465,8 @@ type AIGatewayTargetLlama2Config struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10343,6 +10486,8 @@ type AIGatewayTargetLlama2Config struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10384,6 +10529,8 @@ type AIGatewayTargetMistralConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// The request format to use when communicating with the Mistral model.
 	//
@@ -10399,6 +10546,8 @@ type AIGatewayTargetMistralConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10418,6 +10567,8 @@ type AIGatewayTargetMistralConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10458,6 +10609,8 @@ type AIGatewayTargetOllamaConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10466,6 +10619,8 @@ type AIGatewayTargetOllamaConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10485,6 +10640,8 @@ type AIGatewayTargetOllamaConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10525,6 +10682,8 @@ type AIGatewayTargetOpenaiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10533,6 +10692,8 @@ type AIGatewayTargetOpenaiConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10552,6 +10713,8 @@ type AIGatewayTargetOpenaiConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10597,6 +10760,8 @@ type AIGatewayTargetSagemakerConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10605,6 +10770,8 @@ type AIGatewayTargetSagemakerConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10628,6 +10795,8 @@ type AIGatewayTargetSagemakerConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10715,6 +10884,8 @@ type AIGatewayTargetVercelConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10723,6 +10894,8 @@ type AIGatewayTargetVercelConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10742,6 +10915,8 @@ type AIGatewayTargetVercelConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10782,6 +10957,8 @@ type AIGatewayTargetVllmConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10790,6 +10967,8 @@ type AIGatewayTargetVllmConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10809,6 +10988,8 @@ type AIGatewayTargetVllmConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.
@@ -10850,6 +11031,8 @@ type AIGatewayTargetXaiConfig struct {
 	// The number of dimensions for embedding outputs.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	EmbeddingsDimensions int `json:"embeddingsDimensions,omitzero"`
 	// Cost per 1M input tokens for billing and cost tracking.
 	//
@@ -10858,6 +11041,8 @@ type AIGatewayTargetXaiConfig struct {
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxTokens int `json:"maxTokens,omitzero"`
 	// Cost per 1M output tokens for billing and cost tracking.
 	//
@@ -10877,6 +11062,8 @@ type AIGatewayTargetXaiConfig struct {
 	// generation.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	TopK int `json:"topK,omitzero"`
 	// Nucleus sampling probability mass.
 	// Tokens with cumulative probability up to top_p are considered.

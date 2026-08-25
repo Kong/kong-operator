@@ -222,11 +222,23 @@ spec:
                             required:
                             - type
                             type: object
+                          authStrategies:
+                            description: |-
+                              List of auth strategies for granting access to the model.
+                              At most 1 auth strategy of each auth strategy type can be referenced.
+                            items:
+                              description: |-
+                                AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                name.
+                              type: string
+                            type: array
                           identityProviders:
                             description: |-
                               List of identity providers for granting access to the model.
                               At most 1 identity provider of each identity provider type can be
                               referenced.
+
+                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                             items:
                               description: |-
                                 AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
@@ -956,6 +968,8 @@ spec:
                                           port:
                                             description: the port of the pgvector
                                               database
+                                            maximum: 65535
+                                            minimum: 0
                                             type: integer
                                           ssl:
                                             description: AIGatewayModelVectorDBConfigPgVectorSSL
@@ -1139,6 +1153,8 @@ spec:
                                               maxRedirections:
                                                 description: Maximum retry attempts
                                                   for redirection.
+                                                maximum: 2147483646
+                                                minimum: 0
                                                 type: integer
                                               nodes:
                                                 description: |-
@@ -1187,6 +1203,8 @@ spec:
                                           database:
                                             description: Database to use for the Redis
                                               connection when using the `redis` strategy
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           dimensions:
                                             description: the desired dimensionality
@@ -1431,6 +1449,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           proxy:
                             description: |-
@@ -1540,6 +1560,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -1614,6 +1636,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -1847,6 +1871,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -1855,6 +1881,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -1898,6 +1926,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -1999,6 +2029,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     foundryPathPrefix:
                                       description: |-
@@ -2020,6 +2052,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2063,6 +2097,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2154,6 +2190,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     embeddingsNormalize:
                                       description: Whether to normalize embedding
@@ -2169,6 +2207,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2223,6 +2263,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2314,6 +2356,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2322,6 +2366,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2365,6 +2411,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2471,6 +2519,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2479,6 +2529,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2522,6 +2574,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2615,6 +2669,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2630,6 +2686,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2673,6 +2731,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2759,6 +2819,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2767,6 +2829,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2810,6 +2874,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -2904,6 +2970,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -2912,6 +2980,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -2955,6 +3025,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3041,6 +3113,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     gcpEnvironment:
                                       description: |-
@@ -3079,6 +3153,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3122,6 +3198,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3208,6 +3286,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -3216,6 +3296,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3259,6 +3341,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3359,6 +3443,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -3375,6 +3461,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3418,6 +3506,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3504,6 +3594,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     format:
                                       description: The request format to use when
@@ -3522,6 +3614,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3565,6 +3659,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3655,6 +3751,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     format:
                                       description: The request format to use when
@@ -3672,6 +3770,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3715,6 +3815,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3803,6 +3905,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -3811,6 +3915,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3854,6 +3960,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -3940,6 +4048,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -3948,6 +4058,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -3991,6 +4103,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -4105,6 +4219,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -4113,6 +4229,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -4177,6 +4295,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -4287,6 +4407,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -4295,6 +4417,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -4338,6 +4462,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -4424,6 +4550,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -4432,6 +4560,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -4475,6 +4605,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -4564,6 +4696,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -4572,6 +4706,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -4615,6 +4751,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -4787,11 +4925,23 @@ spec:
                             required:
                             - type
                             type: object
+                          authStrategies:
+                            description: |-
+                              List of auth strategies for granting access to the model.
+                              At most 1 auth strategy of each auth strategy type can be referenced.
+                            items:
+                              description: |-
+                                AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                name.
+                              type: string
+                            type: array
                           identityProviders:
                             description: |-
                               List of identity providers for granting access to the model.
                               At most 1 identity provider of each identity provider type can be
                               referenced.
+
+                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                             items:
                               description: |-
                                 AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
@@ -5520,6 +5670,8 @@ spec:
                                           port:
                                             description: the port of the pgvector
                                               database
+                                            maximum: 65535
+                                            minimum: 0
                                             type: integer
                                           ssl:
                                             description: AIGatewayModelVectorDBConfigPgVectorSSL
@@ -5703,6 +5855,8 @@ spec:
                                               maxRedirections:
                                                 description: Maximum retry attempts
                                                   for redirection.
+                                                maximum: 2147483646
+                                                minimum: 0
                                                 type: integer
                                               nodes:
                                                 description: |-
@@ -5751,6 +5905,8 @@ spec:
                                           database:
                                             description: Database to use for the Redis
                                               connection when using the `redis` strategy
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           dimensions:
                                             description: the desired dimensionality
@@ -5995,6 +6151,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           model:
                             description: |-
@@ -6120,6 +6278,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -6194,6 +6354,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -6427,6 +6589,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -6435,6 +6599,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -6478,6 +6644,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -6579,6 +6747,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     foundryPathPrefix:
                                       description: |-
@@ -6600,6 +6770,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -6643,6 +6815,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -6734,6 +6908,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     embeddingsNormalize:
                                       description: Whether to normalize embedding
@@ -6749,6 +6925,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -6803,6 +6981,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -6894,6 +7074,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -6902,6 +7084,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -6945,6 +7129,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7051,6 +7237,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7059,6 +7247,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7102,6 +7292,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7195,6 +7387,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7210,6 +7404,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7253,6 +7449,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7339,6 +7537,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7347,6 +7547,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7390,6 +7592,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7484,6 +7688,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7492,6 +7698,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7535,6 +7743,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7621,6 +7831,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     gcpEnvironment:
                                       description: |-
@@ -7659,6 +7871,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7702,6 +7916,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7788,6 +8004,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7796,6 +8014,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7839,6 +8059,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -7939,6 +8161,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -7955,6 +8179,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -7998,6 +8224,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8084,6 +8312,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     format:
                                       description: The request format to use when
@@ -8102,6 +8332,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8145,6 +8377,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8235,6 +8469,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     format:
                                       description: The request format to use when
@@ -8252,6 +8488,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8295,6 +8533,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8383,6 +8623,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -8391,6 +8633,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8434,6 +8678,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8520,6 +8766,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -8528,6 +8776,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8571,6 +8821,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8685,6 +8937,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -8693,6 +8947,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8757,6 +9013,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -8867,6 +9125,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -8875,6 +9135,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -8918,6 +9180,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -9004,6 +9268,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -9012,6 +9278,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -9055,6 +9323,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-
@@ -9144,6 +9414,8 @@ spec:
                                     embeddingsDimensions:
                                       description: The number of dimensions for embedding
                                         outputs.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     inputCost:
                                       description: Cost per 1M input tokens for billing
@@ -9152,6 +9424,8 @@ spec:
                                     maxTokens:
                                       description: The maximum number of tokens to
                                         generate in the response.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     outputCost:
                                       description: Cost per 1M output tokens for billing
@@ -9195,6 +9469,8 @@ spec:
                                       description: |-
                                         Limits the number of highest-probability tokens considered during
                                         generation.
+                                      maximum: 2147483646
+                                      minimum: 0
                                       type: integer
                                     topP:
                                       description: |-

@@ -215,11 +215,24 @@ spec:
                         required:
                         - type
                         type: object
+                      authStrategies:
+                        description: |-
+                          List of auth strategies for granting access to the agent.
+                          At most 1 auth strategy of each auth strategy type can be referenced.
+                        items:
+                          description: |-
+                            AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                            name.
+                          type: string
+                        maxItems: 1
+                        type: array
                       identityProviders:
                         description: |-
                           List of identity providers for granting access to the agent.
                           At most 1 identity provider of each identity provider type can be
                           referenced.
+
+                          Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                         items:
                           description: |-
                             AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
@@ -261,6 +274,8 @@ spec:
                             description: |-
                               Maximum size in bytes for logged request/response payloads.
                               Payloads exceeding this size will be truncated.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           payloads:
                             enum:
@@ -271,6 +286,8 @@ spec:
                       maxRequestBodySize:
                         description: Maximum size of request body to parse. Set to
                           0 for unlimited.
+                        maximum: 2147483646
+                        minimum: 0
                         type: integer
                       proxy:
                         description: |-
@@ -373,6 +390,8 @@ spec:
                               or 308.
                               Note: This config applies only if the route is configured to only accept the
                               `https` protocol.
+                            maximum: 599
+                            minimum: 100
                             type: integer
                           methods:
                             description: A list of HTTP methods that match this route.
@@ -412,6 +431,8 @@ spec:
                               one (lowest `created_at`) is used.
                               Note that the priority for non-regex routes is different (longer non-regex
                               routes are matched before shorter ones).
+                            maximum: 2147483647
+                            minimum: -2147483648
                             type: integer
                           requestBuffering:
                             description: |-

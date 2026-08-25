@@ -29,7 +29,7 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 				ListAIGatewayMCPServersResponse: &sdkkonnectcomp.ListAIGatewayMCPServersResponse{
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
-							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
+							AIGatewayMCPServerListenerResponse: &sdkkonnectcomp.AIGatewayMCPServerListenerResponse{
 								ID:     "other-id",
 								Name:   "other-mcp-server",
 								Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
@@ -41,7 +41,7 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
 						},
 						{
-							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
+							AIGatewayMCPServerListenerResponse: &sdkkonnectcomp.AIGatewayMCPServerListenerResponse{
 								ID:     "matched-by-uid",
 								Name:   "different-name",
 								Labels: map[string]string{KubernetesUIDLabelKey: string(obj.GetUID())},
@@ -75,20 +75,16 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 				ListAIGatewayMCPServersResponse: &sdkkonnectcomp.ListAIGatewayMCPServersResponse{
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
-							AIGatewayMCPServerAIGatewayMCPServerConversionOnly: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerConversionOnly{
+							AIGatewayMCPServerConversionOnlyResponse: &sdkkonnectcomp.AIGatewayMCPServerConversionOnlyResponse{
 								ID:   "wrong-variant",
 								Name: "flights-mcp-server",
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeConversionOnly,
 						},
 						{
-							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
+							AIGatewayMCPServerListenerResponse: &sdkkonnectcomp.AIGatewayMCPServerListenerResponse{
 								ID:   "matched-by-name",
 								Name: "flights-mcp-server",
-								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{
-									Type:                               sdkkonnectcomp.AIGatewayMCPServerListenerAccessTypeConsumer,
-									AIGatewayMCPServerListenerConsumer: &sdkkonnectcomp.AIGatewayMCPServerListenerConsumer{},
-								},
 							},
 							Type: sdkkonnectcomp.AIGatewayMCPServerTypeListener,
 						},
@@ -115,7 +111,7 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 				ListAIGatewayMCPServersResponse: &sdkkonnectcomp.ListAIGatewayMCPServersResponse{
 					Data: []sdkkonnectcomp.AIGatewayMCPServer{
 						{
-							AIGatewayMCPServerAIGatewayMCPServerListener: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerListener{
+							AIGatewayMCPServerListenerResponse: &sdkkonnectcomp.AIGatewayMCPServerListenerResponse{
 								ID:   "other-id",
 								Name: "other-mcp-server",
 								Access: &sdkkonnectcomp.AIGatewayMCPServerListenerAccess{

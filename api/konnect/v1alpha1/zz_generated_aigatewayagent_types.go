@@ -174,6 +174,8 @@ type AIGatewayAgentConfig struct {
 	// Maximum size of request body to parse. Set to 0 for unlimited.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
 	// HTTP/HTTPS proxy configuration for outbound requests to the upstream AI
 	// provider.
@@ -216,6 +218,8 @@ type AIGatewayAgentConfigLogging struct {
 	// Payloads exceeding this size will be truncated.
 	//
 	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
 	MaxPayloadSize int `json:"maxPayloadSize,omitzero"`
 	//
 	//

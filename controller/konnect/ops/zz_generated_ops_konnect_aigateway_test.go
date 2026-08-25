@@ -29,10 +29,11 @@ func testGeneratedKonnectAIGatewayForSDKOps() *konnectv1alpha1.KonnectAIGateway 
 		},
 		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			APISpec: &konnectv1alpha1.KonnectAIGatewayAPISpec{
-				Description: "test-value",
-				DisplayName: "test-value",
-				Labels:      konnectv1alpha1.PublicLabels{"test-key": "test-value"},
-				Name:        "test-value",
+				DeploymentType: "hybrid",
+				Description:    "test-value",
+				DisplayName:    "test-value",
+				Labels:         konnectv1alpha1.PublicLabels{"test-key": "test-value"},
+				Name:           "test-value",
 			},
 		},
 	}

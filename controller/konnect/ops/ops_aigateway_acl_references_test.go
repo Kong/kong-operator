@@ -237,8 +237,8 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 
 	model := testGeneratedAIGatewayModelForSDKOps()
 	model.Spec.APISpec.API.Access = konnectv1alpha1.AIGatewayModelAccess{
-		IdentityProviders: []konnectv1alpha1.AIGatewayIdentityProviderRef{
-			{Name: "idp-1"},
+		AuthStrategies: []konnectv1alpha1.AIGatewayAuthStrategyReference{
+			"idp-1",
 		},
 		Acls: &konnectv1alpha1.AIGatewayModelAccessAcls{
 			Type: konnectv1alpha1.AIGatewayModelAccessAclsTypeAllow,
@@ -261,7 +261,7 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	require.NotNil(t, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL)
 	assert.Equal(t, []string{"konnect-consumer-group-name"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL.Allow)
 
-	// The identity_providers sibling survived the union rebuild, resolved to
+	// The auth_strategies sibling survived the union rebuild, resolved to
 	// the referenced AIGatewayIdentityProvider's Konnect name.
-	assert.Equal(t, []string{"konnect-idp-name"}, req.AIGatewayModelAPI.Access.IdentityProviders)
+	assert.Equal(t, []string{"idp-1"}, req.AIGatewayModelAPI.Access.AuthStrategies)
 }
