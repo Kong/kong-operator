@@ -1,6 +1,7 @@
 package metadata
 
 import (
+	"reflect"
 	"strings"
 )
 
@@ -9,6 +10,14 @@ import (
 //
 //godoclint:disable max-len
 func ExtractTags(obj ObjectWithAnnotations) []string {
+	if obj == nil {
+		return nil
+	}
+	// If the object is a nil pointer, return nil to avoid panics when calling GetAnnotations().
+	if v := reflect.ValueOf(obj); v.Kind() == reflect.Pointer && v.IsNil() {
+		return nil
+	}
+
 	ann, ok := obj.GetAnnotations()[AnnotationKeyTags]
 	if !ok || len(ann) == 0 {
 		return nil
