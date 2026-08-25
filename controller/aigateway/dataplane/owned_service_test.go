@@ -348,7 +348,7 @@ func Test_ensureIngressService(t *testing.T) {
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(r *Reconciler, rec *events.FakeRecorder) {
-				_ = r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
+				_, _ = r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -382,7 +382,7 @@ func Test_ensureIngressService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
+			_, err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
 
 			if testcase.wantErr {
 				require.Error(t, err)

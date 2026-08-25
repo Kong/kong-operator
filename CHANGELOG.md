@@ -97,6 +97,14 @@
 - AIGateway: Support referring to `AIGatewayConsumerGroup`s in ACL allow/deny
   lists in `AIGatewayAgent` and `AIGatewayModel`.
   [#5307](https://github.com/Kong/kong-operator/pull/5307)
+- `AIGatewayDataPlane`: added a `ServiceReady` status condition and a
+  `status.addresses` field that expose the ingress Service's readiness and
+  reachable addresses. For `LoadBalancer`-type Services, `ServiceReady` stays
+  `False` until an external address is allocated, which also blocks the overall
+  `Ready` condition; `ClusterIP` and `NodePort` Services are always considered
+  ready. The external hostname or IP is visible in `status.addresses` once
+  allocated.
+  [#5391](https://github.com/Kong/kong-operator/pull/5391)
 
 ### Changed
 

@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -35,15 +36,16 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// ensureIngressService reconciles the Ingress Service for the given AIGatewayDataPlane.
+// ensureIngressService reconciles the Ingress Service for the given AIGatewayDataPlane
+// and returns the live Service object (with Status populated).
 func (r *Reconciler) ensureIngressService(
 	ctx context.Context,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-) error {
+) (*corev1.Service, error) {
 	desired, err := buildIngressService(r.TypeConverter, aigwdp)
 	if err != nil {
-		return fmt.Errorf("failed to build Ingress Service for AIGatewayDataPlane %s/%s: %w",
+		return nil, fmt.Errorf("failed to build Ingress Service for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
 	}
 
@@ -51,7 +53,7 @@ func (r *Reconciler) ensureIngressService(
 	if err != nil {
 		r.eventRecorder.Eventf(aigwdp, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
 			"Failed to apply Ingress Service: %v", err)
-		return fmt.Errorf("failed to apply Ingress Service for AIGatewayDataPlane %s/%s: %w",
+		return nil, fmt.Errorf("failed to apply Ingress Service for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
 	}
 	switch result {
@@ -65,7 +67,22 @@ func (r *Reconciler) ensureIngressService(
 			"Ingress Service %s updated", desired.GetName())
 	case op.Noop, op.Deleted:
 	}
-	return nil
+
+	// Fetch the live object so we get Status (SSA response does not include it).
+	// The informer cache may not have caught up after a fresh create, so treat
+	// NotFound as a transient condition: return nil and let the Owns() watch
+	// trigger the next reconcile once the cache is populated.
+	svc := &corev1.Service{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug(logger, "Ingress Service not yet in cache, will retry on next reconcile",
+				"name", desired.GetName())
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get Ingress Service for AIGatewayDataPlane %s/%s: %w",
+			aigwdp.Namespace, aigwdp.Name, err)
+	}
+	return svc, nil
 }
 
 // buildIngressService constructs the desired Ingress Service. If the user has

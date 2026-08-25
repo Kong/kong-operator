@@ -102,6 +102,30 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// DataPlane - Service Ready Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// ServiceReadyType indicates whether the ingress Service is ready.
+	// For LoadBalancer-type Services, ready means an external address has been allocated.
+	// For other Service types, it is always considered ready.
+	ServiceReadyType consts.ConditionType = "ServiceReady"
+
+	// ServiceReadyReason indicates the ingress Service is ready.
+	ServiceReadyReason consts.ConditionReason = "ServiceReady"
+	// WaitingForAddressReason indicates the ingress Service exists but has not
+	// yet been assigned an external address by the cloud load-balancer controller.
+	WaitingForAddressReason consts.ConditionReason = "WaitingForAddress"
+)
+
+const (
+	// ServiceReadyMessage indicates the ingress Service is ready.
+	ServiceReadyMessage = "Ingress Service is ready"
+	// WaitingForAddressMessage indicates the Service is waiting for an external address.
+	WaitingForAddressMessage = "Waiting for ingress Service external address to be allocated"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - KonnectCertificate Registration Condition Constants
 // -----------------------------------------------------------------------------
 

@@ -320,7 +320,77 @@ type AIGatewayDataPlaneStatus struct {
 	// +kubebuilder:default=0
 	// +optional
 	Replicas int32 `json:"replicas"`
+
+	// Addresses lists the addresses of the ingress Service.
+	// For LoadBalancer-type Services this includes the externally-reachable
+	// hostname or IP once allocated; for other Service types it includes
+	// the ClusterIP(s).
+	//
+	// +optional
+	// +listType=map
+	// +listMapKey=value
+	// +kubebuilder:validation:MaxItems=16
+	Addresses []Address `json:"addresses,omitempty"`
 }
+
+// Address describes a reachable address of the ingress Service.
+type Address struct {
+	// Type of the address.
+	//
+	// +optional
+	// +kubebuilder:default=IPAddress
+	// +kubebuilder:validation:MaxLength=253
+	Type *AddressType `json:"type,omitempty"`
+
+	// Value of the address. The validity of the values will depend
+	// on the type and support by the controller.
+	//
+	// Examples: `1.2.3.4`, `128::1`, `my-ip-address`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Value string `json:"value,omitempty"`
+
+	// SourceType of the address.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	SourceType AddressSourceType `json:"sourceType,omitempty"`
+}
+
+// AddressType defines how a network address is represented as a text string.
+//
+// +kubebuilder:validation:Pattern=`^IPAddress|Hostname$`
+type AddressType string
+
+const (
+	// IPAddressType is a textual representation of a numeric IP address.
+	IPAddressType AddressType = "IPAddress"
+
+	// HostnameAddressType represents a DNS based ingress point.
+	HostnameAddressType AddressType = "Hostname"
+)
+
+// AddressSourceType defines the type of source an address represents.
+//
+// +kubebuilder:validation:Pattern=`^PublicLoadBalancer|PrivateLoadBalancer|PublicIP|PrivateIP$`
+type AddressSourceType string
+
+const (
+	// PublicLoadBalancerAddressSourceType is an address from a public Load Balancer.
+	PublicLoadBalancerAddressSourceType AddressSourceType = "PublicLoadBalancer"
+
+	// PrivateLoadBalancerAddressSourceType is an address from a private Load Balancer.
+	PrivateLoadBalancerAddressSourceType AddressSourceType = "PrivateLoadBalancer"
+
+	// PublicIPAddressSourceType is an address from a public IP.
+	PublicIPAddressSourceType AddressSourceType = "PublicIP"
+
+	// PrivateIPAddressSourceType is an address from a private IP.
+	PrivateIPAddressSourceType AddressSourceType = "PrivateIP"
+)
 
 // GetConditions retrieves the AIGatewayDataPlane Status Conditions.
 func (a *AIGatewayDataPlane) GetConditions() []metav1.Condition {
