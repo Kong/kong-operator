@@ -67,6 +67,16 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  deploymentType:
+                    description: |-
+                      How this AI Gateway's control plane is deployed.
+                      Set at creation time and cannot be changed afterward.
+                    enum:
+                    - hybrid
+                    - managed
+                    - serverless
+                    maxLength: 253
+                    type: string
                   description:
                     description: The description of the AI Gateway.
                     maxLength: 1024

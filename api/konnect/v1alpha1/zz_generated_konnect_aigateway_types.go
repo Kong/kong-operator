@@ -73,6 +73,14 @@ type KonnectAIGatewaySpec struct {
 
 // KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 type KonnectAIGatewayAPISpec struct {
+	// How this AI Gateway's control plane is deployed.
+	// Set at creation time and cannot be changed afterward.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=hybrid;managed;serverless
+	DeploymentType string `json:"deploymentType,omitzero"`
+
 	// The description of the AI Gateway.
 	//
 	// +optional

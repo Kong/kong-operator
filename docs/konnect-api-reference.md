@@ -487,7 +487,8 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayAgentAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced. |
+| `authStrategies` _[][AIGatewayAuthStrategyReference](#konnect-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
 _Appears in:_
 
@@ -620,6 +621,23 @@ _Appears in:_
 
 - [AIGatewayAgentAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccessacls)
 - [AIGatewayModelAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)
+
+#### AIGatewayAuthStrategyReference
+
+_Underlying type:_ `string`
+
+AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+name.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayAgentAccess](#konnect-konghq-com-v1alpha1-types-aigatewayagentaccess)
+- [AIGatewayMCPServerListenerConsumer](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
+- [AIGatewayMCPServerListenerOauth](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
+- [AIGatewayModelAccess](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 #### AIGatewayAzureEmbeddingsModelConfig
 
@@ -1634,7 +1652,6 @@ This feature is currently in beta and is subject to change.
 | `name` _[AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#konnect-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `sources` _[][AIGatewayEntityIdentifier](#konnect-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
-| `tools` _[][AIGatewayMCPToolBase](#konnect-konghq-com-v1alpha1-types-aigatewaymcptoolbase)_ | List of tools exposed by this MCP Server. |
 
 _Appears in:_
 
@@ -1682,7 +1699,7 @@ Allowed values:
 
 
 AIGatewayMCPServerListenerConsumer **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+This feature is currently in beta and is subject to change.<br /><br />Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
 for granting access to an MCP server.
 
 
@@ -1690,8 +1707,9 @@ for granting access to an MCP server.
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `authStrategies` _[][AIGatewayAuthStrategyReference](#konnect-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
-| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 _Appears in:_
@@ -1704,7 +1722,7 @@ _Appears in:_
 
 
 AIGatewayMCPServerListenerOauth **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Identity provider and OAuth 2.0 Protected Resource Metadata configuration
+This feature is currently in beta and is subject to change.<br /><br />Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
 for granting access to an MCP server.
 
 
@@ -1713,8 +1731,9 @@ for granting access to an MCP server.
 | --- | --- |
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
 | `acls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `authStrategies` _[][AIGatewayAuthStrategyReference](#konnect-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#konnect-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
-| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
 _Appears in:_
@@ -2364,7 +2383,6 @@ HTTP endpoint.
 
 _Appears in:_
 
-- [AIGatewayMCPServerListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
 - [AIGatewayMCPServerPassthroughListener](#konnect-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
 
 #### AIGatewayMCPToolBaseAccess
@@ -2673,7 +2691,8 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayModelAccessAcls](#konnect-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced. |
+| `authStrategies` _[][AIGatewayAuthStrategyReference](#konnect-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderRef](#konnect-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
 _Appears in:_
 
@@ -6429,6 +6448,7 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 
 | Field | Description |
 | --- | --- |
+| `deploymentType` _string_ | How this AI Gateway's control plane is deployed. Set at creation time and cannot be changed afterward. |
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |

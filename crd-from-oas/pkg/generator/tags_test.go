@@ -115,6 +115,20 @@ func TestKubebuilderTags(t *testing.T) {
 			},
 		},
 		{
+			name: "integer with large maximum is not rendered in scientific notation",
+			prop: &parser.Property{
+				Name:    "timeout",
+				Type:    "integer",
+				Minimum: new(float64(0)),
+				Maximum: new(float64(2147483646)),
+			},
+			expected: []string{
+				"+optional",
+				"+kubebuilder:validation:Minimum=0",
+				"+kubebuilder:validation:Maximum=2147483646",
+			},
+		},
+		{
 			name: "integer with only minimum",
 			prop: &parser.Property{
 				Name:     "retries",

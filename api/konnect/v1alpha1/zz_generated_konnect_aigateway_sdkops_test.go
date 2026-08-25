@@ -11,10 +11,11 @@ import (
 
 func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 	spec := &KonnectAIGatewayAPISpec{
-		Description: "test-value",
-		DisplayName: "test-value",
-		Labels:      PublicLabels{"test-key": "test-value"},
-		Name:        "test-value",
+		DeploymentType: "hybrid",
+		Description:    "test-value",
+		DisplayName:    "test-value",
+		Labels:         PublicLabels{"test-key": "test-value"},
+		Name:           "test-value",
 	}
 	result, err := spec.ToCreateAIGatewayRequest()
 	require.NoError(t, err)
@@ -26,6 +27,7 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, "hybrid", payload["deployment_type"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
@@ -34,10 +36,11 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 
 func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 	spec := &KonnectAIGatewayAPISpec{
-		Description: "test-value",
-		DisplayName: "test-value",
-		Labels:      PublicLabels{"test-key": "test-value"},
-		Name:        "test-value",
+		DeploymentType: "hybrid",
+		Description:    "test-value",
+		DisplayName:    "test-value",
+		Labels:         PublicLabels{"test-key": "test-value"},
+		Name:           "test-value",
 	}
 	result, err := spec.ToUpdateAIGatewayRequest()
 	require.NoError(t, err)
@@ -49,6 +52,7 @@ func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, "hybrid", payload["deployment_type"])
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])

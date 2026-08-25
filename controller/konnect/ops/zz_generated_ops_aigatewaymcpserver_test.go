@@ -61,7 +61,7 @@ func TestCreateAIGatewayMCPServer_UsesSDKOpsConversion(t *testing.T) {
 		).
 		Return(&sdkkonnectops.CreateAiGatewayMcpServerResponse{
 			AIGatewayMCPServer: &sdkkonnectcomp.AIGatewayMCPServer{
-				AIGatewayMCPServerAIGatewayMCPServerConversionOnly: &sdkkonnectcomp.AIGatewayMCPServerAIGatewayMCPServerConversionOnly{
+				AIGatewayMCPServerConversionOnlyResponse: &sdkkonnectcomp.AIGatewayMCPServerConversionOnlyResponse{
 					ID: expectedID,
 				},
 			},

@@ -158,6 +158,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -184,6 +195,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -257,6 +270,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -283,6 +307,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -357,6 +383,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           route:
                             description: |-
@@ -390,6 +418,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -430,6 +460,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -628,6 +660,8 @@ spec:
                                           maxRedirections:
                                             description: Maximum retry attempts for
                                               redirection.
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           nodes:
                                             description: |-
@@ -676,6 +710,8 @@ spec:
                                       database:
                                         description: Database to use for the Redis
                                           connection when using the `redis` strategy
+                                        maximum: 2147483646
+                                        minimum: 0
                                         type: integer
                                       host:
                                         description: |-
@@ -864,6 +900,8 @@ spec:
                                   sessionTtl:
                                     description: The time-to-live (TTL) for each session
                                       in seconds.
+                                    maximum: 2147483646
+                                    minimum: 0
                                     type: integer
                                   strategy:
                                     description: |-
@@ -881,6 +919,8 @@ spec:
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
+                                maximum: 2147483646
+                                minimum: 0
                                 type: integer
                             type: object
                           upstream:
@@ -1358,6 +1398,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -1398,6 +1440,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -1882,6 +1926,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -1908,6 +1963,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -1981,6 +2038,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -2007,6 +2075,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -2081,6 +2151,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           route:
                             description: |-
@@ -2114,6 +2186,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -2154,6 +2228,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -2352,6 +2428,8 @@ spec:
                                           maxRedirections:
                                             description: Maximum retry attempts for
                                               redirection.
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           nodes:
                                             description: |-
@@ -2400,6 +2478,8 @@ spec:
                                       database:
                                         description: Database to use for the Redis
                                           connection when using the `redis` strategy
+                                        maximum: 2147483646
+                                        minimum: 0
                                         type: integer
                                       host:
                                         description: |-
@@ -2588,6 +2668,8 @@ spec:
                                   sessionTtl:
                                     description: The time-to-live (TTL) for each session
                                       in seconds.
+                                    maximum: 2147483646
+                                    minimum: 0
                                     type: integer
                                   strategy:
                                     description: |-
@@ -2605,6 +2687,8 @@ spec:
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
+                                maximum: 2147483646
+                                minimum: 0
                                 type: integer
                             type: object
                         type: object
@@ -2699,243 +2783,6 @@ spec:
                             In some cases, this may be the entity name or ID.
                           type: string
                         type: array
-                      tools:
-                        description: List of tools exposed by this MCP Server.
-                        items:
-                          description: |-
-                            AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
-                            HTTP endpoint.
-                          properties:
-                            access:
-                              description: AIGatewayMCPToolBaseAccess is a type alias.
-                              properties:
-                                acls:
-                                  description: |-
-                                    **Pre-release Feature**
-                                    This feature is currently in beta and is subject to change.
-
-                                    Access control rules for allowing or denying consumer groups access to this
-                                    tool.
-                                    When configured, these will override the default access control rules
-                                    defined on the MCP Server.
-                                  properties:
-                                    allow:
-                                      description: List of consumer groups that are
-                                        permitted access.
-                                      items:
-                                        type: string
-                                      type: array
-                                    deny:
-                                      description: List of consumer groups that are
-                                        denied access.
-                                      items:
-                                        type: string
-                                      type: array
-                                  type: object
-                              type: object
-                            annotations:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-                              properties:
-                                destructiveHint:
-                                  description: If true, the tool may perform destructive
-                                    updates
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                idempotentHint:
-                                  description: If true, repeated calls with same args
-                                    have no additional effect
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                openWorldHint:
-                                  description: If true, tool interacts with external
-                                    entities
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                readOnlyHint:
-                                  description: If true, the tool does not modify its
-                                    environment
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                title:
-                                  description: Human-readable title for the tool
-                                  maxLength: 253
-                                  type: string
-                              type: object
-                            description:
-                              description: A description of what the tool does.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                            headers:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The headers of the exported API.
-                                By default, Kong will extract the headers from API configuration.
-                                If the configured headers are not exactly matched, this field is required.
-                              type: object
-                            host:
-                              description: |-
-                                The host of the exported API, which must match the route's hosts.
-                                It should be the route's host.
-                                By default, Kong will extract the host from API configuration.
-                                If the configured host is wildcard, this field is required.
-                              maxLength: 253
-                              type: string
-                            method:
-                              description: |-
-                                For conversion-only and conversion-listener modes, the method of the
-                                exported API, which must match the route's methods.
-                              enum:
-                              - DELETE
-                              - GET
-                              - PATCH
-                              - POST
-                              - PUT
-                              maxLength: 253
-                              type: string
-                            name:
-                              description: |-
-                                Tool identifier.
-                                In passthrough-listener mode, used to match remote MCP Server tools for ACL
-                                enforcement.
-                                In other modes, it is also used as the tool name (overrides
-                                annotations.title if present).
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                            parameters:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-                              items:
-                                description: |-
-                                  AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
-                                  JSON format.
-                                  For example, '[{"name": "city", "in": "query", "description": "Name of the
-                                  city to get the weather for", "required": true, "schema": {"type":
-                                  "string"}}]'.
-                                  See https://swagger.io/docs/specification/v3_0/describing-parameters/ for
-                                  more details.
-                                properties:
-                                  description:
-                                    description: A description of the parameter.
-                                    maxLength: 253
-                                    type: string
-                                  in:
-                                    description: The location of the parameter in
-                                      the request.
-                                    enum:
-                                    - query
-                                    - path
-                                    - header
-                                    - body
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  name:
-                                    description: The name of the parameter.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  required:
-                                    description: Whether this parameter is required.
-                                    enum:
-                                    - Enabled
-                                    - Disabled
-                                    type: string
-                                  schema:
-                                    description: |-
-                                      JSON Schema definition for the parameter value.
-                                      See
-                                      https://swagger.io/docs/specification/v3_0/describing-parameters/#schema-vs-content
-                                      for more details.
-                                    x-kubernetes-preserve-unknown-fields: true
-                                required:
-                                - in
-                                - name
-                                type: object
-                              type: array
-                            path:
-                              description: |-
-                                The path of the exported API, which must match the route's paths.
-                                Path not starting with '/' are treated as relative path and the route path
-                                will be added as the prefix.
-                                By default, Kong will extract the path from API configuration.
-                              maxLength: 253
-                              type: string
-                            query:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The query arguments of the exported API.
-                                If the generated query arguments are not exactly matched, this field is
-                                required.
-                              type: object
-                            requestBody:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API requestBody specification defined in OpenAPI JSON format.
-                                For example,
-                                '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-                                See
-                                https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-                                for more details.
-                                Note that `$ref` is not supported.
-                              type: object
-                            responses:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API responses specification defined in OpenAPI JSON format.
-                                This specification will be used to validate the upstream response and map it
-                                back to the structuredOutput.
-                                For example,
-                                '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-                                See https://swagger.io/docs/specification/v3_0/describing-responses/ for
-                                more details.
-                                Only one non-error (status code < 400) response is supported.
-                                Note that `$ref` is not supported.
-                              type: object
-                            scheme:
-                              description: |-
-                                The scheme of the exported API.
-                                By default, Kong will extract the scheme from API configuration.
-                                If the configured scheme is not expected, this field can be used to override
-                                it.
-                              enum:
-                              - http
-                              - https
-                              maxLength: 253
-                              type: string
-                          required:
-                          - description
-                          - name
-                          type: object
-                        type: array
                     required:
                     - config
                     - displayName
@@ -2980,6 +2827,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -3006,6 +2864,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -3079,6 +2939,17 @@ spec:
                                       type: string
                                     type: array
                                 type: object
+                              authStrategies:
+                                description: |-
+                                  List of auth strategies for granting access to the MCP server.
+                                  At most 1 auth strategy of each auth strategy type can be referenced.
+                                items:
+                                  description: |-
+                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
+                                    name.
+                                  type: string
+                                maxItems: 1
+                                type: array
                               defaultToolAcls:
                                 description: |-
                                   **Pre-release Feature**
@@ -3105,6 +2976,8 @@ spec:
                                   List of identity providers for granting access to the MCP server.
                                   At most 1 identity provider of each identity provider type can be
                                   referenced.
+
+                                  Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
                                 items:
                                   description: |-
                                     AIGatewayIdentityProviderReference Reference to a identity provider instance
@@ -3179,6 +3052,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           proxy:
                             description: |-
@@ -3281,6 +3156,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -3321,6 +3198,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -3519,6 +3398,8 @@ spec:
                                           maxRedirections:
                                             description: Maximum retry attempts for
                                               redirection.
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           nodes:
                                             description: |-
@@ -3567,6 +3448,8 @@ spec:
                                       database:
                                         description: Database to use for the Redis
                                           connection when using the `redis` strategy
+                                        maximum: 2147483646
+                                        minimum: 0
                                         type: integer
                                       host:
                                         description: |-
@@ -3755,6 +3638,8 @@ spec:
                                   sessionTtl:
                                     description: The time-to-live (TTL) for each session
                                       in seconds.
+                                    maximum: 2147483646
+                                    minimum: 0
                                     type: integer
                                   strategy:
                                     description: |-
@@ -3772,6 +3657,8 @@ spec:
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
+                                maximum: 2147483646
+                                minimum: 0
                                 type: integer
                             type: object
                           upstream:
@@ -4339,6 +4226,8 @@ spec:
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
+                            maximum: 2147483646
+                            minimum: 0
                             type: integer
                           route:
                             description: |-
@@ -4372,6 +4261,8 @@ spec:
                                   or 308.
                                   Note: This config applies only if the route is configured to only accept the
                                   `https` protocol.
+                                maximum: 599
+                                minimum: 100
                                 type: integer
                               methods:
                                 description: A list of HTTP methods that match this
@@ -4412,6 +4303,8 @@ spec:
                                   one (lowest `created_at`) is used.
                                   Note that the priority for non-regex routes is different (longer non-regex
                                   routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
                                 type: integer
                               requestBuffering:
                                 description: |-
@@ -4618,6 +4511,8 @@ spec:
                                           maxRedirections:
                                             description: Maximum retry attempts for
                                               redirection.
+                                            maximum: 2147483646
+                                            minimum: 0
                                             type: integer
                                           nodes:
                                             description: |-
@@ -4666,6 +4561,8 @@ spec:
                                       database:
                                         description: Database to use for the Redis
                                           connection when using the `redis` strategy
+                                        maximum: 2147483646
+                                        minimum: 0
                                         type: integer
                                       host:
                                         description: |-
@@ -4854,6 +4751,8 @@ spec:
                                   sessionTtl:
                                     description: The time-to-live (TTL) for each session
                                       in seconds.
+                                    maximum: 2147483646
+                                    minimum: 0
                                     type: integer
                                   strategy:
                                     description: |-
@@ -4871,6 +4770,8 @@ spec:
                               timeout:
                                 description: The timeout for calling the tools in
                                   milliseconds.
+                                maximum: 2147483646
+                                minimum: 0
                                 type: integer
                               toolsListAuth:
                                 description: |-
