@@ -114,7 +114,7 @@
 - CRD-from-OAS: enable resources to reference other resources from different
   namespaces by setting `supportCrossNamespaceReference` in `ReferenceConfig`.
   [#5263](https://github.com/Kong/kong-operator/pull/5263)
-- Enable KONG_USE_STANDARD_GRPC_STATUS_CODES on dataplanes by default and run all 
+- Enable KONG_USE_STANDARD_GRPC_STATUS_CODES on dataplanes by default and run all
   core level GRPCRoute conformance tests.
   [#5366](https://github.com/Kong/kong-operator/pull/5366)
 
