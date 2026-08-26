@@ -284,6 +284,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayAuthStrategy":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayAuthStrategyConfig",
+			TypeConstName:   "AIGatewayAuthStrategyConfigTypeKeyAuth",
+			VariantField:    "KeyAuth",
+			VariantTypeName: "AIGatewayAuthStrategyKeyAuth",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.AIGatewayAuthStrategyKeyAuth{DisplayName: "test-display-name", Name: "test-auth-strategy"}`,
+				apiAlias,
+			),
+		}
 	case "AIGatewayModelProvider":
 		return &opsControllerRootUnionFixture{
 			UnionTypeName:   "AIGatewayModelProviderConfig",

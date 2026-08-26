@@ -23,6 +23,8 @@ func reconciliationWatchOptionsForEntity[
 	switch any(ent).(type) {
 	case *konnectv1alpha1.AIGatewayAgent:
 		return AIGatewayAgentReconciliationWatchOptions(cl)
+	case *konnectv1alpha1.AIGatewayAuthStrategy:
+		return AIGatewayAuthStrategyReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayConsumer:
 		return AIGatewayConsumerReconciliationWatchOptions(cl)
 	case *konnectv1alpha1.AIGatewayConsumerCredential:

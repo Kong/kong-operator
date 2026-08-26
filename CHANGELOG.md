@@ -105,6 +105,8 @@
   ready. The external hostname or IP is visible in `status.addresses` once
   allocated.
   [#5391](https://github.com/Kong/kong-operator/pull/5391)
+- Added `AIGatewayAuthStrategy` CRD
+  [#5405](https://github.com/Kong/kong-operator/pull/5405)
 
 ### Changed
 

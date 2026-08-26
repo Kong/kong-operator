@@ -12,6 +12,7 @@ func generatedControllersForKonnectEntities(
 ) []ControllerDef {
 	return []ControllerDef{
 		newKonnectEntityController[konnectv1alpha1.AIGatewayAgent](controllerFactory),
+		newKonnectEntityController[konnectv1alpha1.AIGatewayAuthStrategy](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumer](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumerCredential](controllerFactory),
 		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumerGroup](controllerFactory),

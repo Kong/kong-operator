@@ -27,6 +27,8 @@ func DeleteGeneratedOps[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayAgent:
 		return deleteAIGatewayAgent(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayAuthStrategy:
+		return deleteAIGatewayAuthStrategy(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumer:
 		return deleteAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerCredential:
