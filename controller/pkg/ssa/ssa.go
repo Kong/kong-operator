@@ -215,7 +215,9 @@ func ApplyIfChanged(
 	//    are extracted from existing but absent in desired → Removed.
 	//  - Foreign-manager / server-defaulted fields outside compareSet are
 	//    invisible to the diff.
-	comparison, err := existingTyped.ExtractItems(compareSet).Compare(desiredTyped)
+	// Only leaf paths are extracted because preserve-unknown fields can include
+	// both parent and nested child paths in their field sets.
+	comparison, err := existingTyped.ExtractItems(compareSet.Leaves()).Compare(desiredTyped)
 	if err != nil {
 		return op.Noop, fmt.Errorf("failed to compare existing and desired objects: %w", err)
 	}

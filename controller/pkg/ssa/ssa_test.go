@@ -315,6 +315,69 @@ func Test_ApplyIfChanged(t *testing.T) {
 			wantRes: op.Noop,
 		},
 		{
+			name: "noop for matching preserve-unknown object fields",
+			objects: []client.Object{func() client.Object {
+				u := kongPluginWithHeaders([]string{"X-Test:true"})
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    testFieldManager,
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongPluginGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   FieldsWithRawBytes(ownedFieldsRaw(t, tc, u)),
+				}})
+				return u
+			}()},
+			desired: kongPluginWithHeaders([]string{"X-Test:true"}),
+			build:   func(c client.WithWatch) client.Client { return c },
+			wantRes: op.Noop,
+		},
+		{
+			name: "updated when preserve-unknown object field changes",
+			objects: []client.Object{func() client.Object {
+				u := kongPluginWithHeaders([]string{"X-Test:true"})
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    testFieldManager,
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongPluginGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   FieldsWithRawBytes(ownedFieldsRaw(t, tc, u)),
+				}})
+				return u
+			}()},
+			desired: kongPluginWithHeaders([]string{"X-Test:false"}),
+			build: func(c client.WithWatch) client.Client {
+				return interceptor.NewClient(c, interceptor.Funcs{
+					Apply: func(context.Context, client.WithWatch, runtime.ApplyConfiguration, ...client.ApplyOption) error {
+						return nil
+					},
+				})
+			},
+			wantRes: op.Updated,
+		},
+		{
+			name: "updated when preserve-unknown object field is removed",
+			objects: []client.Object{func() client.Object {
+				u := kongPluginWithHeaders([]string{"X-Test:true"})
+				u.SetManagedFields([]metav1.ManagedFieldsEntry{{
+					Manager:    testFieldManager,
+					Operation:  metav1.ManagedFieldsOperationApply,
+					APIVersion: kongPluginGVK.GroupVersion().String(),
+					FieldsType: "FieldsV1",
+					FieldsV1:   FieldsWithRawBytes(ownedFieldsRaw(t, tc, u)),
+				}})
+				return u
+			}()},
+			desired: kongPluginWithHeaders(nil),
+			build: func(c client.WithWatch) client.Client {
+				return interceptor.NewClient(c, interceptor.Funcs{
+					Apply: func(context.Context, client.WithWatch, runtime.ApplyConfiguration, ...client.ApplyOption) error {
+						return nil
+					},
+				})
+			},
+			wantRes: op.Updated,
+		},
+		{
 			// Regression test: even when the live values already match desired, if
 			// fieldManager has no managed-fields entry yet on the existing object
 			// (e.g. it was created/owned by a different manager), ApplyIfChanged
@@ -480,12 +543,16 @@ func Test_ApplyStatusIfChanged(t *testing.T) {
 
 // kongServiceGVK is the GVK of the CRD used to build the real, schema-based
 // TypeConverter shared by this file's tests.
-var kongServiceGVK = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+var (
+	kongServiceGVK = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
+	kongPluginGVK  = schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
+)
 
 // realSchemaCRDManifests lists the real, repo-checked-in CRD manifest used to
 // build a schema-based TypeConverter, following the same approach as
 // controller/hybridgateway's newTestTypeConverter.
 var realSchemaCRDManifests = []string{
+	"configuration.konghq.com_kongplugins.yaml",
 	"configuration.konghq.com_kongservices.yaml",
 }
 
@@ -541,6 +608,21 @@ func kongServiceWithHost(host string) *unstructured.Unstructured {
 	_ = unstructured.SetNestedField(u.Object, host, "spec", "host")
 	_ = unstructured.SetNestedField(u.Object, int64(80), "spec", "port")
 	_ = unstructured.SetNestedField(u.Object, "http", "spec", "protocol")
+	return u
+}
+
+// kongPluginWithHeaders returns a KongPlugin whose nested config field uses
+// the preserve-unknown schema from the real CRD. A nil headers slice omits
+// config to exercise removal of an owned preserve-unknown field.
+func kongPluginWithHeaders(headers []string) *unstructured.Unstructured {
+	u := &unstructured.Unstructured{}
+	u.SetGroupVersionKind(kongPluginGVK)
+	u.SetNamespace("ns")
+	u.SetName("plugin")
+	_ = unstructured.SetNestedField(u.Object, "request-transformer", "plugin")
+	if headers != nil {
+		_ = unstructured.SetNestedStringSlice(u.Object, headers, "config", "add", "headers")
+	}
 	return u
 }
 

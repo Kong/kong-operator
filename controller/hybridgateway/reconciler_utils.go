@@ -3,6 +3,7 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -287,6 +288,7 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 		// owns and persists it atomically with the rest of the resource. When the object does not
 		// exist yet, existing carries no annotations and the annotation is initialised to just this
 		// route ref. Gateway converters (empty routeAnnotationKey) skip this step.
+		mergeHybridGatewayAnnotation(&desired, existing)
 		if routeAnnotationKey != "" {
 			mergeHybridRouteAnnotation(&desired, existing, routeAnnotationKey, routeRef)
 		}
@@ -391,20 +393,55 @@ func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, an
 	if anns := existing.GetAnnotations(); len(anns) > 0 {
 		current = anns[annotationKey]
 	}
-	merged := current
-	if !strings.Contains(","+current+",", ","+routeRef+",") {
-		if current != "" {
-			merged = current + "," + routeRef
-		} else {
-			merged = routeRef
-		}
-	}
 	anns := desired.GetAnnotations()
 	if anns == nil {
 		anns = make(map[string]string)
 	}
-	anns[annotationKey] = merged
+	anns[annotationKey] = mergeCommaSeparatedValues(current, routeRef)
 	desired.SetAnnotations(anns)
+}
+
+// mergeHybridGatewayAnnotation preserves Gateway references already present on
+// a shared resource and adds the Gateway references from the desired object.
+// Different Routes can generate the same Kong resource for different Gateways,
+// so replacing this annotation would cause their reconciles to overwrite each
+// other indefinitely.
+func mergeHybridGatewayAnnotation(desired, existing *unstructured.Unstructured) {
+	desiredAnnotations := desired.GetAnnotations()
+	if len(desiredAnnotations) == 0 {
+		return
+	}
+
+	desiredGateways := desiredAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation]
+	if desiredGateways == "" {
+		return
+	}
+
+	current := ""
+	if existingAnnotations := existing.GetAnnotations(); len(existingAnnotations) > 0 {
+		current = existingAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation]
+	}
+
+	desiredAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation] = mergeCommaSeparatedValues(current, desiredGateways)
+	desired.SetAnnotations(desiredAnnotations)
+}
+
+func mergeCommaSeparatedValues(values ...string) string {
+	unique := make(map[string]struct{})
+	for _, value := range values {
+		for item := range strings.SplitSeq(value, ",") {
+			if item != "" {
+				unique[item] = struct{}{}
+			}
+		}
+	}
+
+	merged := make([]string, 0, len(unique))
+	for item := range unique {
+		merged = append(merged, item)
+	}
+	slices.Sort(merged)
+	return strings.Join(merged, ",")
 }
 
 // ensureHybridRouteAnnotationOnKongService checks if routeRef existed in KongService's annos with key annotationKey,
