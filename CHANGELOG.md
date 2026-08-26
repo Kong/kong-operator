@@ -67,6 +67,7 @@
   tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
+  [#5400](https://github.com/Kong/kong-operator/pull/5400)
 
 ## [v2.1.9]
 
