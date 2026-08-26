@@ -48,6 +48,16 @@ func TestExtractTags(t *testing.T) {
 			},
 			expected: nil,
 		},
+		{
+			name:     "Nil object",
+			obj:      nil,
+			expected: nil,
+		},
+		{
+			name:     "Nil pointer object",
+			obj:      (*configurationv1.KongConsumer)(nil),
+			expected: nil,
+		},
 	}
 
 	for _, tt := range tests {
