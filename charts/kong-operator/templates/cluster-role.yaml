@@ -471,6 +471,7 @@ rules:
       - konnect.konghq.com
     resources:
       - aigatewayagents
+      - aigatewayauthstrategies
       - aigatewayconsumercredentials
       - aigatewayconsumergroups
       - aigatewayconsumers
@@ -505,6 +506,8 @@ rules:
     resources:
       - aigatewayagents/finalizers
       - aigatewayagents/status
+      - aigatewayauthstrategies/finalizers
+      - aigatewayauthstrategies/status
       - aigatewayconsumercredentials/finalizers
       - aigatewayconsumercredentials/status
       - aigatewayconsumergroups/finalizers

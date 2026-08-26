@@ -332,6 +332,7 @@ apiGroupVersions:
               respPath: ConfigVersion
         reconciler: {}
 
+      # TODO: to be replaced with Auth Strategies
       - path: /v1/ai-gateways/{gatewayId}/identity
         name: AIGatewayIdentityProvider
         secretReferences:
@@ -350,6 +351,32 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
           update:
             path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
+      - path: /v1/ai-gateways/{gatewayId}/auth-strategies
+        name: AIGatewayAuthStrategy
+        secretReferences:
+          - path: spec.apiSpec.openid-connect.config.clientSecret
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayAuthStrategiesSDK
+            fieldName: AIGatewayAuthStrategies
+          # TODO: this entity's union variants declare labels/tags/name; enable
+          # root-union metadata detection (drop this toggle, add a getForUID
+          # match strategy) once create/update label injection has been
+          # reviewed for this entity.
+          skipRootUnionMetadataFields: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAuthStrategyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAuthStrategyRequest
           delete: {}
         reconciler:
           parentEntityGVK:

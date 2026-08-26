@@ -15,6 +15,7 @@ func generatedIndexOptionsForKonnectEntities(
 ) []index.Option {
 	return slices.Concat(
 		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayAuthStrategy(),
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),

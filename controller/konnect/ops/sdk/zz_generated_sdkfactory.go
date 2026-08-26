@@ -9,6 +9,7 @@ import (
 // GeneratedSDK is the interface for generated SDKs.
 type GeneratedSDK interface {
 	GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK
+	GetAIGatewayAuthStrategiesSDK() sdkkonnectgo.AIGatewayAuthStrategiesSDK
 	GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatewayConsumersSDK
 	GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK
 	GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK
@@ -42,6 +43,11 @@ type GeneratedSDK interface {
 // GetAIGatewayAgentsSDK returns the SDK to operate AIGatewayAgent.
 func (w sdkWrapper) GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK {
 	return w.sdk.AIGatewayAgents
+}
+
+// GetAIGatewayAuthStrategiesSDK returns the SDK to operate AIGatewayAuthStrategy.
+func (w sdkWrapper) GetAIGatewayAuthStrategiesSDK() sdkkonnectgo.AIGatewayAuthStrategiesSDK {
+	return w.sdk.AIGatewayAuthStrategies
 }
 
 // GetAIGatewayConsumersSDK returns the SDK to operate AIGatewayConsumer.

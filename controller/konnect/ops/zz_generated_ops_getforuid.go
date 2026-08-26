@@ -43,6 +43,8 @@ func getForUID[
 	switch ent := any(e).(type) {
 	case *konnectv1alpha1.AIGatewayAgent:
 		return getAIGatewayAgentForUID(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
+	case *konnectv1alpha1.AIGatewayAuthStrategy:
+		return getAIGatewayAuthStrategyForUID(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumer:
 		return getAIGatewayConsumerForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *konnectv1alpha1.AIGatewayConsumerCredential:

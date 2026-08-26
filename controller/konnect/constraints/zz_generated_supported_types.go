@@ -11,6 +11,7 @@ import (
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
 	konnectv1alpha1.AIGatewayAgent |
+		konnectv1alpha1.AIGatewayAuthStrategy |
 		konnectv1alpha1.AIGatewayConsumer |
 		konnectv1alpha1.AIGatewayConsumerCredential |
 		konnectv1alpha1.AIGatewayConsumerGroup |
