@@ -152,6 +152,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 
 	t.Run("omits replicas when HPA is active", func(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
+		aigwdp.Spec.Deployment.Replicas = new(int32(3))
 
 		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret")
 		require.NoError(t, err)

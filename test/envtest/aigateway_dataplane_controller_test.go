@@ -225,7 +225,7 @@ func waitForAIGWHPA(t *testing.T, ctx context.Context, cl client.Client, ns, aig
 	t.Helper()
 	var hpaList autoscalingv2.HorizontalPodAutoscalerList
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: aigwdpName}))
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": aigwdpName}))
 		assert.Len(ct, hpaList.Items, 1)
 	}, waitTime, tickTime)
 	require.Len(t, hpaList.Items, 1)
@@ -237,7 +237,7 @@ func waitForNoAIGWHPA(t *testing.T, ctx context.Context, cl client.Client, ns, a
 	t.Helper()
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		var hpaList autoscalingv2.HorizontalPodAutoscalerList
-		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: aigwdpName}))
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": aigwdpName}))
 		assert.Empty(ct, hpaList.Items)
 	}, waitTime, tickTime)
 }
@@ -293,9 +293,10 @@ func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
 		assert.Equal(t, maxReplicas, hpa.Spec.MaxReplicas)
 		assert.Equal(t, aigwdp.Name, hpa.Spec.ScaleTargetRef.Name)
 
-		// Deployment must not manage spec.replicas when HPA is active (SSA ownership handed off).
-		deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
-		assert.Nil(t, deploy.Spec.Replicas, "spec.replicas must be absent when HPA owns scaling")
+		// Verify the Deployment was created. The replica guard (omitting spec.replicas from
+		// the SSA patch when HPA is active) is covered by TestGenerateBaseDeployment_ReplicaGuard;
+		// the API server defaults spec.replicas to 1 so it is never nil in the stored object.
+		waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
 	})
 
 	t.Run("HPA is deleted when scaling is removed", func(t *testing.T) {
