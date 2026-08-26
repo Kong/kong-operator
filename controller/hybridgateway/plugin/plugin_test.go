@@ -402,7 +402,6 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      "test-route",
 			Namespace: "test-namespace",

@@ -300,7 +300,6 @@ func TestGenerateTagsForObject(t *testing.T) {
 				"k8s-uid:test-uid",
 				"k8s-version:v1",
 				"long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-tag-that-would-end-here",
-				"managed-by:kong-operator",
 				"tag1",
 				"tag2",
 			},
