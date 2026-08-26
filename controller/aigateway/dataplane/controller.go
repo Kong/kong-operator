@@ -19,10 +19,12 @@ package dataplane
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -33,9 +35,11 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/pkg/address"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles an AIGatewayDataPlane object.
@@ -123,11 +127,83 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 		return ctrl.Result{}, err
 	}
 
-	// Ensure the Ingress Service.
-	if err := r.ensureIngressService(ctx, logger, aigwdp); err != nil {
+	// Ensure the Ingress Service and set its readiness condition.
+	// nil svc means the cache hasn't caught up yet; the Owns() watch will
+	// trigger another reconcile once the Service appears.
+	svc, err := r.ensureIngressService(ctx, logger, aigwdp)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if svc != nil {
+		if err := r.ensureServiceReadyCondition(aigwdp, svc); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	log.Debug(logger, "reconciliation complete for AIGatewayDataPlane resource")
 	return ctrl.Result{}, nil
+}
+
+// ensureServiceReadyCondition sets the ServiceReady condition and populates
+// Status.Addresses based on the live ingress Service.
+func (r *Reconciler) ensureServiceReadyCondition(
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	svc *corev1.Service,
+) error {
+	svcAddrs, err := address.AddressesFromService(svc)
+	if err != nil {
+		return fmt.Errorf("failed to get addresses from Ingress Service for AIGatewayDataPlane %s/%s: %w",
+			aigwdp.Namespace, aigwdp.Name, err)
+	}
+	addrs := make([]aigatewayv1alpha1.Address, len(svcAddrs))
+	for i, a := range svcAddrs {
+		addrs[i] = aigatewayv1alpha1.Address{
+			Value:      a.Value,
+			SourceType: aigatewayv1alpha1.AddressSourceType(a.SourceType),
+		}
+		if a.Type != nil {
+			t := aigatewayv1alpha1.AddressType(*a.Type)
+			addrs[i].Type = &t
+		}
+	}
+	aigwdp.Status.Addresses = addrs
+
+	if ingressServiceIsReady(svc) {
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				aigatewayv1alpha1.ServiceReadyType,
+				metav1.ConditionTrue,
+				aigatewayv1alpha1.ServiceReadyReason,
+				aigatewayv1alpha1.ServiceReadyMessage,
+				aigwdp.Generation,
+			),
+			aigwdp,
+		)
+	} else {
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				aigatewayv1alpha1.ServiceReadyType,
+				metav1.ConditionFalse,
+				aigatewayv1alpha1.WaitingForAddressReason,
+				aigatewayv1alpha1.WaitingForAddressMessage,
+				aigwdp.Generation,
+			),
+			aigwdp,
+		)
+	}
+	return nil
+}
+
+// ingressServiceIsReady reports whether the ingress Service has an external
+// address. Non-LoadBalancer Services are always considered ready.
+func ingressServiceIsReady(svc *corev1.Service) bool {
+	if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+		return true
+	}
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.Hostname != "" || ing.IP != "" {
+			return true
+		}
+	}
+	return false
 }

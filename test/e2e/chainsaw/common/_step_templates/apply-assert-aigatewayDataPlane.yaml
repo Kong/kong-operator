@@ -50,6 +50,10 @@ spec:
             name: ($aigw_dp_name)
             namespace: ($namespace)
           status:
+            (conditions[?type == 'ServiceReady']):
+              - status: 'True'
             (conditions[?type == 'Ready']):
               - status: 'True'
             (readyReplicas > `0`): true
+            (addresses[0].value != null): true
+            (addresses[0].value != ''): true

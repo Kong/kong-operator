@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -331,11 +332,11 @@ func Test_ensureIngressService(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		buildClient func(base client.WithWatch) client.Client
-		// prepareRecorder runs before the assertion (e.g. pre-call to set state).
+		name            string
+		buildClient     func(base client.WithWatch) client.Client
 		prepareRecorder func(r *Reconciler, rec *events.FakeRecorder)
 		wantErr         bool
+		wantNilService  bool
 		wantEvent       string
 	}{
 		{
@@ -348,7 +349,7 @@ func Test_ensureIngressService(t *testing.T) {
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(r *Reconciler, rec *events.FakeRecorder) {
-				_ = r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
+				_, _ = r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -366,6 +367,19 @@ func Test_ensureIngressService(t *testing.T) {
 			wantErr:   true,
 			wantEvent: "ServiceFailed",
 		},
+		{
+			name: "Get returns NotFound after apply: returns nil, nil (cache lag)",
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return apierrors.NewNotFound(corev1.Resource("services"), key.Name)
+					},
+				})
+			},
+			wantErr:        false,
+			wantNilService: true,
+			wantEvent:      "ServiceCreated",
+		},
 	}
 
 	for _, testcase := range tests {
@@ -382,12 +396,16 @@ func Test_ensureIngressService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
+			svc, err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
 
 			if testcase.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+
+			if testcase.wantNilService {
+				assert.Nil(t, svc)
 			}
 
 			if testcase.wantEvent != "" {

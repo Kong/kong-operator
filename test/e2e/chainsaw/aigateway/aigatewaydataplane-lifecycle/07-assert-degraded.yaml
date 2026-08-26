@@ -18,6 +18,13 @@ status:
   (conditions[?type == 'KonnectCertificateRegistered']):
     - status: 'True'
       reason: KonnectCertificateRegistered
+  # ServiceReady reflects the ingress Service state, which is independent of the
+  # KonnectAIGateway dependency. The reconcile returns early when KonnectAIGateway
+  # is gone, so ServiceReady keeps its last value (True) from when the Service had
+  # an external address.
+  (conditions[?type == 'ServiceReady']):
+    - status: 'True'
+      reason: ServiceReady
   (conditions[?type == 'Ready']):
     - status: 'False'
       reason: DependenciesNotReady

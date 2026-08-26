@@ -70,10 +70,70 @@ AIGatewayDataPlaneStatus defines the observed state of AIGatewayDataPlane.
 | `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the AIGatewayDataPlane. |
 | `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
 | `replicas` _int32_ | Replicas indicates how many replicas have been set for the AIGatewayDataPlane. |
+| `addresses` _[][Address](#aigateway-konghq-com-v1alpha1-types-address)_ | Addresses lists the addresses of the ingress Service. For LoadBalancer-type Services the list holds the externally-reachable hostname or IP once allocated, plus the ClusterIP(s). For other Service types it holds the ClusterIP(s) only. |
 
 _Appears in:_
 
 - [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+
+#### Address
+
+
+Address describes a reachable address of the ingress Service.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[AddressType](#aigateway-konghq-com-v1alpha1-types-addresstype)_ | Type of the address. |
+| `value` _string_ | Value of the address. The validity of the values will depend on the type and support by the controller.<br /><br />Examples: `1.2.3.4`, `128::1`, `my-ip-address`. |
+| `sourceType` _[AddressSourceType](#aigateway-konghq-com-v1alpha1-types-addresssourcetype)_ | SourceType of the address. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneStatus](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanestatus)
+
+#### AddressSourceType
+
+_Underlying type:_ `string`
+
+AddressSourceType defines the type of source an address represents.
+
+
+
+
+_Appears in:_
+
+- [Address](#aigateway-konghq-com-v1alpha1-types-address)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `PublicLoadBalancer` | PublicLoadBalancerAddressSourceType is an address from a public Load Balancer.<br /> |
+| `PrivateLoadBalancer` | PrivateLoadBalancerAddressSourceType is an address from a private Load Balancer.<br /> |
+| `PublicIP` | PublicIPAddressSourceType is an address from a public IP.<br /> |
+| `PrivateIP` | PrivateIPAddressSourceType is an address from a private IP.<br /> |
+
+#### AddressType
+
+_Underlying type:_ `string`
+
+AddressType defines how a network address is represented as a text string.
+
+
+
+
+_Appears in:_
+
+- [Address](#aigateway-konghq-com-v1alpha1-types-address)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `IPAddress` | IPAddressType is a textual representation of a numeric IP address.<br /> |
+| `Hostname` | HostnameAddressType represents a DNS based ingress point.<br /> |
 
 #### ControlPlaneRef
 
