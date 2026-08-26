@@ -25,10 +25,10 @@ spec:
     authRef:
       name: konnect-api-auth
 ---
-kind: AIGatewayIdentityProvider
+kind: AIGatewayAuthStrategy
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-provider-key-auth
+  name: ai-gw-auth-strategy-key-auth
   namespace: default
 spec:
   aiGatewayRef:
@@ -54,10 +54,10 @@ type: Opaque
 data:
   clientSecret: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
 ---
-kind: AIGatewayIdentityProvider
+kind: AIGatewayAuthStrategy
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-provider-oidc
+  name: ai-gw-auth-strategy-oidc
   namespace: default
 spec:
   aiGatewayRef:

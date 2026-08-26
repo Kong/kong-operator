@@ -148,6 +148,14 @@ type SensitiveDataSource struct {
 	// +optional{{range .SensitiveDataSourceSecretRefValidations}}
 	// {{ . }}{{end}}
 	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
+}
+	
+// GetValue returns the sensitive value if it is provided inline, or an empty string otherwise.
+func (s SensitiveDataSource) GetValue() string {
+	if s.Value == nil {
+		return ""
+	}
+	return *s.Value
 }`
 
 // dedicatedSensitiveDataSourceStructType is a per-field variant of

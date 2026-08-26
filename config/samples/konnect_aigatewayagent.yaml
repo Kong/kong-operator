@@ -68,10 +68,10 @@ spec:
     name: agent-dev-users
     displayName: Dev Users Group
 ---
-kind: AIGatewayIdentityProvider
+kind: AIGatewayAuthStrategy
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-agent-identity-provider
+  name: ai-gw-agent-auth-strategy
   namespace: default
 spec:
   aiGatewayRef:
@@ -81,8 +81,8 @@ spec:
   apiSpec:
     type: key-auth
     key-auth:
-      name: agent-key-auth-provider
-      displayName: Agent Key Auth Identity Provider
+      name: agent-key-auth-auth-strategy
+      displayName: Agent Key Auth Strategy
       config:
         hideCredentials: Enabled
 ---
@@ -115,12 +115,12 @@ spec:
           allow:
             - kind: AIGatewayConsumerGroup
               name: ai-gw-agent-consumer-group
-      # References to AIGatewayIdentityProvider CRs (by metadata.name). The
+      # References to AIGatewayAuthStrategy CRs (by metadata.name). The
       # operator resolves each reference to the referenced CR's Konnect name
       # at reconcile time. At most 1 identity provider of each type can be
       # referenced.
-      identityProviders:
-        - name: ai-gw-agent-identity-provider
+      authStrategies:
+        - name: ai-gw-agent-auth-strategy
     config:
       url: https://my-upstream-agent.example.com
       route:

@@ -1,21 +1,21 @@
-# Template for creating and asserting an AIGatewayIdentityProvider of type key-auth.
+# Template for creating and asserting an AIGatewayAuthStrategy of type key-auth.
 #
 # Required bindings:
-#   - idp_name: Name of the AIGatewayIdentityProvider to create (also used as apiSpec name).
-#   - namespace: Namespace where the AIGatewayIdentityProvider will be created.
+#   - auth_strategy_name: Name of the AIGatewayAuthStrategy to create (also used as apiSpec name).
+#   - namespace: Namespace where the AIGatewayAuthStrategy will be created.
 #   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
-  name: apply-assert-aigateway-identityprovider-keyauth
+  name: apply-assert-aigateway-authstrategy-keyauth
 spec:
   try:
     - apply:
         resource:
           apiVersion: aiconfiguration.konghq.com/v1alpha1
-          kind: AIGatewayIdentityProvider
+          kind: AIGatewayAuthStrategy
           metadata:
-            name: ($idp_name)
+            name: ($auth_strategy_name)
             namespace: ($namespace)
           spec:
             aiGatewayRef:
@@ -25,16 +25,16 @@ spec:
             apiSpec:
               type: key-auth
               key-auth:
-                name: ($idp_name)
-                displayName: ($idp_name)
+                name: ($auth_strategy_name)
+                displayName: ($auth_strategy_name)
                 config:
                   hideCredentials: Enabled
     - assert:
         resource:
           apiVersion: aiconfiguration.konghq.com/v1alpha1
-          kind: AIGatewayIdentityProvider
+          kind: AIGatewayAuthStrategy
           metadata:
-            name: ($idp_name)
+            name: ($auth_strategy_name)
             namespace: ($namespace)
           status:
             (conditions[?type == 'Programmed']):

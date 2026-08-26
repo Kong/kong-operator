@@ -51,9 +51,9 @@ func AIGatewayAgentReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&aiconfigurationv1alpha1.AIGatewayIdentityProvider{},
+				&aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueAIGatewayAgentForAIGatewayIdentityProvider(cl),
+					enqueueAIGatewayAgentForAIGatewayAuthStrategy(cl),
 				),
 			)
 		},
@@ -122,17 +122,17 @@ func enqueueAIGatewayAgentForAIGatewayConsumerGroup(
 	}
 }
 
-func enqueueAIGatewayAgentForAIGatewayIdentityProvider(
+func enqueueAIGatewayAgentForAIGatewayAuthStrategy(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayIdentityProvider)
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy)
 		if !ok {
 			return nil
 		}
 		var l aiconfigurationv1alpha1.AIGatewayAgentList
 		if err := cl.List(ctx, &l, client.MatchingFields{
-			index.IndexFieldAIGatewayAgentOnAIGatewayIdentityProviderRef: client.ObjectKeyFromObject(ref).String(),
+			index.IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

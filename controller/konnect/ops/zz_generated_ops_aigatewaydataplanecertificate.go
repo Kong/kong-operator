@@ -10,14 +10,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayDataPlaneCertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK,
-	obj *configurationv1alpha1.AIGatewayDataPlaneCertificate,
+	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -43,7 +43,7 @@ func createAIGatewayDataPlaneCertificate(
 func deleteAIGatewayDataPlaneCertificate(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK,
-	obj *configurationv1alpha1.AIGatewayDataPlaneCertificate,
+	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -61,7 +61,7 @@ func deleteAIGatewayDataPlaneCertificate(
 func getAIGatewayDataPlaneCertificateForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK,
-	obj *configurationv1alpha1.AIGatewayDataPlaneCertificate,
+	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

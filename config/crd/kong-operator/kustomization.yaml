@@ -7,13 +7,12 @@ resources:
   - aiconfiguration.konghq.com_aigatewayconsumercredentials.yaml
   - aiconfiguration.konghq.com_aigatewayconsumergroups.yaml
   - aiconfiguration.konghq.com_aigatewayconsumers.yaml
-  - aiconfiguration.konghq.com_aigatewayidentityproviders.yaml
+  - aiconfiguration.konghq.com_aigatewaydataplanecertificates.yaml
   - aiconfiguration.konghq.com_aigatewaymcpservers.yaml
   - aiconfiguration.konghq.com_aigatewaymodelproviders.yaml
   - aiconfiguration.konghq.com_aigatewaymodels.yaml
   - aiconfiguration.konghq.com_aigatewaypolicies.yaml
   - aigateway.konghq.com_aigatewaydataplanes.yaml
-  - configuration.konghq.com_aigatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml
