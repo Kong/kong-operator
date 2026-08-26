@@ -78,6 +78,9 @@ func main() {
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
 		"github.com/kong/kong-operator/v2/api/konnect/v1alpha2",
 
+		// aiconfiguration.konghq.com
+		"github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1",
+
 		// gateway-operator.konghq.com
 		"github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1",
 		"github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1",

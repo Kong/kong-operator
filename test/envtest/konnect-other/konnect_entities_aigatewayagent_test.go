@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -43,8 +44,8 @@ func TestAIGatewayAgent(t *testing.T) {
 	sdk := factory.SDK
 	envtest.StartReconcilers(ctx, t, mgr, logs,
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, mgr.GetClient(),
-			konnect.WithKonnectEntitySyncPeriod[konnectv1alpha1.AIGatewayAgent](consts.KonnectInfiniteSyncTime),
-			konnect.WithMetricRecorder[konnectv1alpha1.AIGatewayAgent](&metricsmocks.MockRecorder{}),
+			konnect.WithKonnectEntitySyncPeriod[aiconfigurationv1alpha1.AIGatewayAgent](consts.KonnectInfiniteSyncTime),
+			konnect.WithMetricRecorder[aiconfigurationv1alpha1.AIGatewayAgent](&metricsmocks.MockRecorder{}),
 		),
 	)
 
@@ -70,7 +71,7 @@ func TestAIGatewayAgent(t *testing.T) {
 			agentURL           = "https://upstream.example.com"
 		)
 
-		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[aiconfigurationv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Setting up SDK expectations on AIGatewayAgent creation")
 		sdk.AIGatewayAgentsSDK.EXPECT().
@@ -89,7 +90,7 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Creating AIGatewayAgent")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
-			a, ok := o.(*konnectv1alpha1.AIGatewayAgent)
+			a, ok := o.(*aiconfigurationv1alpha1.AIGatewayAgent)
 			if !ok {
 				return
 			}
@@ -100,9 +101,9 @@ func TestAIGatewayAgent(t *testing.T) {
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
 			envtest.AssertsAnd(
 				envtest.ObjectMatchesName(agent),
-				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
-				func(a *konnectv1alpha1.AIGatewayAgent) bool {
+				envtest.ObjectMatchesKonnectID[*aiconfigurationv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*aiconfigurationv1alpha1.AIGatewayAgent](),
+				func(a *aiconfigurationv1alpha1.AIGatewayAgent) bool {
 					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
 				},
@@ -133,9 +134,9 @@ func TestAIGatewayAgent(t *testing.T) {
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
 			envtest.AssertsAnd(
 				envtest.ObjectMatchesName(agent),
-				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
-				func(a *konnectv1alpha1.AIGatewayAgent) bool {
+				envtest.ObjectMatchesKonnectID[*aiconfigurationv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*aiconfigurationv1alpha1.AIGatewayAgent](),
+				func(a *aiconfigurationv1alpha1.AIGatewayAgent) bool {
 					return a.Spec.APISpec.DisplayName == updatedDisplayName
 				},
 			),
@@ -163,34 +164,34 @@ func TestAIGatewayAgent(t *testing.T) {
 		)
 
 		t.Log("Creating an unprogrammed AIGatewayConsumerGroup to be referenced by the agent ACL")
-		consumerGroup := &konnectv1alpha1.AIGatewayConsumerGroup{
+		consumerGroup := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 			ObjectMeta: metav1.ObjectMeta{Name: "acl-consumer-group", Namespace: ns.Name},
-			Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
+			Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gateway.Name},
 				},
-				APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
-					Name:        konnectv1alpha1.AIGatewayEntityIdentifier(consumerGroupKonnectName),
+				APISpec: aiconfigurationv1alpha1.AIGatewayConsumerGroupAPISpec{
+					Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(consumerGroupKonnectName),
 					DisplayName: "ACL Consumer Group",
 				},
 			},
 		}
 		require.NoError(t, clientNamespaced.Create(ctx, consumerGroup))
 
-		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[aiconfigurationv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
 		t.Log("Creating AIGatewayAgent that references the consumer group via an ACL allow rule")
 		agent := deploy.AIGatewayAgent(t, ctx, clientNamespaced, gateway, func(o client.Object) {
-			a, ok := o.(*konnectv1alpha1.AIGatewayAgent)
+			a, ok := o.(*aiconfigurationv1alpha1.AIGatewayAgent)
 			if !ok {
 				return
 			}
-			a.Spec.APISpec.Access = konnectv1alpha1.AIGatewayAgentAccess{
-				Acls: &konnectv1alpha1.AIGatewayAgentAccessAcls{
-					Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
-					Allow: &konnectv1alpha1.AIGatewayAllowACL{
-						Allow: []konnectv1alpha1.AIGatewayACLRef{
+			a.Spec.APISpec.Access = aiconfigurationv1alpha1.AIGatewayAgentAccess{
+				Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+					Type: aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+					Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{
+						Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{
 							{Kind: "AIGatewayConsumerGroup", Name: consumerGroup.Name},
 						},
 					},
@@ -200,14 +201,14 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Waiting for KonnectReferencesResolved=False with ReferenceNotProgrammed reason")
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
-			func(a *konnectv1alpha1.AIGatewayAgent) bool {
+			func(a *aiconfigurationv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
 				}
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectReferencesResolvedConditionType, a)
+				cond, ok := k8sutils.GetCondition(aiconfigurationv1alpha1.KonnectReferencesResolvedConditionType, a)
 				return ok &&
 					cond.Status == metav1.ConditionFalse &&
-					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
+					cond.Reason == aiconfigurationv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
 			},
 			"AIGatewayAgent didn't report KonnectReferencesResolved=False/ReferenceNotProgrammed for the unprogrammed consumer group",
 		)
@@ -236,14 +237,14 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Waiting for the watch to re-enqueue the agent and flip KonnectReferencesResolved to True")
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
-			func(a *konnectv1alpha1.AIGatewayAgent) bool {
+			func(a *aiconfigurationv1alpha1.AIGatewayAgent) bool {
 				if a.GetName() != agent.GetName() {
 					return false
 				}
-				cond, ok := k8sutils.GetCondition(konnectv1alpha1.KonnectReferencesResolvedConditionType, a)
+				cond, ok := k8sutils.GetCondition(aiconfigurationv1alpha1.KonnectReferencesResolvedConditionType, a)
 				return ok &&
 					cond.Status == metav1.ConditionTrue &&
-					cond.Reason == konnectv1alpha1.KonnectReferencesResolvedReasonResolved
+					cond.Reason == aiconfigurationv1alpha1.KonnectReferencesResolvedReasonResolved
 			},
 			"AIGatewayAgent KonnectReferencesResolved didn't flip to True after the consumer group was programmed",
 		)
@@ -254,9 +255,9 @@ func TestAIGatewayAgent(t *testing.T) {
 	t.Run("should create AIGatewayAgent successfully on conflict when agent with matching uid label exists", func(t *testing.T) {
 		const agentID = "ai-agent-conflict-id"
 
-		w := envtest.SetupWatch[konnectv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
+		w := envtest.SetupWatch[aiconfigurationv1alpha1.AIGatewayAgentList](t, ctx, cl, client.InNamespace(ns.Name))
 
-		var agent *konnectv1alpha1.AIGatewayAgent
+		var agent *aiconfigurationv1alpha1.AIGatewayAgent
 
 		sdk.AIGatewayAgentsSDK.EXPECT().
 			CreateAiGatewayAgent(mock.Anything, konnectAIGatewayID, mock.Anything).
@@ -291,9 +292,9 @@ func TestAIGatewayAgent(t *testing.T) {
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified,
 			envtest.AssertsAnd(
 				envtest.ObjectMatchesName(agent),
-				envtest.ObjectMatchesKonnectID[*konnectv1alpha1.AIGatewayAgent](agentID),
-				envtest.ObjectHasConditionProgrammedSetToTrue[*konnectv1alpha1.AIGatewayAgent](),
-				func(a *konnectv1alpha1.AIGatewayAgent) bool {
+				envtest.ObjectMatchesKonnectID[*aiconfigurationv1alpha1.AIGatewayAgent](agentID),
+				envtest.ObjectHasConditionProgrammedSetToTrue[*aiconfigurationv1alpha1.AIGatewayAgent](),
+				func(a *aiconfigurationv1alpha1.AIGatewayAgent) bool {
 					return a.GetGatewayID() == konnectAIGatewayID &&
 						controllerutil.ContainsFinalizer(a, konnect.KonnectCleanupFinalizer)
 				},

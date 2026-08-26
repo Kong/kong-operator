@@ -26,7 +26,7 @@ spec:
       name: konnect-api-auth-1
 ---
 kind: AIGatewayMCPServer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: flights-mcp-server-listener
   namespace: default
@@ -58,7 +58,7 @@ spec:
         domain: flights
 ---
 kind: AIGatewayMCPServer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: flights-mcp-server-conversion-only
   namespace: default
@@ -98,7 +98,7 @@ spec:
         domain: flights
 ---
 kind: AIGatewayMCPServer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: flights-mcp-server-conversion-listener
   namespace: default
@@ -124,7 +124,7 @@ spec:
         domain: flights
 ---
 kind: AIGatewayMCPServer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: flights-mcp-server-passthrough-listener
   namespace: default
@@ -153,7 +153,7 @@ spec:
         domain: flights
 ---
 kind: AIGatewayMCPServer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: flights-mcp-server-upstream-server
   namespace: default

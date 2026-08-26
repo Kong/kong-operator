@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func testGeneratedAIGatewayIdentityProviderForSDKOps() *konnectv1alpha1.AIGatewayIdentityProvider {
-	return &konnectv1alpha1.AIGatewayIdentityProvider{
+func testGeneratedAIGatewayIdentityProviderForSDKOps() *aiconfigurationv1alpha1.AIGatewayIdentityProvider {
+	return &aiconfigurationv1alpha1.AIGatewayIdentityProvider{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayIdentityProvider",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,11 +29,11 @@ func testGeneratedAIGatewayIdentityProviderForSDKOps() *konnectv1alpha1.AIGatewa
 			UID:        "aigatewayidentityprovider-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.AIGatewayIdentityProviderSpec{
-			APISpec: konnectv1alpha1.AIGatewayIdentityProviderAPISpec{
-				AIGatewayIdentityProviderConfig: &konnectv1alpha1.AIGatewayIdentityProviderConfig{
-					Type:    konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
-					KeyAuth: &konnectv1alpha1.AIGatewayIdentityProviderKeyAuth{DisplayName: "test-display-name", Name: "test-identity-provider"},
+		Spec: aiconfigurationv1alpha1.AIGatewayIdentityProviderSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayIdentityProviderAPISpec{
+				AIGatewayIdentityProviderConfig: &aiconfigurationv1alpha1.AIGatewayIdentityProviderConfig{
+					Type:    aiconfigurationv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
+					KeyAuth: &aiconfigurationv1alpha1.AIGatewayIdentityProviderKeyAuth{DisplayName: "test-display-name", Name: "test-identity-provider"},
 				},
 			},
 		},

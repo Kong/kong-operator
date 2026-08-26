@@ -11,14 +11,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayModelProvider(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayModelProvidersSDK,
-	obj *konnectv1alpha1.AIGatewayModelProvider,
+	obj *aiconfigurationv1alpha1.AIGatewayModelProvider,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -63,7 +63,7 @@ func updateAIGatewayModelProvider(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayModelProvidersSDK,
-	obj *konnectv1alpha1.AIGatewayModelProvider,
+	obj *aiconfigurationv1alpha1.AIGatewayModelProvider,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -91,7 +91,7 @@ func updateAIGatewayModelProvider(
 func deleteAIGatewayModelProvider(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayModelProvidersSDK,
-	obj *konnectv1alpha1.AIGatewayModelProvider,
+	obj *aiconfigurationv1alpha1.AIGatewayModelProvider,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -109,7 +109,7 @@ func deleteAIGatewayModelProvider(
 func getAIGatewayModelProviderForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayModelProvidersSDK,
-	obj *konnectv1alpha1.AIGatewayModelProvider,
+	obj *aiconfigurationv1alpha1.AIGatewayModelProvider,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

@@ -159,43 +159,43 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayModel
               name: aigw11-model
               namespace: ($namespace)
         - error:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayModel
               metadata:
                 namespace: ($namespace)
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayModelProvider
               name: openai-provider
               namespace: ($namespace)
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayPolicy
               name: (join('-', [($test_name), 'policy-inline-config']))
               namespace: ($namespace)
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayPolicy
               name: (join('-', [($test_name), 'policy-secretref-config']))
               namespace: ($namespace)
         - error:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayModelProvider
               metadata:
                 namespace: ($namespace)
         - error:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayPolicy
               metadata:
                 namespace: ($namespace)

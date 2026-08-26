@@ -26,7 +26,7 @@ spec:
       name: konnect-api-auth
 ---
 kind: AIGatewayIdentityProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-key-auth
   namespace: default
@@ -55,7 +55,7 @@ data:
   clientSecret: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
 ---
 kind: AIGatewayIdentityProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-oidc
   namespace: default

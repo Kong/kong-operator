@@ -15,6 +15,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -280,9 +281,9 @@ func getKonnectIDForUID[
 		return getKongCertificateForUID(ctx, sdk.GetCertificatesSDK(), ent)
 	case *configurationv1alpha1.KongCACertificate:
 		return getKongCACertificateForUID(ctx, sdk.GetCACertificatesSDK(), ent)
-	case *konnectv1alpha1.AIGatewayModel:
+	case *aiconfigurationv1alpha1.AIGatewayModel:
 		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayMCPServer:
+	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 
 	// ---------------------------------------------------------------------
@@ -553,7 +554,7 @@ func Update[
 		err = updateSNI(ctx, sdk.GetSNIsSDK(), ent)
 	case *configurationv1alpha1.KongDataPlaneClientCertificate:
 		err = nil // DataPlaneCertificates are immutable.
-	case *konnectv1alpha1.AIGatewayConsumerCredential:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		err = nil // AIGatewayConsumerCredentials are immutable.
 	case *konnectv1alpha1.MCPServer:
 		// MCPServer is mirror-only, so we use Konnect as the source of truth for it.

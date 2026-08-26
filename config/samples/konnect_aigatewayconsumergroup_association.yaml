@@ -24,7 +24,7 @@ spec:
       name: konnect-api-auth
 ---
 kind: AIGatewayConsumerGroup
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-gw-consumer-group-1
   namespace: default
@@ -40,7 +40,7 @@ spec:
       tier: development
 ---
 kind: AIGatewayConsumer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-gw-consumer-1
   namespace: default

@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -490,25 +491,25 @@ func AIGatewayAgent(
 	cl client.Client,
 	gateway *konnectv1alpha1.KonnectAIGateway,
 	opts ...ObjOption,
-) *konnectv1alpha1.AIGatewayAgent {
+) *aiconfigurationv1alpha1.AIGatewayAgent {
 	t.Helper()
 	name := "ai-agent-" + randomSuffix()
-	obj := konnectv1alpha1.AIGatewayAgent{
+	obj := aiconfigurationv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: name,
 		},
-		Spec: konnectv1alpha1.AIGatewayAgentSpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: gateway.Name,
 				},
 			},
-			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
-				Name:        konnectv1alpha1.AIGatewayEntityIdentifier(name),
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(name),
 				DisplayName: "AI Agent " + name,
 				Type:        "http",
-				Config: konnectv1alpha1.AIGatewayAgentConfig{
+				Config: aiconfigurationv1alpha1.AIGatewayAgentConfig{
 					URL: "https://upstream.example.com",
 				},
 			},

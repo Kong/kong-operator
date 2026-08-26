@@ -8,6 +8,7 @@ import (
 
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -41,27 +42,27 @@ func getForUID[
 	e TEnt,
 ) (string, error) {
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.AIGatewayAgent:
+	case *aiconfigurationv1alpha1.AIGatewayAgent:
 		return getAIGatewayAgentForUID(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayAuthStrategy:
+	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return getAIGatewayAuthStrategyForUID(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumer:
+	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return getAIGatewayConsumerForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumerCredential:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		return getAIGatewayConsumerCredentialForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumerGroup:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return getAIGatewayConsumerGroupForUID(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return getAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
-	case *konnectv1alpha1.AIGatewayIdentityProvider:
+	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
 		return getAIGatewayIdentityProviderForUID(ctx, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayMCPServer:
+	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayModel:
+	case *aiconfigurationv1alpha1.AIGatewayModel:
 		return getAIGatewayModelForUID(ctx, sdk.GetAIGatewayModelsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayModelProvider:
+	case *aiconfigurationv1alpha1.AIGatewayModelProvider:
 		return getAIGatewayModelProviderForUID(ctx, sdk.GetAIGatewayModelProvidersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayPolicy:
+	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return getAIGatewayPolicyForUID(ctx, sdk.GetAIGatewayPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)

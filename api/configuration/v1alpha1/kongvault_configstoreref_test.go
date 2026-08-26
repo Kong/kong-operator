@@ -85,7 +85,7 @@ func TestKongVaultResolveConfigStoreID(t *testing.T) {
 			name:  "missing config store is reported as not found",
 			vault: konnectVaultWithRef(ref),
 			assertError: func(t *testing.T, err error) {
-				var target konnectv1alpha1.ReferenceNotFoundError
+				var target configurationv1alpha1.ReferenceNotFoundError
 				require.ErrorAs(t, err, &target)
 				assert.Equal(t, "KonnectConfigStore", target.Kind)
 				assert.Equal(t, "kong", target.Namespace)
@@ -97,7 +97,7 @@ func TestKongVaultResolveConfigStoreID(t *testing.T) {
 			vault:   konnectVaultWithRef(ref),
 			objects: []client.Object{configStore("kong", "")},
 			assertError: func(t *testing.T, err error) {
-				var target konnectv1alpha1.ReferenceNotProgrammedError
+				var target configurationv1alpha1.ReferenceNotProgrammedError
 				require.ErrorAs(t, err, &target)
 				assert.Equal(t, "KonnectConfigStore", target.Kind)
 			},
@@ -107,7 +107,7 @@ func TestKongVaultResolveConfigStoreID(t *testing.T) {
 			vault:   konnectVaultWithRef(ref),
 			objects: []client.Object{configStore("other", "konnect-config-store-id")},
 			assertError: func(t *testing.T, err error) {
-				var target konnectv1alpha1.ReferenceNotFoundError
+				var target configurationv1alpha1.ReferenceNotFoundError
 				require.ErrorAs(t, err, &target)
 			},
 		},

@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func testGeneratedAIGatewayConsumerGroupForSDKOps() *konnectv1alpha1.AIGatewayConsumerGroup {
-	return &konnectv1alpha1.AIGatewayConsumerGroup{
+func testGeneratedAIGatewayConsumerGroupForSDKOps() *aiconfigurationv1alpha1.AIGatewayConsumerGroup {
+	return &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayConsumerGroup",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,11 +29,11 @@ func testGeneratedAIGatewayConsumerGroupForSDKOps() *konnectv1alpha1.AIGatewayCo
 			UID:        "aigatewayconsumergroup-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
-			APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerGroupAPISpec{
 				DisplayName: "test-value",
-				Labels:      konnectv1alpha1.PublicLabels{"test-key": "test-value"},
-				ManagedBy:   konnectv1alpha1.ManagedBy{"test-key": "test-value"},
+				Labels:      aiconfigurationv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:   aiconfigurationv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name:        "test-value",
 			},
 		},

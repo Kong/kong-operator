@@ -57,8 +57,8 @@ func (v *KongVault) GetConfigStoreRefNamespacedName() (client.ObjectKey, bool) {
 //
 // The returned error is one of:
 //   - ConfigStoreRefInvalidError when the reference is not allowed for this KongVault.
-//   - konnectv1alpha1.ReferenceNotFoundError when the KonnectConfigStore does not exist.
-//   - konnectv1alpha1.ReferenceNotProgrammedError when the KonnectConfigStore exists
+//   - ReferenceNotFoundError when the KonnectConfigStore does not exist.
+//   - ReferenceNotProgrammedError when the KonnectConfigStore exists
 //     but has not been programmed in Konnect yet, so its ID is not known.
 func (v *KongVault) ResolveConfigStoreID(ctx context.Context, cl client.Client) (string, error) {
 	ref := v.Spec.ConfigStoreRef
@@ -95,7 +95,7 @@ func (v *KongVault) ResolveConfigStoreID(ctx context.Context, cl client.Client) 
 	var configStore konnectv1alpha1.KonnectConfigStore
 	if err := cl.Get(ctx, nn, &configStore); err != nil {
 		if apierrors.IsNotFound(err) {
-			return "", konnectv1alpha1.ReferenceNotFoundError{
+			return "", ReferenceNotFoundError{
 				Kind:      KonnectConfigStoreKind,
 				Namespace: nn.Namespace,
 				Name:      nn.Name,
@@ -112,7 +112,7 @@ func (v *KongVault) ResolveConfigStoreID(ctx context.Context, cl client.Client) 
 		return id, nil
 	}
 
-	return "", konnectv1alpha1.ReferenceNotProgrammedError{
+	return "", ReferenceNotProgrammedError{
 		Kind:      KonnectConfigStoreKind,
 		Namespace: nn.Namespace,
 		Name:      nn.Name,

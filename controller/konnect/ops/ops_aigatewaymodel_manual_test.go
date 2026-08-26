@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func TestGetAIGatewayModelForUID(t *testing.T) {
@@ -122,10 +122,10 @@ func TestGetAIGatewayModelForUID(t *testing.T) {
 	})
 }
 
-func testAIGatewayModel() *konnectv1alpha1.AIGatewayModel {
-	return &konnectv1alpha1.AIGatewayModel{
+func testAIGatewayModel() *aiconfigurationv1alpha1.AIGatewayModel {
+	return &aiconfigurationv1alpha1.AIGatewayModel{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayModel",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -134,24 +134,24 @@ func testAIGatewayModel() *konnectv1alpha1.AIGatewayModel {
 			UID:        "aigatewaymodel-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.AIGatewayModelSpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "ai-gw-cp-1",
 				},
 			},
-			APISpec: konnectv1alpha1.AIGatewayModelAPISpec{
-				AIGatewayModelConfig: &konnectv1alpha1.AIGatewayModelConfig{
-					Type: konnectv1alpha1.AIGatewayModelConfigTypeAPI,
-					API: &konnectv1alpha1.AIGatewayModelAPI{
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
+				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI,
+					API: &aiconfigurationv1alpha1.AIGatewayModelAPI{
 						Name: "llama-3.1",
 					},
 				},
 			},
 		},
-		Status: konnectv1alpha1.AIGatewayModelStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: aiconfigurationv1alpha1.AIGatewayModelStatus{
+			GatewayID: &aiconfigurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
 		},

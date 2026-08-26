@@ -26,7 +26,7 @@ spec:
       name: konnect-api-auth
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-anthropic
   namespace: default
@@ -51,7 +51,7 @@ spec:
                 value: sk-ant-xxxxxxxxxxxxxxxxxxxx
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-azure
   namespace: default
@@ -88,7 +88,7 @@ data:
   secretAccessKey: eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eHh4eA==
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-bedrock
   namespace: default
@@ -116,7 +116,7 @@ spec:
                 key: secretAccessKey
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-gemini
   namespace: default
@@ -152,7 +152,7 @@ data:
   token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-openai
   namespace: default

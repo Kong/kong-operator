@@ -11,6 +11,7 @@ import (
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -312,16 +313,16 @@ type WatchableEntityType interface {
 		konnectv1alpha1.PortalIdentityProviderRequest |
 		konnectv1alpha1.KonnectAIGateway |
 		konnectv1alpha1.KonnectConfigStore |
-		konnectv1alpha1.AIGatewayModel |
-		konnectv1alpha1.AIGatewayModelProvider |
-		konnectv1alpha1.AIGatewayIdentityProvider |
-		konnectv1alpha1.AIGatewayPolicy |
-		konnectv1alpha1.AIGatewayAgent |
-		konnectv1alpha1.AIGatewayConsumer |
-		konnectv1alpha1.AIGatewayConsumerCredential |
-		konnectv1alpha1.AIGatewayConsumerGroup |
-		konnectv1alpha1.AIGatewayMCPServer |
-		konnectv1alpha1.AIGatewayAuthStrategy |
+		aiconfigurationv1alpha1.AIGatewayAuthStrategy |
+		aiconfigurationv1alpha1.AIGatewayModel |
+		aiconfigurationv1alpha1.AIGatewayModelProvider |
+		aiconfigurationv1alpha1.AIGatewayIdentityProvider |
+		aiconfigurationv1alpha1.AIGatewayPolicy |
+		aiconfigurationv1alpha1.AIGatewayAgent |
+		aiconfigurationv1alpha1.AIGatewayConsumer |
+		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
+		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
+		aiconfigurationv1alpha1.AIGatewayMCPServer |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |
@@ -443,8 +444,8 @@ func enqueueObjectsForKongReferenceGrant[
 // generated GetSensitiveDataSecretRefs method, converting to the shared
 // commonv1alpha1.NamespacedRef shape, and reports whether obj has one at all.
 //
-// Each API group-version package (api/konnect/v1alpha1,
-// api/configuration/v1alpha1, ...) generates its own identically-shaped
+// Each API group-version package (api/configuration/v1alpha1,
+// api/aiconfiguration/v1alpha1, ...) generates its own identically-shaped
 // SensitiveDataSecretRef type, so a single generic method-return-type
 // constraint can't span all of them — dispatch by type switch instead,
 // mirroring getSecretRefs in reconciler_secretref.go. Add a case here when a
@@ -452,7 +453,7 @@ func enqueueObjectsForKongReferenceGrant[
 func secretRefsForSensitiveData(obj any) ([]commonv1alpha1.NamespacedRef, bool) {
 	switch g := obj.(type) {
 	case interface {
-		GetSensitiveDataSecretRefs() []konnectv1alpha1.SensitiveDataSecretRef
+		GetSensitiveDataSecretRefs() []configurationv1alpha1.SensitiveDataSecretRef
 	}:
 		refs := g.GetSensitiveDataSecretRefs()
 		out := make([]commonv1alpha1.NamespacedRef, len(refs))
@@ -461,7 +462,7 @@ func secretRefsForSensitiveData(obj any) ([]commonv1alpha1.NamespacedRef, bool) 
 		}
 		return out, true
 	case interface {
-		GetSensitiveDataSecretRefs() []configurationv1alpha1.SensitiveDataSecretRef
+		GetSensitiveDataSecretRefs() []aiconfigurationv1alpha1.SensitiveDataSecretRef
 	}:
 		refs := g.GetSensitiveDataSecretRefs()
 		out := make([]commonv1alpha1.NamespacedRef, len(refs))

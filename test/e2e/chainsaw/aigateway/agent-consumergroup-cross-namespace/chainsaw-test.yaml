@@ -96,7 +96,7 @@ spec:
           value: ($namespace)
         - name: from
           value:
-            - group: konnect.konghq.com
+            - group: aiconfiguration.konghq.com
               kind: AIGatewayAgent
               namespace: ($agent_namespace)
         - name: to
@@ -111,7 +111,7 @@ spec:
       try:
         - apply:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($agent_name)
@@ -157,7 +157,7 @@ spec:
       try:
         - assert:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($agent_name)
@@ -179,14 +179,14 @@ spec:
           value: ($namespace)
         - name: from
           value:
-            - group: konnect.konghq.com
+            - group: aiconfiguration.konghq.com
               kind: AIGatewayAgent
               namespace: ($agent_namespace)
         - name: to
           value:
             - group: konnect.konghq.com
               kind: KonnectAIGateway
-            - group: konnect.konghq.com
+            - group: aiconfiguration.konghq.com
               kind: AIGatewayConsumerGroup
       use:
         template: ../../common/_step_templates/apply-assert-kongreferencegrant.yaml
@@ -196,7 +196,7 @@ spec:
       try:
         - assert:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($agent_name)
@@ -227,7 +227,7 @@ spec:
           value: ($namespace)
         - name: from
           value:
-            - group: konnect.konghq.com
+            - group: aiconfiguration.konghq.com
               kind: AIGatewayAgent
               namespace: ($agent_namespace)
         - name: to
@@ -241,7 +241,7 @@ spec:
       try:
         - assert:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($agent_name)
@@ -269,23 +269,23 @@ spec:
                 namespace: ($namespace)
               spec:
                 from:
-                  - group: konnect.konghq.com
+                  - group: aiconfiguration.konghq.com
                     kind: AIGatewayAgent
                     namespace: ($agent_namespace)
                 to:
                   - group: konnect.konghq.com
                     kind: KonnectAIGateway
-                  - group: konnect.konghq.com
+                  - group: aiconfiguration.konghq.com
                     kind: AIGatewayConsumerGroup
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               name: ($agent_name)
               namespace: ($agent_namespace)
         - error:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($agent_name)

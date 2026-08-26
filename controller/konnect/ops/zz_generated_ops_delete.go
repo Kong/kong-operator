@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -25,27 +26,27 @@ func DeleteGeneratedOps[
 	e TEnt,
 ) error {
 	switch ent := any(e).(type) {
-	case *konnectv1alpha1.AIGatewayAgent:
+	case *aiconfigurationv1alpha1.AIGatewayAgent:
 		return deleteAIGatewayAgent(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayAuthStrategy:
+	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return deleteAIGatewayAuthStrategy(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumer:
+	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return deleteAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumerCredential:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		return deleteAIGatewayConsumerCredential(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayConsumerGroup:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return deleteAIGatewayConsumerGroup(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return deleteAIGatewayDataPlaneCertificate(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
-	case *konnectv1alpha1.AIGatewayIdentityProvider:
+	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
 		return deleteAIGatewayIdentityProvider(ctx, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayMCPServer:
+	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return deleteAIGatewayMCPServer(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayModel:
+	case *aiconfigurationv1alpha1.AIGatewayModel:
 		return deleteAIGatewayModel(ctx, sdk.GetAIGatewayModelsSDK(), ent)
-	case *konnectv1alpha1.AIGatewayModelProvider:
+	case *aiconfigurationv1alpha1.AIGatewayModelProvider:
 		return deleteAIGatewayModelProvider(ctx, sdk.GetAIGatewayModelProvidersSDK(), ent)
-	case *konnectv1alpha1.AIGatewayPolicy:
+	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return deleteAIGatewayPolicy(ctx, sdk.GetAIGatewayPoliciesSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return deleteEventGatewayBackendCluster(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)

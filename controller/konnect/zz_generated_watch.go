@@ -8,6 +8,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -21,27 +22,27 @@ func reconciliationWatchOptionsForEntity[
 	ent TEnt,
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	switch any(ent).(type) {
-	case *konnectv1alpha1.AIGatewayAgent:
+	case *aiconfigurationv1alpha1.AIGatewayAgent:
 		return AIGatewayAgentReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayAuthStrategy:
+	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return AIGatewayAuthStrategyReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayConsumer:
+	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return AIGatewayConsumerReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayConsumerCredential:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
 		return AIGatewayConsumerCredentialReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayConsumerGroup:
+	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return AIGatewayConsumerGroupReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayIdentityProvider:
+	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
 		return AIGatewayIdentityProviderReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayMCPServer:
+	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return AIGatewayMCPServerReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayModel:
+	case *aiconfigurationv1alpha1.AIGatewayModel:
 		return AIGatewayModelReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayModelProvider:
+	case *aiconfigurationv1alpha1.AIGatewayModelProvider:
 		return AIGatewayModelProviderReconciliationWatchOptions(cl)
-	case *konnectv1alpha1.AIGatewayPolicy:
+	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return AIGatewayPolicyReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)

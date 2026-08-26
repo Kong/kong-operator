@@ -41,7 +41,7 @@ spec:
             clientSecret: ($client_secret_value)
     - apply:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayIdentityProvider
           metadata:
             name: ($idp_name)
@@ -72,7 +72,7 @@ spec:
                         key: clientSecret
     - assert:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayIdentityProvider
           metadata:
             name: ($idp_name)

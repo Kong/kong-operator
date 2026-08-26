@@ -11,6 +11,7 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -170,7 +171,7 @@ func getAPIAuthRefViaAIGatewayConsumer(
 	obj aiGatewayConsumerRefAccessor,
 ) (types.NamespacedName, error) {
 	return getAPIAuthRefViaParent[
-		konnectv1alpha1.AIGatewayConsumer,
+		aiconfigurationv1alpha1.AIGatewayConsumer,
 		konnectv1alpha1.KonnectAIGateway,
 	](ctx, cl, obj)
 }

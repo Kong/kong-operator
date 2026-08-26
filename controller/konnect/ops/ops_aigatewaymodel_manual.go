@@ -8,13 +8,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func getAIGatewayModelForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayModelsSDK,
-	obj *konnectv1alpha1.AIGatewayModel,
+	obj *aiconfigurationv1alpha1.AIGatewayModel,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -52,22 +52,22 @@ func getAIGatewayModelForUID(
 	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }
 
-func getAIGatewayModelSpecLookupKey(obj *konnectv1alpha1.AIGatewayModel) (variantType, name string, ok bool) {
+func getAIGatewayModelSpecLookupKey(obj *aiconfigurationv1alpha1.AIGatewayModel) (variantType, name string, ok bool) {
 	if obj == nil || obj.Spec.APISpec.AIGatewayModelConfig == nil {
 		return "", "", false
 	}
 
 	switch obj.Spec.APISpec.Type {
-	case konnectv1alpha1.AIGatewayModelConfigTypeAPI:
+	case aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI:
 		if obj.Spec.APISpec.API == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayModelConfigTypeAPI), string(obj.Spec.APISpec.API.Name), true
-	case konnectv1alpha1.AIGatewayModelConfigTypeModel:
+		return string(aiconfigurationv1alpha1.AIGatewayModelConfigTypeAPI), string(obj.Spec.APISpec.API.Name), true
+	case aiconfigurationv1alpha1.AIGatewayModelConfigTypeModel:
 		if obj.Spec.APISpec.Model == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayModelConfigTypeModel), string(obj.Spec.APISpec.Model.Name), true
+		return string(aiconfigurationv1alpha1.AIGatewayModelConfigTypeModel), string(obj.Spec.APISpec.Model.Name), true
 	default:
 		return "", "", false
 	}

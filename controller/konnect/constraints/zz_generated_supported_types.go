@@ -3,6 +3,7 @@
 package constraints
 
 import (
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -10,17 +11,17 @@ import (
 // SupportedGeneratedKonnectEntityType is the generated subset of
 // constraints.SupportedKonnectEntityType.
 type SupportedGeneratedKonnectEntityType interface {
-	konnectv1alpha1.AIGatewayAgent |
-		konnectv1alpha1.AIGatewayAuthStrategy |
-		konnectv1alpha1.AIGatewayConsumer |
-		konnectv1alpha1.AIGatewayConsumerCredential |
-		konnectv1alpha1.AIGatewayConsumerGroup |
+	aiconfigurationv1alpha1.AIGatewayAgent |
+		aiconfigurationv1alpha1.AIGatewayAuthStrategy |
+		aiconfigurationv1alpha1.AIGatewayConsumer |
+		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
+		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
 		configurationv1alpha1.AIGatewayDataPlaneCertificate |
-		konnectv1alpha1.AIGatewayIdentityProvider |
-		konnectv1alpha1.AIGatewayMCPServer |
-		konnectv1alpha1.AIGatewayModel |
-		konnectv1alpha1.AIGatewayModelProvider |
-		konnectv1alpha1.AIGatewayPolicy |
+		aiconfigurationv1alpha1.AIGatewayIdentityProvider |
+		aiconfigurationv1alpha1.AIGatewayMCPServer |
+		aiconfigurationv1alpha1.AIGatewayModel |
+		aiconfigurationv1alpha1.AIGatewayModelProvider |
+		aiconfigurationv1alpha1.AIGatewayPolicy |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |

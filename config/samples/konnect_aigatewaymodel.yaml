@@ -15,7 +15,7 @@ spec:
       name: konnect-api-auth-1
 ---
 kind: AIGatewayConsumerGroup
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-model-consumer-group
   namespace: default
@@ -40,7 +40,7 @@ data:
   token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
 ---
 kind: AIGatewayIdentityProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-model-identity-provider
   namespace: default
@@ -58,7 +58,7 @@ spec:
         hideCredentials: Enabled
 ---
 kind: AIGatewayModelProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-provider-openai
   namespace: default
@@ -86,7 +86,7 @@ spec:
                   key: token
 ---
 kind: AIGatewayPolicy
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-policy-prompt-decorator
   namespace: default
@@ -120,7 +120,7 @@ spec:
           score: 0.9
 ---
 kind: AIGatewayModel
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-gw-model-api
   namespace: default
@@ -177,7 +177,7 @@ spec:
               upstreamURL: https://api.openai.com/v1/chat/completions
 ---
 kind: AIGatewayModel
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-gw-model
   namespace: default

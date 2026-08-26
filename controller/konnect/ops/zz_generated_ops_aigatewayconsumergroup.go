@@ -10,14 +10,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayConsumerGroup(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerGroup,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerGroup,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -45,7 +45,7 @@ func updateAIGatewayConsumerGroup(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerGroup,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerGroup,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -74,7 +74,7 @@ func updateAIGatewayConsumerGroup(
 func deleteAIGatewayConsumerGroup(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerGroup,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerGroup,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -92,7 +92,7 @@ func deleteAIGatewayConsumerGroup(
 func getAIGatewayConsumerGroupForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayConsumerGroupsSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerGroup,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerGroup,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
