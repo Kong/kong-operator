@@ -1,0 +1,32 @@
+# Template for waiting until a Kubernetes resource is fully deleted.
+# Uses kubectl wait --for=delete so the step blocks until the API server
+# confirms the object is gone.
+#
+# Required bindings:
+#   - resource_type:      Kubernetes resource type (e.g. "hpa", "deployment").
+#   - resource_name:      Name of the resource to wait for deletion.
+#   - resource_namespace: Namespace where the resource lives.
+#
+# Optional bindings:
+#   - timeout: Timeout in seconds (default: 300).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: wait-for-resource-deleted
+spec:
+  bindings:
+    - name: timeout
+      value: "300"
+  try:
+    - script:
+        env:
+          - name: RESOURCE_TYPE
+            value: ($resource_type)
+          - name: RESOURCE_NAME
+            value: ($resource_name)
+          - name: NAMESPACE
+            value: ($resource_namespace)
+          - name: TIMEOUT
+            value: ($timeout)
+        content: |
+          bash ../../common/scripts/wait_for_resource_deleted.sh

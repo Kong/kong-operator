@@ -203,7 +203,10 @@ func generateBaseDeployment(
 
 	var replicas *int32
 	if aigwdp.Spec.Deployment != nil {
-		replicas = aigwdp.Spec.Deployment.Replicas
+		// when HPA is active, omit spec.replicas from the SSA object so HPA owns the field
+		if aigwdp.Spec.Deployment.Scaling == nil || aigwdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
+			replicas = aigwdp.Spec.Deployment.Replicas
+		}
 	}
 
 	d := &appsv1.Deployment{

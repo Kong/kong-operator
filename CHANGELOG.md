@@ -107,6 +107,13 @@
   [#5391](https://github.com/Kong/kong-operator/pull/5391)
 - Added `AIGatewayAuthStrategy` CRD
   [#5405](https://github.com/Kong/kong-operator/pull/5405)
+- `AIGatewayDataPlane`: reconcile a `HorizontalPodAutoscaler` from
+  `spec.deployment.scaling.horizontal`. When horizontal scaling is configured
+  the operator creates and keeps an HPA up to date; when the configuration is
+  removed the HPA is deleted so it no longer conflicts with a static replica
+  count. The operator's RBAC now includes `create;get;list;patch;watch;delete`
+  on `horizontalpodautoscalers` for the AIGatewayDataPlane controller.
+  [#5406](https://github.com/Kong/kong-operator/pull/5406)
 
 ### Changed
 
