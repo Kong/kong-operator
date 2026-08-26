@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/events"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -30,6 +31,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
 // newHPAAIGWDP returns an AIGatewayDataPlane with horizontal scaling configured.
@@ -102,6 +104,35 @@ func TestEnsureHPA(t *testing.T) {
 		var hpa autoscalingv2.HorizontalPodAutoscaler
 		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: aigwdp.Name}, &hpa))
 		assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
+	})
+
+	t.Run("reduces to one HPA when multiple exist", func(t *testing.T) {
+		aigwdp := newHPAAIGWDP()
+		// Managed labels are required so ListHPAsForOwner's label selector finds the HPAs.
+		labels := k8sresources.GetManagedLabelForOwner(aigwdp)
+		ownerRef := metav1.OwnerReference{UID: aigwdp.UID, Name: aigwdp.Name}
+
+		hpa1 := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: aigwdp.Name + "-1", Namespace: reconcileTestNS,
+				Labels:          labels,
+				OwnerReferences: []metav1.OwnerReference{ownerRef},
+			},
+		}
+		hpa2 := &autoscalingv2.HorizontalPodAutoscaler{
+			ObjectMeta: metav1.ObjectMeta{
+				Name: aigwdp.Name + "-2", Namespace: reconcileTestNS,
+				Labels:          labels,
+				OwnerReferences: []metav1.OwnerReference{ownerRef},
+			},
+		}
+		r, cl := newReconcilerForHPATest(t, aigwdp, hpa1, hpa2)
+
+		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), aigwdp, aigwdp.Name))
+
+		var hpaList autoscalingv2.HorizontalPodAutoscalerList
+		require.NoError(t, cl.List(t.Context(), &hpaList, client.InNamespace(reconcileTestNS)))
+		assert.Len(t, hpaList.Items, 1)
 	})
 }
 

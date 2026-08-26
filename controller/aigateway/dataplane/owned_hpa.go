@@ -60,7 +60,13 @@ func (r *Reconciler) ensureHPA(
 		return nil
 	}
 
-	generatedHPA, err := k8sresources.GenerateHPAForAIGatewayDataPlane(aigwdp, deploymentName)
+	hs := aigwdp.Spec.Deployment.Scaling.HorizontalScaling
+	generatedHPA, err := k8sresources.GenerateHPA(aigwdp, &k8sresources.HPAScalingSpec{
+		MinReplicas: hs.MinReplicas,
+		MaxReplicas: hs.MaxReplicas,
+		Metrics:     hs.Metrics,
+		Behavior:    hs.Behavior,
+	}, deploymentName)
 	if err != nil {
 		return err
 	}
