@@ -485,7 +485,7 @@ func TestIngressServiceIsReady(t *testing.T) {
 func TestEnsureServiceReadyCondition(t *testing.T) {
 	r := &Reconciler{}
 
-	t.Run("ClusterIP sets ServiceReady=True and no addresses", func(t *testing.T) {
+	t.Run("ClusterIP sets ServiceReady=True and reports the ClusterIP", func(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{
 			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},

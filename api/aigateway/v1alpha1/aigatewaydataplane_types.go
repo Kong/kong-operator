@@ -339,7 +339,6 @@ type Address struct {
 	//
 	// +optional
 	// +kubebuilder:default=IPAddress
-	// +kubebuilder:validation:MaxLength=253
 	Type *AddressType `json:"type,omitempty"`
 
 	// Value of the address. The validity of the values will depend
@@ -355,8 +354,6 @@ type Address struct {
 	// SourceType of the address.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	SourceType AddressSourceType `json:"sourceType,omitempty"`
 }
 

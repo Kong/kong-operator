@@ -332,11 +332,11 @@ func Test_ensureIngressService(t *testing.T) {
 	}
 
 	tests := []struct {
-		name        string
-		buildClient func(base client.WithWatch) client.Client
-		// prepareRecorder runs before the assertion (e.g. pre-call to set state).
+		name            string
+		buildClient     func(base client.WithWatch) client.Client
 		prepareRecorder func(r *Reconciler, rec *events.FakeRecorder)
 		wantErr         bool
+		wantNilService  bool
 		wantEvent       string
 	}{
 		{
@@ -376,8 +376,9 @@ func Test_ensureIngressService(t *testing.T) {
 					},
 				})
 			},
-			wantErr:   false,
-			wantEvent: "ServiceCreated",
+			wantErr:        false,
+			wantNilService: true,
+			wantEvent:      "ServiceCreated",
 		},
 	}
 
@@ -395,12 +396,16 @@ func Test_ensureIngressService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			_, err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
+			svc, err := r.ensureIngressService(context.Background(), logr.Discard(), aigwdp)
 
 			if testcase.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+
+			if testcase.wantNilService {
+				assert.Nil(t, svc)
 			}
 
 			if testcase.wantEvent != "" {

@@ -150,13 +150,13 @@ func (r *Reconciler) ensureServiceReadyCondition(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 	svc *corev1.Service,
 ) error {
-	v1beta1Addrs, err := address.AddressesFromService(svc)
+	svcAddrs, err := address.AddressesFromService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to get addresses from Ingress Service for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
 	}
-	addrs := make([]aigatewayv1alpha1.Address, len(v1beta1Addrs))
-	for i, a := range v1beta1Addrs {
+	addrs := make([]aigatewayv1alpha1.Address, len(svcAddrs))
+	for i, a := range svcAddrs {
 		addrs[i] = aigatewayv1alpha1.Address{
 			Value:      a.Value,
 			SourceType: aigatewayv1alpha1.AddressSourceType(a.SourceType),

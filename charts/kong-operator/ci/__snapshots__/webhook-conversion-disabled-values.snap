@@ -9042,8 +9042,6 @@ spec:
                       - PrivateLoadBalancer
                       - PublicIP
                       - PrivateIP
-                      maxLength: 253
-                      minLength: 1
                       type: string
                     type:
                       default: IPAddress
@@ -9051,7 +9049,6 @@ spec:
                       enum:
                       - IPAddress
                       - Hostname
-                      maxLength: 253
                       type: string
                     value:
                       description: |-
