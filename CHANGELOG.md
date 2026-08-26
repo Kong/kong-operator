@@ -127,9 +127,25 @@
 - Enable KONG_USE_STANDARD_GRPC_STATUS_CODES on dataplanes by default and run all
   core level GRPCRoute conformance tests.
   [#5366](https://github.com/Kong/kong-operator/pull/5366)
+- Moved `AIGatewayAgent`, `AIGatewayAuthStrategy`, `AIGatewayConsumer`,
+  `AIGatewayConsumerCredential`, `AIGatewayConsumerGroup`,
+  `AIGatewayIdentityProvider`, `AIGatewayMCPServer`, `AIGatewayModel`,
+  `AIGatewayModelProvider` and `AIGatewayPolicy` from the `konnect.konghq.com`
+  API group to a new `aiconfiguration.konghq.com` API group.
+  [#5407](https://github.com/Kong/kong-operator/pull/5407)
 
 ### Fixes
 
+- `EventGatewayBackendCluster`, `EventGatewaySchemaRegistry`,
+  `EventGatewayListenerPolicy`, `EventGatewayDataPlaneCertificate` and
+  `AIGatewayDataPlaneCertificate` now require a `KongReferenceGrant` for a
+  cross-namespace `secretRef`, matching every other entity that references
+  Secrets. Previously these five kinds were not recognized as using the
+  generated sensitive-data Secret mechanism and skipped the grant check. An
+  existing object with `secretRef.namespace` set and no matching
+  `KongReferenceGrant` reports `ResolvedRefs=False/RefNotPermitted` on
+  upgrade until a grant is added.
+  [#5407](https://github.com/Kong/kong-operator/pull/5407)
 - Konnect entities whose cross-namespace `controlPlaneRef` was permitted by a
   `KongReferenceGrant` no longer get stuck during deletion when that grant is
   removed first. The grant is now enforced only while the entity is not being
