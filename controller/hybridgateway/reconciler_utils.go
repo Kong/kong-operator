@@ -3,6 +3,8 @@ package hybridgateway
 import (
 	"context"
 	"fmt"
+	"slices"
+	"strings"
 
 	"github.com/go-logr/logr"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -21,6 +23,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -246,6 +249,13 @@ func enforceState[t converter.RootObject](ctx context.Context, cl client.Client,
 			Namespace: desired.GetNamespace(),
 			Name:      desired.GetName(),
 		}, existing)
+		if err != nil && !apierrors.IsNotFound(err) {
+			return false, false, fmt.Errorf("failed to get object kind %s obj %s: %w", desired.GetKind(), client.ObjectKeyFromObject(&desired), err)
+		}
+
+		// Preserve Gateway references already recorded on shared resources before
+		// comparing or applying the desired state.
+		mergeHybridGatewayAnnotation(&desired, existing)
 
 		namespacedNameDesired := client.ObjectKeyFromObject(&desired)
 		namespacedNameExisting := client.ObjectKeyFromObject(existing)
@@ -366,6 +376,52 @@ func upstreamTargetsProgrammed(ctx context.Context, cl client.Client, targets []
 		}
 	}
 	return true, nil
+}
+
+// mergeHybridGatewayAnnotation preserves Gateway references already present on
+// a shared resource and adds the Gateway references from the desired object.
+// Different Routes can generate the same Kong resource for different Gateways,
+// so replacing this annotation would cause their reconciles to overwrite each
+// other indefinitely. Route-kind controllers can still read and apply the same
+// stale value concurrently, so this is eventually rather than atomically
+// convergent: each successful apply requeues and restores the union on a
+// subsequent reconciliation.
+func mergeHybridGatewayAnnotation(desired, existing *unstructured.Unstructured) {
+	desiredAnnotations := desired.GetAnnotations()
+	if len(desiredAnnotations) == 0 {
+		return
+	}
+
+	desiredGateways := desiredAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation]
+	if desiredGateways == "" {
+		return
+	}
+
+	current := ""
+	if existingAnnotations := existing.GetAnnotations(); len(existingAnnotations) > 0 {
+		current = existingAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation]
+	}
+
+	desiredAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation] = mergeCommaSeparatedValues(current, desiredGateways)
+	desired.SetAnnotations(desiredAnnotations)
+}
+
+func mergeCommaSeparatedValues(values ...string) string {
+	unique := make(map[string]struct{})
+	for _, value := range values {
+		for item := range strings.SplitSeq(value, ",") {
+			if item != "" {
+				unique[item] = struct{}{}
+			}
+		}
+	}
+
+	merged := make([]string, 0, len(unique))
+	for item := range unique {
+		merged = append(merged, item)
+	}
+	slices.Sort(merged)
+	return strings.Join(merged, ",")
 }
 
 // enforceStatus updates the status of the root object managed by the provided APIConverter.
