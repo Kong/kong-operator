@@ -29,6 +29,12 @@
     "dependencies"
   ],
   "schedule": "before 5am every weekday",
+  // Let CVE fixes through even on branches where packageRules below disable
+  // routine updates (e.g. release/2.1.x, release/2.2.x) — Renovate's
+  "osvVulnerabilityAlerts": true,
+  "vulnerabilityAlerts": {
+    "enabled": true
+  },
   "customDatasources": {
     "gke-rapid": {
       "defaultRegistryUrlTemplate": "https://raw.githubusercontent.com/kong/gke-renovate-datasource/main/static/rapid.json",
@@ -263,20 +269,14 @@
     // Latest release branch specific rules for updating patch versions of Go toolchain and Dockerfiles.
     {
       "description": "Disable dependency updates on 2.1 and 2.2",
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "enabled": false
     },
     {
       "description": "Go toolchain patch updates only on 2.1 and 2.2",
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "rangeStrategy": "bump",
       "enabled": true
     },
@@ -284,10 +284,7 @@
       "description": "Disable Go toolchain major and minor updates on release/2.1.x",
       "matchManagers": ["gomod"],
       "matchDepNames": ["go"],
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     },
@@ -295,10 +292,7 @@
       "description": "Go modules patch updates only on 2.1 and 2.2",
       "matchManagers": ["gomod"],
       "matchDepNames": ["!go"],
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "matchUpdateTypes": ["patch"],
       "enabled": true
     },
@@ -307,10 +301,7 @@
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["docker"],
       "matchDepNames": ["golang"],
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "enabled": true
     },
     {
@@ -318,10 +309,7 @@
       "matchManagers": ["dockerfile"],
       "matchDatasources": ["docker"],
       "matchDepNames": ["golang"],
-      "matchBaseBranches": [
-        "release/2.1.x",
-        "release/2.2.x"
-      ],
+      "matchBaseBranches": ["release/*"],
       "matchUpdateTypes": ["major", "minor"],
       "enabled": false
     }
