@@ -15,8 +15,8 @@ const (
 	IndexFieldAIGatewayAgentOnAIGatewayPolicyRef = "aiGatewayAgentOnAIGatewayPolicyRef"
 	// IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef is the index field for AIGatewayAgent -> AIGatewayConsumerGroup.
 	IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef = "aiGatewayAgentOnAIGatewayConsumerGroupRef"
-	// IndexFieldAIGatewayAgentOnAIGatewayIdentityProviderRef is the index field for AIGatewayAgent -> AIGatewayIdentityProvider.
-	IndexFieldAIGatewayAgentOnAIGatewayIdentityProviderRef = "aiGatewayAgentOnAIGatewayIdentityProviderRef"
+	// IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef is the index field for AIGatewayAgent -> AIGatewayAuthStrategy.
+	IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef = "aiGatewayAgentOnAIGatewayAuthStrategyRef"
 )
 
 // OptionsForAIGatewayAgent returns required Index options for AIGatewayAgent reconciler.
@@ -39,8 +39,8 @@ func OptionsForAIGatewayAgent() []Option {
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
-			Field:          IndexFieldAIGatewayAgentOnAIGatewayIdentityProviderRef,
-			ExtractValueFn: aiGatewayAgentOnAIGatewayIdentityProviderRef,
+			Field:          IndexFieldAIGatewayAgentOnAIGatewayAuthStrategyRef,
+			ExtractValueFn: aiGatewayAgentOnAIGatewayAuthStrategyRef,
 		},
 	}
 }
@@ -110,14 +110,14 @@ func aiGatewayAgentOnAIGatewayConsumerGroupRef(object client.Object) []string {
 	return out
 }
 
-func aiGatewayAgentOnAIGatewayIdentityProviderRef(object client.Object) []string {
+func aiGatewayAgentOnAIGatewayAuthStrategyRef(object client.Object) []string {
 	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessIdentityProviders(ent) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessAuthStrategies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
 			continue
 		}
 		ns := ref.Namespace

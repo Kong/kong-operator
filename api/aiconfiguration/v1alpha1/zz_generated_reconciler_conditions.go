@@ -3,6 +3,22 @@
 package v1alpha1
 
 const (
+	// AIGatewayAuthStrategyRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayAuthStrategy reference is valid and points to an existing
+	// AIGatewayAuthStrategy.
+	AIGatewayAuthStrategyRefValidConditionType = "AIGatewayAuthStrategyRefValid"
+
+	// AIGatewayAuthStrategyRefReasonValid is the reason used with the AIGatewayAuthStrategyRefValid
+	// condition type indicating that the AIGatewayAuthStrategy reference is valid.
+	AIGatewayAuthStrategyRefReasonValid = "Valid"
+	// AIGatewayAuthStrategyRefReasonInvalid is the reason used with the AIGatewayAuthStrategyRefValid
+	// condition type indicating that the AIGatewayAuthStrategy reference is invalid.
+	AIGatewayAuthStrategyRefReasonInvalid = "Invalid"
+	// AIGatewayAuthStrategyRefReasonNotProgrammed is the reason used with the AIGatewayAuthStrategyRefValid
+	// condition type indicating that the referenced AIGatewayAuthStrategy exists but is not
+	// yet programmed in Konnect.
+	AIGatewayAuthStrategyRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayConsumerRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayConsumer reference is valid and points to an existing
 	// AIGatewayConsumer.
@@ -34,22 +50,6 @@ const (
 	// condition type indicating that the referenced AIGatewayConsumerGroup exists but is not
 	// yet programmed in Konnect.
 	AIGatewayConsumerGroupRefReasonNotProgrammed = "NotProgrammed"
-
-	// AIGatewayIdentityProviderRefValidConditionType is the type of the condition that indicates
-	// whether the AIGatewayIdentityProvider reference is valid and points to an existing
-	// AIGatewayIdentityProvider.
-	AIGatewayIdentityProviderRefValidConditionType = "AIGatewayIdentityProviderRefValid"
-
-	// AIGatewayIdentityProviderRefReasonValid is the reason used with the AIGatewayIdentityProviderRefValid
-	// condition type indicating that the AIGatewayIdentityProvider reference is valid.
-	AIGatewayIdentityProviderRefReasonValid = "Valid"
-	// AIGatewayIdentityProviderRefReasonInvalid is the reason used with the AIGatewayIdentityProviderRefValid
-	// condition type indicating that the AIGatewayIdentityProvider reference is invalid.
-	AIGatewayIdentityProviderRefReasonInvalid = "Invalid"
-	// AIGatewayIdentityProviderRefReasonNotProgrammed is the reason used with the AIGatewayIdentityProviderRefValid
-	// condition type indicating that the referenced AIGatewayIdentityProvider exists but is not
-	// yet programmed in Konnect.
-	AIGatewayIdentityProviderRefReasonNotProgrammed = "NotProgrammed"
 
 	// AIGatewayModelProviderRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayModelProvider reference is valid and points to an existing

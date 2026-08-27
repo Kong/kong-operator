@@ -227,28 +227,15 @@ spec:
                               At most 1 auth strategy of each auth strategy type can be referenced.
                             items:
                               description: |-
-                                AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                name.
-                              type: string
-                            type: array
-                          identityProviders:
-                            description: |-
-                              List of identity providers for granting access to the model.
-                              At most 1 identity provider of each identity provider type can be
-                              referenced.
-
-                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
-                            items:
-                              description: |-
-                                AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
+                                AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
                                 object's Konnect name is used where the Konnect API accepts it.
                               properties:
                                 kind:
-                                  default: AIGatewayIdentityProvider
+                                  default: AIGatewayAuthStrategy
                                   description: Kind is the kind of the referenced
                                     object.
                                   enum:
-                                  - AIGatewayIdentityProvider
+                                  - AIGatewayAuthStrategy
                                   type: string
                                 name:
                                   description: Name is the name of the referenced
@@ -262,6 +249,19 @@ spec:
                               required:
                               - name
                               type: object
+                            type: array
+                          identityProviders:
+                            description: |-
+                              List of identity providers for granting access to the model.
+                              At most 1 identity provider of each identity provider type can be
+                              referenced.
+
+                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
+                            items:
+                              description: |-
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
+                              type: string
                             type: array
                         type: object
                       capabilities:
@@ -4930,28 +4930,15 @@ spec:
                               At most 1 auth strategy of each auth strategy type can be referenced.
                             items:
                               description: |-
-                                AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                name.
-                              type: string
-                            type: array
-                          identityProviders:
-                            description: |-
-                              List of identity providers for granting access to the model.
-                              At most 1 identity provider of each identity provider type can be
-                              referenced.
-
-                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
-                            items:
-                              description: |-
-                                AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
+                                AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
                                 object's Konnect name is used where the Konnect API accepts it.
                               properties:
                                 kind:
-                                  default: AIGatewayIdentityProvider
+                                  default: AIGatewayAuthStrategy
                                   description: Kind is the kind of the referenced
                                     object.
                                   enum:
-                                  - AIGatewayIdentityProvider
+                                  - AIGatewayAuthStrategy
                                   type: string
                                 name:
                                   description: Name is the name of the referenced
@@ -4965,6 +4952,19 @@ spec:
                               required:
                               - name
                               type: object
+                            type: array
+                          identityProviders:
+                            description: |-
+                              List of identity providers for granting access to the model.
+                              At most 1 identity provider of each identity provider type can be
+                              referenced.
+
+                              Deprecated: use `auth_strategies` instead. The two are mutually exclusive.
+                            items:
+                              description: |-
+                                AIGatewayIdentityProviderReference Reference to a identity provider instance
+                                by name.
+                              type: string
                             type: array
                         type: object
                       capabilities:

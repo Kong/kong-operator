@@ -132,7 +132,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # AI Gateway resources (all related resources regardless of API group)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "AI Gateway Resources" \
-    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.configuration.konghq.com,aigatewaymodelproviders.aiconfiguration.konghq.com,aigatewaymodels.aiconfiguration.konghq.com,aigatewaypolicies.aiconfiguration.konghq.com,aigatewayconsumers.aiconfiguration.konghq.com,aigatewayconsumercredentials.aiconfiguration.konghq.com,aigatewayconsumergroups.aiconfiguration.konghq.com,aigatewayagents.aiconfiguration.konghq.com,aigatewaymcpservers.aiconfiguration.konghq.com,aigatewayidentityproviders.aiconfiguration.konghq.com,aigatewayauthstrategies.aiconfiguration.konghq.com"
+    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.aiconfiguration.konghq.com,aigatewaymodelproviders.aiconfiguration.konghq.com,aigatewaymodels.aiconfiguration.konghq.com,aigatewaypolicies.aiconfiguration.konghq.com,aigatewayconsumers.aiconfiguration.konghq.com,aigatewayconsumercredentials.aiconfiguration.konghq.com,aigatewayconsumergroups.aiconfiguration.konghq.com,aigatewayagents.aiconfiguration.konghq.com,aigatewaymcpservers.aiconfiguration.konghq.com,aigatewayauthstrategies.aiconfiguration.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \
@@ -224,7 +224,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${DESCRIBED_FILE}"
 
-  safe_kubectl "${DESCRIBED_FILE}" describe aigatewaydataplanes.aigateway.konghq.com,konnectaigateways,aigatewaydataplanecertificates,aigatewaymodelproviders,aigatewaymodels,aigatewaypolicies,aigatewayconsumers,aigatewayconsumercredentials,aigatewayconsumergroups,aigatewayagents,aigatewaymcpservers,aigatewayidentityproviders -n "${ns}"
+  safe_kubectl "${DESCRIBED_FILE}" describe aigatewaydataplanes.aigateway.konghq.com,konnectaigateways,aigatewaydataplanecertificates,aigatewaymodelproviders,aigatewaymodels,aigatewaypolicies,aigatewayconsumers,aigatewayconsumercredentials,aigatewayconsumergroups,aigatewayagents,aigatewaymcpservers,aigatewayauthstrategies -n "${ns}"
 done
 
 # 3. Capture events in test namespaces

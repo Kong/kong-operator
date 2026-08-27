@@ -12,8 +12,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
@@ -27,9 +27,10 @@ import (
 // passes to ApplyIfChanged / MergeObjects, matching the set built in
 // modules/manager/controller_setup.go.
 var aigwCRDGroups = map[string]struct{}{
-	"aigateway.konghq.com":     {},
-	"configuration.konghq.com": {},
-	"konnect.konghq.com":       {},
+	"aigateway.konghq.com":       {},
+	"configuration.konghq.com":   {},
+	"aiconfiguration.konghq.com": {},
+	"konnect.konghq.com":         {},
 }
 
 // TestAIGatewayDataPlaneReconciler_SelectorStability is a regression test for
@@ -169,7 +170,7 @@ func setupProgrammedAIGWDP(
 	}
 	require.NoError(t, cl.Create(ctx, aigwdp))
 
-	konnectCert := &configurationv1alpha1.AIGatewayDataPlaneCertificate{}
+	konnectCert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: aigwdpName, Namespace: ns}, konnectCert))
 	}, waitTime, tickTime)
@@ -374,7 +375,7 @@ func updateAIGatewayDataPlaneCertificateStatusWithProgrammed(
 	t *testing.T,
 	ctx context.Context,
 	cl client.Client,
-	obj *configurationv1alpha1.AIGatewayDataPlaneCertificate,
+	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) {
 	t.Helper()
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {

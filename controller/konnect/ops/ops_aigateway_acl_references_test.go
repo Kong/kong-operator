@@ -49,25 +49,26 @@ func programmedModelProvider(name, namespace, konnectID string) *aiconfiguration
 	return p
 }
 
-// programmedIdentityProvider builds an AIGatewayIdentityProvider that already
-// has a Konnect ID and a Konnect name, i.e. a reference target that resolves
+// programmedAuthStrategy builds an AIGatewayAuthStrategy that already has a
+// Konnect ID and a Konnect name, i.e. a reference target that resolves
 // successfully.
-func programmedIdentityProvider(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayIdentityProvider {
-	p := &aiconfigurationv1alpha1.AIGatewayIdentityProvider{
+func programmedAuthStrategy(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayAuthStrategy {
+	s := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: aiconfigurationv1alpha1.AIGatewayIdentityProviderSpec{
-			APISpec: aiconfigurationv1alpha1.AIGatewayIdentityProviderAPISpec{
-				AIGatewayIdentityProviderConfig: &aiconfigurationv1alpha1.AIGatewayIdentityProviderConfig{
-					Type: aiconfigurationv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
-					KeyAuth: &aiconfigurationv1alpha1.AIGatewayIdentityProviderKeyAuth{
-						Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
+		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAuthStrategyAPISpec{
+				AIGatewayAuthStrategyConfig: &aiconfigurationv1alpha1.AIGatewayAuthStrategyConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayAuthStrategyConfigTypeKeyAuth,
+					KeyAuth: &aiconfigurationv1alpha1.AIGatewayAuthStrategyKeyAuth{
+						Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
+						DisplayName: konnectName,
 					},
 				},
 			},
 		},
 	}
-	p.SetKonnectID(konnectID)
-	return p
+	s.SetKonnectID(konnectID)
+	return s
 }
 
 func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *aiconfigurationv1alpha1.AIGatewayPolicy {
@@ -222,23 +223,25 @@ func TestToCreateAIGatewayAgentRequest_RejectsPolicyRefFromDifferentGateway(t *t
 	require.ErrorContains(t, err, `belongs to Gateway "gw-2", not referrer Gateway "gw-1"`)
 }
 
-// TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling verifies
+// TestToCreateAIGatewayModelRequest_PreservesAuthStrategiesSibling verifies
 // that rebuilding the referenced acls union in the model payload does not drop
-// the identity_providers sibling that lives next to acls under access, and
-// that the identity provider reference itself resolves to its Konnect name.
-func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *testing.T) {
+// the auth_strategies sibling that lives next to acls under access, and
+// that the auth strategy reference itself resolves to its Konnect name.
+func TestToCreateAIGatewayModelRequest_PreservesAuthStrategiesSibling(t *testing.T) {
 	t.Parallel()
 
 	consumerGroup := programmedConsumerGroup("consumer-group-1", "default", "konnect-consumer-group-name", "kid-consumer-group-1")
 	// testGeneratedAIGatewayModelForSDKOps's fixture targets a provider named
 	// "provider-1" in the model's own ("default") namespace.
 	provider := programmedModelProvider("provider-1", "default", "kid-provider-1")
-	identityProvider := programmedIdentityProvider("idp-1", "default", "konnect-idp-name", "kid-idp-1")
+	authStrategy := programmedAuthStrategy("auth-strategy-1", "default", "konnect-auth-strategy-name", "kid-auth-strategy-1")
 
 	model := testGeneratedAIGatewayModelForSDKOps()
 	model.Spec.APISpec.API.Access = aiconfigurationv1alpha1.AIGatewayModelAccess{
-		AuthStrategies: []aiconfigurationv1alpha1.AIGatewayAuthStrategyReference{
-			"idp-1",
+		AuthStrategies: []aiconfigurationv1alpha1.AIGatewayAuthStrategyRef{
+			{
+				Name: "auth-strategy-1",
+			},
 		},
 		Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
 			Type: aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
@@ -250,7 +253,7 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 		},
 	}
 
-	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup, provider, identityProvider).Build()
+	cl := fake.NewClientBuilder().WithScheme(aclReferencesScheme(t)).WithObjects(consumerGroup, provider, authStrategy).Build()
 
 	req, err := model.ToCreateAIGatewayModelRequest(t.Context(), cl)
 	require.NoError(t, err)
@@ -262,6 +265,6 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	assert.Equal(t, []string{"konnect-consumer-group-name"}, req.AIGatewayModelAPI.Access.Acls.AIGatewayAllowACL.Allow)
 
 	// The auth_strategies sibling survived the union rebuild, resolved to
-	// the referenced AIGatewayIdentityProvider's Konnect name.
-	assert.Equal(t, []string{"idp-1"}, req.AIGatewayModelAPI.Access.AuthStrategies)
+	// the referenced AIGatewayAuthStrategy's Konnect name.
+	assert.Equal(t, []string{"konnect-auth-strategy-name"}, req.AIGatewayModelAPI.Access.AuthStrategies)
 }

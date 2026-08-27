@@ -11,7 +11,7 @@
 # Optional bindings:
 #   - agent_access: Access-control block restricting the route, in the shape of
 #     `AIGatewayAgent.spec.apiSpec.access` (e.g. an `acls` allow-list and/or an
-#     `identityProviders` list of identity-provider names to require authentication
+#     `authStrategies` list of auth-strategy names to require authentication
 #     via). Defaults to unrestricted access (field omitted) when not set.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate

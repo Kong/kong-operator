@@ -1,14 +1,14 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
-  name: aigateway-identity-provider-keyauth
+  name: aigateway-auth-strategy-keyauth
 spec:
   description: |
-    Dedicated coverage for the key-auth AIGatewayIdentityProvider: stands up a Konnect
-    AIGateway control plane, a key-auth AIGatewayIdentityProvider, an AIGatewayConsumer +
+    Dedicated coverage for the key-auth AIGatewayAuthStrategy: stands up a Konnect
+    AIGateway control plane, a key-auth AIGatewayAuthStrategy, an AIGatewayConsumer +
     AIGatewayConsumerCredential (api-key, no consumer group/ACL involved), and an
     AIGatewayAgent route (backed by the shared go-echo backend) with unrestricted access.
-    Verifies the identity provider actually enforces authentication end-to-end against a
+    Verifies the auth strategy actually enforces authentication end-to-end against a
     real in-cluster AIGatewayDataPlane:
       1. Requests without a credential are rejected (401).
       2. Requests with a valid api-key credential succeed (200).
@@ -42,8 +42,8 @@ spec:
       value: ($namespace)
     - name: echo_deployment_replicas
       value: 1
-    - name: keyauth_idp_name
-      value: (join('-', [($test_name), 'key-auth-idp']))
+    - name: keyauth_auth_strategy_name
+      value: (join('-', [($test_name), 'key-auth-strategy']))
     - name: consumer_name
       value: (join('-', [($test_name), 'consumer']))
     - name: consumer_type
@@ -105,14 +105,14 @@ spec:
           value: ($konnect_auth_name)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
-    - name: 4-Create-keyauth-identity-provider
+    - name: 4-Create-keyauth-auth-strategy
       bindings:
-        - name: idp_name
-          value: ($keyauth_idp_name)
+        - name: auth_strategy_name
+          value: ($keyauth_auth_strategy_name)
         - name: namespace
           value: ($namespace)
       use:
-        template: ../../common/_step_templates/apply-assert-aigatewayIdentityProvider-keyauth.yaml
+        template: ../../common/_step_templates/apply-assert-aigatewayAuthStrategy-keyauth.yaml
     - name: 5-Create-consumer
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayConsumer.yaml
@@ -132,8 +132,8 @@ spec:
       bindings:
         - name: agent_access
           value:
-            identityProviders:
-              - name: ($keyauth_idp_name)
+            authStrategies:
+              - name: ($keyauth_auth_strategy_name)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayAgent-http.yaml
     - name: 9-Create-aigateway-dataplane
@@ -230,7 +230,7 @@ spec:
       script:
         env:
           - name: TEST_NAME
-            value: aigateway-identity-provider-keyauth
+            value: aigateway-auth-strategy-keyauth
           - name: NAMESPACE
             value: ($namespace)
           - name: OPERATOR_NAMESPACE

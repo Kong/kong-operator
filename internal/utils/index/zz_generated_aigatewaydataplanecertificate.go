@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForAIGatewayDataPlaneCertificate() []Option {
 	return []Option{
 		{
-			Object:         &configurationv1alpha1.AIGatewayDataPlaneCertificate{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{},
 			Field:          IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForAIGatewayDataPlaneCertificate() []Option {
 }
 
 func aiGatewayDataPlaneCertificateOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*configurationv1alpha1.AIGatewayDataPlaneCertificate)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate)
 	if !ok {
 		return nil
 	}
