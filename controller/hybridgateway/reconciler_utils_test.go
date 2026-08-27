@@ -2,6 +2,7 @@ package hybridgateway
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"maps"
@@ -53,11 +54,23 @@ func newUnstructured(ns, name string, gvk schema.GroupVersionKind, labels map[st
 	return u
 }
 
+func ownedFieldsRaw(t *testing.T, tc k8smanagedfields.TypeConverter, obj *unstructured.Unstructured) []byte {
+	t.Helper()
+	typed, err := tc.ObjectToTyped(obj)
+	require.NoError(t, err)
+	set, err := typed.ToFieldSet()
+	require.NoError(t, err)
+	raw, err := set.ToJSON()
+	require.NoError(t, err)
+	return raw
+}
+
 // hybridGatewayTestCRDManifests lists the real, repo-checked-in CRD manifests
 // for the Kong CRD kinds exercised by enforceState's tests below. Building the
 // TypeConverter from these manifests (rather than a live cluster) keeps this
 // suite fast/offline while still exercising the real CRD OpenAPI schemas.
 var hybridGatewayTestCRDManifests = []string{
+	"configuration.konghq.com_kongplugins.yaml",
 	"configuration.konghq.com_kongtargets.yaml",
 	"configuration.konghq.com_kongroutes.yaml",
 	"configuration.konghq.com_kongpluginbindings.yaml",
@@ -349,20 +362,6 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 		return u
 	}
 
-	// ownedFieldsRaw computes the FieldsV1 raw JSON that a real Server-Side
-	// Apply of obj would have recorded, by converting obj to its field set via
-	// the real, CRD-derived TypeConverter. Used to build a realistic
-	// ManagedFieldsEntry fixture for a foreign field manager.
-	ownedFieldsRaw := func(obj *unstructured.Unstructured) []byte {
-		typed, err := newTestTypeConverter().ObjectToTyped(obj)
-		require.NoError(t, err)
-		set, err := typed.ToFieldSet()
-		require.NoError(t, err)
-		raw, err := set.ToJSON()
-		require.NoError(t, err)
-		return raw
-	}
-
 	tests := []struct {
 		name            string
 		scheme          *runtime.Scheme
@@ -458,7 +457,7 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 					Operation:  metav1.ManagedFieldsOperationApply,
 					APIVersion: kongServiceGVK.GroupVersion().String(),
 					FieldsType: "FieldsV1",
-					FieldsV1:   ssa.FieldsWithRawBytes(ownedFieldsRaw(&u)),
+					FieldsV1:   ssa.FieldsWithRawBytes(ownedFieldsRaw(t, newTestTypeConverter(), &u)),
 				}})
 				return &u
 			}()},
@@ -540,6 +539,88 @@ func TestEnforceState_CoreAndErrorPaths(t *testing.T) {
 			assert.Equal(t, tt.wantWaiting, waiting)
 		})
 	}
+}
+
+func TestEnforceState_HybridGatewaysAnnotationConverges(t *testing.T) {
+	ctx := t.Context()
+	logger := logr.Discard()
+	tc := newTestTypeConverter()
+	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
+	route := gwtypes.HTTPRoute{
+		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
+		ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "ns"},
+	}
+	routeRef := client.ObjectKeyFromObject(&route).String()
+
+	makePlugin := func(gateway string) unstructured.Unstructured {
+		u := newUnstructured("ns", "shared-plugin", gvk, map[string]string{
+			consts.GatewayOperatorManagedByLabel: "HTTPRoute",
+		})
+		u.SetAnnotations(map[string]string{
+			consts.GatewayOperatorHybridGatewaysAnnotation:        gateway,
+			consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: routeRef,
+		})
+		_ = unstructured.SetNestedField(u.Object, "request-transformer", "plugin")
+		_ = unstructured.SetNestedStringSlice(u.Object, []string{"X-Test:true"}, "config", "add", "headers")
+		return u
+	}
+	existing := makePlugin("ns/gateway-a")
+	existing.SetManagedFields([]metav1.ManagedFieldsEntry{{
+		Manager:    hybridGatewayStateFieldManager,
+		Operation:  metav1.ManagedFieldsOperationApply,
+		APIVersion: gvk.GroupVersion().String(),
+		FieldsType: "FieldsV1",
+		FieldsV1:   ssa.FieldsWithRawBytes(ownedFieldsRaw(t, tc, &existing)),
+	}})
+	var appliedObject map[string]any
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithReturnManagedFields().
+		WithObjects(&existing).
+		WithInterceptorFuncs(interceptor.Funcs{
+			Apply: func(_ context.Context, _ client.WithWatch, obj runtime.ApplyConfiguration, _ ...client.ApplyOption) error {
+				raw, err := json.Marshal(obj)
+				require.NoError(t, err)
+				require.NoError(t, json.Unmarshal(raw, &appliedObject))
+				return nil
+			},
+		}).
+		Build()
+
+	desiredForGatewayB := makePlugin("ns/gateway-b")
+	conv := &fakeHTTPRouteConverter{desired: []unstructured.Unstructured{desiredForGatewayB}, root: route}
+	applied, waiting, err := enforceState(ctx, cl, tc, logger, conv)
+	require.NoError(t, err)
+	require.True(t, applied)
+	require.False(t, waiting)
+
+	appliedAnnotations, _, err := unstructured.NestedStringMap(appliedObject, "metadata", "annotations")
+	require.NoError(t, err)
+	assert.Equal(
+		t,
+		"ns/gateway-a,ns/gateway-b",
+		appliedAnnotations[consts.GatewayOperatorHybridGatewaysAnnotation],
+	)
+
+	converged := makePlugin("ns/gateway-a,ns/gateway-b")
+	converged.SetManagedFields([]metav1.ManagedFieldsEntry{{
+		Manager:    hybridGatewayStateFieldManager,
+		Operation:  metav1.ManagedFieldsOperationApply,
+		APIVersion: gvk.GroupVersion().String(),
+		FieldsType: "FieldsV1",
+		FieldsV1:   ssa.FieldsWithRawBytes(ownedFieldsRaw(t, tc, &converged)),
+	}})
+	cl = fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithReturnManagedFields().
+		WithObjects(&converged).
+		Build()
+	desiredForGatewayA := makePlugin("ns/gateway-a")
+	conv.desired = []unstructured.Unstructured{desiredForGatewayA}
+	applied, waiting, err = enforceState(ctx, cl, tc, logger, conv)
+	require.NoError(t, err)
+	assert.False(t, applied)
+	assert.False(t, waiting)
 }
 
 func TestCleanOrphanedResources(t *testing.T) {
@@ -3167,6 +3248,70 @@ func TestMergeHybridRouteAnnotation(t *testing.T) {
 				existing.SetAnnotations(tt.existingAnns)
 			}
 			mergeHybridRouteAnnotation(&desired, &existing, annotationKey, routeRef)
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
+	}
+}
+
+func TestMergeHybridGatewayAnnotation(t *testing.T) {
+	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
+	annotationKey := consts.GatewayOperatorHybridGatewaysAnnotation
+
+	tests := []struct {
+		name           string
+		existing       string
+		desired        string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing keeps desired gateway",
+			desired:        "ns/gateway-a",
+			wantAnnotation: "ns/gateway-a",
+		},
+		{
+			name:           "existing gateway is preserved",
+			existing:       "ns/gateway-a",
+			desired:        "ns/gateway-b",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "desired gateway sorts before existing",
+			existing:       "ns/gateway-b",
+			desired:        "ns/gateway-a",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "existing desired gateway is not duplicated",
+			existing:       "ns/gateway-a,ns/gateway-b",
+			desired:        "ns/gateway-b",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "all desired gateways are merged",
+			existing:       "ns/gateway-a",
+			desired:        "ns/gateway-b,ns/gateway-c",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b,ns/gateway-c",
+		},
+		{
+			name:           "desired object without gateway annotation is unchanged",
+			existing:       "ns/gateway-a",
+			wantAnnotation: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := newUnstructured("ns", "plugin", gvk, nil)
+			if tt.existing != "" {
+				existing.SetAnnotations(map[string]string{annotationKey: tt.existing})
+			}
+			desired := newUnstructured("ns", "plugin", gvk, nil)
+			if tt.desired != "" {
+				desired.SetAnnotations(map[string]string{annotationKey: tt.desired})
+			}
+
+			mergeHybridGatewayAnnotation(&desired, &existing)
+
 			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
 		})
 	}
