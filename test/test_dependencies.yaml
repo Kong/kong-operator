@@ -34,3 +34,7 @@ chainsaw:
     image: kong/kong-ai-gateway-dev
     # renovate: datasource=docker depName=kong/kong-ai-gateway-dev versioning=docker
     tag: '2.0.2-rc.3'
+  keg-dp:
+    image: kong/kong-event-gateway
+    # renovate: datasource=docker depName=kong/kong-event-gateway versioning=docker
+    tag: '1.2.1'
