@@ -2,11 +2,6 @@
 
 package v1alpha1
 
-// PersistsKonnectID reports whether AIGatewayDataPlaneCertificate persists a Konnect ID in status.
-func (*AIGatewayDataPlaneCertificate) PersistsKonnectID() bool {
-	return true
-}
-
 // PersistsKonnectID reports whether EventGatewayBackendCluster persists a Konnect ID in status.
 func (*EventGatewayBackendCluster) PersistsKonnectID() bool {
 	return true

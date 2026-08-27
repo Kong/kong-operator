@@ -20,6 +20,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -396,8 +397,8 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "aigatewaydataplanes",
 				},
 				{
-					Group:    configurationv1alpha1.SchemeGroupVersion.Group,
-					Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+					Group:    aiconfigurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  aiconfigurationv1alpha1.SchemeGroupVersion.Version,
 					Resource: "aigatewaydataplanecertificates",
 				},
 				{

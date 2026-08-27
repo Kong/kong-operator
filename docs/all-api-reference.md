@@ -25,7 +25,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 - [AIGatewayConsumer](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumer)
 - [AIGatewayConsumerCredential](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumercredential)
 - [AIGatewayConsumerGroup](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumergroup)
-- [AIGatewayIdentityProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewayidentityprovider)
+- [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
 - [AIGatewayMCPServer](#aiconfiguration-konghq-com-v1alpha1-aigatewaymcpserver)
 - [AIGatewayModel](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
@@ -106,20 +106,20 @@ AIGatewayConsumerGroup is the Schema for the aigatewayconsumergroups API.
 | `spec` _[AIGatewayConsumerGroupSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)_ |  |
 | `status` _[AIGatewayConsumerGroupStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)_ |  |
 
-### AIGatewayIdentityProvider
+### AIGatewayDataPlaneCertificate
 
 
-AIGatewayIdentityProvider is the Schema for the aigatewayidentityproviders API.
+AIGatewayDataPlaneCertificate is the Schema for the aigatewaydataplanecertificates API.
 
-<!-- ai_gateway_identity_provider description placeholder -->
+<!-- ai_gateway_data_plane_certificate description placeholder -->
 
 | Field | Description |
 | --- | --- |
 | `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
-| `kind` _string_ | `AIGatewayIdentityProvider`
+| `kind` _string_ | `AIGatewayDataPlaneCertificate`
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AIGatewayIdentityProviderSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderspec)_ |  |
-| `status` _[AIGatewayIdentityProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)_ |  |
+| `spec` _[AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)_ |  |
+| `status` _[AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)_ |  |
 
 ### AIGatewayMCPServer
 
@@ -239,8 +239,8 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `identityProviders` _[][AIGatewayIdentityProviderRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
+| `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
 _Appears in:_
 
@@ -598,6 +598,25 @@ _Appears in:_
 
 - [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
 
+#### AIGatewayAuthStrategyRef
+
+
+AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)
+- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
+
 #### AIGatewayAuthStrategyReference
 
 _Underlying type:_ `string`
@@ -610,10 +629,8 @@ name.
 
 _Appears in:_
 
-- [AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
-- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 
 
@@ -940,6 +957,56 @@ _Appears in:_
 - [AIGatewayTargetVllmConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetvllmconfig)
 - [AIGatewayTargetXaiConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetxaiconfig)
 
+#### AIGatewayDataPlaneCertificateAPISpec
+
+
+AIGatewayDataPlaneCertificateAPISpec defines the API spec fields for AIGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cert` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
+| `description` _string_ | An optional description of the certificate. |
+| `title` _string_ | A human-readable name for the certificate. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)
+
+#### AIGatewayDataPlaneCertificateSpec
+
+
+AIGatewayDataPlaneCertificateSpec defines the desired state of AIGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `apiSpec` _[AIGatewayDataPlaneCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
+
+#### AIGatewayDataPlaneCertificateStatus
+
+
+AIGatewayDataPlaneCertificateStatus defines the observed state of AIGatewayDataPlaneCertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneCertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
+
 #### AIGatewayDenyACL
 
 
@@ -1002,8 +1069,6 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
-- [AIGatewayIdentityProviderKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
-- [AIGatewayIdentityProviderOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
 - [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
 - [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
@@ -1069,249 +1134,6 @@ _Appears in:_
 - [AIGatewayEmbeddingsModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
 - [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
-#### AIGatewayIdentityProviderAPISpec
-
-
-AIGatewayIdentityProviderAPISpec defines the API spec fields for AIGatewayIdentityProvider.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderspec)
-
-#### AIGatewayIdentityProviderConfig
-
-
-AIGatewayIdentityProviderConfig represents a union type for AIGatewayIdentityProviderConfig.
-Only one of the fields should be set based on the Type.
-
-
-
-| Field | Description |
-| --- | --- |
-| `type` _[AIGatewayIdentityProviderConfigType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderconfigtype)_ | Type designates the type of configuration. |
-| `key-auth` _[AIGatewayIdentityProviderKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)_ | KeyAuth configuration. |
-| `openid-connect` _[AIGatewayIdentityProviderOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)_ | OpenIDConnect configuration. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderapispec)
-
-#### AIGatewayIdentityProviderConfigType
-
-_Underlying type:_ `string`
-
-AIGatewayIdentityProviderConfigType represents the type of AIGatewayIdentityProviderConfig.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `key-auth` |  |
-| `openid-connect` |  |
-
-#### AIGatewayIdentityProviderKeyAuth
-
-
-AIGatewayIdentityProviderKeyAuth **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an identity provider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `config` _[AIGatewayIdentityProviderKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfig)_ | Configuration for the Kong Key auth identity provider. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of properties |
-| `displayName` _string_ | The display name for this identity provider instance. |
-| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this identity provider instance, used as a stable human-readable reference. This value is immutable after creation. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
-
-#### AIGatewayIdentityProviderKeyAuthConfig
-
-
-AIGatewayIdentityProviderKeyAuthConfig Configuration for the Kong Key auth
-identity provider.
-For advanced use cases, additional config properties can be sent in the
-request body.
-See: https://developer.konghq.com/plugins/key-auth/reference/ for the list of
-properties
-
-
-
-| Field | Description |
-| --- | --- |
-| `hideCredentials` _string_ | An optional boolean value telling the plugin to show or hide the credential from the upstream service. If true, the plugin strips the credential from the request. |
-| `keyInBody` _string_ | If enabled, reads the request body. Supported MIME types: application/www-form-urlencoded, application/json, and multipart/form-data. |
-| `keyInHeader` _string_ | If enabled (default), the plugin reads the request header and tries to find the key in it. |
-| `keyInQuery` _string_ | If enabled (default), the plugin reads the query parameter in the request and tries to find the key in it. |
-| `keyNames` _[]string_ | An array of strings containing the names of the keys to look for in the request. |
-| `principals` _[AIGatewayIdentityProviderKeyAuthConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfigprincipals)_ | Authenticate against Kong Identity instead of local credentials. Mutually exclusive with identity realms. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
-
-#### AIGatewayIdentityProviderKeyAuthConfigPrincipals
-
-
-AIGatewayIdentityProviderKeyAuthConfigPrincipals Authenticate against Kong
-Identity instead of local credentials.
-Mutually exclusive with identity realms.
-
-
-
-| Field | Description |
-| --- | --- |
-| `directory` _string_ | The Kong Identity directory instance to authenticate against. |
-| `enabled` _string_ | When true, authenticate against Kong Identity instead of local credentials. |
-| `errorOnMiss` _string_ | When true (default), reject the request if no matching principal is found in Kong Identity. When false, allow the request to continue unauthenticated instead. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderKeyAuthConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauthconfig)
-
-#### AIGatewayIdentityProviderOpenIDConnect
-
-
-AIGatewayIdentityProviderOpenIDConnect **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an identity provider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `config` _[AIGatewayIdentityProviderOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)_ | Configuration for the OpenID Connect identity provider. For advanced use cases, additional config properties can be sent in the request body. See: https://developer.konghq.com/plugins/openid-connect/reference/ for the list of properties |
-| `displayName` _string_ | The display name for this identity provider instance. |
-| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
-| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this identity provider instance, used as a stable human-readable reference. This value is immutable after creation. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderconfig)
-
-#### AIGatewayIdentityProviderOpenIDConnectConfig
-
-
-AIGatewayIdentityProviderOpenIDConnectConfig Configuration for the OpenID
-Connect identity provider.
-For advanced use cases, additional config properties can be sent in the
-request body.
-See: https://developer.konghq.com/plugins/openid-connect/reference/ for the
-list of properties
-
-
-
-| Field | Description |
-| --- | --- |
-| `audienceRequired` _[]string_ | Audiences required in the access token or introspection response. |
-| `authMethods` _[]string_ | Types of credentials/grants to enable. |
-| `cacheIntrospection` _string_ | Cache introspection endpoint requests. |
-| `cacheTokensSalt` _string_ | Salt used for generating the cache key that is used for caching the token endpoint requests. |
-| `clientAlg` _[]string_ | Algorithm to use for `client_secret_jwt` or `private_key_jwt` authentication. |
-| `clientAuth` _[]string_ | Client authentication methods used with the identity provider. |
-| `clientID` _[]string_ | An array of strings representing the client id for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
-| `clientSecret` _[][SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | An array of strings representing the client secret for the OpenID Connect provider. When multiple values are provided, the client ID and secrets pairs correspond based on their locations in the array. |
-| `consumerBy` _[]string_ | Consumer fields used when mapping a token claim to a Kong consumer. |
-| `consumerClaims` _[]string_ | An array containing an array of string paths representing the location of the claim in a nested object. For example, to map to user.info.id, set [ "user", "info", "id" ]. |
-| `consumerGroupsClaim` _[]string_ | The claim used for consumer groups mapping. If multiple values are set, it means the claim is inside a nested object of the token payload. |
-| `consumerGroupsOptional` _string_ | Do not terminate the request if consumer groups mapping fails. |
-| `consumerOptional` _string_ | Do not terminate the request if consumer mapping fails. |
-| `credentialClaim` _[]string_ | Claim path used to derive virtual credentials when consumer mapping is not used. |
-| `hideCredentials` _string_ | Remove credentials used for authentication before proxying the request upstream. |
-| `httpProxy` _string_ | HTTP proxy used for identity provider requests. |
-| `httpProxyAuthorization` _string_ | Authorization header value sent to the HTTP proxy. |
-| `httpVersion` _float64_ | HTTP version used for identity provider requests. |
-| `httpsProxy` _string_ | HTTPS proxy used for identity provider requests. |
-| `httpsProxyAuthorization` _string_ | Authorization header value sent to the HTTPS proxy. |
-| `introspectionEndpoint` _string_ | Overrides the introspection endpoint returned by discovery. |
-| `issuer` _string_ | URL that identifies the OpenID Provider |
-| `jwksEndpoint` _string_ | Overrides the JWKS endpoint returned by discovery. |
-| `keepalive` _string_ | Reuse HTTP client connections for identity provider requests. |
-| `leeway` _int_ | Leeway, in seconds, for validating token time claims. |
-| `mtlsIntrospectionEndpoint` _string_ | mTLS alias for the introspection endpoint. |
-| `noProxy` _string_ | Comma-separated hosts that bypass the configured proxies. |
-| `principals` _[AIGatewayIdentityProviderOpenIDConnectConfigPrincipals](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfigprincipals)_ | Map a request to a Kong Identity principal after token verification. |
-| `scopes` _[]string_ | This field is referenceable. |
-| `sslVerify` _string_ |  |
-| `timeout` _int_ | Network I/O timeout, in milliseconds, for identity provider requests. |
-| `upstreamHeaders` _[][AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfigupstreamheaders)_ | Map token claims to upstream headers using path-based access. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
-
-#### AIGatewayIdentityProviderOpenIDConnectConfigPrincipals
-
-
-AIGatewayIdentityProviderOpenIDConnectConfigPrincipals Map a request to a
-Kong Identity principal after token verification.
-
-
-
-| Field | Description |
-| --- | --- |
-| `directory` _string_ | The Kong Identity directory instance to look up against. |
-| `enabled` _string_ | When true, look up a Kong Identity principal after token verification. |
-| `errorOnMiss` _string_ | When true (default), reject the request if no principal is matched in Kong Identity after token verification. When false, the request continues without an authenticated principal set. |
-| `matchConsumer` _string_ | If a consumer is attached to the matched principal, load it and set it in the request context, overriding consumer_by. |
-| `matchConsumerGroups` _string_ | If consumer groups are attached to the matched principal, load them, overriding consumer_groups_claim. |
-| `principalBy` _string_ | Custom identity name for a custom Kong Identity lookup. When absent and principal_claim is set, a lookup is performed using principal_claim as the claim name instead of the default sub claim. |
-| `principalClaim` _[]string_ | Token claim used for the Kong Identity lookup. If multiple values are set, the claim is inside a nested object of the token payload. Used together with, or instead of, principal_by. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
-
-#### AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders
-
-
-AIGatewayIdentityProviderOpenIDConnectConfigUpstreamHeaders Map token claims
-to upstream headers using path-based access.
-
-
-
-| Field | Description |
-| --- | --- |
-| `header` _string_ | The name of the header. |
-| `path` _[]string_ | The path of the header value. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProviderOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
-
-#### AIGatewayIdentityProviderRef
-
-
-AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
-object's Konnect name is used where the Konnect API accepts it.
-
-
-
-| Field | Description |
-| --- | --- |
-| `kind` _string_ | Kind is the kind of the referenced object. |
-| `name` _string_ | Name is the name of the referenced object. |
-| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
-
-_Appears in:_
-
-- [AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)
-- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
-
 #### AIGatewayIdentityProviderReference
 
 _Underlying type:_ `string`
@@ -1324,43 +1146,10 @@ by name.
 
 _Appears in:_
 
+- [AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
-
-
-
-#### AIGatewayIdentityProviderSpec
-
-
-AIGatewayIdentityProviderSpec defines the desired state of AIGatewayIdentityProvider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
-| `apiSpec` _[AIGatewayIdentityProviderAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-
-_Appears in:_
-
-- [AIGatewayIdentityProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewayidentityprovider)
-
-#### AIGatewayIdentityProviderStatus
-
-
-AIGatewayIdentityProviderStatus defines the observed state of AIGatewayIdentityProvider.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
-| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
-
-_Appears in:_
-
-- [AIGatewayIdentityProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewayidentityprovider)
+- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
 
 #### AIGatewayLoggingConfig
 
@@ -2704,8 +2493,8 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
-| `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `identityProviders` _[][AIGatewayIdentityProviderRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderref)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
+| `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
 _Appears in:_
 
@@ -6127,7 +5916,7 @@ _Appears in:_
 - [AIGatewayConsumerCredentialStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialstatus)
 - [AIGatewayConsumerGroupStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)
 - [AIGatewayConsumerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
-- [AIGatewayIdentityProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderstatus)
+- [AIGatewayDataPlaneCertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)
 - [AIGatewayMCPServerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverstatus)
 - [AIGatewayModelProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelstatus)
@@ -6153,8 +5942,6 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
-- [AIGatewayIdentityProviderKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
-- [AIGatewayIdentityProviderOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
 - [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
 - [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
@@ -6215,8 +6002,6 @@ _Appears in:_
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
-- [AIGatewayIdentityProviderKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderkeyauth)
-- [AIGatewayIdentityProviderOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnect)
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
 - [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
 - [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
@@ -6297,7 +6082,7 @@ _Appears in:_
 
 - [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
-- [AIGatewayIdentityProviderOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityprovideropenidconnectconfig)
+- [AIGatewayDataPlaneCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)
 - [AIGatewayModelProviderConfigAuthAWS](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthaws)
 - [AIGatewayModelProviderConfigAuthAzure](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthazure)
 - [AIGatewayModelProviderConfigAuthBasicHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasicheaders)
@@ -6911,7 +6696,6 @@ _Appears in:_
 
 Package v1alpha1 contains API Schema definitions for the configuration.konghq.com v1alpha1 API group.
 
-- [AIGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
 - [EventGatewayBackendCluster](#configuration-konghq-com-v1alpha1-eventgatewaybackendcluster)
 - [EventGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-eventgatewaydataplanecertificate)
 - [EventGatewayListener](#configuration-konghq-com-v1alpha1-eventgatewaylistener)
@@ -6942,21 +6726,6 @@ Package v1alpha1 contains API Schema definitions for the configuration.konghq.co
 - [KongTarget](#configuration-konghq-com-v1alpha1-kongtarget)
 - [KongUpstream](#configuration-konghq-com-v1alpha1-kongupstream)
 - [KongVault](#configuration-konghq-com-v1alpha1-kongvault)
-
-### AIGatewayDataPlaneCertificate
-
-
-AIGatewayDataPlaneCertificate is the Schema for the aigatewaydataplanecertificates API.
-
-<!-- ai_gateway_data_plane_certificate description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `configuration.konghq.com/v1alpha1`
-| `kind` _string_ | `AIGatewayDataPlaneCertificate`
-| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[AIGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)_ |  |
-| `status` _[AIGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)_ |  |
 
 ### EventGatewayBackendCluster
 
@@ -7418,56 +7187,6 @@ See: https://docs.konghq.com/gateway/latest/kong-enterprise/secrets-management/
 ### Types
 
 In this section you will find types that the CRDs rely on.
-#### AIGatewayDataPlaneCertificateAPISpec
-
-
-AIGatewayDataPlaneCertificateAPISpec defines the API spec fields for AIGatewayDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `cert` _[SensitiveDataSource](#configuration-konghq-com-v1alpha1-types-sensitivedatasource)_ | JSON escaped string of the certificate. |
-| `description` _string_ | An optional description of the certificate. |
-| `title` _string_ | A human-readable name for the certificate. |
-
-_Appears in:_
-
-- [AIGatewayDataPlaneCertificateSpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)
-
-#### AIGatewayDataPlaneCertificateSpec
-
-
-AIGatewayDataPlaneCertificateSpec defines the desired state of AIGatewayDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
-| `apiSpec` _[AIGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
-
-_Appears in:_
-
-- [AIGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
-
-#### AIGatewayDataPlaneCertificateStatus
-
-
-AIGatewayDataPlaneCertificateStatus defines the observed state of AIGatewayDataPlaneCertificate.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
-| `gatewayID` _[KonnectEntityRef](#configuration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
-| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
-
-_Appears in:_
-
-- [AIGatewayDataPlaneCertificate](#configuration-konghq-com-v1alpha1-aigatewaydataplanecertificate)
-
 #### BackendClusterAuthenticationAnonymous
 
 
@@ -11104,7 +10823,6 @@ KonnectEntityRef is a reference to a Konnect entity.
 
 _Appears in:_
 
-- [AIGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatestatus)
 - [EventGatewayBackendClusterStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaybackendclusterstatus)
 - [EventGatewayDataPlaneCertificateStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificatestatus)
 - [EventGatewayListenerPolicyStatus](#configuration-konghq-com-v1alpha1-types-eventgatewaylistenerpolicystatus)
@@ -11514,7 +11232,6 @@ either inline or sourced from a Kubernetes Secret.
 
 _Appears in:_
 
-- [AIGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)
 - [BackendClusterTLSClientIdentity](#configuration-konghq-com-v1alpha1-types-backendclustertlsclientidentity)
 - [EventGatewayDataPlaneCertificateAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewaydataplanecertificateapispec)
 - [SchemaRegistryAuthenticationBasic](#configuration-konghq-com-v1alpha1-types-schemaregistryauthenticationbasic)

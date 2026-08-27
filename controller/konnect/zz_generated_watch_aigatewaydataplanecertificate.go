@@ -11,6 +11,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -23,7 +24,7 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&configurationv1alpha1.AIGatewayDataPlaneCertificate{})
+			return b.For(&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -37,7 +38,7 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[configurationv1alpha1.AIGatewayDataPlaneCertificateList](cl),
+					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList](cl),
 				),
 			)
 		},
@@ -45,7 +46,7 @@ func AIGatewayDataPlaneCertificateReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[configurationv1alpha1.AIGatewayDataPlaneCertificateList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList](cl),
 				),
 			)
 		},
@@ -60,7 +61,7 @@ func enqueueAIGatewayDataPlaneCertificateForKonnectAIGateway(
 		if !ok {
 			return nil
 		}
-		var l configurationv1alpha1.AIGatewayDataPlaneCertificateList
+		var l aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayDataPlaneCertificateOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {

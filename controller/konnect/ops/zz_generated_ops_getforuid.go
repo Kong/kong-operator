@@ -52,10 +52,8 @@ func getForUID[
 		return getAIGatewayConsumerCredentialForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return getAIGatewayConsumerGroupForUID(ctx, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return getAIGatewayDataPlaneCertificateForUID(ctx, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
-	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
-		return getAIGatewayIdentityProviderForUID(ctx, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return getAIGatewayMCPServerForUID(ctx, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

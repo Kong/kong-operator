@@ -16,8 +16,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayConsumer |
 		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
 		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
-		configurationv1alpha1.AIGatewayDataPlaneCertificate |
-		aiconfigurationv1alpha1.AIGatewayIdentityProvider |
+		aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate |
 		aiconfigurationv1alpha1.AIGatewayMCPServer |
 		aiconfigurationv1alpha1.AIGatewayModel |
 		aiconfigurationv1alpha1.AIGatewayModelProvider |

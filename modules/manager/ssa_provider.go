@@ -35,10 +35,11 @@ func IsSSAProviderNeeded(cfg Config) bool {
 // konnect.konghq.com for their server-side apply schema, both already present
 // below.
 var ssaCRDGroups = map[string]struct{}{
-	"eventgateway.konghq.com":  {},
-	"aigateway.konghq.com":     {},
-	"configuration.konghq.com": {},
-	"konnect.konghq.com":       {},
+	"eventgateway.konghq.com":    {},
+	"aigateway.konghq.com":       {},
+	"configuration.konghq.com":   {},
+	"aiconfiguration.konghq.com": {},
+	"konnect.konghq.com":         {},
 }
 
 // buildSSAProvider constructs and builds the shared SSA TypeConverterProvider.

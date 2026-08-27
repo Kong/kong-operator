@@ -37,7 +37,6 @@ spec:
             failureThreshold: 90
           resources:
             requests: { cpu: "500m", memory: "1Gi" }
-            limits: { memory: "2Gi" }
 ---
 apiVersion: v1
 kind: Service

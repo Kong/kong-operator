@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func testGeneratedAIGatewayDataPlaneCertificateForSDKOps() *configurationv1alpha1.AIGatewayDataPlaneCertificate {
-	return &configurationv1alpha1.AIGatewayDataPlaneCertificate{
+func testGeneratedAIGatewayDataPlaneCertificateForSDKOps() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayDataPlaneCertificate",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,9 +29,9 @@ func testGeneratedAIGatewayDataPlaneCertificateForSDKOps() *configurationv1alpha
 			UID:        "aigatewaydataplanecertificate-uid",
 			Generation: 3,
 		},
-		Spec: configurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-			APISpec: configurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
-				Cert:        configurationv1alpha1.SensitiveDataSource{Type: configurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
+		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+				Cert:        aiconfigurationv1alpha1.SensitiveDataSource{Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
 				Description: "test-value",
 				Title:       "test-value",
 			},

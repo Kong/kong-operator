@@ -1,9 +1,9 @@
-# Template for creating and asserting an AIGatewayIdentityProvider of type openid-connect,
+# Template for creating and asserting an AIGatewayAuthStrategy of type openid-connect,
 # including the Secret backing its secretRef'd clientSecret.
 #
 # Required bindings:
-#   - idp_name: Name of the AIGatewayIdentityProvider to create (also used as apiSpec name).
-#   - namespace: Namespace where the AIGatewayIdentityProvider and Secret will be created.
+#   - auth_strategy_name: Name of the AIGatewayAuthStrategy to create (also used as apiSpec name).
+#   - namespace: Namespace where the AIGatewayAuthStrategy and Secret will be created.
 #   - aigw_cp_name: Name of the KonnectAIGateway it attaches to (same namespace).
 #   - issuer: OpenID Connect discovery endpoint URL (config.issuer).
 #   - client_id: OAuth2 client_id (config.clientID[0]).
@@ -24,7 +24,7 @@
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
-  name: apply-assert-aigateway-identityprovider-openid-connect
+  name: apply-assert-aigateway-authstrategy-openid-connect
 spec:
   try:
     - apply:
@@ -42,9 +42,9 @@ spec:
     - apply:
         resource:
           apiVersion: aiconfiguration.konghq.com/v1alpha1
-          kind: AIGatewayIdentityProvider
+          kind: AIGatewayAuthStrategy
           metadata:
-            name: ($idp_name)
+            name: ($auth_strategy_name)
             namespace: ($namespace)
           spec:
             aiGatewayRef:
@@ -54,8 +54,8 @@ spec:
             apiSpec:
               type: openid-connect
               openid-connect:
-                name: ($idp_name)
-                displayName: ($idp_name)
+                name: ($auth_strategy_name)
+                displayName: ($auth_strategy_name)
                 config:
                   issuer: ($issuer)
                   cacheTokensSalt: ($cache_tokens_salt)
@@ -73,9 +73,9 @@ spec:
     - assert:
         resource:
           apiVersion: aiconfiguration.konghq.com/v1alpha1
-          kind: AIGatewayIdentityProvider
+          kind: AIGatewayAuthStrategy
           metadata:
-            name: ($idp_name)
+            name: ($auth_strategy_name)
             namespace: ($namespace)
           status:
             (conditions[?type == 'Programmed']):

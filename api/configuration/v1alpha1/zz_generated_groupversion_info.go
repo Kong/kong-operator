@@ -9,8 +9,6 @@ import (
 
 func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
-		&AIGatewayDataPlaneCertificate{},
-		&AIGatewayDataPlaneCertificateList{},
 		&EventGatewayBackendCluster{},
 		&EventGatewayBackendClusterList{},
 		&EventGatewayDataPlaneCertificate{},

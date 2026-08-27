@@ -11,25 +11,28 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
-       # TODO: to be replaced with Auth Strategies
-      - path: /v1/ai-gateways/{gatewayId}/identity
-        name: AIGatewayIdentityProvider
+      # AI Gateway APIs
+      - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
+        name: AIGatewayDataPlaneCertificate
         secretReferences:
-          - path: spec.apiSpec.openid-connect.config.clientSecret
+          - path: spec.apiSpec.cert
             type: Secret
         ops:
           sdk:
-            interface: github.com/Kong/sdk-konnect-go.AIGatewayIdentityProvidersSDK
-            fieldName: AIGatewayIdentityProviders
-          # TODO: this entity's union variants declare labels/tags/name; enable
-          # root-union metadata detection (drop this toggle, add a getForUID
-          # match strategy) once create/update label injection has been
-          # reviewed for this entity.
-          skipRootUnionMetadataFields: true
+          # AIGatewayDataPlaneClientCertificate is named struct in SDK
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
+            fieldName: AIGatewayDataPlaneCertificates
+          requireClient: true
+          getForUID:
+            matchFields:
+              - objectField: Spec.APISpec.Cert
+                responseField: Cert
+              - objectField: Spec.APISpec.Title
+                responseField: Title
+              - objectField: Spec.APISpec.Description
+                responseField: Description
           create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayIdentityProviderRequest
-          update:
-            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayIdentityProviderRequest
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDataPlaneCertificateRequest
           delete: {}
         reconciler:
           parentEntityGVK:
@@ -103,13 +106,13 @@ apiGroupVersions:
             kinds: [AIGatewayModelProvider]
             refTypeName: AIGatewayModelProviderRef
             resolvesTo: name
-          - path: spec.apiSpec.api.access.identityProviders
-            kinds: [AIGatewayIdentityProvider]
-            refTypeName: AIGatewayIdentityProviderRef
+          - path: spec.apiSpec.api.access.authStrategies
+            kinds: [AIGatewayAuthStrategy]
+            refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
-          - path: spec.apiSpec.model.access.identityProviders
-            kinds: [AIGatewayIdentityProvider]
-            refTypeName: AIGatewayIdentityProviderRef
+          - path: spec.apiSpec.model.access.authStrategies
+            kinds: [AIGatewayAuthStrategy]
+            refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
         ops:
           sdk:
@@ -196,9 +199,9 @@ apiGroupVersions:
             refTypeName: AIGatewayACLRef
             resolvesTo: name
             supportCrossNamespaceReference: true
-          - path: spec.apiSpec.access.identityProviders
-            kinds: [AIGatewayIdentityProvider]
-            refTypeName: AIGatewayIdentityProviderRef
+          - path: spec.apiSpec.access.authStrategies
+            kinds: [AIGatewayAuthStrategy]
+            refTypeName: AIGatewayAuthStrategyRef
             resolvesTo: name
         ops:
           sdk:
@@ -387,36 +390,6 @@ apiGroupVersions:
           path: github.com/kong/kong-operator/v2/api/common/v1alpha1
           alias: commonv1alpha1
     types:
-      # AI Gateway APIs
-      - path: /v1/ai-gateways/{gatewayId}/data-plane-certificates
-        name: AIGatewayDataPlaneCertificate
-        secretReferences:
-          - path: spec.apiSpec.cert
-            type: Secret
-        ops:
-          sdk:
-          # AIGatewayDataPlaneClientCertificate is named struct in SDK
-            interface: github.com/Kong/sdk-konnect-go.AIGatewayDataPlaneCertificatesSDK
-            fieldName: AIGatewayDataPlaneCertificates
-          requireClient: true
-          getForUID:
-            matchFields:
-              - objectField: Spec.APISpec.Cert
-                responseField: Cert
-              - objectField: Spec.APISpec.Title
-                responseField: Title
-              - objectField: Spec.APISpec.Description
-                responseField: Description
-          create:
-            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayDataPlaneCertificateRequest
-          delete: {}
-        reconciler:
-          parentEntityGVK:
-            kind: KonnectAIGateway
-            group: konnect.konghq.com
-          parentRef:
-            fieldName: aiGatewayRef
-
       # Event Gateway APIs
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate

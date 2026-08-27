@@ -64,7 +64,7 @@ spec:
                   {
                     "ClientId": "aigateway-oidc-client",
                     "ClientSecrets": ["aigateway-oidc-client-secret", "aigateway-oidc-client-secret-2"],
-                    "Description": "Client credentials client for AIGatewayIdentityProvider openid-connect e2e coverage",
+                    "Description": "Client credentials client for AIGatewayAuthStrategy openid-connect e2e coverage",
                     "AllowedGrantTypes": ["client_credentials"],
                     "AllowedScopes": ["aigateway-scope"],
                     "ClientClaimsPrefix": ""

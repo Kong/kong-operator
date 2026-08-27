@@ -39,10 +39,10 @@ type: Opaque
 data:
   token: QmVhcmVyIHNrLXh4eHh4eHh4eHh4eHh4eHh4eHh4
 ---
-kind: AIGatewayIdentityProvider
+kind: AIGatewayAuthStrategy
 apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
-  name: ai-gw-model-identity-provider
+  name: ai-gw-model-auth-strategy
   namespace: default
 spec:
   aiGatewayRef:
@@ -53,7 +53,7 @@ spec:
     type: key-auth
     key-auth:
       name: model-key-auth-provider
-      displayName: Model Key Auth Identity Provider
+      displayName: Model Key Auth
       config:
         hideCredentials: Enabled
 ---
@@ -149,12 +149,12 @@ spec:
             allow:
               - kind: AIGatewayConsumerGroup
                 name: ai-gw-model-consumer-group
-        # References to AIGatewayIdentityProvider CRs (by metadata.name). The
+        # References to AIGatewayAuthStrategy CRs (by metadata.name). The
         # operator resolves each reference to the referenced CR's Konnect name
-        # at reconcile time. At most 1 identity provider of each type can be
+        # at reconcile time. At most 1 auth strategy of each type can be
         # referenced.
-        identityProviders:
-          - name: ai-gw-model-identity-provider
+        authStrategies:
+          - name: ai-gw-model-auth-strategy
       config:
         route:
           paths:
