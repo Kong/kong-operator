@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.2.4](#v224)
 - [v2.2.3](#v223)
 - [v2.2.2](#v222)
 - [v2.2.1](#v221)
@@ -53,7 +54,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.2.4]
+
+> Relaese date: 2026-08-27
 
 ### Fixes
 
@@ -61,28 +64,29 @@
   `KongReferenceGrant` no longer get stuck during deletion when that grant is
   removed first. The grant is now enforced only while the entity is not being
   deleted, allowing its Konnect counterpart and cleanup finalizer to be removed.
-  [#5229](https://github.com/Kong/kong-operator/pull/5229)
+  [#5229](https://github.com/Kong/kong-operator/pull/5229) [#5232](https://github.com/Kong/kong-operator/pull/5232)
 - DataPlaneMetricsExtension: the reconciler now returns an error (and gets
   requeued with backoff) when it fails to create, update or delete the
   Prometheus `KongPlugin` for a Service, instead of logging and giving up.
   Previously a single transient failure (e.g. a rejected admission webhook
   call) left the Service without its `konghq.com/plugins` annotation
   indefinitely, since nothing else would trigger another reconcile.
-  [#5210](https://github.com/Kong/kong-operator/pull/5210)
+  [#5210](https://github.com/Kong/kong-operator/pull/5210) [#5217](https://github.com/Kong/kong-operator/pull/5217)
 - Dataplane: Fixed the method to compare whether dataplane options are deep
   equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
   in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
-  [#5003](https://github.com/Kong/kong-operator/pull/5003)
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5104](https://github.com/Kong/kong-operator/pull/5104)
 - Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
   to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
   tags in `KongPlugin`s' annotation to plugins in Konnect.
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
+  [#5334](https://github.com/Kong/kong-operator/pull/5334)
 - Konnect entities: Fix truncating of tags to cut at 128 unicode runes
   (UTF8 code points).
-  [#5306](https://github.com/Kong/kong-operator/pull/5306)
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5370](https://github.com/Kong/kong-operator/pull/5370)
 
 ## [v2.2.3]
 
@@ -2420,6 +2424,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
