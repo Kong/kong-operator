@@ -1,0 +1,62 @@
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha2
+metadata:
+  name: cp-test1
+  namespace: default
+spec:
+  createControlPlaneRequest:
+    name: test1
+    labels:
+      app: test1
+      key1: test1
+    description: "An API Gateway for testing"
+  konnect:
+    authRef:
+      name: konnect-api-auth
+---
+kind: MCPServer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: mcpserver1
+  namespace: default
+spec:
+  source: Mirror
+  mirror:
+    konnect:
+      id: 045cf9df-0000-0000-0000-000000000000
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: cp-test1
+---
+kind: MCPServerDataPlane
+apiVersion: mcp.konghq.com/v1alpha1
+metadata:
+  name: mcpserver1
+  namespace: default
+spec:
+  mcpServerRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: mcpserver1
+  deployment:
+    replicas: 2
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: mcp-server
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
+        - name: init-mcp-server
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "50m"
+            limits:
+              memory: "128Mi"
+              cpu: "100m"

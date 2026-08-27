@@ -17,6 +17,17 @@ func GetPodContainerByName(podSpec *corev1.PodSpec, name string) *corev1.Contain
 	return nil
 }
 
+// GetInitContainerByName takes a PodSpec reference and a string and returns a reference to the init container in the PodSpec
+// with that name, if any exists.
+func GetInitContainerByName(podSpec *corev1.PodSpec, name string) *corev1.Container {
+	for i, container := range podSpec.InitContainers {
+		if container.Name == name {
+			return &podSpec.InitContainers[i]
+		}
+	}
+	return nil
+}
+
 // SetPodContainer appends a container to the list of containers if it does not exists,
 // or it overwrites the existing container, in case it exists.
 func SetPodContainer(podSpec *corev1.PodSpec, container *corev1.Container) {

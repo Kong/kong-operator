@@ -63,17 +63,52 @@ _Appears in:_
 
 - [MCPServerRef](#mcp-konghq-com-v1alpha1-types-mcpserverref)
 
+#### MCPServerDataPlaneContainer
+
+
+MCPServerDataPlaneContainer describes a single container that
+you want to run within a pod, exposes fields supported by the
+MCPServerDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name of the container. Must match the name of a container in the Pod managed by the MCPServerDataPlane controller (e.g. "mcp-server"). |
+| `resources` _[ResourceRequirements](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#resourcerequirements-v1-core)_ | Resources specifies the compute resource requirements for the container. |
+
+_Appears in:_
+
+- [MCPServerDataPlanePodSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodspec)
+
+#### MCPServerDataPlanePodSpec
+
+
+MCPServerDataPlanePodSpec describes the data a pod should have when created from a template.
+
+
+
+| Field | Description |
+| --- | --- |
+| `containers` _[][MCPServerDataPlaneContainer](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanecontainer)_ | List of containers belonging to the pod to patch. A container is patched by name. |
+
+_Appears in:_
+
+- [MCPServerDataPlanePodTemplateSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespec)
+
 #### MCPServerDataPlanePodTemplateSpec
 
 
-MCPServerDataPlanePodTemplateSpec defines the pod template spec for the
-Deployment managed by the MCPServerDataPlane controller.
+MCPServerDataPlanePodTemplateSpec specifies available options for the Deployments
+(similarly as in the Kubernetes resource "Deployment") which are created and managed
+for the MCPServerDataPlane resource.
 
 
 
 | Field | Description |
 | --- | --- |
 | `metadata` _[MCPServerDataPlanePodTemplateSpecMetadata](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespecmetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[MCPServerDataPlanePodSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodspec)_ | Specification of the desired behavior of the pod. |
 
 _Appears in:_
 

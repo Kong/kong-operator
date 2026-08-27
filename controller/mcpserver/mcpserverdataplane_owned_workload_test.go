@@ -10,6 +10,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -448,6 +449,66 @@ func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
 	// The Pod template must be unaffected by Deployment-level labels/annotations.
 	assert.NotContains(t, deploy.Spec.Template.Labels, "team")
 	assert.NotContains(t, deploy.Spec.Template.Annotations, "team-contact")
+}
+
+func Test_generateDeployment_ContainerResources(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	mcpDataPlane.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+		PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+			Spec: mcpv1alpha1.MCPServerDataPlanePodSpec{
+				Containers: []mcpv1alpha1.MCPServerDataPlaneContainer{
+					{
+						Name: consts.MCPServerDataPlaneContainerName,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("250m"),
+								corev1.ResourceMemory: resource.MustParse("256Mi"),
+							},
+							Limits: corev1.ResourceList{
+								corev1.ResourceCPU:    resource.MustParse("2"),
+								corev1.ResourceMemory: resource.MustParse("1Gi"),
+							},
+						},
+					},
+					{
+						Name: consts.MCPServerDataPlaneInitContainerName,
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("50m"),
+							},
+						},
+					},
+					{
+						// A name that doesn't match any container the operator manages must be ignored.
+						Name: "does-not-exist",
+						Resources: corev1.ResourceRequirements{
+							Requests: corev1.ResourceList{
+								corev1.ResourceCPU: resource.MustParse("1"),
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+	apiAuth := minimalAPIAuth()
+	metadata := mcpServerMetadataWithContainers()
+
+	tokenSecret := tokenSecret(mcpDataPlane)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	mainContainer := deploy.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, resource.MustParse("250m"), mainContainer.Resources.Requests[corev1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("256Mi"), mainContainer.Resources.Requests[corev1.ResourceMemory])
+	assert.Equal(t, resource.MustParse("2"), mainContainer.Resources.Limits[corev1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("1Gi"), mainContainer.Resources.Limits[corev1.ResourceMemory])
+
+	require.Len(t, deploy.Spec.Template.Spec.InitContainers, 1)
+	initContainer := deploy.Spec.Template.Spec.InitContainers[0]
+	assert.Equal(t, resource.MustParse("50m"), initContainer.Resources.Requests[corev1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("500m"), initContainer.Resources.Limits[corev1.ResourceCPU])
+	assert.Equal(t, resource.MustParse("256Mi"), initContainer.Resources.Limits[corev1.ResourceMemory])
 }
 
 func Test_generateDeployment_PodTemplateLabelsAndAnnotations(t *testing.T) {
