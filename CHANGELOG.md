@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.0.12](#v2012)
 - [v2.0.11](#v2011)
 - [v2.0.10](#v2010)
 - [v2.0.9](#v209)
@@ -41,19 +42,21 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.0.12]
+
+> Release date: 2026-08-27
 
 ### Fixes
 
 - Konnect entities: Fix truncating of tags to cut at 128 unicode runes
   (UTF8 code points).
-  [#5306](https://github.com/Kong/kong-operator/pull/5306)
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5372](https://github.com/Kong/kong-operator/pull/5372)
 - Dataplane: Fixed the method to compare whether dataplane options are deep
   equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
   in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
-  [#5003](https://github.com/Kong/kong-operator/pull/5003
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5373](https://github.com/Kong/kong-operator/pull/5373)
 
 ## [v2.0.11]
 
@@ -1491,6 +1494,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.0.12]: https://github.com/Kong/kong-operator/compare/v2.0.12..v2.0.11
 [v2.0.11]: https://github.com/Kong/kong-operator/compare/v2.0.11..v2.0.10
 [v2.0.10]: https://github.com/Kong/kong-operator/compare/v2.0.10..v2.0.9
 [v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.8
