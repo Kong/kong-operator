@@ -130,6 +130,11 @@
 
 ### Fixes
 
+- HybridGateway: shared Kong resources now converge when referenced by Routes
+  attached to multiple Gateways, and SSA no-op detection correctly handles
+  preserve-unknown fields. This prevents repeated apply loops from blocking
+  stale resource cleanup after workload rollouts.
+  [#5410](https://github.com/Kong/kong-operator/pull/5410)
 - Konnect entities whose cross-namespace `controlPlaneRef` was permitted by a
   `KongReferenceGrant` no longer get stuck during deletion when that grant is
   removed first. The grant is now enforced only while the entity is not being

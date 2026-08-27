@@ -3275,6 +3275,12 @@ func TestMergeHybridGatewayAnnotation(t *testing.T) {
 			wantAnnotation: "ns/gateway-a,ns/gateway-b",
 		},
 		{
+			name:           "desired gateway sorts before existing",
+			existing:       "ns/gateway-b",
+			desired:        "ns/gateway-a",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
 			name:           "existing desired gateway is not duplicated",
 			existing:       "ns/gateway-a,ns/gateway-b",
 			desired:        "ns/gateway-b",

@@ -405,7 +405,10 @@ func mergeHybridRouteAnnotation(desired, existing *unstructured.Unstructured, an
 // a shared resource and adds the Gateway references from the desired object.
 // Different Routes can generate the same Kong resource for different Gateways,
 // so replacing this annotation would cause their reconciles to overwrite each
-// other indefinitely.
+// other indefinitely. Route-kind controllers can still read and apply the same
+// stale value concurrently, so this is eventually rather than atomically
+// convergent: each successful apply requeues and restores the union on a
+// subsequent reconciliation.
 func mergeHybridGatewayAnnotation(desired, existing *unstructured.Unstructured) {
 	desiredAnnotations := desired.GetAnnotations()
 	if len(desiredAnnotations) == 0 {
