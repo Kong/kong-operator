@@ -13,6 +13,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -119,9 +120,9 @@ func setAIGatewayConsumerGroupRefsValidCondition(obj *aiconfigurationv1alpha1.AI
 		}
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
+				commonv1alpha1.ConsumerGroupRefsValidConditionType,
 				metav1.ConditionFalse,
-				aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsReasonInvalid,
+				commonv1alpha1.ConsumerGroupRefsReasonInvalid,
 				fmt.Sprintf("Invalid AIGatewayConsumerGroup references: %s", strings.Join(reasons, ", ")),
 				obj.GetGeneration(),
 			),
@@ -131,9 +132,9 @@ func setAIGatewayConsumerGroupRefsValidCondition(obj *aiconfigurationv1alpha1.AI
 	}
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
+			commonv1alpha1.ConsumerGroupRefsValidConditionType,
 			metav1.ConditionTrue,
-			aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsReasonValid,
+			commonv1alpha1.ConsumerGroupRefsReasonValid,
 			"",
 			obj.GetGeneration(),
 		),
