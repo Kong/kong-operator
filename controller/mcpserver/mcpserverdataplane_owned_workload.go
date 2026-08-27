@@ -3,6 +3,7 @@ package mcpserver
 import (
 	"context"
 	"fmt"
+	"maps"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/go-logr/logr"
@@ -291,7 +292,7 @@ func generateDeployment(
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
 						{
-							Name:            "init-mcp-server",
+							Name:            consts.MCPServerDataPlaneInitContainerName,
 							Image:           mcpMetadata.InitContainerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Args: []string{
@@ -324,7 +325,7 @@ func generateDeployment(
 					},
 					Containers: []corev1.Container{
 						{
-							Name:            "mcp-server",
+							Name:            consts.MCPServerDataPlaneContainerName,
 							Image:           mcpMetadata.ContainerImage,
 							ImagePullPolicy: corev1.PullIfNotPresent,
 							Ports: []corev1.ContainerPort{
@@ -371,8 +372,36 @@ func generateDeployment(
 	addAnnotationsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
 	addLabelsForMCPServerDataPlaneDeployment(logger, deployment, mcpDataPlane)
 	addPodTemplateMetadataForMCPServerDataPlane(logger, deployment, mcpDataPlane)
+	addContainerResourcesForMCPServerDataPlane(deployment, mcpDataPlane)
 
 	return deployment
+}
+
+// addContainerResourcesForMCPServerDataPlane overrides the Resources of
+// containers (init or regular) in the generated Deployment's Pod template with
+// the ones provided via spec.deployment.podTemplateSpec.spec.containers,
+// matched by container name. Overrides for names that don't match any
+// container the operator manages are ignored.
+func addContainerResourcesForMCPServerDataPlane(
+	deployment *appsv1.Deployment,
+	mcpDataPlane *mcpv1alpha1.MCPServerDataPlane,
+) {
+	if mcpDataPlane.Spec.Deployment == nil {
+		return
+	}
+
+	podSpec := &deployment.Spec.Template.Spec
+	for _, override := range mcpDataPlane.Spec.Deployment.PodTemplateSpec.Spec.Containers {
+		if container := k8sutils.GetPodContainerByName(podSpec, override.Name); container != nil {
+			maps.Copy(container.Resources.Requests, override.Resources.Requests)
+			maps.Copy(container.Resources.Limits, override.Resources.Limits)
+			continue
+		}
+		if initContainer := k8sutils.GetInitContainerByName(podSpec, override.Name); initContainer != nil {
+			maps.Copy(initContainer.Resources.Requests, override.Resources.Requests)
+			maps.Copy(initContainer.Resources.Limits, override.Resources.Limits)
+		}
+	}
 }
 
 // mcpServerDataPlaneDeploymentReservedKeys reports whether a label/annotation key is

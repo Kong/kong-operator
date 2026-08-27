@@ -13,6 +13,15 @@ const (
 
 	// MCPServerDefaultPort is the default port exposed by MCP server containers.
 	MCPServerDefaultPort = 8080
+
+	// MCPServerDataPlaneContainerName is the name of the main MCP server
+	// container in the Deployment managed by the MCPServerDataPlane controller.
+	MCPServerDataPlaneContainerName = "mcp-server"
+
+	// MCPServerDataPlaneInitContainerName is the name of the init container
+	// that fetches the MCP server code in the Deployment managed by the
+	// MCPServerDataPlane controller.
+	MCPServerDataPlaneInitContainerName = "init-mcp-server"
 )
 
 // -----------------------------------------------------------------------------
