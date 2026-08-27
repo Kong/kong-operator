@@ -346,16 +346,16 @@ func resolveAIGatewayAgentAccessAclsDenyDeny(ctx context.Context, cl client.Clie
 	return resolved, nil
 }
 
-// RefsAtAIGatewayAgentAccessIdentityProviders returns the references at spec.apiSpec.access.identityProviders,
+// RefsAtAIGatewayAgentAccessAuthStrategies returns the references at spec.apiSpec.access.authStrategies,
 // or nil when any ancestor is unset.
-func RefsAtAIGatewayAgentAccessIdentityProviders(obj *AIGatewayAgent) []AIGatewayIdentityProviderRef {
-	return obj.Spec.APISpec.Access.IdentityProviders
+func RefsAtAIGatewayAgentAccessAuthStrategies(obj *AIGatewayAgent) []AIGatewayAuthStrategyRef {
+	return obj.Spec.APISpec.Access.AuthStrategies
 }
 
-// resolveAIGatewayAgentAccessIdentityProviders resolves the CR references in spec.apiSpec.access.identityProviders
+// resolveAIGatewayAgentAccessAuthStrategies resolves the CR references in spec.apiSpec.access.authStrategies
 // to Konnect names.
-func resolveAIGatewayAgentAccessIdentityProviders(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {
-	refs := RefsAtAIGatewayAgentAccessIdentityProviders(obj)
+func resolveAIGatewayAgentAccessAuthStrategies(ctx context.Context, cl client.Client, obj *AIGatewayAgent) ([]string, error) {
+	refs := RefsAtAIGatewayAgentAccessAuthStrategies(obj)
 	resolved := make([]string, 0, len(refs))
 	var errs []error
 	for _, ref := range refs {
@@ -365,27 +365,27 @@ func resolveAIGatewayAgentAccessIdentityProviders(ctx context.Context, cl client
 		}
 		kind := ref.Kind
 		if kind == "" {
-			kind = "AIGatewayIdentityProvider"
+			kind = "AIGatewayAuthStrategy"
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
 		}
-		var referenced AIGatewayIdentityProvider
+		var referenced AIGatewayAuthStrategy
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
-				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayIdentityProvider", Namespace: ns, Name: ref.Name, Err: err})
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, Err: err})
 				continue
 			}
-			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayIdentityProvider %s/%s: %w", ns, ref.Name, err))
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayAuthStrategy %s/%s: %w", ns, ref.Name, err))
 			continue
 		}
 		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
-			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayIdentityProvider", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
 		}
 		if referenced.GetKonnectID() == "" {
-			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayIdentityProvider", Namespace: ns, Name: ref.Name})
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayAuthStrategy", Namespace: ns, Name: ref.Name})
 			continue
 		}
 		resolved = append(resolved, referenced.GetKonnectName())
@@ -409,7 +409,7 @@ func (obj *AIGatewayAgent) ResolveKonnectReferences(ctx context.Context, cl clie
 	if _, err := resolveAIGatewayAgentAccessAclsDenyDeny(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
-	if _, err := resolveAIGatewayAgentAccessIdentityProviders(ctx, cl, obj); err != nil {
+	if _, err := resolveAIGatewayAgentAccessAuthStrategies(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -511,7 +511,7 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 		}
 		payload["access"] = access
 	}
-	// spec.apiSpec.access.identityProviders carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -519,11 +519,11 @@ func (obj *AIGatewayAgent) ToCreateAIGatewayAgentRequest(ctx context.Context, cl
 	if access == nil {
 		access = map[string]any{}
 	}
-	resolvedAccessIdentityProviders, err := resolveAIGatewayAgentAccessIdentityProviders(ctx, cl, obj)
+	resolvedAccessAuthStrategies, err := resolveAIGatewayAgentAccessAuthStrategies(ctx, cl, obj)
 	if err != nil {
-		return nil, fmt.Errorf("resolving spec.apiSpec.access.identityProviders references: %w", err)
+		return nil, fmt.Errorf("resolving spec.apiSpec.access.authStrategies references: %w", err)
 	}
-	access["identity_providers"] = resolvedAccessIdentityProviders
+	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
 	data, err = json.Marshal(payload)
 	if err != nil {
@@ -583,7 +583,7 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 		}
 		payload["access"] = access
 	}
-	// spec.apiSpec.access.identityProviders carries a CR reference: overwrite its resolved Konnect values in
+	// spec.apiSpec.access.authStrategies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
 	// ancestor pointer means that part of the config wasn't set, so the payload
 	// is left untouched.
@@ -591,11 +591,11 @@ func (obj *AIGatewayAgent) ToUpdateAIGatewayAgentRequest(ctx context.Context, cl
 	if access == nil {
 		access = map[string]any{}
 	}
-	resolvedAccessIdentityProviders, err := resolveAIGatewayAgentAccessIdentityProviders(ctx, cl, obj)
+	resolvedAccessAuthStrategies, err := resolveAIGatewayAgentAccessAuthStrategies(ctx, cl, obj)
 	if err != nil {
-		return nil, fmt.Errorf("resolving spec.apiSpec.access.identityProviders references: %w", err)
+		return nil, fmt.Errorf("resolving spec.apiSpec.access.authStrategies references: %w", err)
 	}
-	access["identity_providers"] = resolvedAccessIdentityProviders
+	access["auth_strategies"] = resolvedAccessAuthStrategies
 	payload["access"] = access
 	data, err = json.Marshal(payload)
 	if err != nil {

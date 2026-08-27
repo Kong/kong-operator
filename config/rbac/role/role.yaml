@@ -80,7 +80,6 @@ rules:
   - aigatewayconsumercredentials
   - aigatewayconsumergroups
   - aigatewayconsumers
-  - aigatewayidentityproviders
   - aigatewaymcpservers
   - aigatewaymodelproviders
   - aigatewaymodels
@@ -104,8 +103,8 @@ rules:
   - aigatewayconsumergroups/status
   - aigatewayconsumers/finalizers
   - aigatewayconsumers/status
-  - aigatewayidentityproviders/finalizers
-  - aigatewayidentityproviders/status
+  - aigatewaydataplanecertificates/finalizers
+  - aigatewaydataplanecertificates/status
   - aigatewaymcpservers/finalizers
   - aigatewaymcpservers/status
   - aigatewaymodelproviders/finalizers
@@ -117,6 +116,18 @@ rules:
   verbs:
   - patch
   - update
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewaydataplanecertificates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
 - apiGroups:
   - aigateway.konghq.com
   resources:
@@ -188,26 +199,22 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - aigatewaydataplanecertificates
-  - eventgatewaydataplanecertificates
-  - kongcertificates
-  - kongcredentialacls
-  - kongcredentialapikeys
-  - kongcredentialbasicauths
-  - kongcredentialhmacs
-  - kongcredentialjwts
-  - kongdataplaneclientcertificates
-  - kongpluginbindings
-  - kongplugins
-  - kongreferencegrants
-  - kongroutes
-  - kongservices
-  - kongsnis
-  - kongtargets
-  - kongupstreams
+  - eventgatewaybackendclusters
+  - eventgatewaylistenerpolicies
+  - eventgatewaylisteners
+  - eventgatewayschemaregistries
+  - eventgatewayvirtualclusterconsumepolicies
+  - eventgatewayvirtualclusterpolicies
+  - eventgatewayvirtualclusterproducepolicies
+  - eventgatewayvirtualclusters
+  - kongcacertificates
+  - kongconsumergroups
+  - kongconsumers
+  - kongdataplaneclientcertificates/status
+  - kongkeys
+  - kongkeysets
+  - kongvaults
   verbs:
-  - create
-  - delete
   - get
   - list
   - patch
@@ -216,8 +223,6 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - aigatewaydataplanecertificates/finalizers
-  - aigatewaydataplanecertificates/status
   - eventgatewaybackendclusters/finalizers
   - eventgatewaybackendclusters/status
   - eventgatewaydataplanecertificates/finalizers
@@ -268,22 +273,25 @@ rules:
 - apiGroups:
   - configuration.konghq.com
   resources:
-  - eventgatewaybackendclusters
-  - eventgatewaylistenerpolicies
-  - eventgatewaylisteners
-  - eventgatewayschemaregistries
-  - eventgatewayvirtualclusterconsumepolicies
-  - eventgatewayvirtualclusterpolicies
-  - eventgatewayvirtualclusterproducepolicies
-  - eventgatewayvirtualclusters
-  - kongcacertificates
-  - kongconsumergroups
-  - kongconsumers
-  - kongdataplaneclientcertificates/status
-  - kongkeys
-  - kongkeysets
-  - kongvaults
+  - eventgatewaydataplanecertificates
+  - kongcertificates
+  - kongcredentialacls
+  - kongcredentialapikeys
+  - kongcredentialbasicauths
+  - kongcredentialhmacs
+  - kongcredentialjwts
+  - kongdataplaneclientcertificates
+  - kongpluginbindings
+  - kongplugins
+  - kongreferencegrants
+  - kongroutes
+  - kongservices
+  - kongsnis
+  - kongtargets
+  - kongupstreams
   verbs:
+  - create
+  - delete
   - get
   - list
   - patch

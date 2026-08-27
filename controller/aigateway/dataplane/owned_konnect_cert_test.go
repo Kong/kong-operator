@@ -19,9 +19,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
@@ -92,20 +92,20 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		wantErrContains string
 		wantCondStatus  metav1.ConditionStatus
 		wantCondReason  string
-		verifyCert      func(t *testing.T, cert configurationv1alpha1.AIGatewayDataPlaneCertificate)
+		verifyCert      func(t *testing.T, cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate)
 	}{
 		{
 			name:           "creates cert when none exists",
 			wantProgrammed: false,
 			wantCondStatus: metav1.ConditionFalse,
 			wantCondReason: string(aigatewayv1alpha1.KonnectCertificateNotProgrammedReason),
-			verifyCert: func(t *testing.T, cert configurationv1alpha1.AIGatewayDataPlaneCertificate) {
+			verifyCert: func(t *testing.T, cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate) {
 				t.Helper()
 				assert.Equal(t, commonv1alpha1.ObjectRefTypeNamespacedRef, cert.Spec.AIGatewayRef.Type)
 				require.NotNil(t, cert.Spec.AIGatewayRef.NamespacedRef)
 				assert.Equal(t, "test-aigwcp", cert.Spec.AIGatewayRef.NamespacedRef.Name)
 				assert.Nil(t, cert.Spec.AIGatewayRef.KonnectID)
-				assert.Equal(t, configurationv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Cert.Type)
+				assert.Equal(t, aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Cert.Type)
 				require.NotNil(t, cert.Spec.APISpec.Cert.SecretRef)
 				assert.Equal(t, testCertSecretName, cert.Spec.APISpec.Cert.SecretRef.Name)
 				assert.Equal(t, "test-dp", cert.Spec.APISpec.Title)
@@ -125,26 +125,26 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		{
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True",
 			extraObjs: []client.Object{
-				&configurationv1alpha1.AIGatewayDataPlaneCertificate{
+				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
+						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 						Kind:       "AIGatewayDataPlaneCertificate",
 					},
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
-					Spec: configurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
 						},
-						APISpec: configurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
-							Cert: configurationv1alpha1.SensitiveDataSource{
-								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-								SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
+						APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+							Cert: aiconfigurationv1alpha1.SensitiveDataSource{
+								Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
 							},
 							Title: "test-dp",
 						},
 					},
-					Status: configurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
+					Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{
 							{
 								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -175,26 +175,26 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		{
 			name: "cert exists with Programmed=False: returns not-programmed condition",
 			extraObjs: []client.Object{
-				&configurationv1alpha1.AIGatewayDataPlaneCertificate{
+				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
+						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 						Kind:       "AIGatewayDataPlaneCertificate",
 					},
 					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
-					Spec: configurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
 						},
-						APISpec: configurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
-							Cert: configurationv1alpha1.SensitiveDataSource{
-								Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-								SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
+						APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+							Cert: aiconfigurationv1alpha1.SensitiveDataSource{
+								Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: testCertSecretName, Key: corev1.TLSCertKey},
 							},
 							Title: "test-dp",
 						},
 					},
-					Status: configurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
+					Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
 						Conditions: []metav1.Condition{
 							{
 								Type:               konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -214,7 +214,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "Get error after apply: sets RegistrationFailed condition and returns error",
 			interceptors: interceptor.Funcs{
 				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-					if _, ok := obj.(*configurationv1alpha1.AIGatewayDataPlaneCertificate); ok {
+					if _, ok := obj.(*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate); ok {
 						return assert.AnError
 					}
 					return c.Get(ctx, key, obj, opts...)
@@ -237,7 +237,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			objs := append([]client.Object{aigwdp}, tc.extraObjs...)
 			base := fake.NewClientBuilder().
 				WithScheme(managerscheme.Get()).
-				WithStatusSubresource(&configurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+				WithStatusSubresource(&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
 				WithObjects(objs...).
 				Build()
 			cl := interceptor.NewClient(base, tc.interceptors)
@@ -269,7 +269,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			assert.Equal(t, tc.wantCondReason, cond.Reason)
 
 			if tc.verifyCert != nil {
-				var cert configurationv1alpha1.AIGatewayDataPlaneCertificate
+				var cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: aigwdp.Name, Namespace: aigwdp.Namespace}, &cert))
 				tc.verifyCert(t, cert)
 			}

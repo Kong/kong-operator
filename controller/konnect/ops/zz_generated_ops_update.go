@@ -38,10 +38,8 @@ func UpdateGeneratedOps[
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
-	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
-	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
-		return updateAIGatewayIdentityProvider(ctx, cl, sdk.GetAIGatewayIdentityProvidersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return updateAIGatewayMCPServer(ctx, cl, sdk.GetAIGatewayMCPServersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

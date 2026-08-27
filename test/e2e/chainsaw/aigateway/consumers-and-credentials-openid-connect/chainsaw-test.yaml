@@ -10,7 +10,7 @@ spec:
     shared aigateway fixtures, since the secret-rotation scenario below needs to mutate it
     freely). Mirrors consumers-and-credentials-keyauth scenario-for-scenario, but for
     OAuth-mapped (not key-auth) consumers: config.consumerClaims maps the token's client_id
-    claim to an AIGatewayConsumer's apiSpec.customID. See identity-provider-openid-connect
+    claim to an AIGatewayConsumer's apiSpec.customID. See auth-strategy-openid-connect
     for a minimal, bare (no ACL/consumer group) counterpart. Requests with no bearer token,
     or an invalid one, fall through openid-connect as an anonymous consumer, which the ACL
     then denies with 403 (rather than openid-connect itself rejecting with 401). Scenarios
@@ -58,8 +58,8 @@ spec:
       value: ($namespace)
     - name: echo_deployment_replicas
       value: 1
-    - name: oidc_idp_name
-      value: (join('-', [($test_name), 'oidc-idp']))
+    - name: oidc_auth_strategy_name
+      value: (join('-', [($test_name), 'oidc-auth-strategy']))
     - name: oidc_client_secret_name
       value: (join('-', [($test_name), 'oidc-client-secret']))
     - name: oidc_issuer
@@ -99,7 +99,7 @@ spec:
     # Defaults for verify-aigw-agent-request-from-{cluster,host} optional bindings.
     # Steps below only need to override what differs from these.
     # NOTE: oidc_token_url/oidc_client_id/oidc_scope are NOT defaulted here since
-    # they're already bound above (to real values used by the identity provider
+    # they're already bound above (to real values used by the auth strategy
     # setup step) and cascade automatically; the reject-* steps below must
     # explicitly override them to '' to disable auto bearer-token fetching.
     - name: request_headers
@@ -153,10 +153,10 @@ spec:
               status:
                 replicas: 1
                 readyReplicas: 1
-    - name: 5-Create-oidc-identity-provider
+    - name: 5-Create-oidc-auth-strategy
       bindings:
-        - name: idp_name
-          value: ($oidc_idp_name)
+        - name: auth_strategy_name
+          value: ($oidc_auth_strategy_name)
         - name: namespace
           value: ($namespace)
         - name: issuer
@@ -180,7 +180,7 @@ spec:
           value:
             - - client_id
       use:
-        template: ../../common/_step_templates/apply-assert-aigatewayIdentityProvider-openid-connect.yaml
+        template: ../../common/_step_templates/apply-assert-aigatewayAuthStrategy-openid-connect.yaml
     - name: 6-Create-consumer-group
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayConsumerGroup.yaml
@@ -201,8 +201,8 @@ spec:
       bindings:
         - name: agent_access
           value:
-            identityProviders:
-              - name: ($oidc_idp_name)
+            authStrategies:
+              - name: ($oidc_auth_strategy_name)
             acls:
               type: allow
               allow:
@@ -377,8 +377,8 @@ spec:
           value: ($http_agent_deny_route_path)
         - name: agent_access
           value:
-            identityProviders:
-              - name: ($oidc_idp_name)
+            authStrategies:
+              - name: ($oidc_auth_strategy_name)
             acls:
               type: deny
               deny:

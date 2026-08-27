@@ -35,10 +35,10 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
@@ -172,23 +172,23 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 
 // newProgrammedKonnectCert builds an AIGatewayDataPlaneCertificate with Programmed=True,
 // modelling the state after the Konnect controller has registered it.
-func newProgrammedKonnectCert() *configurationv1alpha1.AIGatewayDataPlaneCertificate {
-	return &configurationv1alpha1.AIGatewayDataPlaneCertificate{
+func newProgrammedKonnectCert() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
-		Spec: configurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestAIGWCPName},
 			},
-			APISpec: configurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
-				Cert: configurationv1alpha1.SensitiveDataSource{
-					Type:      configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
+			APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+				Cert: aiconfigurationv1alpha1.SensitiveDataSource{
+					Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
 				},
 				Title: reconcileTestDPName,
 			},
 		},
-		Status: configurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
+		Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
 			Conditions: []metav1.Condition{
 				{
 					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
@@ -380,7 +380,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
 				WithObjects(tc.objects...).
-				WithStatusSubresource(aigwdp, &configurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+				WithStatusSubresource(aigwdp, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
 				Build()
 
 			recorder := events.NewFakeRecorder(30)

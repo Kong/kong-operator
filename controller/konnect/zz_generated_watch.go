@@ -32,10 +32,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayConsumerCredentialReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return AIGatewayConsumerGroupReconciliationWatchOptions(cl)
-	case *configurationv1alpha1.AIGatewayDataPlaneCertificate:
+	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return AIGatewayDataPlaneCertificateReconciliationWatchOptions(cl)
-	case *aiconfigurationv1alpha1.AIGatewayIdentityProvider:
-		return AIGatewayIdentityProviderReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:
 		return AIGatewayMCPServerReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayModel:

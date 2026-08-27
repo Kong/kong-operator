@@ -103,6 +103,14 @@ type SensitiveDataSource struct {
 	SecretRef *SensitiveDataSecretRef `json:"secretRef,omitempty"`
 }
 
+// GetValue returns the sensitive value if it is provided inline, or an empty string otherwise.
+func (s SensitiveDataSource) GetValue() string {
+	if s.Value == nil {
+		return ""
+	}
+	return *s.Value
+}
+
 // flattenSDKUnions recursively flattens nested discriminated-union shapes.
 // Object-valued members are rewritten from {"<disc>": "X", "X": {...}}
 // to {"<disc>": "X", ...}, while scalar and array members are rewritten to

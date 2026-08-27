@@ -62,7 +62,7 @@ spec:
       try:
         - apply:
             resource:
-              apiVersion: configuration.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayDataPlaneCertificate
               metadata:
                 name: ($dp_cert_name)
@@ -82,7 +82,7 @@ spec:
                       key: tls.crt
         - assert:
             resource:
-              apiVersion: configuration.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayDataPlaneCertificate
               metadata:
                 name: ($dp_cert_name)

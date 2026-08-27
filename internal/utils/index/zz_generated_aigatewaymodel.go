@@ -17,8 +17,8 @@ const (
 	IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef = "aiGatewayModelOnAIGatewayConsumerGroupRef"
 	// IndexFieldAIGatewayModelOnAIGatewayModelProviderRef is the index field for AIGatewayModel -> AIGatewayModelProvider.
 	IndexFieldAIGatewayModelOnAIGatewayModelProviderRef = "aiGatewayModelOnAIGatewayModelProviderRef"
-	// IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef is the index field for AIGatewayModel -> AIGatewayIdentityProvider.
-	IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef = "aiGatewayModelOnAIGatewayIdentityProviderRef"
+	// IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef is the index field for AIGatewayModel -> AIGatewayAuthStrategy.
+	IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef = "aiGatewayModelOnAIGatewayAuthStrategyRef"
 )
 
 // OptionsForAIGatewayModel returns required Index options for AIGatewayModel reconciler.
@@ -46,8 +46,8 @@ func OptionsForAIGatewayModel() []Option {
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
-			Field:          IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef,
-			ExtractValueFn: aiGatewayModelOnAIGatewayIdentityProviderRef,
+			Field:          IndexFieldAIGatewayModelOnAIGatewayAuthStrategyRef,
+			ExtractValueFn: aiGatewayModelOnAIGatewayAuthStrategyRef,
 		},
 	}
 }
@@ -156,14 +156,14 @@ func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
 	return out
 }
 
-func aiGatewayModelOnAIGatewayIdentityProviderRef(object client.Object) []string {
+func aiGatewayModelOnAIGatewayAuthStrategyRef(object client.Object) []string {
 	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessIdentityProviders(ent) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessAuthStrategies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
 			continue
 		}
 		ns := ref.Namespace
@@ -172,8 +172,8 @@ func aiGatewayModelOnAIGatewayIdentityProviderRef(object client.Object) []string
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessIdentityProviders(ent) {
-		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAuthStrategies(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayAuthStrategy" {
 			continue
 		}
 		ns := ref.Namespace

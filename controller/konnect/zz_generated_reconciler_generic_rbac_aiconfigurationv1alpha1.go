@@ -17,9 +17,9 @@ package konnect
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumergroups,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumergroups/status,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumergroups/finalizers,verbs=update;patch
-//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayidentityproviders,verbs=get;list;watch;update;patch
-//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayidentityproviders/status,verbs=update;patch
-//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayidentityproviders/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaydataplanecertificates,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaydataplanecertificates/status,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaydataplanecertificates/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymcpservers,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymcpservers/status,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymcpservers/finalizers,verbs=update;patch

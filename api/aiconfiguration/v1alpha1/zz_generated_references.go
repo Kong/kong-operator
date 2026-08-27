@@ -133,14 +133,14 @@ type AIGatewayACLRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
-// AIGatewayIdentityProviderRef references an AIGatewayIdentityProvider in the cluster. The referenced
+// AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
-type AIGatewayIdentityProviderRef struct {
+type AIGatewayAuthStrategyRef struct {
 	// Kind is the kind of the referenced object.
 	//
 	// +optional
-	// +kubebuilder:validation:Enum=AIGatewayIdentityProvider
-	// +kubebuilder:default=AIGatewayIdentityProvider
+	// +kubebuilder:validation:Enum=AIGatewayAuthStrategy
+	// +kubebuilder:default=AIGatewayAuthStrategy
 	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.
