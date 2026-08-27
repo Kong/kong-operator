@@ -45,6 +45,9 @@
 
 ### Fixes
 
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306)
 - Dataplane: Fixed the method to compare whether dataplane options are deep
   equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
   in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
