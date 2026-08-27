@@ -6435,10 +6435,13 @@ func TestGenerateReferencesFile(t *testing.T) {
 	require.Contains(t, out, "KonnectReferencesResolvedConditionType")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonInvalid")
 	require.Contains(t, out, "KonnectReferencesResolvedReasonResolutionFailed")
-	require.Contains(t, out, "type ReferenceNotFoundError struct")
-	require.Contains(t, out, "type ReferenceNotProgrammedError struct")
-	require.Contains(t, out, "type ReferenceCrossNamespaceError struct")
-	require.Contains(t, out, "type ReferenceDifferentGatewayError struct")
+	// The sentinel error types are defined once in the shared commonv1alpha1
+	// package, this file only re-exports them as aliases.
+	require.Contains(t, out, `commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"`)
+	require.Contains(t, out, "type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError")
+	require.Contains(t, out, "type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError")
+	require.Contains(t, out, "type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError")
+	require.Contains(t, out, "type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError")
 }
 
 func TestGenerateReferencesFile_MultiKind(t *testing.T) {

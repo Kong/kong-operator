@@ -3,33 +3,31 @@
 package v1alpha1
 
 import (
-	"fmt"
-
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 const (
 	// KonnectReferencesResolvedConditionType indicates whether all CR references
 	// declared on the entity's spec have been resolved to Konnect IDs/names.
-	KonnectReferencesResolvedConditionType = "KonnectReferencesResolved"
+	KonnectReferencesResolvedConditionType = commonv1alpha1.KonnectReferencesResolvedConditionType
 
 	// KonnectReferencesResolvedReasonResolved indicates all references resolved.
-	KonnectReferencesResolvedReasonResolved = "Resolved"
+	KonnectReferencesResolvedReasonResolved = commonv1alpha1.KonnectReferencesResolvedReasonResolved
 	// KonnectReferencesResolvedReasonNotFound indicates a referenced CR does not exist.
-	KonnectReferencesResolvedReasonNotFound = "ReferenceNotFound"
+	KonnectReferencesResolvedReasonNotFound = commonv1alpha1.KonnectReferencesResolvedReasonNotFound
 	// KonnectReferencesResolvedReasonNotProgrammed indicates a referenced CR exists
 	// but has not been programmed in Konnect yet.
-	KonnectReferencesResolvedReasonNotProgrammed = "ReferenceNotProgrammed"
+	KonnectReferencesResolvedReasonNotProgrammed = commonv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
 	// KonnectReferencesResolvedReasonInvalid indicates a reference is invalid
 	// and cannot be resolved by waiting for the referenced CR to be programmed.
-	KonnectReferencesResolvedReasonInvalid = "ReferenceInvalid"
+	KonnectReferencesResolvedReasonInvalid = commonv1alpha1.KonnectReferencesResolvedReasonInvalid
 	// KonnectReferencesResolvedReasonNotPermitted indicates a cross-namespace
 	// reference is not permitted by any KongReferenceGrant in the referenced
 	// namespace.
-	KonnectReferencesResolvedReasonNotPermitted = "ReferenceNotPermitted"
+	KonnectReferencesResolvedReasonNotPermitted = commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted
 	// KonnectReferencesResolvedReasonResolutionFailed indicates references failed
 	// for multiple reasons. The condition message contains per-reference details.
-	KonnectReferencesResolvedReasonResolutionFailed = "ReferenceResolutionFailed"
+	KonnectReferencesResolvedReasonResolutionFailed = commonv1alpha1.KonnectReferencesResolvedReasonResolutionFailed
 )
 
 // CrossNamespaceReferenceCheck describes one cross-namespace sibling
@@ -39,76 +37,25 @@ const (
 // declare such references expose them via CrossNamespaceSiblingReferences,
 // for callers outside this package to check against KongReferenceGrant
 // before calling ResolveKonnectReferences.
-//
-// +kubebuilder:object:generate=false
-type CrossNamespaceReferenceCheck struct {
-	FromGVK, ToGVK                     metav1.GroupVersionKind
-	FromNamespace, ToNamespace, ToName string
-}
+type CrossNamespaceReferenceCheck = commonv1alpha1.CrossNamespaceReferenceCheck
 
 // ReferenceNotFoundError is returned when a referenced CR does not exist.
-//
-// +kubebuilder:object:generate=false
-type ReferenceNotFoundError struct {
-	Kind      string
-	Namespace string
-	Name      string
-	Err       error
-}
-
-func (e ReferenceNotFoundError) Error() string {
-	return fmt.Sprintf("%s %s/%s: %v", e.Kind, e.Namespace, e.Name, e.Err)
-}
-
-func (e ReferenceNotFoundError) Unwrap() error { return e.Err }
+type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 
 // ReferenceNotProgrammedError is returned when a referenced CR exists but has
 // no Konnect ID yet.
-//
-// +kubebuilder:object:generate=false
-type ReferenceNotProgrammedError struct {
-	Kind      string
-	Namespace string
-	Name      string
-}
-
-func (e ReferenceNotProgrammedError) Error() string {
-	return fmt.Sprintf("%s %s/%s is not programmed in Konnect yet", e.Kind, e.Namespace, e.Name)
-}
+type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
 
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.
-//
-// +kubebuilder:object:generate=false
-type ReferenceCrossNamespaceError struct {
-	Kind              string
-	Namespace         string
-	Name              string
-	ReferrerNamespace string
-}
-
-func (e ReferenceCrossNamespaceError) Error() string {
-	return fmt.Sprintf("%s %s/%s uses cross-namespace reference from namespace %s, which is not supported yet", e.Kind, e.Namespace, e.Name, e.ReferrerNamespace)
-}
+type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 
 // ReferenceDifferentGatewayError is returned when a reference points to a CR
 // programmed under a different AIGatewayControlPlane. References must stay
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
 // references from the same AI Gateway.
-//
-// +kubebuilder:object:generate=false
-type ReferenceDifferentGatewayError struct {
-	Kind                string
-	Namespace           string
-	Name                string
-	ReferrerGatewayID   string
-	ReferencedGatewayID string
-}
-
-func (e ReferenceDifferentGatewayError) Error() string {
-	return fmt.Sprintf("%s %s/%s belongs to Gateway %q, not referrer Gateway %q", e.Kind, e.Namespace, e.Name, e.ReferencedGatewayID, e.ReferrerGatewayID)
-}
+type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
 
 // AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
