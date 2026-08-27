@@ -17,7 +17,7 @@ spec:
   try:
     - apply:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayConsumer
           metadata:
             name: ($consumer_name)
@@ -35,7 +35,7 @@ spec:
             consumerGroups: ($consumer_groups)
     - assert:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayConsumer
           metadata:
             name: ($consumer_name)

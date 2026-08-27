@@ -21,7 +21,7 @@ spec:
   try:
     - apply:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayAgent
           metadata:
             name: ($http_agent_name)
@@ -51,7 +51,7 @@ spec:
               access: ($agent_access || null)
     - assert:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayAgent
           metadata:
             name: ($http_agent_name)

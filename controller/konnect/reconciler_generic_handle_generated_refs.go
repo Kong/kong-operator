@@ -11,6 +11,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -85,8 +86,8 @@ func init() {
 			handler: parentRefHandler[konnectv1alpha1.KonnectAIGateway, *konnectv1alpha1.KonnectAIGateway]{},
 		},
 		{
-			gvk:     konnectv1alpha1.GroupVersion.WithKind("AIGatewayConsumer"),
-			handler: parentRefHandler[konnectv1alpha1.AIGatewayConsumer, *konnectv1alpha1.AIGatewayConsumer]{},
+			gvk:     aiconfigurationv1alpha1.GroupVersion.WithKind("AIGatewayConsumer"),
+			handler: parentRefHandler[aiconfigurationv1alpha1.AIGatewayConsumer, *aiconfigurationv1alpha1.AIGatewayConsumer]{},
 		},
 	}
 	_generatedHandlersPerGVK = make(map[schema.GroupVersionKind]generatedParentRefHandler, len(_generatedHandlers))

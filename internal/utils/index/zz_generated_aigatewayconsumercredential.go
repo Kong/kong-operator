@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForAIGatewayConsumerCredential() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayConsumerCredential{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayConsumerCredential{},
 			Field:          IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef,
 			ExtractValueFn: aiGatewayConsumerCredentialOnAIGatewayConsumerRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForAIGatewayConsumerCredential() []Option {
 }
 
 func aiGatewayConsumerCredentialOnAIGatewayConsumerRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayConsumerCredential)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayConsumerCredential)
 	if !ok {
 		return nil
 	}

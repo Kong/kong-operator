@@ -3,7 +3,7 @@
 #  - namespace: The namespace where the AIGatewayPolicy resource was created.
 #  - aigw_policy_name: The name of the AIGatewayPolicy resource to be asserted.
 
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayPolicy
 metadata:
   name: ($aigw_policy_name)

@@ -11,14 +11,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayMCPServer(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
-	obj *konnectv1alpha1.AIGatewayMCPServer,
+	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -63,7 +63,7 @@ func updateAIGatewayMCPServer(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
-	obj *konnectv1alpha1.AIGatewayMCPServer,
+	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -91,7 +91,7 @@ func updateAIGatewayMCPServer(
 func deleteAIGatewayMCPServer(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
-	obj *konnectv1alpha1.AIGatewayMCPServer,
+	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

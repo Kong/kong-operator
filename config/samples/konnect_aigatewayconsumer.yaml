@@ -24,7 +24,7 @@ spec:
       name: konnect-api-auth
 ---
 kind: AIGatewayPolicy
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: aigw-consumer-policy-prompt-decorator
   namespace: default
@@ -51,7 +51,7 @@ spec:
               role: user
 ---
 kind: AIGatewayConsumer
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-gw-consumer
   namespace: default

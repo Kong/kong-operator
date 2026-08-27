@@ -9,7 +9,7 @@ type: Opaque
 stringData:
   apikey: test-ai-gateway-key
 ---
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModelProvider
 metadata:
   name: openai-provider
@@ -35,7 +35,7 @@ spec:
                   key: apikey
 ---
 # headers selector: reused for the negative/non-matching-alias case.
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModel
 metadata:
   name: model-headers-selector
@@ -75,7 +75,7 @@ spec:
               upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
 ---
 # body selector: routes on the "model" property of the JSON request body.
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModel
 metadata:
   name: model-body-selector
@@ -115,7 +115,7 @@ spec:
               upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
 ---
 # path selector: routes on a named capture group within the route's path regex.
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModel
 metadata:
   name: model-path-selector

@@ -24,7 +24,7 @@ spec:
       name: konnect-api-auth-1
 ---
 kind: AIGatewayPolicy
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: aigw-agent-policy-rate-limiting-advanced
   namespace: default
@@ -55,7 +55,7 @@ spec:
         strategy: local
 ---
 kind: AIGatewayConsumerGroup
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-agent-consumer-group
   namespace: default
@@ -69,7 +69,7 @@ spec:
     displayName: Dev Users Group
 ---
 kind: AIGatewayIdentityProvider
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: ai-gw-agent-identity-provider
   namespace: default
@@ -87,7 +87,7 @@ spec:
         hideCredentials: Enabled
 ---
 kind: AIGatewayAgent
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 metadata:
   name: sample-ai-agent
   namespace: default

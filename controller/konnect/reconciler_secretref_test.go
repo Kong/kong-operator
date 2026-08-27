@@ -541,6 +541,123 @@ func TestHandleSecretRef_RecoversToValidAfterFix(t *testing.T) {
 	assert.Equal(t, konnectv1alpha1.SecretRefReasonValid, cond.Reason)
 }
 
+// TestHandleSecretRef_SensitiveDataSourceCrossNamespace ensures the
+// KongReferenceGrant check is enforced for cross-namespace secretRef on
+// entities that use the generated SensitiveDataSource mechanism (detected via
+// GetSensitiveDataSecretRefs), not just on the hand-written KongCertificate
+// cases above. EventGatewayBackendCluster is used as a representative type.
+func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
+	ctx := context.Background()
+	scheme := scheme.Get()
+
+	newCluster := func() *configurationv1alpha1.EventGatewayBackendCluster {
+		return &configurationv1alpha1.EventGatewayBackendCluster{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "test-cluster",
+				Namespace: "cluster-ns",
+			},
+			TypeMeta: metav1.TypeMeta{
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "EventGatewayBackendCluster",
+			},
+			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
+				APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
+					TLS: configurationv1alpha1.BackendClusterTLS{
+						ClientIdentity: configurationv1alpha1.BackendClusterTLSClientIdentity{
+							Certificate: configurationv1alpha1.SensitiveDataSource{
+								Type: configurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+								SecretRef: &configurationv1alpha1.SensitiveDataSecretRef{
+									Name:      "test-secret",
+									Key:       "tls.crt",
+									Namespace: new("secret-ns"),
+								},
+							},
+						},
+					},
+				},
+			},
+		}
+	}
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-secret",
+			Namespace: "secret-ns",
+		},
+		Data: map[string][]byte{"tls.crt": []byte("cert")},
+	}
+
+	t.Run("without grant is not permitted", func(t *testing.T) {
+		cluster := newCluster()
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, secret).
+			WithStatusSubresource(cluster).
+			Build()
+
+		_, hasResult, err := handleSecretRef(ctx, cl, cluster)
+		require.NoError(t, err)
+		assert.True(t, hasResult)
+
+		updated := &configurationv1alpha1.EventGatewayBackendCluster{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cluster), updated))
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KongReferenceGrantReasonRefNotPermitted, cond.Reason)
+	})
+
+	t.Run("with matching grant is permitted", func(t *testing.T) {
+		cluster := newCluster()
+		grant := &configurationv1alpha1.KongReferenceGrant{
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "allow-cluster-to-secret",
+				Namespace: "secret-ns",
+			},
+			Spec: configurationv1alpha1.KongReferenceGrantSpec{
+				From: []configurationv1alpha1.ReferenceGrantFrom{
+					{
+						Group:     "configuration.konghq.com",
+						Kind:      "EventGatewayBackendCluster",
+						Namespace: "cluster-ns",
+					},
+				},
+				To: []configurationv1alpha1.ReferenceGrantTo{
+					{
+						Group: "core",
+						Kind:  "Secret",
+						Name:  new(configurationv1alpha1.ObjectName("test-secret")),
+					},
+				},
+			},
+		}
+		cl := fake.NewClientBuilder().
+			WithScheme(scheme).
+			WithObjects(cluster, secret, grant).
+			WithStatusSubresource(cluster).
+			Build()
+
+		_, hasResult, err := handleSecretRef(ctx, cl, cluster)
+		require.NoError(t, err)
+		assert.False(t, hasResult)
+
+		updated := &configurationv1alpha1.EventGatewayBackendCluster{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(cluster), updated))
+		cond, found := findConditionGeneric(updated.Status.Conditions, string(configurationv1alpha1.KongReferenceGrantConditionTypeResolvedRefs))
+		require.True(t, found)
+		assert.Equal(t, metav1.ConditionTrue, cond.Status)
+		assert.Equal(t, configurationv1alpha1.KongReferenceGrantReasonResolvedRefs, cond.Reason)
+	})
+}
+
+func findConditionGeneric(conditions []metav1.Condition, condType string) (metav1.Condition, bool) {
+	for _, cond := range conditions {
+		if cond.Type == condType {
+			return cond, true
+		}
+	}
+	return metav1.Condition{}, false
+}
+
 func findCondition(cert *configurationv1alpha1.KongCertificate, condType string) (metav1.Condition, bool) {
 	for _, cond := range cert.Status.Conditions {
 		if cond.Type == condType {

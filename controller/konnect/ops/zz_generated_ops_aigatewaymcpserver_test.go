@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func testGeneratedAIGatewayMCPServerForSDKOps() *konnectv1alpha1.AIGatewayMCPServer {
-	return &konnectv1alpha1.AIGatewayMCPServer{
+func testGeneratedAIGatewayMCPServerForSDKOps() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+	return &aiconfigurationv1alpha1.AIGatewayMCPServer{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayMCPServer",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,11 +29,11 @@ func testGeneratedAIGatewayMCPServerForSDKOps() *konnectv1alpha1.AIGatewayMCPSer
 			UID:        "aigatewaymcpserver-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.AIGatewayMCPServerSpec{
-			APISpec: konnectv1alpha1.AIGatewayMCPServerAPISpec{
-				AIGatewayMCPServerConfig: &konnectv1alpha1.AIGatewayMCPServerConfig{
-					Type:           konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly,
-					ConversionOnly: &konnectv1alpha1.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: konnectv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}},
+		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &aiconfigurationv1alpha1.AIGatewayMCPServerConfig{
+					Type:           aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly,
+					ConversionOnly: &aiconfigurationv1alpha1.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}},
 				},
 			},
 		},

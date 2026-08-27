@@ -165,11 +165,11 @@ func configStoreRefFailure(err error, nn types.NamespacedName) (_ kcfgconsts.Con
 	if _, ok := errors.AsType[configurationv1alpha1.ConfigStoreRefInvalidError](err); ok {
 		return konnectv1alpha1.ConfigStoreRefReasonInvalid, err.Error(), true
 	}
-	if _, ok := errors.AsType[konnectv1alpha1.ReferenceNotFoundError](err); ok {
+	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotFoundError](err); ok {
 		return konnectv1alpha1.ConfigStoreRefReasonInvalid,
 			fmt.Sprintf("Referenced KonnectConfigStore %s does not exist", nn), true
 	}
-	if _, ok := errors.AsType[konnectv1alpha1.ReferenceNotProgrammedError](err); ok {
+	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotProgrammedError](err); ok {
 		return konnectv1alpha1.ConfigStoreRefReasonNotProgrammed,
 			fmt.Sprintf("Referenced KonnectConfigStore %s is not programmed yet", nn), true
 	}

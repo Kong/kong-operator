@@ -15,6 +15,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -228,13 +229,13 @@ func TestCreate(t *testing.T) {
 func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
 	t.Parallel()
 
-	credential := &konnectv1alpha1.AIGatewayConsumerCredential{
+	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:       "test-credential",
 			Namespace:  "test-ns",
 			Generation: 2,
 		},
-		Status: konnectv1alpha1.AIGatewayConsumerCredentialStatus{
+		Status: aiconfigurationv1alpha1.AIGatewayConsumerCredentialStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "credential-id",
 			},

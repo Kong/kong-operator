@@ -12,22 +12,22 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 type failingKonnectReferenceResolver struct {
 	err                             error
-	crossNamespaceSiblingReferences []konnectv1alpha1.CrossNamespaceReferenceCheck
+	crossNamespaceSiblingReferences []configurationv1alpha1.CrossNamespaceReferenceCheck
 }
 
 func (r failingKonnectReferenceResolver) ResolveKonnectReferences(context.Context, client.Client) error {
 	return r.err
 }
 
-func (r failingKonnectReferenceResolver) CrossNamespaceSiblingReferences() []konnectv1alpha1.CrossNamespaceReferenceCheck {
+func (r failingKonnectReferenceResolver) CrossNamespaceSiblingReferences() []configurationv1alpha1.CrossNamespaceReferenceCheck {
 	return r.crossNamespaceSiblingReferences
 }
 
@@ -222,11 +222,11 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 }
 
 func TestHandleKonnectReferencesResolution(t *testing.T) {
-	agent := &konnectv1alpha1.AIGatewayAgent{
+	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
-		Spec: konnectv1alpha1.AIGatewayAgentSpec{
-			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
-				Policies: []konnectv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
 			},
 		},
 	}
@@ -242,11 +242,11 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
 	})
 
 	t.Run("referenced CR exists but is not programmed sets condition False with NotProgrammed", func(t *testing.T) {
-		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
 		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
@@ -257,12 +257,12 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotProgrammed, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotProgrammed, cond.Reason)
 	})
 
 	t.Run("cross-namespace ref sets condition False with Invalid", func(t *testing.T) {
 		ent := agent.DeepCopy()
-		ent.Spec.APISpec.Policies = []konnectv1alpha1.AIGatewayPolicyRef{{
+		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{
 			Namespace: "other-ns",
 			Name:      "policy",
 		}}
@@ -276,16 +276,16 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
 	})
 
 	t.Run("different GatewayID ref sets condition False with Invalid", func(t *testing.T) {
-		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "policy", Namespace: "ns"}}
 		policy.SetKonnectID("kid-123")
 		policy.SetGatewayID("gw-other")
 		ent := agent.DeepCopy()
 		ent.SetGatewayID("gw-agent")
-		ent.Spec.APISpec.Policies = []konnectv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
+		ent.Spec.APISpec.Policies = []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: policy.Name}}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(ent.DeepCopy(), policy).Build()
 
 		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
@@ -296,15 +296,15 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonInvalid, cond.Reason)
 	})
 
 	t.Run("joined same-category reference errors keep specific reason", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := errors.Join(
-			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-1"},
-			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-2"},
+			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-1"},
+			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "policy-2"},
 		)
 
 		updated, isProblem, err := handleKonnectReferences(
@@ -320,7 +320,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason)
 		assert.Contains(t, cond.Message, "policy-1")
 		assert.Contains(t, cond.Message, "policy-2")
 	})
@@ -329,9 +329,9 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		ent := agent.DeepCopy()
 		resolverErr := errors.Join(
-			konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "missing-policy"},
-			konnectv1alpha1.ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "pending-policy"},
-			konnectv1alpha1.ReferenceCrossNamespaceError{
+			aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "missing-policy"},
+			aiconfigurationv1alpha1.ReferenceNotProgrammedError{Kind: "AIGatewayPolicy", Namespace: "ns", Name: "pending-policy"},
+			aiconfigurationv1alpha1.ReferenceCrossNamespaceError{
 				Kind:              "AIGatewayPolicy",
 				Namespace:         "other-ns",
 				Name:              "invalid-policy",
@@ -352,14 +352,14 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonResolutionFailed, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonResolutionFailed, cond.Reason)
 		assert.Contains(t, cond.Message, "missing-policy")
 		assert.Contains(t, cond.Message, "pending-policy")
 		assert.Contains(t, cond.Message, "invalid-policy")
 	})
 
 	t.Run("programmed referenced CR sets condition True", func(t *testing.T) {
-		policy := &konnectv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
 		policy.SetKonnectID("kid-123")
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
@@ -371,7 +371,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonResolved, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonResolved, cond.Reason)
 	})
 
 	t.Run("unexpected resolver error is returned for normal reconcile retry", func(t *testing.T) {
@@ -390,9 +390,9 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		require.False(t, updated)
 	})
 
-	crossNamespaceCheck := konnectv1alpha1.CrossNamespaceReferenceCheck{
-		FromGVK:       metav1.GroupVersionKind{Group: konnectv1alpha1.GroupVersion.Group, Version: konnectv1alpha1.GroupVersion.Version, Kind: "AIGatewayAgent"},
-		ToGVK:         metav1.GroupVersionKind{Group: konnectv1alpha1.GroupVersion.Group, Version: konnectv1alpha1.GroupVersion.Version, Kind: "AIGatewayPolicy"},
+	crossNamespaceCheck := configurationv1alpha1.CrossNamespaceReferenceCheck{
+		FromGVK:       metav1.GroupVersionKind{Group: aiconfigurationv1alpha1.GroupVersion.Group, Version: aiconfigurationv1alpha1.GroupVersion.Version, Kind: "AIGatewayAgent"},
+		ToGVK:         metav1.GroupVersionKind{Group: aiconfigurationv1alpha1.GroupVersion.Group, Version: aiconfigurationv1alpha1.GroupVersion.Version, Kind: "AIGatewayPolicy"},
 		FromNamespace: "ns",
 		ToNamespace:   "other-ns",
 		ToName:        "policy",
@@ -408,7 +408,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			ent,
 			failingKonnectReferenceResolver{
 				err:                             errors.New("resolver should not be called"),
-				crossNamespaceSiblingReferences: []konnectv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+				crossNamespaceSiblingReferences: []configurationv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
 			},
 		)
 		require.NoError(t, err)
@@ -418,7 +418,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotPermitted, cond.Reason)
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotPermitted, cond.Reason)
 	})
 
 	t.Run("cross-namespace sibling reference permitted by a KongReferenceGrant proceeds to resolve", func(t *testing.T) {
@@ -426,19 +426,19 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			ObjectMeta: metav1.ObjectMeta{Name: "allow-agent", Namespace: "other-ns"},
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{{
-					Group:     configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Group:     configurationv1alpha1.Group(aiconfigurationv1alpha1.GroupVersion.Group),
 					Kind:      configurationv1alpha1.Kind("AIGatewayAgent"),
 					Namespace: configurationv1alpha1.Namespace("ns"),
 				}},
 				To: []configurationv1alpha1.ReferenceGrantTo{{
-					Group: configurationv1alpha1.Group(konnectv1alpha1.GroupVersion.Group),
+					Group: configurationv1alpha1.Group(aiconfigurationv1alpha1.GroupVersion.Group),
 					Kind:  configurationv1alpha1.Kind("AIGatewayPolicy"),
 				}},
 			},
 		}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(grant).Build()
 		ent := agent.DeepCopy()
-		resolverErr := konnectv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
+		resolverErr := aiconfigurationv1alpha1.ReferenceNotFoundError{Kind: "AIGatewayPolicy", Namespace: "other-ns", Name: "policy", Err: errors.New("not found")}
 
 		updated, isProblem, err := handleKonnectReferences(
 			t.Context(),
@@ -446,7 +446,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 			ent,
 			failingKonnectReferenceResolver{
 				err:                             resolverErr,
-				crossNamespaceSiblingReferences: []konnectv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
+				crossNamespaceSiblingReferences: []configurationv1alpha1.CrossNamespaceReferenceCheck{crossNamespaceCheck},
 			},
 		)
 		require.NoError(t, err)
@@ -456,13 +456,13 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 		cond, ok := getKonnectReferencesResolvedCondition(ent.Status.Conditions)
 		require.True(t, ok, "expected KonnectReferencesResolved condition to be set")
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, konnectv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
+		assert.Equal(t, configurationv1alpha1.KonnectReferencesResolvedReasonNotFound, cond.Reason, "grant check passed, so the resolver's own error must surface")
 	})
 }
 
 func getKonnectReferencesResolvedCondition(conditions []metav1.Condition) (metav1.Condition, bool) {
 	for _, cond := range conditions {
-		if cond.Type == konnectv1alpha1.KonnectReferencesResolvedConditionType {
+		if cond.Type == configurationv1alpha1.KonnectReferencesResolvedConditionType {
 			return cond, true
 		}
 	}

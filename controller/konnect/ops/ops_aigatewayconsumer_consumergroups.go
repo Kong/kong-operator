@@ -12,6 +12,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -36,7 +37,7 @@ func enforceAIGatewayConsumerConsumerGroups(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumersSDK,
-	obj *konnectv1alpha1.AIGatewayConsumer,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumer,
 	gatewayID string,
 ) error {
 	resolvedNames, invalid, err := resolveAIGatewayConsumerConsumerGroups(ctx, cl, obj)
@@ -83,11 +84,11 @@ type invalidAIGatewayConsumerGroupRef struct {
 func resolveAIGatewayConsumerConsumerGroups(
 	ctx context.Context,
 	cl client.Client,
-	obj *konnectv1alpha1.AIGatewayConsumer,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumer,
 ) (resolvedNames []string, invalid []invalidAIGatewayConsumerGroupRef, err error) {
 	resolvedNames = make([]string, 0, len(obj.Spec.ConsumerGroups))
 	for _, ref := range obj.Spec.ConsumerGroups {
-		var cg konnectv1alpha1.AIGatewayConsumerGroup
+		var cg aiconfigurationv1alpha1.AIGatewayConsumerGroup
 		nn := client.ObjectKey{
 			Namespace: obj.GetNamespace(),
 			Name:      ref.Name,
@@ -110,7 +111,7 @@ func resolveAIGatewayConsumerConsumerGroups(
 
 // setAIGatewayConsumerGroupRefsValidCondition sets the ConsumerGroupRefsValid
 // condition to False (listing the invalid refs) or True.
-func setAIGatewayConsumerGroupRefsValidCondition(obj *konnectv1alpha1.AIGatewayConsumer, invalid []invalidAIGatewayConsumerGroupRef) {
+func setAIGatewayConsumerGroupRefsValidCondition(obj *aiconfigurationv1alpha1.AIGatewayConsumer, invalid []invalidAIGatewayConsumerGroupRef) {
 	if len(invalid) > 0 {
 		reasons := make([]string, 0, len(invalid))
 		for _, ref := range invalid {
@@ -118,9 +119,9 @@ func setAIGatewayConsumerGroupRefsValidCondition(obj *konnectv1alpha1.AIGatewayC
 		}
 		k8sutils.SetCondition(
 			k8sutils.NewConditionWithGeneration(
-				konnectv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
+				aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
 				metav1.ConditionFalse,
-				konnectv1alpha1.AIGatewayConsumerGroupRefsReasonInvalid,
+				aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsReasonInvalid,
 				fmt.Sprintf("Invalid AIGatewayConsumerGroup references: %s", strings.Join(reasons, ", ")),
 				obj.GetGeneration(),
 			),
@@ -130,9 +131,9 @@ func setAIGatewayConsumerGroupRefsValidCondition(obj *konnectv1alpha1.AIGatewayC
 	}
 	k8sutils.SetCondition(
 		k8sutils.NewConditionWithGeneration(
-			konnectv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
+			aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsValidConditionType,
 			metav1.ConditionTrue,
-			konnectv1alpha1.AIGatewayConsumerGroupRefsReasonValid,
+			aiconfigurationv1alpha1.AIGatewayConsumerGroupRefsReasonValid,
 			"",
 			obj.GetGeneration(),
 		),

@@ -4,7 +4,7 @@
 #   - aigw_cp_name: The name of the AIGateway control plane resource to which this policy will be applied.
 #   - aigw_policy_name: The name of the AIGatewayPolicy resource to be created.
 #   - response_header: The "Name:value" response header this policy adds.
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayPolicy
 metadata:
   name: ($aigw_policy_name)

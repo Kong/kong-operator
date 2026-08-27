@@ -132,7 +132,7 @@ for ns in ${ALL_NAMESPACES}; do
 
   # AI Gateway resources (all related resources regardless of API group)
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "AI Gateway Resources" \
-    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.configuration.konghq.com,aigatewaymodelproviders.konnect.konghq.com,aigatewaymodels.konnect.konghq.com,aigatewaypolicies.konnect.konghq.com,aigatewayconsumers.konnect.konghq.com,aigatewayconsumercredentials.konnect.konghq.com,aigatewayconsumergroups.konnect.konghq.com,aigatewayagents.konnect.konghq.com,aigatewaymcpservers.konnect.konghq.com,aigatewayidentityproviders.konnect.konghq.com"
+    "aigatewaydataplanes.aigateway.konghq.com,konnectaigateways.konnect.konghq.com,aigatewaydataplanecertificates.configuration.konghq.com,aigatewaymodelproviders.aiconfiguration.konghq.com,aigatewaymodels.aiconfiguration.konghq.com,aigatewaypolicies.aiconfiguration.konghq.com,aigatewayconsumers.aiconfiguration.konghq.com,aigatewayconsumercredentials.aiconfiguration.konghq.com,aigatewayconsumergroups.aiconfiguration.konghq.com,aigatewayagents.aiconfiguration.konghq.com,aigatewaymcpservers.aiconfiguration.konghq.com,aigatewayidentityproviders.aiconfiguration.konghq.com,aigatewayauthstrategies.aiconfiguration.konghq.com"
 
   # Core Kubernetes resources
   capture_resource_group "${RESOURCES_FILE}" "${ns}" "Core Kubernetes Resources" \

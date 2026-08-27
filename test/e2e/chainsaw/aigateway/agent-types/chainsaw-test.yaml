@@ -100,7 +100,7 @@ spec:
             file: 01-aigatewayagents.yaml
         - assert:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($http_agent_name)
@@ -111,7 +111,7 @@ spec:
                 (id != null): true
         - assert:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayAgent
               metadata:
                 name: ($a2a_agent_name)

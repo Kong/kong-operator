@@ -190,13 +190,13 @@ spec:
       try:
         - delete:
             ref:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayConsumerCredential
               name: ($credential_name)
               namespace: ($namespace)
         - error:
             resource:
-              apiVersion: konnect.konghq.com/v1alpha1
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayConsumerCredential
               metadata:
                 name: ($credential_name)

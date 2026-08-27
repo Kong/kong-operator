@@ -25,7 +25,7 @@ spec:
     authRef:
       name: konnect-api-auth-1
 ---
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayPolicy
 metadata:
   name: aigw-policy-prompt-decorator

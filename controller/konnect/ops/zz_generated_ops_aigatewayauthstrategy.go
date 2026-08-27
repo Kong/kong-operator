@@ -11,14 +11,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayAuthStrategy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayAuthStrategiesSDK,
-	obj *konnectv1alpha1.AIGatewayAuthStrategy,
+	obj *aiconfigurationv1alpha1.AIGatewayAuthStrategy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -63,7 +63,7 @@ func updateAIGatewayAuthStrategy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayAuthStrategiesSDK,
-	obj *konnectv1alpha1.AIGatewayAuthStrategy,
+	obj *aiconfigurationv1alpha1.AIGatewayAuthStrategy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -91,7 +91,7 @@ func updateAIGatewayAuthStrategy(
 func deleteAIGatewayAuthStrategy(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayAuthStrategiesSDK,
-	obj *konnectv1alpha1.AIGatewayAuthStrategy,
+	obj *aiconfigurationv1alpha1.AIGatewayAuthStrategy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -109,7 +109,7 @@ func deleteAIGatewayAuthStrategy(
 func getAIGatewayAuthStrategyForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayAuthStrategiesSDK,
-	obj *konnectv1alpha1.AIGatewayAuthStrategy,
+	obj *aiconfigurationv1alpha1.AIGatewayAuthStrategy,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

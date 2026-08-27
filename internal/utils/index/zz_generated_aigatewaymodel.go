@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -25,27 +25,27 @@ const (
 func OptionsForAIGatewayModel() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayModelOnKonnectAIGatewayRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayPolicyRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayPolicyRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayConsumerGroupRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayModelProviderRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayModelProviderRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayModel{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnAIGatewayIdentityProviderRef,
 			ExtractValueFn: aiGatewayModelOnAIGatewayIdentityProviderRef,
 		},
@@ -53,7 +53,7 @@ func OptionsForAIGatewayModel() []Option {
 }
 
 func aiGatewayModelOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
@@ -70,12 +70,12 @@ func aiGatewayModelOnKonnectAIGatewayRef(object client.Object) []string {
 }
 
 func aiGatewayModelOnAIGatewayPolicyRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -85,7 +85,7 @@ func aiGatewayModelOnAIGatewayPolicyRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -99,12 +99,12 @@ func aiGatewayModelOnAIGatewayPolicyRef(object client.Object) []string {
 }
 
 func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIAccessAclsAllowAllow(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessAclsAllowAllow(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
 			continue
 		}
@@ -114,7 +114,7 @@ func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIAccessAclsDenyDeny(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessAclsDenyDeny(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
 			continue
 		}
@@ -128,12 +128,12 @@ func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
 }
 
 func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPITargetsProvider(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPITargetsProvider(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayModelProvider" {
 			continue
 		}
@@ -143,7 +143,7 @@ func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelTargetsProvider(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelTargetsProvider(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayModelProvider" {
 			continue
 		}
@@ -157,12 +157,12 @@ func aiGatewayModelOnAIGatewayModelProviderRef(object client.Object) []string {
 }
 
 func aiGatewayModelOnAIGatewayIdentityProviderRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModel)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelAPIAccessIdentityProviders(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessIdentityProviders(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
 			continue
 		}
@@ -172,7 +172,7 @@ func aiGatewayModelOnAIGatewayIdentityProviderRef(object client.Object) []string
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayModelModelAccessIdentityProviders(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessIdentityProviders(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
 			continue
 		}

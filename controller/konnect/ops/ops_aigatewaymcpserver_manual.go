@@ -9,13 +9,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func getAIGatewayMCPServerForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayMCPServersSDK,
-	obj *konnectv1alpha1.AIGatewayMCPServer,
+	obj *aiconfigurationv1alpha1.AIGatewayMCPServer,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -59,37 +59,37 @@ func getAIGatewayMCPServerForUID(
 // getAIGatewayMCPServerSpecLookupKey returns the discriminator type and name
 // configured on the Kubernetes object's spec, to be matched against the
 // Konnect list response.
-func getAIGatewayMCPServerSpecLookupKey(obj *konnectv1alpha1.AIGatewayMCPServer) (variantType, name string, ok bool) {
+func getAIGatewayMCPServerSpecLookupKey(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) (variantType, name string, ok bool) {
 	if obj == nil || obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
 		return "", "", false
 	}
 
 	switch obj.Spec.APISpec.Type {
-	case konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly:
+	case aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly:
 		if obj.Spec.APISpec.ConversionOnly == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly), string(obj.Spec.APISpec.ConversionOnly.Name), true
-	case konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionListener:
+		return string(aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly), string(obj.Spec.APISpec.ConversionOnly.Name), true
+	case aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionListener:
 		if obj.Spec.APISpec.ConversionListener == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayMCPServerConfigTypeConversionListener), string(obj.Spec.APISpec.ConversionListener.Name), true
-	case konnectv1alpha1.AIGatewayMCPServerConfigTypeListener:
+		return string(aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionListener), string(obj.Spec.APISpec.ConversionListener.Name), true
+	case aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeListener:
 		if obj.Spec.APISpec.Listener == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayMCPServerConfigTypeListener), string(obj.Spec.APISpec.Listener.Name), true
-	case konnectv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener:
+		return string(aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeListener), string(obj.Spec.APISpec.Listener.Name), true
+	case aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener:
 		if obj.Spec.APISpec.PassthroughListener == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener), string(obj.Spec.APISpec.PassthroughListener.Name), true
-	case konnectv1alpha1.AIGatewayMCPServerConfigTypeUpstreamServer:
+		return string(aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypePassthroughListener), string(obj.Spec.APISpec.PassthroughListener.Name), true
+	case aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeUpstreamServer:
 		if obj.Spec.APISpec.UpstreamServer == nil {
 			return "", "", false
 		}
-		return string(konnectv1alpha1.AIGatewayMCPServerConfigTypeUpstreamServer), string(obj.Spec.APISpec.UpstreamServer.Name), true
+		return string(aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeUpstreamServer), string(obj.Spec.APISpec.UpstreamServer.Name), true
 	default:
 		return "", "", false
 	}

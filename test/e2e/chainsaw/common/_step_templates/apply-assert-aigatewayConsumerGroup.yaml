@@ -15,7 +15,7 @@ spec:
   try:
     - apply:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayConsumerGroup
           metadata:
             name: ($consumer_group_name)
@@ -31,7 +31,7 @@ spec:
               policies: ($policies)
     - assert:
         resource:
-          apiVersion: konnect.konghq.com/v1alpha1
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
           kind: AIGatewayConsumerGroup
           metadata:
             name: ($consumer_group_name)

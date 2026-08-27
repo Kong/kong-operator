@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -22,7 +23,7 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.AIGatewayMCPServer{})
+			return b.For(&aiconfigurationv1alpha1.AIGatewayMCPServer{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -34,7 +35,7 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayPolicy{},
+				&aiconfigurationv1alpha1.AIGatewayPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayMCPServerForAIGatewayPolicy(cl),
 				),
@@ -44,7 +45,7 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.AIGatewayMCPServerList](cl),
+					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayMCPServerList](cl),
 				),
 			)
 		},
@@ -59,7 +60,7 @@ func enqueueAIGatewayMCPServerForKonnectAIGateway(
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.AIGatewayMCPServerList
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayMCPServerOnKonnectAIGatewayRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {
@@ -73,11 +74,11 @@ func enqueueAIGatewayMCPServerForAIGatewayPolicy(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		ref, ok := obj.(*konnectv1alpha1.AIGatewayPolicy)
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayPolicy)
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.AIGatewayMCPServerList
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {

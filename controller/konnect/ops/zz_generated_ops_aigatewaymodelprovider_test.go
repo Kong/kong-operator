@@ -13,14 +13,14 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func testGeneratedAIGatewayModelProviderForSDKOps() *konnectv1alpha1.AIGatewayModelProvider {
-	return &konnectv1alpha1.AIGatewayModelProvider{
+func testGeneratedAIGatewayModelProviderForSDKOps() *aiconfigurationv1alpha1.AIGatewayModelProvider {
+	return &aiconfigurationv1alpha1.AIGatewayModelProvider{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayModelProvider",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -29,11 +29,11 @@ func testGeneratedAIGatewayModelProviderForSDKOps() *konnectv1alpha1.AIGatewayMo
 			UID:        "aigatewaymodelprovider-uid",
 			Generation: 3,
 		},
-		Spec: konnectv1alpha1.AIGatewayModelProviderSpec{
-			APISpec: konnectv1alpha1.AIGatewayModelProviderAPISpec{
-				AIGatewayModelProviderConfig: &konnectv1alpha1.AIGatewayModelProviderConfig{
-					Type:      konnectv1alpha1.AIGatewayModelProviderConfigTypeAnthropic,
-					Anthropic: &konnectv1alpha1.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: konnectv1alpha1.AIGatewayModelProviderAnthropicConfig{Auth: konnectv1alpha1.AIGatewayModelProviderConfigAuthBasic{Headers: []konnectv1alpha1.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: konnectv1alpha1.SensitiveDataSource{Type: konnectv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}},
+		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
+				AIGatewayModelProviderConfig: &aiconfigurationv1alpha1.AIGatewayModelProviderConfig{
+					Type:      aiconfigurationv1alpha1.AIGatewayModelProviderConfigTypeAnthropic,
+					Anthropic: &aiconfigurationv1alpha1.AIGatewayModelProviderAnthropic{DisplayName: "test-display-name", Name: "test-provider", Config: aiconfigurationv1alpha1.AIGatewayModelProviderAnthropicConfig{Auth: aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthBasic{Headers: []aiconfigurationv1alpha1.AIGatewayModelProviderConfigAuthBasicHeaders{{Name: "x-api-key", Value: aiconfigurationv1alpha1.SensitiveDataSource{Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")}}}}}},
 				},
 			},
 		},
