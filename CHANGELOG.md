@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.10](#v2110)
 - [v2.1.9](#v219)
 - [v2.1.8](#v218)
 - [v2.1.7](#v217)
@@ -49,7 +50,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.1.10]
+
+> Release date: 2026-08-27
 
 ### Fixes
 
@@ -58,10 +61,10 @@
   in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
   `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
   is changed in dataplane options.
-  [#5003](https://github.com/Kong/kong-operator/pull/5003)
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5105](https://github.com/Kong/kong-operator/pull/5105)
 - Konnect entities: Fix truncating of tags to cut at 128 unicode runes
   (UTF8 code points).
-  [#5306](https://github.com/Kong/kong-operator/pull/5306)
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5371](https://github.com/Kong/kong-operator/pull/5371)
 - Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
   to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
   tags in `KongPlugin`s' annotation to plugins in Konnect.
@@ -2016,6 +2019,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
 [v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
