@@ -56,7 +56,7 @@
 
 ## [v2.2.4]
 
-> Relaese date: 2026-08-26
+> Relaese date: 2026-08-27
 
 ### Fixes
 
