@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -19,12 +19,12 @@ const (
 func OptionsForAIGatewayMCPServer() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayMCPServer{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
 			Field:          IndexFieldAIGatewayMCPServerOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayMCPServerOnKonnectAIGatewayRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayMCPServer{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayMCPServer{},
 			Field:          IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef,
 			ExtractValueFn: aiGatewayMCPServerOnAIGatewayPolicyRef,
 		},
@@ -32,7 +32,7 @@ func OptionsForAIGatewayMCPServer() []Option {
 }
 
 func aiGatewayMCPServerOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayMCPServer)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
 	if !ok {
 		return nil
 	}
@@ -49,12 +49,12 @@ func aiGatewayMCPServerOnKonnectAIGatewayRef(object client.Object) []string {
 }
 
 func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayMCPServer)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerConversionListenerPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionListenerPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -64,7 +64,7 @@ func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerConversionOnlyPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -74,7 +74,7 @@ func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerListenerPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerListenerPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -84,7 +84,7 @@ func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerPassthroughListenerPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}
@@ -94,7 +94,7 @@ func aiGatewayMCPServerOnAIGatewayPolicyRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerPolicies(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerPolicies(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayPolicy" {
 			continue
 		}

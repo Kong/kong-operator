@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -17,7 +17,7 @@ const (
 func OptionsForAIGatewayModelProvider() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayModelProvider{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayModelProvider{},
 			Field:          IndexFieldAIGatewayModelProviderOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayModelProviderOnKonnectAIGatewayRef,
 		},
@@ -25,7 +25,7 @@ func OptionsForAIGatewayModelProvider() []Option {
 }
 
 func aiGatewayModelProviderOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayModelProvider)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModelProvider)
 	if !ok {
 		return nil
 	}

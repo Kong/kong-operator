@@ -10,14 +10,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
-	obj *konnectv1alpha1.AIGatewayPolicy,
+	obj *aiconfigurationv1alpha1.AIGatewayPolicy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -45,7 +45,7 @@ func updateAIGatewayPolicy(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
-	obj *konnectv1alpha1.AIGatewayPolicy,
+	obj *aiconfigurationv1alpha1.AIGatewayPolicy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -74,7 +74,7 @@ func updateAIGatewayPolicy(
 func deleteAIGatewayPolicy(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
-	obj *konnectv1alpha1.AIGatewayPolicy,
+	obj *aiconfigurationv1alpha1.AIGatewayPolicy,
 ) error {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {
@@ -92,7 +92,7 @@ func deleteAIGatewayPolicy(
 func getAIGatewayPolicyForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayPoliciesSDK,
-	obj *konnectv1alpha1.AIGatewayPolicy,
+	obj *aiconfigurationv1alpha1.AIGatewayPolicy,
 ) (string, error) {
 	parentID := obj.GetGatewayID()
 	if parentID == "" {

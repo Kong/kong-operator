@@ -3,6 +3,7 @@
 package manager
 
 import (
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -11,17 +12,17 @@ func generatedControllersForKonnectEntities(
 	controllerFactory konnectControllerFactory,
 ) []ControllerDef {
 	return []ControllerDef{
-		newKonnectEntityController[konnectv1alpha1.AIGatewayAgent](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayAuthStrategy](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumer](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumerCredential](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayConsumerGroup](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayAgent](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayAuthStrategy](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumer](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerCredential](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerGroup](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.AIGatewayDataPlaneCertificate](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayIdentityProvider](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayMCPServer](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayModel](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayModelProvider](controllerFactory),
-		newKonnectEntityController[konnectv1alpha1.AIGatewayPolicy](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayIdentityProvider](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayMCPServer](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModel](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModelProvider](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayPolicy](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayBackendCluster](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),

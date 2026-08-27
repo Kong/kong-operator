@@ -134,12 +134,12 @@ func ensureKongReferenceGrantForParentRef[
 // shared ResolvedRefs condition for them. The parent-ref handler must not remove
 // ResolvedRefs while one exists, otherwise it would clobber what that handler sets.
 func parentRefEntityHasCrossNamespaceRefs(ent client.Object) bool {
-	g, ok := any(ent).(sensitiveDataSecretRefsGetter)
+	refs, ok := sensitiveDataSecretRefs(ent)
 	if !ok {
 		return false
 	}
 	ns := ent.GetNamespace()
-	for _, r := range g.GetSensitiveDataSecretRefs() {
+	for _, r := range refs {
 		if n := r.Namespace; n != nil && *n != "" && *n != ns {
 			return true
 		}

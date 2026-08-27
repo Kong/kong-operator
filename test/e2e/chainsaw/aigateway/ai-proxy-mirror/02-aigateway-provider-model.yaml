@@ -9,7 +9,7 @@ type: Opaque
 stringData:
   apikey: test-ai-gateway-key
 ---
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModelProvider
 metadata:
   name: openai-provider
@@ -34,7 +34,7 @@ spec:
                   name: openai-provider-credentials
                   key: apikey
 ---
-apiVersion: konnect.konghq.com/v1alpha1
+apiVersion: aiconfiguration.konghq.com/v1alpha1
 kind: AIGatewayModel
 metadata:
   name: aigw11-model

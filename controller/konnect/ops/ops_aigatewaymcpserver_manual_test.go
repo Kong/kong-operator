@@ -11,8 +11,8 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func TestGetAIGatewayMCPServerForUID(t *testing.T) {
@@ -134,10 +134,10 @@ func TestGetAIGatewayMCPServerForUID(t *testing.T) {
 	})
 }
 
-func testAIGatewayMCPServer() *konnectv1alpha1.AIGatewayMCPServer {
-	return &konnectv1alpha1.AIGatewayMCPServer{
+func testAIGatewayMCPServer() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+	return &aiconfigurationv1alpha1.AIGatewayMCPServer{
 		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			Kind:       "AIGatewayMCPServer",
 		},
 		ObjectMeta: metav1.ObjectMeta{
@@ -146,24 +146,24 @@ func testAIGatewayMCPServer() *konnectv1alpha1.AIGatewayMCPServer {
 			UID:        "aigatewaymcpserver-uid",
 			Generation: 2,
 		},
-		Spec: konnectv1alpha1.AIGatewayMCPServerSpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "ai-gw-cp-1",
 				},
 			},
-			APISpec: konnectv1alpha1.AIGatewayMCPServerAPISpec{
-				AIGatewayMCPServerConfig: &konnectv1alpha1.AIGatewayMCPServerConfig{
-					Type: konnectv1alpha1.AIGatewayMCPServerConfigTypeListener,
-					Listener: &konnectv1alpha1.AIGatewayMCPServerListener{
+			APISpec: aiconfigurationv1alpha1.AIGatewayMCPServerAPISpec{
+				AIGatewayMCPServerConfig: &aiconfigurationv1alpha1.AIGatewayMCPServerConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeListener,
+					Listener: &aiconfigurationv1alpha1.AIGatewayMCPServerListener{
 						Name: "flights-mcp-server",
 					},
 				},
 			},
 		},
-		Status: konnectv1alpha1.AIGatewayMCPServerStatus{
-			GatewayID: &konnectv1alpha1.KonnectEntityRef{
+		Status: aiconfigurationv1alpha1.AIGatewayMCPServerStatus{
+			GatewayID: &aiconfigurationv1alpha1.KonnectEntityRef{
 				ID: "gateway-1",
 			},
 		},

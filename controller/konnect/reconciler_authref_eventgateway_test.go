@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -173,12 +174,12 @@ func TestGetAPIAuthRef(t *testing.T) {
 				newTestAIGatewayConsumer(namespace, consumerName, aiGatewayName),
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
-				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.AIGatewayConsumerCredential{
+				return getAPIAuthRef(ctx, cl, &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
 					ObjectMeta: metav1.ObjectMeta{
 						Name:      "ai-gateway-consumer-credential",
 						Namespace: namespace,
 					},
-					Spec: konnectv1alpha1.AIGatewayConsumerCredentialSpec{
+					Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
 						AIGatewayConsumerRef: testNamespacedObjectRef(consumerName),
 					},
 				})
@@ -474,13 +475,13 @@ func newTestKonnectAIGateway(namespace, name, apiAuthName string) *konnectv1alph
 	}
 }
 
-func newTestAIGatewayConsumer(namespace, name, gatewayName string) *konnectv1alpha1.AIGatewayConsumer {
-	return &konnectv1alpha1.AIGatewayConsumer{
+func newTestAIGatewayConsumer(namespace, name, gatewayName string) *aiconfigurationv1alpha1.AIGatewayConsumer {
+	return &aiconfigurationv1alpha1.AIGatewayConsumer{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: namespace,
 		},
-		Spec: konnectv1alpha1.AIGatewayConsumerSpec{
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
 			AIGatewayRef: testNamespacedObjectRef(gatewayName),
 		},
 	}

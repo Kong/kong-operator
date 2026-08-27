@@ -10,14 +10,14 @@ import (
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 func createAIGatewayConsumerCredential(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.AIGatewayConsumersSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerCredential,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -50,7 +50,7 @@ func createAIGatewayConsumerCredential(
 func deleteAIGatewayConsumerCredential(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayConsumersSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerCredential,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) error {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {
@@ -76,7 +76,7 @@ func deleteAIGatewayConsumerCredential(
 func getAIGatewayConsumerCredentialForUID(
 	ctx context.Context,
 	sdk sdkkonnectgo.AIGatewayConsumersSDK,
-	obj *konnectv1alpha1.AIGatewayConsumerCredential,
+	obj *aiconfigurationv1alpha1.AIGatewayConsumerCredential,
 ) (string, error) {
 	gatewayID := obj.GetGatewayID()
 	if gatewayID == "" {

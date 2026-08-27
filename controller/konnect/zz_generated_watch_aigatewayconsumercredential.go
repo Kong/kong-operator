@@ -11,8 +11,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -23,11 +23,11 @@ func AIGatewayConsumerCredentialReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&konnectv1alpha1.AIGatewayConsumerCredential{})
+			return b.For(&aiconfigurationv1alpha1.AIGatewayConsumerCredential{})
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
-				&konnectv1alpha1.AIGatewayConsumer{},
+				&aiconfigurationv1alpha1.AIGatewayConsumer{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayConsumerCredentialForAIGatewayConsumer(cl),
 				),
@@ -37,7 +37,7 @@ func AIGatewayConsumerCredentialReconciliationWatchOptions(
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.AIGatewayConsumerCredentialList](cl),
+					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl),
 				),
 			)
 		},
@@ -45,7 +45,7 @@ func AIGatewayConsumerCredentialReconciliationWatchOptions(
 			return b.Watches(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
-					enqueueObjectsForSecretRef[konnectv1alpha1.AIGatewayConsumerCredentialList](cl),
+					enqueueObjectsForSecretRef[aiconfigurationv1alpha1.AIGatewayConsumerCredentialList](cl),
 				),
 			)
 		},
@@ -56,11 +56,11 @@ func enqueueAIGatewayConsumerCredentialForAIGatewayConsumer(
 	cl client.Client,
 ) func(ctx context.Context, obj client.Object) []reconcile.Request {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		parent, ok := obj.(*konnectv1alpha1.AIGatewayConsumer)
+		parent, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumer)
 		if !ok {
 			return nil
 		}
-		var l konnectv1alpha1.AIGatewayConsumerCredentialList
+		var l aiconfigurationv1alpha1.AIGatewayConsumerCredentialList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayConsumerCredentialOnAIGatewayConsumerRef: client.ObjectKeyFromObject(parent).String(),
 		}); err != nil {

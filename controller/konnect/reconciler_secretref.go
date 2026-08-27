@@ -37,9 +37,9 @@ func getSecretRefs[T constraints.SupportedKonnectEntityType, TEnt constraints.En
 		}
 	}
 	// Entities using the generated SensitiveDataSource mechanism implement
-	// SensitiveDataSecretRefsGetter; collect all active secretRef pointers.
-	if g, ok := any(e).(sensitiveDataSecretRefsGetter); ok {
-		for _, r := range g.GetSensitiveDataSecretRefs() {
+	// GetSensitiveDataSecretRefs; collect all active secretRef pointers.
+	if refs, ok := sensitiveDataSecretRefs(e); ok {
+		for _, r := range refs {
 			secretRefs = append(secretRefs, commonv1alpha1.NamespacedRef{Name: r.Name, Namespace: r.Namespace})
 		}
 	}
@@ -92,8 +92,8 @@ func handleSecretRef[T constraints.SupportedKonnectEntityType, TEnt constraints.
 
 		// For entities using SensitiveDataSource, verify every expected key exists.
 		if !deleting {
-			if g, ok := any(ent).(sensitiveDataSecretRefsGetter); ok {
-				for _, sdr := range g.GetSensitiveDataSecretRefs() {
+			if refs, ok := sensitiveDataSecretRefs(ent); ok {
+				for _, sdr := range refs {
 					refNS := ent.GetNamespace()
 					if sdr.Namespace != nil && *sdr.Namespace != "" {
 						refNS = *sdr.Namespace

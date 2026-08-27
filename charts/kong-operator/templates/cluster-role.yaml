@@ -73,6 +73,51 @@ rules:
       - update
       - watch
   - apiGroups:
+      - aiconfiguration.konghq.com
+    resources:
+      - aigatewayagents
+      - aigatewayauthstrategies
+      - aigatewayconsumercredentials
+      - aigatewayconsumergroups
+      - aigatewayconsumers
+      - aigatewayidentityproviders
+      - aigatewaymcpservers
+      - aigatewaymodelproviders
+      - aigatewaymodels
+      - aigatewaypolicies
+    verbs:
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - aiconfiguration.konghq.com
+    resources:
+      - aigatewayagents/finalizers
+      - aigatewayagents/status
+      - aigatewayauthstrategies/finalizers
+      - aigatewayauthstrategies/status
+      - aigatewayconsumercredentials/finalizers
+      - aigatewayconsumercredentials/status
+      - aigatewayconsumergroups/finalizers
+      - aigatewayconsumergroups/status
+      - aigatewayconsumers/finalizers
+      - aigatewayconsumers/status
+      - aigatewayidentityproviders/finalizers
+      - aigatewayidentityproviders/status
+      - aigatewaymcpservers/finalizers
+      - aigatewaymcpservers/status
+      - aigatewaymodelproviders/finalizers
+      - aigatewaymodelproviders/status
+      - aigatewaymodels/finalizers
+      - aigatewaymodels/status
+      - aigatewaypolicies/finalizers
+      - aigatewaypolicies/status
+    verbs:
+      - patch
+      - update
+  - apiGroups:
       - aigateway.konghq.com
     resources:
       - aigatewaydataplanes
@@ -470,16 +515,6 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
-      - aigatewayagents
-      - aigatewayauthstrategies
-      - aigatewayconsumercredentials
-      - aigatewayconsumergroups
-      - aigatewayconsumers
-      - aigatewayidentityproviders
-      - aigatewaymcpservers
-      - aigatewaymodelproviders
-      - aigatewaymodels
-      - aigatewaypolicies
       - konnectaigateways
       - konnectapiauthconfigurations
       - konnectcloudgatewaydataplanegroupconfigurations
@@ -504,26 +539,6 @@ rules:
   - apiGroups:
       - konnect.konghq.com
     resources:
-      - aigatewayagents/finalizers
-      - aigatewayagents/status
-      - aigatewayauthstrategies/finalizers
-      - aigatewayauthstrategies/status
-      - aigatewayconsumercredentials/finalizers
-      - aigatewayconsumercredentials/status
-      - aigatewayconsumergroups/finalizers
-      - aigatewayconsumergroups/status
-      - aigatewayconsumers/finalizers
-      - aigatewayconsumers/status
-      - aigatewayidentityproviders/finalizers
-      - aigatewayidentityproviders/status
-      - aigatewaymcpservers/finalizers
-      - aigatewaymcpservers/status
-      - aigatewaymodelproviders/finalizers
-      - aigatewaymodelproviders/status
-      - aigatewaymodels/finalizers
-      - aigatewaymodels/status
-      - aigatewaypolicies/finalizers
-      - aigatewaypolicies/status
       - konnectaigateways/finalizers
       - konnectaigateways/status
       - konnectapiauthconfigurations/finalizers

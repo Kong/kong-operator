@@ -9,26 +9,26 @@ import (
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
-// aclReferencesScheme returns a scheme with the konnect v1alpha1 types
+// aclReferencesScheme returns a scheme with the aiconfiguration v1alpha1 types
 // registered so a fake client can serve referenced AIGatewayConsumerGroup CRs.
 func aclReferencesScheme(t *testing.T) *runtime.Scheme {
 	t.Helper()
 	scheme := runtime.NewScheme()
-	require.NoError(t, konnectv1alpha1.AddToScheme(scheme))
+	require.NoError(t, aiconfigurationv1alpha1.AddToScheme(scheme))
 	return scheme
 }
 
 // programmedConsumerGroup builds an AIGatewayConsumerGroup that already has a Konnect ID
 // and a Konnect name, i.e. a reference target that resolves successfully.
-func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *konnectv1alpha1.AIGatewayConsumerGroup {
-	c := &konnectv1alpha1.AIGatewayConsumerGroup{
+func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayConsumerGroup {
+	c := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: konnectv1alpha1.AIGatewayConsumerGroupSpec{
-			APISpec: konnectv1alpha1.AIGatewayConsumerGroupAPISpec{
-				Name: konnectv1alpha1.AIGatewayEntityIdentifier(konnectName),
+		Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerGroupAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
 			},
 		},
 	}
@@ -41,8 +41,8 @@ func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *ko
 // resolvesTo:name Konnect name is left empty (GetKonnectName's union type
 // switch returns "" when the provider config isn't set), which is fine here
 // since these tests only need the reference to resolve, not a specific name.
-func programmedModelProvider(name, namespace, konnectID string) *konnectv1alpha1.AIGatewayModelProvider {
-	p := &konnectv1alpha1.AIGatewayModelProvider{
+func programmedModelProvider(name, namespace, konnectID string) *aiconfigurationv1alpha1.AIGatewayModelProvider {
+	p := &aiconfigurationv1alpha1.AIGatewayModelProvider{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
 	}
 	p.SetKonnectID(konnectID)
@@ -52,15 +52,15 @@ func programmedModelProvider(name, namespace, konnectID string) *konnectv1alpha1
 // programmedIdentityProvider builds an AIGatewayIdentityProvider that already
 // has a Konnect ID and a Konnect name, i.e. a reference target that resolves
 // successfully.
-func programmedIdentityProvider(name, namespace, konnectName, konnectID string) *konnectv1alpha1.AIGatewayIdentityProvider {
-	p := &konnectv1alpha1.AIGatewayIdentityProvider{
+func programmedIdentityProvider(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayIdentityProvider {
+	p := &aiconfigurationv1alpha1.AIGatewayIdentityProvider{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: konnectv1alpha1.AIGatewayIdentityProviderSpec{
-			APISpec: konnectv1alpha1.AIGatewayIdentityProviderAPISpec{
-				AIGatewayIdentityProviderConfig: &konnectv1alpha1.AIGatewayIdentityProviderConfig{
-					Type: konnectv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
-					KeyAuth: &konnectv1alpha1.AIGatewayIdentityProviderKeyAuth{
-						Name: konnectv1alpha1.AIGatewayEntityIdentifier(konnectName),
+		Spec: aiconfigurationv1alpha1.AIGatewayIdentityProviderSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayIdentityProviderAPISpec{
+				AIGatewayIdentityProviderConfig: &aiconfigurationv1alpha1.AIGatewayIdentityProviderConfig{
+					Type: aiconfigurationv1alpha1.AIGatewayIdentityProviderConfigTypeKeyAuth,
+					KeyAuth: &aiconfigurationv1alpha1.AIGatewayIdentityProviderKeyAuth{
+						Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
 					},
 				},
 			},
@@ -70,12 +70,12 @@ func programmedIdentityProvider(name, namespace, konnectName, konnectID string) 
 	return p
 }
 
-func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *konnectv1alpha1.AIGatewayPolicy {
-	p := &konnectv1alpha1.AIGatewayPolicy{
+func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *aiconfigurationv1alpha1.AIGatewayPolicy {
+	p := &aiconfigurationv1alpha1.AIGatewayPolicy{
 		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-		Spec: konnectv1alpha1.AIGatewayPolicySpec{
-			APISpec: konnectv1alpha1.AIGatewayPolicyAPISpec{
-				Name: konnectv1alpha1.AIGatewayEntityIdentifier(specName),
+		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(specName),
 			},
 		},
 	}
@@ -84,13 +84,13 @@ func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *k
 	return p
 }
 
-func testAgentWithPolicyRef(namespace string, ref konnectv1alpha1.AIGatewayPolicyRef) *konnectv1alpha1.AIGatewayAgent {
-	return &konnectv1alpha1.AIGatewayAgent{
+func testAgentWithPolicyRef(namespace string, ref aiconfigurationv1alpha1.AIGatewayPolicyRef) *aiconfigurationv1alpha1.AIGatewayAgent {
+	return &aiconfigurationv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: namespace},
-		Spec: konnectv1alpha1.AIGatewayAgentSpec{
-			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
-				Name: konnectv1alpha1.AIGatewayEntityIdentifier("agent-name"),
-				Policies: []konnectv1alpha1.AIGatewayPolicyRef{
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier("agent-name"),
+				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{
 					ref,
 				},
 			},
@@ -107,16 +107,16 @@ func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 
 	consumerGroup := programmedConsumerGroup("consumer-group-1", "ns", "konnect-consumer-group-name", "kid-consumer-group-1")
 
-	agent := &konnectv1alpha1.AIGatewayAgent{
+	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
-		Spec: konnectv1alpha1.AIGatewayAgentSpec{
-			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
-				Name: konnectv1alpha1.AIGatewayEntityIdentifier("agent-name"),
-				Access: konnectv1alpha1.AIGatewayAgentAccess{
-					Acls: &konnectv1alpha1.AIGatewayAgentAccessAcls{
-						Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
-						Allow: &konnectv1alpha1.AIGatewayAllowACL{
-							Allow: []konnectv1alpha1.AIGatewayACLRef{
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier("agent-name"),
+				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{
+					Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+						Type: aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+						Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{
+							Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{
 								{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 							},
 						},
@@ -143,19 +143,19 @@ func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 	t.Parallel()
 
-	consumerGroup := &konnectv1alpha1.AIGatewayConsumerGroup{
+	consumerGroup := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 		ObjectMeta: metav1.ObjectMeta{Name: "consumer-group-1", Namespace: "ns"},
 	}
 
-	agent := &konnectv1alpha1.AIGatewayAgent{
+	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
 		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
-		Spec: konnectv1alpha1.AIGatewayAgentSpec{
-			APISpec: konnectv1alpha1.AIGatewayAgentAPISpec{
-				Access: konnectv1alpha1.AIGatewayAgentAccess{
-					Acls: &konnectv1alpha1.AIGatewayAgentAccessAcls{
-						Type: konnectv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
-						Allow: &konnectv1alpha1.AIGatewayAllowACL{
-							Allow: []konnectv1alpha1.AIGatewayACLRef{
+		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
+			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
+				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{
+					Acls: &aiconfigurationv1alpha1.AIGatewayAgentAccessAcls{
+						Type: aiconfigurationv1alpha1.AIGatewayAgentAccessAclsTypeAllow,
+						Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{
+							Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{
 								{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 							},
 						},
@@ -176,7 +176,7 @@ func TestToCreateAIGatewayAgentRequest_AllowsExplicitSameNamespacePolicyRef(t *t
 	t.Parallel()
 
 	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-1", "konnect-policy-name")
-	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
+	agent := testAgentWithPolicyRef("ns", aiconfigurationv1alpha1.AIGatewayPolicyRef{
 		Namespace: "ns",
 		Name:      "policy-1",
 	})
@@ -193,7 +193,7 @@ func TestToCreateAIGatewayAgentRequest_RejectsCrossNamespacePolicyRef(t *testing
 	t.Parallel()
 
 	policy := programmedPolicy("policy-1", "other-ns", "kid-policy-1", "gw-1", "konnect-policy-name")
-	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
+	agent := testAgentWithPolicyRef("ns", aiconfigurationv1alpha1.AIGatewayPolicyRef{
 		Namespace: "other-ns",
 		Name:      "policy-1",
 	})
@@ -210,7 +210,7 @@ func TestToCreateAIGatewayAgentRequest_RejectsPolicyRefFromDifferentGateway(t *t
 	t.Parallel()
 
 	policy := programmedPolicy("policy-1", "ns", "kid-policy-1", "gw-2", "konnect-policy-name")
-	agent := testAgentWithPolicyRef("ns", konnectv1alpha1.AIGatewayPolicyRef{
+	agent := testAgentWithPolicyRef("ns", aiconfigurationv1alpha1.AIGatewayPolicyRef{
 		Name: "policy-1",
 	})
 	agent.SetGatewayID("gw-1")
@@ -236,14 +236,14 @@ func TestToCreateAIGatewayModelRequest_PreservesIdentityProvidersSibling(t *test
 	identityProvider := programmedIdentityProvider("idp-1", "default", "konnect-idp-name", "kid-idp-1")
 
 	model := testGeneratedAIGatewayModelForSDKOps()
-	model.Spec.APISpec.API.Access = konnectv1alpha1.AIGatewayModelAccess{
-		AuthStrategies: []konnectv1alpha1.AIGatewayAuthStrategyReference{
+	model.Spec.APISpec.API.Access = aiconfigurationv1alpha1.AIGatewayModelAccess{
+		AuthStrategies: []aiconfigurationv1alpha1.AIGatewayAuthStrategyReference{
 			"idp-1",
 		},
-		Acls: &konnectv1alpha1.AIGatewayModelAccessAcls{
-			Type: konnectv1alpha1.AIGatewayModelAccessAclsTypeAllow,
-			Allow: &konnectv1alpha1.AIGatewayAllowACL{
-				Allow: []konnectv1alpha1.AIGatewayACLRef{
+		Acls: &aiconfigurationv1alpha1.AIGatewayModelAccessAcls{
+			Type: aiconfigurationv1alpha1.AIGatewayModelAccessAclsTypeAllow,
+			Allow: &aiconfigurationv1alpha1.AIGatewayAllowACL{
+				Allow: []aiconfigurationv1alpha1.AIGatewayACLRef{
 					{Kind: "AIGatewayConsumerGroup", Name: "consumer-group-1"},
 				},
 			},

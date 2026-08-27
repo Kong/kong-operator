@@ -1229,4 +1229,5 @@ lint.api: download.kube-api-linter
 		./api/common/v1alpha1/... \
 		./api/eventgateway/v1alpha1/... \
 		./api/mcp/v1alpha1/... \
-		./api/aigateway/v1alpha1/...
+		./api/aigateway/v1alpha1/... \
+		./api/aiconfiguration/v1alpha1/...

@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -23,22 +23,22 @@ const (
 func OptionsForAIGatewayAgent() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayAgentOnKonnectAIGatewayRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnAIGatewayPolicyRef,
 			ExtractValueFn: aiGatewayAgentOnAIGatewayPolicyRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnAIGatewayConsumerGroupRef,
 			ExtractValueFn: aiGatewayAgentOnAIGatewayConsumerGroupRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayAgent{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayAgent{},
 			Field:          IndexFieldAIGatewayAgentOnAIGatewayIdentityProviderRef,
 			ExtractValueFn: aiGatewayAgentOnAIGatewayIdentityProviderRef,
 		},
@@ -46,7 +46,7 @@ func OptionsForAIGatewayAgent() []Option {
 }
 
 func aiGatewayAgentOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
 	if !ok {
 		return nil
 	}
@@ -63,7 +63,7 @@ func aiGatewayAgentOnKonnectAIGatewayRef(object client.Object) []string {
 }
 
 func aiGatewayAgentOnAIGatewayPolicyRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
 	if !ok {
 		return nil
 	}
@@ -82,12 +82,12 @@ func aiGatewayAgentOnAIGatewayPolicyRef(object client.Object) []string {
 }
 
 func aiGatewayAgentOnAIGatewayConsumerGroupRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
 			continue
 		}
@@ -97,7 +97,7 @@ func aiGatewayAgentOnAIGatewayConsumerGroupRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessAclsDenyDeny(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
 			continue
 		}
@@ -111,12 +111,12 @@ func aiGatewayAgentOnAIGatewayConsumerGroupRef(object client.Object) []string {
 }
 
 func aiGatewayAgentOnAIGatewayIdentityProviderRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayAgent)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
 	if !ok {
 		return nil
 	}
 	var out []string
-	for _, ref := range konnectv1alpha1.RefsAtAIGatewayAgentAccessIdentityProviders(ent) {
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayAgentAccessIdentityProviders(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayIdentityProvider" {
 			continue
 		}

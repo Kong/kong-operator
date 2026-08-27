@@ -5,7 +5,7 @@ package index
 import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 )
 
 const (
@@ -19,12 +19,12 @@ const (
 func OptionsForAIGatewayConsumer() []Option {
 	return []Option{
 		{
-			Object:         &konnectv1alpha1.AIGatewayConsumer{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayConsumer{},
 			Field:          IndexFieldAIGatewayConsumerOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayConsumerOnKonnectAIGatewayRef,
 		},
 		{
-			Object:         &konnectv1alpha1.AIGatewayConsumer{},
+			Object:         &aiconfigurationv1alpha1.AIGatewayConsumer{},
 			Field:          IndexFieldAIGatewayConsumerOnAIGatewayPolicyRef,
 			ExtractValueFn: aiGatewayConsumerOnAIGatewayPolicyRef,
 		},
@@ -32,7 +32,7 @@ func OptionsForAIGatewayConsumer() []Option {
 }
 
 func aiGatewayConsumerOnKonnectAIGatewayRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayConsumer)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayConsumer)
 	if !ok {
 		return nil
 	}
@@ -49,7 +49,7 @@ func aiGatewayConsumerOnKonnectAIGatewayRef(object client.Object) []string {
 }
 
 func aiGatewayConsumerOnAIGatewayPolicyRef(object client.Object) []string {
-	ent, ok := object.(*konnectv1alpha1.AIGatewayConsumer)
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayConsumer)
 	if !ok {
 		return nil
 	}
