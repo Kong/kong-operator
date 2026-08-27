@@ -1,0 +1,70 @@
+# Template for creating and asserting an AIGatewayDataPlane with horizontal
+# autoscaling enabled. The operator reconciles an HPA from the scaling config;
+# spec.deployment.replicas is intentionally absent because the XValidation rule
+# on DeploymentOptions forbids having both replicas and scaling set simultaneously.
+#
+# Required bindings:
+#   - aigw_dp_name:  Name of the AIGatewayDataPlane to create.
+#   - aigw_cp_name:  Name of the KonnectAIGateway it attaches to (same namespace).
+#   - namespace:     Namespace where the AIGatewayDataPlane will be created.
+#   - aigw_dp_image: AI Gateway data plane container image.
+#
+# Optional bindings (override to customise HPA bounds):
+#   - hpa_min_replicas: Minimum replicas for the HPA (default: 1).
+#   - hpa_max_replicas: Maximum replicas for the HPA (default: 3).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-dataplane-hpa
+spec:
+  bindings:
+    - name: hpa_min_replicas
+      value: 1
+    - name: hpa_max_replicas
+      value: 3
+  try:
+    - apply:
+        resource:
+          apiVersion: aigateway.konghq.com/v1alpha1
+          kind: AIGatewayDataPlane
+          metadata:
+            name: ($aigw_dp_name)
+            namespace: ($namespace)
+          spec:
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($aigw_cp_name)
+            deployment:
+              scaling:
+                horizontal:
+                  minReplicas: ($hpa_min_replicas)
+                  maxReplicas: ($hpa_max_replicas)
+              podTemplateSpec:
+                spec:
+                  containers:
+                    - name: aigw
+                      image: ($aigw_dp_image)
+            network:
+              services:
+                ingress:
+                  type: LoadBalancer
+                  ports:
+                    - name: ingress
+                      port: 443
+                      targetPort: 8443
+    - assert:
+        resource:
+          apiVersion: aigateway.konghq.com/v1alpha1
+          kind: AIGatewayDataPlane
+          metadata:
+            name: ($aigw_dp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'ServiceReady']):
+              - status: 'True'
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+            (readyReplicas > `0`): true
+            (addresses[0].value != null): true
+            (addresses[0].value != ''): true

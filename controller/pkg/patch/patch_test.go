@@ -83,7 +83,13 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				},
 			},
 			generateHPAFunc: func(t *testing.T, dataplane *operatorv1beta1.DataPlane) *autoscalingv2.HorizontalPodAutoscaler {
-				hpa, err := k8sresources.GenerateHPAForDataPlane(dataplane, "test-deployment")
+				hs := dataplane.Spec.Deployment.Scaling.HorizontalScaling
+				hpa, err := k8sresources.GenerateHPA(dataplane, &k8sresources.HPAScalingSpec{
+					MinReplicas: hs.MinReplicas,
+					MaxReplicas: hs.MaxReplicas,
+					Metrics:     hs.Metrics,
+					Behavior:    hs.Behavior,
+				}, "test-deployment")
 				require.NoError(t, err)
 				return hpa
 			},
@@ -143,7 +149,13 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 				},
 			},
 			generateHPAFunc: func(t *testing.T, dataplane *operatorv1beta1.DataPlane) *autoscalingv2.HorizontalPodAutoscaler {
-				hpa, err := k8sresources.GenerateHPAForDataPlane(dataplane, "test-deployment")
+				hs := dataplane.Spec.Deployment.Scaling.HorizontalScaling
+				hpa, err := k8sresources.GenerateHPA(dataplane, &k8sresources.HPAScalingSpec{
+					MinReplicas: hs.MinReplicas,
+					MaxReplicas: hs.MaxReplicas,
+					Metrics:     hs.Metrics,
+					Behavior:    hs.Behavior,
+				}, "test-deployment")
 				require.NoError(t, err)
 				return hpa
 			},

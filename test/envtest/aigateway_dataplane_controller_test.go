@@ -7,6 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -217,6 +218,153 @@ func updateKonnectAIGatewayStatusWithProgrammed(
 		}
 		assert.NoError(ct, cl.Status().Update(ctx, aigwcp))
 	}, waitTime, tickTime)
+}
+
+// waitForAIGWHPA waits for exactly one HPA owned by the given AIGatewayDataPlane and returns it.
+func waitForAIGWHPA(t *testing.T, ctx context.Context, cl client.Client, ns, aigwdpName string) autoscalingv2.HorizontalPodAutoscaler {
+	t.Helper()
+	var hpaList autoscalingv2.HorizontalPodAutoscalerList
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": aigwdpName}))
+		assert.Len(ct, hpaList.Items, 1)
+	}, waitTime, tickTime)
+	require.Len(t, hpaList.Items, 1)
+	return hpaList.Items[0]
+}
+
+// waitForNoAIGWHPA asserts that no HPA owned by the given AIGatewayDataPlane exists.
+func waitForNoAIGWHPA(t *testing.T, ctx context.Context, cl client.Client, ns, aigwdpName string) {
+	t.Helper()
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		var hpaList autoscalingv2.HorizontalPodAutoscalerList
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": aigwdpName}))
+		assert.Empty(ct, hpaList.Items)
+	}, waitTime, tickTime)
+}
+
+// TestAIGatewayDataPlaneReconciler_HPA verifies the full HPA lifecycle:
+// create when scaling is configured, update on spec change, delete when scaling is removed.
+func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-hpa")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&aigwdataplane.Reconciler{
+			Client:                   mgr.GetClient(),
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+	maxReplicas := int32(5)
+
+	t.Run("HPA is created when horizontal scaling is configured", func(t *testing.T) {
+		t.Parallel()
+
+		aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+			"aigwcp-hpa-create", "konnect-id-hpa-create", "aigwdp-hpa-create",
+			aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					Scaling: &aigatewayv1alpha1.Scaling{
+						HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		hpa := waitForAIGWHPA(t, ctx, cl, ns.Name, aigwdp.Name)
+		assert.Equal(t, maxReplicas, hpa.Spec.MaxReplicas)
+		assert.Equal(t, aigwdp.Name, hpa.Spec.ScaleTargetRef.Name)
+
+		// Verify the Deployment was created. The replica guard (omitting spec.replicas from
+		// the SSA patch when HPA is active) is covered by TestGenerateBaseDeployment_ReplicaGuard;
+		// the API server defaults spec.replicas to 1 so it is never nil in the stored object.
+		waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
+	})
+
+	t.Run("HPA is deleted when scaling is removed", func(t *testing.T) {
+		t.Parallel()
+
+		aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+			"aigwcp-hpa-delete", "konnect-id-hpa-delete", "aigwdp-hpa-delete",
+			aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					Scaling: &aigatewayv1alpha1.Scaling{
+						HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		// Wait for HPA to be created.
+		_ = waitForAIGWHPA(t, ctx, cl, ns.Name, aigwdp.Name)
+
+		// Remove scaling from the spec.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), aigwdp)) {
+				return
+			}
+			aigwdp.Spec.Deployment = nil
+			assert.NoError(ct, cl.Update(ctx, aigwdp))
+		}, waitTime, tickTime)
+
+		waitForNoAIGWHPA(t, ctx, cl, ns.Name, aigwdp.Name)
+	})
+
+	t.Run("HPA spec is updated when maxReplicas changes", func(t *testing.T) {
+		t.Parallel()
+
+		aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+			"aigwcp-hpa-update", "konnect-id-hpa-update", "aigwdp-hpa-update",
+			aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				Deployment: &aigatewayv1alpha1.DeploymentOptions{
+					Scaling: &aigatewayv1alpha1.Scaling{
+						HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		_ = waitForAIGWHPA(t, ctx, cl, ns.Name, aigwdp.Name)
+
+		// Update maxReplicas to 10.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), aigwdp)) {
+				return
+			}
+			aigwdp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 10
+			assert.NoError(ct, cl.Update(ctx, aigwdp))
+		}, waitTime, tickTime)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var hpa autoscalingv2.HorizontalPodAutoscaler
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: aigwdp.Name, Namespace: ns.Name}, &hpa)) {
+				return
+			}
+			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
+		}, waitTime, tickTime)
+	})
 }
 
 // updateAIGatewayDataPlaneCertificateStatusWithProgrammed flips the owned

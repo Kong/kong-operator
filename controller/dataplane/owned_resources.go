@@ -92,7 +92,13 @@ func ensureHPAForDataPlane(
 		return op.Noop, nil, nil
 	}
 
-	generatedHPA, err := k8sresources.GenerateHPAForDataPlane(dataplane, deploymentName)
+	hs := dataplane.Spec.Deployment.Scaling.HorizontalScaling
+	generatedHPA, err := k8sresources.GenerateHPA(dataplane, &k8sresources.HPAScalingSpec{
+		MinReplicas: hs.MinReplicas,
+		MaxReplicas: hs.MaxReplicas,
+		Metrics:     hs.Metrics,
+		Behavior:    hs.Behavior,
+	}, deploymentName)
 	if err != nil {
 		return op.Noop, nil, err
 	}

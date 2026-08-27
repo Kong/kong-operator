@@ -203,7 +203,19 @@ func generateBaseDeployment(
 
 	var replicas *int32
 	if aigwdp.Spec.Deployment != nil {
-		replicas = aigwdp.Spec.Deployment.Replicas
+		var hs *aigatewayv1alpha1.HorizontalScaling
+		if aigwdp.Spec.Deployment.Scaling != nil {
+			hs = aigwdp.Spec.Deployment.Scaling.HorizontalScaling
+		}
+		switch {
+		case hs == nil:
+			// No HPA: use the static replica count.
+			replicas = aigwdp.Spec.Deployment.Replicas
+		case hs.MinReplicas != nil:
+			// HPA is active: seed replicas from minReplicas so the Deployment
+			// scales up immediately before the HPA's first evaluation.
+			replicas = hs.MinReplicas
+		}
 	}
 
 	d := &appsv1.Deployment{

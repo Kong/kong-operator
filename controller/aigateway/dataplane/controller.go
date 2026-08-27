@@ -23,6 +23,7 @@ import (
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -69,6 +70,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aigatewayv1alpha1.AIGatewayDataPlane{}).
 		Owns(&appsv1.Deployment{}).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
 		Owns(&configurationv1alpha1.AIGatewayDataPlaneCertificate{}).
@@ -124,6 +126,11 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 
 	// Reconcile the full AI Gateway Deployment spec.
 	if err := r.ensureDeployment(ctx, logger, aigwdp, aigatewaycp, certSecret.Name); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Reconcile the HPA if horizontal scaling is configured.
+	if err := r.ensureHPA(ctx, logger, aigwdp, aigwdp.Name); err != nil {
 		return ctrl.Result{}, err
 	}
 
