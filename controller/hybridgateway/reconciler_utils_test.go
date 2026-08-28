@@ -2254,3 +2254,67 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		})
 	}
 }
+
+func TestMergeHybridGatewayAnnotation(t *testing.T) {
+	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
+	annotationKey := consts.GatewayOperatorHybridGatewaysAnnotation
+
+	tests := []struct {
+		name           string
+		existing       string
+		desired        string
+		wantAnnotation string
+	}{
+		{
+			name:           "empty existing keeps desired gateway",
+			desired:        "ns/gateway-a",
+			wantAnnotation: "ns/gateway-a",
+		},
+		{
+			name:           "existing gateway is preserved",
+			existing:       "ns/gateway-a",
+			desired:        "ns/gateway-b",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "desired gateway sorts before existing",
+			existing:       "ns/gateway-b",
+			desired:        "ns/gateway-a",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "existing desired gateway is not duplicated",
+			existing:       "ns/gateway-a,ns/gateway-b",
+			desired:        "ns/gateway-b",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b",
+		},
+		{
+			name:           "all desired gateways are merged",
+			existing:       "ns/gateway-a",
+			desired:        "ns/gateway-b,ns/gateway-c",
+			wantAnnotation: "ns/gateway-a,ns/gateway-b,ns/gateway-c",
+		},
+		{
+			name:           "desired object without gateway annotation is unchanged",
+			existing:       "ns/gateway-a",
+			wantAnnotation: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			existing := newUnstructured("ns", "plugin", gvk, nil)
+			if tt.existing != "" {
+				existing.SetAnnotations(map[string]string{annotationKey: tt.existing})
+			}
+			desired := newUnstructured("ns", "plugin", gvk, nil)
+			if tt.desired != "" {
+				desired.SetAnnotations(map[string]string{annotationKey: tt.desired})
+			}
+
+			mergeHybridGatewayAnnotation(&desired, &existing)
+
+			assert.Equal(t, tt.wantAnnotation, desired.GetAnnotations()[annotationKey])
+		})
+	}
+}

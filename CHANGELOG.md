@@ -54,6 +54,14 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+- HybridGateway: shared Kong resources now converge when referenced by Routes
+  attached to multiple Gateways, and SSA no-op detection correctly handles
+  preserve-unknown fields. This prevents repeated apply loops from blocking
+  stale resource cleanup after workload rollouts.
+  [#5410](https://github.com/Kong/kong-operator/pull/5410)
+
 ## [v2.2.4]
 
 > Relaese date: 2026-08-27
