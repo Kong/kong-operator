@@ -180,10 +180,10 @@ NODE = $(PROJECT_DIR)/bin/installs/node/$(NODE_VERSION)/bin/node
 download.node: mise ## Download node locally if necessary.
 	$(MAKE) mise-install DEP_VER=node@$(NODE_VERSION)
 
-MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["markdownlint-cli2"].version' < $(MISE_FILE))
+MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["npm:markdownlint-cli2"].version' < $(MISE_FILE))
 .PHONY: download.markdownlint-cli2
 download.markdownlint-cli2: mise yq download.node ## Download markdownlint-cli2 locally if necessary.
-	$(MAKE) mise-install DEP_VER=markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
@@ -281,7 +281,7 @@ lint.actions: download.actionlint download.shellcheck
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
-	mise x markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
+	mise x npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \
