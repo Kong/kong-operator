@@ -281,7 +281,7 @@ lint.actions: download.actionlint download.shellcheck
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
-	mise x npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
+	MISE_DATA_DIR=$(PROJECT_DIR)/bin/ mise x npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \
