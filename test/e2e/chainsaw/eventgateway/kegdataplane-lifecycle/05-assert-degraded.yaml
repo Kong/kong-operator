@@ -7,6 +7,13 @@ status:
   (conditions[?type == 'KonnectEventGatewayResolved']):
     - status: 'False'
       reason: NotFound
+  # ServiceReady reflects the Kafka Service state, which is independent of the
+  # KonnectEventGateway dependency. The reconcile returns early when KonnectEventGateway
+  # is gone, so ServiceReady keeps its last value (True) from when the Service had
+  # an external address.
+  (conditions[?type == 'ServiceReady']):
+    - status: 'True'
+      reason: ServiceReady
   (conditions[?type == 'Ready']):
     - status: 'False'
       reason: DependenciesNotReady

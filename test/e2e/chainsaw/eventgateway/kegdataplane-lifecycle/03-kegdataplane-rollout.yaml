@@ -22,3 +22,11 @@ spec:
             env:
               - name: ROLLOUT_TRIGGER
                 value: "v2"
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 9092
+            targetPort: 9092

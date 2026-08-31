@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -35,15 +36,16 @@ import (
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// ensureKafkaService reconciles the Kafka Service for the given DataPlane.
+// ensureKafkaService reconciles the Kafka Service for the given DataPlane
+// and returns the live Service object (with Status populated).
 func (r *Reconciler) ensureKafkaService(
 	ctx context.Context,
 	logger logr.Logger,
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-) error {
+) (*corev1.Service, error) {
 	desired, err := buildKafkaService(r.TypeConverter, egdp)
 	if err != nil {
-		return fmt.Errorf("failed to build Kafka Service for DataPlane %s/%s: %w",
+		return nil, fmt.Errorf("failed to build Kafka Service for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
 	}
 
@@ -51,7 +53,7 @@ func (r *Reconciler) ensureKafkaService(
 	if err != nil {
 		r.eventRecorder.Eventf(egdp, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
 			"Failed to apply Kafka Service: %v", err)
-		return fmt.Errorf("failed to apply Kafka Service for DataPlane %s/%s: %w",
+		return nil, fmt.Errorf("failed to apply Kafka Service for DataPlane %s/%s: %w",
 			egdp.Namespace, egdp.Name, err)
 	}
 	switch result {
@@ -65,7 +67,22 @@ func (r *Reconciler) ensureKafkaService(
 			"Kafka Service %s updated", desired.GetName())
 	case op.Noop, op.Deleted:
 	}
-	return nil
+
+	// Fetch the live object so we get Status (SSA response does not include it).
+	// The informer cache may not have caught up after a fresh create, so treat
+	// NotFound as a transient condition: return nil and let the Owns() watch
+	// trigger the next reconcile once the cache is populated.
+	svc := &corev1.Service{}
+	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			log.Debug(logger, "Kafka Service not yet in cache, will retry on next reconcile",
+				"name", desired.GetName())
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed to get Kafka Service for DataPlane %s/%s: %w",
+			egdp.Namespace, egdp.Name, err)
+	}
+	return svc, nil
 }
 
 // buildKafkaService constructs the desired Kafka Service. If the user has

@@ -19,11 +19,13 @@ package dataplane
 import (
 	"context"
 	"errors"
+	"fmt"
 	"time"
 
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -34,9 +36,11 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	"github.com/kong/kong-operator/v2/controller/pkg/address"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // Reconciler reconciles a KegDataPlane object.
@@ -130,11 +134,83 @@ func (r *Reconciler) Reconcile(ctx context.Context, egdp *eventgatewayv1alpha1.K
 		return ctrl.Result{}, err
 	}
 
-	// Ensure the Kafka Service.
-	if err := r.ensureKafkaService(ctx, logger, egdp); err != nil {
+	// Ensure the Kafka Service and set its readiness condition.
+	// nil svc means the cache hasn't caught up yet; the Owns() watch will
+	// trigger another reconcile once the Service appears.
+	svc, err := r.ensureKafkaService(ctx, logger, egdp)
+	if err != nil {
 		return ctrl.Result{}, err
+	}
+	if svc != nil {
+		if err := r.ensureServiceReadyCondition(egdp, svc); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	log.Debug(logger, "reconciliation complete for DataPlane resource")
 	return ctrl.Result{}, nil
+}
+
+// ensureServiceReadyCondition sets the ServiceReady condition and populates
+// Status.Addresses based on the live Kafka Service.
+func (r *Reconciler) ensureServiceReadyCondition(
+	egdp *eventgatewayv1alpha1.KegDataPlane,
+	svc *corev1.Service,
+) error {
+	svcAddrs, err := address.AddressesFromService(svc)
+	if err != nil {
+		return fmt.Errorf("failed to get addresses from Kafka Service for KegDataPlane %s/%s: %w",
+			egdp.Namespace, egdp.Name, err)
+	}
+	addrs := make([]eventgatewayv1alpha1.Address, len(svcAddrs))
+	for i, a := range svcAddrs {
+		addrs[i] = eventgatewayv1alpha1.Address{
+			Value:      a.Value,
+			SourceType: eventgatewayv1alpha1.AddressSourceType(a.SourceType),
+		}
+		if a.Type != nil {
+			t := eventgatewayv1alpha1.AddressType(*a.Type)
+			addrs[i].Type = &t
+		}
+	}
+	egdp.Status.Addresses = addrs
+
+	if kafkaServiceIsReady(svc) {
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				eventgatewayv1alpha1.ServiceReadyType,
+				metav1.ConditionTrue,
+				eventgatewayv1alpha1.ServiceReadyReason,
+				eventgatewayv1alpha1.ServiceReadyMessage,
+				egdp.Generation,
+			),
+			egdp,
+		)
+	} else {
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(
+				eventgatewayv1alpha1.ServiceReadyType,
+				metav1.ConditionFalse,
+				eventgatewayv1alpha1.WaitingForAddressReason,
+				eventgatewayv1alpha1.WaitingForAddressMessage,
+				egdp.Generation,
+			),
+			egdp,
+		)
+	}
+	return nil
+}
+
+// kafkaServiceIsReady reports whether the Kafka Service has an external
+// address. Non-LoadBalancer Services are always considered ready.
+func kafkaServiceIsReady(svc *corev1.Service) bool {
+	if svc.Spec.Type != corev1.ServiceTypeLoadBalancer {
+		return true
+	}
+	for _, ing := range svc.Status.LoadBalancer.Ingress {
+		if ing.Hostname != "" || ing.IP != "" {
+			return true
+		}
+	}
+	return false
 }

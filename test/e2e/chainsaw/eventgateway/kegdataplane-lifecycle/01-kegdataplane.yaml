@@ -19,3 +19,11 @@ spec:
             # later rollout in which the new pod exists but is not yet Ready.
             readinessProbe:
               initialDelaySeconds: 30
+  network:
+    services:
+      kafka:
+        type: LoadBalancer
+        ports:
+          - name: kafka
+            port: 9092
+            targetPort: 9092

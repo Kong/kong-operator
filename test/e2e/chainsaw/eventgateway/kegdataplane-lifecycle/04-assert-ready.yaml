@@ -4,7 +4,12 @@ metadata:
   name: ($keg_dp_name)
   namespace: ($namespace)
 status:
+  (conditions[?type == 'ServiceReady']):
+    - status: 'True'
+      reason: ServiceReady
   (conditions[?type == 'Ready']):
     - status: 'True'
       reason: Ready
   (readyReplicas > `0`): true
+  (addresses[0].value != null): true
+  (addresses[0].value != ''): true
