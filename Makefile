@@ -174,10 +174,16 @@ TELEPRESENCE= $(PROJECT_DIR)/bin/installs/github-telepresenceio-telepresence/$(T
 download.telepresence: mise yq ## Download telepresence locally if necessary.
 	$(MAKE) mise-install DEP_VER=github:telepresenceio/telepresence
 
-MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["markdownlint-cli2"].version' < $(MISE_FILE))
+NODE_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["node"]' < $(MISE_FILE))
+NODE = $(PROJECT_DIR)/bin/installs/node/$(NODE_VERSION)/bin/node
+.PHONY: download.node
+download.node: mise ## Download node locally if necessary.
+	$(MAKE) mise-install DEP_VER=node@$(NODE_VERSION)
+
+MARKDOWNLINT_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["npm:markdownlint-cli2"].version' < $(MISE_FILE))
 .PHONY: download.markdownlint-cli2
-download.markdownlint-cli2: mise yq ## Download markdownlint-cli2 locally if necessary.
-	$(MAKE) mise-install DEP_VER=markdownlint-cli2@$(MARKDOWNLINT_VERSION)
+download.markdownlint-cli2: mise yq download.node ## Download markdownlint-cli2 locally if necessary.
+	$(MAKE) mise-install DEP_VER=npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION)
 
 HELM_VERSION = $(shell $(YQ) -p toml -o yaml '.tools["aqua:helm/helm"].version' < $(MISE_FILE))
 HELM = helm
@@ -275,7 +281,7 @@ lint.actions: download.actionlint download.shellcheck
 
 .PHONY: lint.markdownlint
 lint.markdownlint: download.markdownlint-cli2
-	mise x markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
+	MISE_DATA_DIR=$(PROJECT_DIR)/bin/ mise x npm:markdownlint-cli2@$(MARKDOWNLINT_VERSION) -- markdownlint-cli2 \
 		CHANGELOG.md \
 		README.md \
 		FEATURES.md \

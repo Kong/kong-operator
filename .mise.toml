@@ -1,12 +1,16 @@
 [settings.github]
 github_attestations = false
 
+[tools]
+# renovate: datasource=node-version depName=node
+node = "26.7.0"
+
 ################################################################################
 # Tools
 
-[tools.markdownlint-cli2]
 # renovate: datasource=github-tags depName=DavidAnson/markdownlint-cli2
-version = "0.23.1"
+# fastq@1.20.2 lacks npm trusted-publisher evidence; keep this exception exact.
+"npm:markdownlint-cli2" = { version = "0.23.2", trust_policy_excludes = ["fastq@1.20.2"] }
 
 [tools."github:kubernetes-sigs/controller-tools"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
