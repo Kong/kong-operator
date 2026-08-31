@@ -1,0 +1,35 @@
+# Template for asserting that the operator reconciled a HorizontalPodAutoscaler
+# for a KegDataPlane.
+#
+# Required bindings:
+#   - keg_dp_name: Name of the KegDataPlane (and its owned HPA).
+#   - namespace:   Namespace to look in.
+#
+# Optional bindings (must match what was set in apply-assert-kegDataPlane-hpa):
+#   - hpa_min_replicas: Expected minReplicas on the HPA (default: 1).
+#   - hpa_max_replicas: Expected maxReplicas on the HPA (default: 3).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-keg-dataplane-hpa
+spec:
+  bindings:
+    - name: hpa_min_replicas
+      value: 1
+    - name: hpa_max_replicas
+      value: 3
+  try:
+    - assert:
+        resource:
+          apiVersion: autoscaling/v2
+          kind: HorizontalPodAutoscaler
+          metadata:
+            name: ($keg_dp_name)
+            namespace: ($namespace)
+          spec:
+            scaleTargetRef:
+              apiVersion: apps/v1
+              kind: Deployment
+              name: ($keg_dp_name)
+            minReplicas: ($hpa_min_replicas)
+            maxReplicas: ($hpa_max_replicas)
