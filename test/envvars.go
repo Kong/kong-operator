@@ -5,6 +5,8 @@ import (
 	"os"
 	"strings"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
+
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -39,6 +41,37 @@ func IsMetalLBDisabled() bool {
 		fmt.Println("INFO: MetalLB plugin is enabled")
 	}
 	return ret
+}
+
+// ClusterIPFamily returns the IP family a newly created KIND test cluster
+// should be configured with. It reads the KONG_TEST_CLUSTER_IP_FAMILY
+// environment variable ("ipv4", "ipv6", or "dual"), defaulting to
+// clusters.IPv4 when unset or unrecognized.
+//
+// This only takes effect when a new KIND cluster is created: KTF does not
+// currently support configuring a non-default IP family on an existing
+// cluster (see KONG_TEST_CLUSTER), so the setting is ignored in that case.
+//
+// clusters.Dual is not yet wired up to an actual dual-stack KIND cluster
+// build (tracked in https://github.com/Kong/kong-operator/issues/5448) -
+// callers must reject it explicitly rather than silently falling back to
+// IPv4 or IPv6-only.
+func ClusterIPFamily() clusters.IPFamily {
+	raw := strings.ToLower(os.Getenv("KONG_TEST_CLUSTER_IP_FAMILY"))
+	var family clusters.IPFamily
+	switch raw {
+	case "ipv6":
+		family = clusters.IPv6
+	case "dual":
+		family = clusters.Dual
+	case "", "ipv4":
+		family = clusters.IPv4
+	default:
+		fmt.Printf("WARNING: unknown KONG_TEST_CLUSTER_IP_FAMILY %q, defaulting to %s\n", raw, clusters.IPv4)
+		family = clusters.IPv4
+	}
+	fmt.Printf("INFO: test cluster IP family is %s\n", family)
+	return family
 }
 
 // IsInstallingCRDsDisabled returns true if installing CRDs is disabled in the test environment.
