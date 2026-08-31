@@ -162,6 +162,9 @@
   `AIGatewayModelProvider` and `AIGatewayPolicy` from the `konnect.konghq.com`
   API group to a new `aiconfiguration.konghq.com` API group.
   [#5407](https://github.com/Kong/kong-operator/pull/5407)
+- AIGateway: update the default AI Gateway DataPlane image to
+  `kong/kong-ai-gateway-dev:2.0.3`.
+  [#5459](https://github.com/Kong/kong-operator/pull/5459)
 
 ### Fixes
 

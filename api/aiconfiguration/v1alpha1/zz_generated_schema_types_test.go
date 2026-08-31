@@ -189,23 +189,10 @@ func TestAIGatewayMCPConversionTool_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayMCPServerBaseACLPropertiesConsumer_MarshalEmpty(t *testing.T) {
+func TestAIGatewayMCPPassthroughTool_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayMCPServerBaseACLPropertiesConsumer
-	out, err := json.Marshal(spec)
-	if err != nil {
-		t.Fatalf("json.Marshal() error = %v", err)
-	}
-	if got, want := string(out), "{}"; got != want {
-		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
-	}
-}
-
-func TestAIGatewayMCPServerBaseACLPropertiesOauth_MarshalEmpty(t *testing.T) {
-	t.Parallel()
-
-	var spec AIGatewayMCPServerBaseACLPropertiesOauth
+	var spec AIGatewayMCPPassthroughTool
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -436,10 +423,10 @@ func TestAIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig_MarshalEmpty(
 	}
 }
 
-func TestAIGatewayMCPToolAnnotations_MarshalEmpty(t *testing.T) {
+func TestAIGatewayMCPToolAccess_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayMCPToolAnnotations
+	var spec AIGatewayMCPToolAccess
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -449,10 +436,10 @@ func TestAIGatewayMCPToolAnnotations_MarshalEmpty(t *testing.T) {
 	}
 }
 
-func TestAIGatewayMCPToolBase_MarshalEmpty(t *testing.T) {
+func TestAIGatewayMCPToolAnnotations_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
-	var spec AIGatewayMCPToolBase
+	var spec AIGatewayMCPToolAnnotations
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1511,34 +1498,6 @@ func TestAIGatewayEmbeddingsModelConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	}
 }
 
-func TestAIGatewayMCPServerBaseACLPropertiesUnmarshalJSON_NilReceiver(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-	}{
-		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
-		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target *AIGatewayMCPServerBaseACLProperties
-			err := target.UnmarshalJSON(tt.payload)
-			if err == nil {
-				t.Fatal("expected error for nil receiver")
-			}
-			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerBaseACLProperties: nil receiver"; got != want {
-				t.Fatalf("unexpected error: got %q want %q", got, want)
-			}
-		})
-	}
-}
-
 func TestAIGatewayMCPServerConversionListenerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1617,34 +1576,6 @@ func TestAIGatewayMCPServerPassthroughListenerAccessUnmarshalJSON_NilReceiver(t 
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerPassthroughListenerAccess: nil receiver"; got != want {
-				t.Fatalf("unexpected error: got %q want %q", got, want)
-			}
-		})
-	}
-}
-
-func TestAIGatewayMCPServerUpstreamServerAccessUnmarshalJSON_NilReceiver(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-	}{
-		{name: "consumer", payload: []byte("{\"aclAttributeType\":\"consumer\",\"consumer\":{}}")},
-		{name: "oauth_access_token", payload: []byte("{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}")},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target *AIGatewayMCPServerUpstreamServerAccess
-			err := target.UnmarshalJSON(tt.payload)
-			if err == nil {
-				t.Fatal("expected error for nil receiver")
-			}
-			if got, want := err.Error(), "unmarshaling AIGatewayMCPServerUpstreamServerAccess: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -2292,62 +2223,6 @@ func TestAIGatewayMCPServerPassthroughListenerUnmarshalJSON_DecodesUnionFields(t
 			t.Parallel()
 
 			var target AIGatewayMCPServerPassthroughListener
-			if err := json.Unmarshal(tt.payload, &target); err != nil {
-				t.Fatalf("json.Unmarshal() error = %v", err)
-			}
-			tt.assert(t, target)
-		})
-	}
-}
-
-func TestAIGatewayMCPServerUpstreamServerUnmarshalJSON_DecodesUnionFields(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name    string
-		payload []byte
-		assert  func(*testing.T, AIGatewayMCPServerUpstreamServer)
-	}{
-		{
-			name:    "Access/consumer",
-			payload: []byte("{\"access\":{\"aclAttributeType\":\"consumer\",\"consumer\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
-				t.Helper()
-				if target.Access == nil {
-					t.Fatalf("Access should be allocated")
-				}
-				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerUpstreamServerAccessTypeConsumer; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Access.Consumer == nil {
-					t.Fatalf("Access.Consumer should be allocated")
-				}
-			},
-		},
-		{
-			name:    "Access/oauth_access_token",
-			payload: []byte("{\"access\":{\"aclAttributeType\":\"oauthAccessToken\",\"oauthAccessToken\":{}}}"),
-			assert: func(t *testing.T, target AIGatewayMCPServerUpstreamServer) {
-				t.Helper()
-				if target.Access == nil {
-					t.Fatalf("Access should be allocated")
-				}
-				if got, want := target.Access.AclAttributeType, AIGatewayMCPServerUpstreamServerAccessTypeOauth; got != want {
-					t.Fatalf("unexpected type: got %q want %q", got, want)
-				}
-				if target.Access.Oauth == nil {
-					t.Fatalf("Access.Oauth should be allocated")
-				}
-			},
-		},
-	}
-
-	for _, tt := range tests {
-		tt := tt
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			var target AIGatewayMCPServerUpstreamServer
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

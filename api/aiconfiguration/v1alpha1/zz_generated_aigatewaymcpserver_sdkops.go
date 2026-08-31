@@ -41,42 +41,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "conversion-listener.config.route.preserve_host",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"route",
-			"preserve_host",
-		},
-	},
-	{
-		Label: "conversion-listener.config.route.request_buffering",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"route",
-			"request_buffering",
-		},
-	},
-	{
-		Label: "conversion-listener.config.route.response_buffering",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"route",
-			"response_buffering",
-		},
-	},
-	{
-		Label: "conversion-listener.config.route.strip_path",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"route",
-			"strip_path",
-		},
-	},
-	{
 		Label: "conversion-listener.config.server.forward_client_headers",
 		Path: []string{
 			"conversion-listener",
@@ -205,42 +169,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "conversion-only.config.route.preserve_host",
-		Path: []string{
-			"conversion-only",
-			"config",
-			"route",
-			"preserve_host",
-		},
-	},
-	{
-		Label: "conversion-only.config.route.request_buffering",
-		Path: []string{
-			"conversion-only",
-			"config",
-			"route",
-			"request_buffering",
-		},
-	},
-	{
-		Label: "conversion-only.config.route.response_buffering",
-		Path: []string{
-			"conversion-only",
-			"config",
-			"route",
-			"response_buffering",
-		},
-	},
-	{
-		Label: "conversion-only.config.route.strip_path",
-		Path: []string{
-			"conversion-only",
-			"config",
-			"route",
-			"strip_path",
-		},
-	},
-	{
 		Label: "conversion-only.enabled",
 		Path: []string{
 			"conversion-only",
@@ -314,42 +242,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
-		},
-	},
-	{
-		Label: "listener.config.route.preserve_host",
-		Path: []string{
-			"listener",
-			"config",
-			"route",
-			"preserve_host",
-		},
-	},
-	{
-		Label: "listener.config.route.request_buffering",
-		Path: []string{
-			"listener",
-			"config",
-			"route",
-			"request_buffering",
-		},
-	},
-	{
-		Label: "listener.config.route.response_buffering",
-		Path: []string{
-			"listener",
-			"config",
-			"route",
-			"response_buffering",
-		},
-	},
-	{
-		Label: "listener.config.route.strip_path",
-		Path: []string{
-			"listener",
-			"config",
-			"route",
-			"strip_path",
 		},
 	},
 	{
@@ -430,42 +322,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "passthrough-listener.config.route.preserve_host",
-		Path: []string{
-			"passthrough-listener",
-			"config",
-			"route",
-			"preserve_host",
-		},
-	},
-	{
-		Label: "passthrough-listener.config.route.request_buffering",
-		Path: []string{
-			"passthrough-listener",
-			"config",
-			"route",
-			"request_buffering",
-		},
-	},
-	{
-		Label: "passthrough-listener.config.route.response_buffering",
-		Path: []string{
-			"passthrough-listener",
-			"config",
-			"route",
-			"response_buffering",
-		},
-	},
-	{
-		Label: "passthrough-listener.config.route.strip_path",
-		Path: []string{
-			"passthrough-listener",
-			"config",
-			"route",
-			"strip_path",
-		},
-	},
-	{
 		Label: "passthrough-listener.config.server.forward_client_headers",
 		Path: []string{
 			"passthrough-listener",
@@ -525,57 +381,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
-		Label: "passthrough-listener.tools.[].annotations.destructive_hint",
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"annotations",
-			"destructive_hint",
-		},
-	},
-	{
-		Label: "passthrough-listener.tools.[].annotations.idempotent_hint",
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"annotations",
-			"idempotent_hint",
-		},
-	},
-	{
-		Label: "passthrough-listener.tools.[].annotations.open_world_hint",
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"annotations",
-			"open_world_hint",
-		},
-	},
-	{
-		Label: "passthrough-listener.tools.[].annotations.read_only_hint",
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"annotations",
-			"read_only_hint",
-		},
-	},
-	{
-		Label: "passthrough-listener.tools.[].parameters.[].required",
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"required",
-		},
-	},
-	{
 		Label: "upstream-server.config.logging.audits",
 		Path: []string{
 			"upstream-server",
@@ -591,42 +396,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
-		},
-	},
-	{
-		Label: "upstream-server.config.route.preserve_host",
-		Path: []string{
-			"upstream-server",
-			"config",
-			"route",
-			"preserve_host",
-		},
-	},
-	{
-		Label: "upstream-server.config.route.request_buffering",
-		Path: []string{
-			"upstream-server",
-			"config",
-			"route",
-			"request_buffering",
-		},
-	},
-	{
-		Label: "upstream-server.config.route.response_buffering",
-		Path: []string{
-			"upstream-server",
-			"config",
-			"route",
-			"response_buffering",
-		},
-	},
-	{
-		Label: "upstream-server.config.route.strip_path",
-		Path: []string{
-			"upstream-server",
-			"config",
-			"route",
-			"strip_path",
 		},
 	},
 	{
@@ -737,17 +506,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"read_only_hint",
 		},
 	},
-	{
-		Label: "upstream-server.tools.[].parameters.[].required",
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"required",
-		},
-	},
 }
 
 func normalizeAIGatewayMCPServerSDKOpsBoolFields(payload map[string]any) error {
@@ -839,7 +597,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"conversion-listener",
 			"config",
 			"route",
-			"headers",
 		},
 	},
 	{
@@ -901,7 +658,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"conversion-only",
 			"config",
 			"route",
-			"headers",
 		},
 	},
 	{
@@ -963,7 +719,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"listener",
 			"config",
 			"route",
-			"headers",
 		},
 	},
 	{
@@ -983,7 +738,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"passthrough-listener",
 			"config",
 			"route",
-			"headers",
 		},
 	},
 	{
@@ -996,48 +750,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"passthrough-listener",
 			"managed_by",
-		},
-	},
-	{
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"headers",
-		},
-	},
-	{
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"schema",
-		},
-	},
-	{
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"query",
-		},
-	},
-	{
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"request_body",
-		},
-	},
-	{
-		Path: []string{
-			"passthrough-listener",
-			"tools",
-			"[]",
-			"responses",
 		},
 	},
 	{
@@ -1045,7 +757,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"upstream-server",
 			"config",
 			"route",
-			"headers",
 		},
 	},
 	{
@@ -1058,14 +769,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"upstream-server",
 			"managed_by",
-		},
-	},
-	{
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"headers",
 		},
 	},
 	{
@@ -1082,40 +785,6 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"tools",
 			"[]",
 			"output_schema",
-		},
-	},
-	{
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"parameters",
-			"[]",
-			"schema",
-		},
-	},
-	{
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"query",
-		},
-	},
-	{
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"request_body",
-		},
-	},
-	{
-		Path: []string{
-			"upstream-server",
-			"tools",
-			"[]",
-			"responses",
 		},
 	},
 }

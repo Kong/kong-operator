@@ -41,8 +41,8 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 							Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 						},
 						Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
-							Route: aiconfigurationv1alpha1.AIGatewayRouteConfig{
-								Paths: []string{"/mcp"},
+							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
+								"paths": "/mcp",
 							},
 						},
 					},
@@ -162,6 +162,13 @@ func validAIGatewayMCPServerConversionOnly(ns string) *aiconfigurationv1alpha1.A
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{
 				URL: "https://example.com/mcp",
 			},
+			Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{
+				{
+					Name:        "test-tool",
+					Description: "test-tool-description",
+					Method:      "GET",
+				},
+			},
 		},
 	}
 	return obj
@@ -180,6 +187,13 @@ func validAIGatewayMCPServerConversionListener(ns string) *aiconfigurationv1alph
 			},
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfig{
 				URL: "https://example.com/mcp",
+			},
+			Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{
+				{
+					Name:        "test-tool",
+					Description: "test-tool-description",
+					Method:      "GET",
+				},
 			},
 		},
 	}
@@ -212,10 +226,6 @@ func validAIGatewayMCPServerUpstreamServer(ns string) *aiconfigurationv1alpha1.A
 		UpstreamServer: &aiconfigurationv1alpha1.AIGatewayMCPServerUpstreamServer{
 			Name:        "test-mcp-server-upstream-server",
 			DisplayName: "Test MCP Server Upstream Server",
-			Access: &aiconfigurationv1alpha1.AIGatewayMCPServerUpstreamServerAccess{
-				AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerUpstreamServerAccessTypeConsumer,
-				Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerBaseACLPropertiesConsumer{},
-			},
 			Config: aiconfigurationv1alpha1.AIGatewayMCPServerUpstreamServerConfig{
 				URL:                  "https://example.com/mcp",
 				ToolsCacheTtlSeconds: 60,

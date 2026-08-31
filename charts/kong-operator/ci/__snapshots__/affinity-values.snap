@@ -2935,7 +2935,13 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying consumer groups.
+                                  This is the
+                                  top-level gate: a caller's consumer group must pass this check before any
+                                  MCP protocol
+                                  operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before
+                                  any tool-level
+                                  `default_tool_acls` or per-tool `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -2964,8 +2970,14 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
+                                  Default per-tool access control rules for allowing or denying consumer
+                                  groups access to
                                   tools.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every tool exposed by this MCP Server unless a specific tool
+                                  overrides it via
+                                  that tool's own `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -3038,7 +3050,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying callers, evaluated
+                                  against the
+                                  value of the configured `access_token_claim_field`.
+                                  This is the top-level gate: a caller
+                                  must pass this check before any MCP protocol operation (`initialize`,
+                                  `tools/list`,
+                                  `tools/call`) is allowed, and before any tool-level `default_tool_acls` or
+                                  per-tool
+                                  `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -3067,8 +3087,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
-                                  tools.
+                                  Default per-tool access control rules for allowing or denying callers access
+                                  to tools,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every tool
+                                  exposed by this MCP Server unless a specific tool overrides it via that
+                                  tool's own
+                                  `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -3160,114 +3187,17 @@ spec:
                             minimum: 0
                             type: integer
                           route:
+                            additionalProperties:
+                              type: string
                             description: |-
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
 
-                              Configuration for an AI Gateway route.
-                            properties:
-                              headers:
-                                description: |-
-                                  One or more lists of values indexed by header name that will cause this
-                                  route to match if present in the request.
-                                  The `Host` header cannot be used with this attribute: hosts should be
-                                  specified using the `hosts` attribute.
-                                  When `headers` contains only one value and that value starts with the
-                                  special prefix `~*`, the value is interpreted as a regular expression.
-                                x-kubernetes-preserve-unknown-fields: true
-                              hosts:
-                                description: |-
-                                  A list of domain names that match this route.
-                                  Note that the hosts value is case sensitive.
-                                items:
-                                  type: string
-                                type: array
-                              httpsRedirectStatusCode:
-                                description: |-
-                                  The status code Kong responds with when all properties of a route match
-                                  except the protocol i.e.
-                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
-                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
-                                  or 308.
-                                  Note: This config applies only if the route is configured to only accept the
-                                  `https` protocol.
-                                maximum: 599
-                                minimum: 100
-                                type: integer
-                              methods:
-                                description: A list of HTTP methods that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              paths:
-                                description: A list of paths that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              preserveHost:
-                                description: |-
-                                  When matching a route via one of the `hosts` domain names, use the request
-                                  `Host` header in the upstream request headers.
-                                  If set to `false`, the upstream `Host` header will be that of the service's
-                                  `host`.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              protocols:
-                                description: |-
-                                  An array of the protocols this route should allow.
-                                  See the [route Object](#route-object) section for a list of accepted
-                                  protocols.
-                                  When set to only `https`, HTTP requests are answered with an upgrade error.
-                                  When set to only `http`, HTTPS requests are answered with an error.
-                                items:
-                                  type: string
-                                type: array
-                              regexPriority:
-                                description: |-
-                                  A number used to choose which route resolves a given request when several
-                                  routes match it using regexes simultaneously.
-                                  When two routes match the path and have the same `regex_priority`, the older
-                                  one (lowest `created_at`) is used.
-                                  Note that the priority for non-regex routes is different (longer non-regex
-                                  routes are matched before shorter ones).
-                                maximum: 2147483647
-                                minimum: -2147483648
-                                type: integer
-                              requestBuffering:
-                                description: |-
-                                  Whether to enable request body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that receive
-                                  data with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              responseBuffering:
-                                description: |-
-                                  Whether to enable response body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that send data
-                                  with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              stripPath:
-                                description: |-
-                                  When matching a route via one of the `paths`, strip the matching prefix from
-                                  the upstream request URL.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              tags:
-                                description: |-
-                                  An optional set of strings associated with the route for grouping and
-                                  filtering.
-                                items:
-                                  type: string
-                                type: array
+                              Route configuration for an MCP Server that terminates its own listener.
+                              At least one
+                              of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+                              match
+                              incoming requests.
                             type: object
                           server:
                             description: |-
@@ -3842,14 +3772,23 @@ spec:
                           type: object
                         type: array
                       tools:
-                        description: List of tools exposed by this MCP Server.
+                        description: |-
+                          List of tools exposed by this MCP Server.
+                          Each tool's `path`, `method`, and `host`
+                          describe the backend HTTP operation on the upstream selected by `config.url`
+                          — they
+                          do not need to match the public MCP Route configured in `config.route`.
                         items:
                           description: |-
                             AIGatewayMCPConversionTool A tool exposed by an MCP Server in
                             `conversion-only` or `conversion-listener` mode.
                           properties:
                             access:
-                              description: AIGatewayMCPConversionToolAccess is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
@@ -3925,16 +3864,13 @@ spec:
                               type: object
                             host:
                               description: |-
-                                The host of the exported API, which must match the route's hosts.
-                                It should be the route's host.
+                                The host used when forwarding the request to the upstream API.
                                 By default, Kong will extract the host from API configuration.
                                 If the configured host is wildcard, this field is required.
                               maxLength: 253
                               type: string
                             method:
-                              description: |-
-                                For conversion-only and conversion-listener modes, the method of the
-                                exported API, which must match the route's methods.
+                              description: The HTTP method used when forwarding the request to the upstream API.
                               enum:
                               - DELETE
                               - GET
@@ -3946,11 +3882,9 @@ spec:
                               type: string
                             name:
                               description: |-
-                                Tool identifier.
-                                In passthrough-listener mode, used to match remote MCP Server tools for ACL
-                                enforcement.
-                                In other modes, it is also used as the tool name (overrides
-                                annotations.title if present).
+                                The MCP tool name.
+                                In upstream-server mode, it also matches the remote MCP Server tool whose
+                                metadata this entry overrides.
                               maxLength: 253
                               minLength: 1
                               type: string
@@ -4007,10 +3941,17 @@ spec:
                               type: array
                             path:
                               description: |-
-                                The path of the exported API, which must match the route's paths.
-                                Path not starting with '/' are treated as relative path and the route path
-                                will be added as the prefix.
-                                By default, Kong will extract the path from API configuration.
+                                The path of the exported API.
+                                Always treated as relative to the path component of
+                                `config.url` and simply concatenated onto it — a leading `/` has no
+                                special
+                                "absolute path" meaning.
+                                If this tool's `host` or `scheme` overrides the source's
+                                URL, `path` is instead relative to the root of that overridden host, since
+                                there is
+                                no URL path from a different host to append to.
+                                By default, Kong will extract the
+                                path from API configuration.
                               maxLength: 253
                               type: string
                             query:
@@ -4077,6 +4018,7 @@ spec:
                     - config
                     - displayName
                     - name
+                    - tools
                     type: object
                   conversion-only:
                     description: ConversionOnly configuration.
@@ -4110,114 +4052,17 @@ spec:
                             description: Maximum size of request body to parse. Set to 0 for unlimited.
                             type: integer
                           route:
+                            additionalProperties:
+                              type: string
                             description: |-
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
 
-                              Configuration for an AI Gateway route.
-                            properties:
-                              headers:
-                                description: |-
-                                  One or more lists of values indexed by header name that will cause this
-                                  route to match if present in the request.
-                                  The `Host` header cannot be used with this attribute: hosts should be
-                                  specified using the `hosts` attribute.
-                                  When `headers` contains only one value and that value starts with the
-                                  special prefix `~*`, the value is interpreted as a regular expression.
-                                x-kubernetes-preserve-unknown-fields: true
-                              hosts:
-                                description: |-
-                                  A list of domain names that match this route.
-                                  Note that the hosts value is case sensitive.
-                                items:
-                                  type: string
-                                type: array
-                              httpsRedirectStatusCode:
-                                description: |-
-                                  The status code Kong responds with when all properties of a route match
-                                  except the protocol i.e.
-                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
-                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
-                                  or 308.
-                                  Note: This config applies only if the route is configured to only accept the
-                                  `https` protocol.
-                                maximum: 599
-                                minimum: 100
-                                type: integer
-                              methods:
-                                description: A list of HTTP methods that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              paths:
-                                description: A list of paths that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              preserveHost:
-                                description: |-
-                                  When matching a route via one of the `hosts` domain names, use the request
-                                  `Host` header in the upstream request headers.
-                                  If set to `false`, the upstream `Host` header will be that of the service's
-                                  `host`.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              protocols:
-                                description: |-
-                                  An array of the protocols this route should allow.
-                                  See the [route Object](#route-object) section for a list of accepted
-                                  protocols.
-                                  When set to only `https`, HTTP requests are answered with an upgrade error.
-                                  When set to only `http`, HTTPS requests are answered with an error.
-                                items:
-                                  type: string
-                                type: array
-                              regexPriority:
-                                description: |-
-                                  A number used to choose which route resolves a given request when several
-                                  routes match it using regexes simultaneously.
-                                  When two routes match the path and have the same `regex_priority`, the older
-                                  one (lowest `created_at`) is used.
-                                  Note that the priority for non-regex routes is different (longer non-regex
-                                  routes are matched before shorter ones).
-                                maximum: 2147483647
-                                minimum: -2147483648
-                                type: integer
-                              requestBuffering:
-                                description: |-
-                                  Whether to enable request body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that receive
-                                  data with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              responseBuffering:
-                                description: |-
-                                  Whether to enable response body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that send data
-                                  with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              stripPath:
-                                description: |-
-                                  When matching a route via one of the `paths`, strip the matching prefix from
-                                  the upstream request URL.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              tags:
-                                description: |-
-                                  An optional set of strings associated with the route for grouping and
-                                  filtering.
-                                items:
-                                  type: string
-                                type: array
+                              Route configuration for an MCP Server that terminates its own listener.
+                              At least one
+                              of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+                              match
+                              incoming requests.
                             type: object
                           upstream:
                             description: |-
@@ -4392,7 +4237,11 @@ spec:
                             `conversion-only` or `conversion-listener` mode.
                           properties:
                             access:
-                              description: AIGatewayMCPConversionToolAccess is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
@@ -4468,16 +4317,13 @@ spec:
                               type: object
                             host:
                               description: |-
-                                The host of the exported API, which must match the route's hosts.
-                                It should be the route's host.
+                                The host used when forwarding the request to the upstream API.
                                 By default, Kong will extract the host from API configuration.
                                 If the configured host is wildcard, this field is required.
                               maxLength: 253
                               type: string
                             method:
-                              description: |-
-                                For conversion-only and conversion-listener modes, the method of the
-                                exported API, which must match the route's methods.
+                              description: The HTTP method used when forwarding the request to the upstream API.
                               enum:
                               - DELETE
                               - GET
@@ -4489,11 +4335,9 @@ spec:
                               type: string
                             name:
                               description: |-
-                                Tool identifier.
-                                In passthrough-listener mode, used to match remote MCP Server tools for ACL
-                                enforcement.
-                                In other modes, it is also used as the tool name (overrides
-                                annotations.title if present).
+                                The MCP tool name.
+                                In upstream-server mode, it also matches the remote MCP Server tool whose
+                                metadata this entry overrides.
                               maxLength: 253
                               minLength: 1
                               type: string
@@ -4550,10 +4394,17 @@ spec:
                               type: array
                             path:
                               description: |-
-                                The path of the exported API, which must match the route's paths.
-                                Path not starting with '/' are treated as relative path and the route path
-                                will be added as the prefix.
-                                By default, Kong will extract the path from API configuration.
+                                The path of the exported API.
+                                Always treated as relative to the path component of
+                                `config.url` and simply concatenated onto it — a leading `/` has no
+                                special
+                                "absolute path" meaning.
+                                If this tool's `host` or `scheme` overrides the source's
+                                URL, `path` is instead relative to the root of that overridden host, since
+                                there is
+                                no URL path from a different host to append to.
+                                By default, Kong will extract the
+                                path from API configuration.
                               maxLength: 253
                               type: string
                             query:
@@ -4620,6 +4471,7 @@ spec:
                     - config
                     - displayName
                     - name
+                    - tools
                     type: object
                   listener:
                     description: Listener configuration.
@@ -4644,7 +4496,13 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying consumer groups.
+                                  This is the
+                                  top-level gate: a caller's consumer group must pass this check before any
+                                  MCP protocol
+                                  operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before
+                                  any tool-level
+                                  `default_tool_acls` or per-tool `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -4673,8 +4531,14 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
+                                  Default per-tool access control rules for allowing or denying consumer
+                                  groups access to
                                   tools.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every tool exposed by this MCP Server unless a specific tool
+                                  overrides it via
+                                  that tool's own `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -4747,7 +4611,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying callers, evaluated
+                                  against the
+                                  value of the configured `access_token_claim_field`.
+                                  This is the top-level gate: a caller
+                                  must pass this check before any MCP protocol operation (`initialize`,
+                                  `tools/list`,
+                                  `tools/call`) is allowed, and before any tool-level `default_tool_acls` or
+                                  per-tool
+                                  `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -4776,8 +4648,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
-                                  tools.
+                                  Default per-tool access control rules for allowing or denying callers access
+                                  to tools,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every tool
+                                  exposed by this MCP Server unless a specific tool overrides it via that
+                                  tool's own
+                                  `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -4869,114 +4748,17 @@ spec:
                             minimum: 0
                             type: integer
                           route:
+                            additionalProperties:
+                              type: string
                             description: |-
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
 
-                              Configuration for an AI Gateway route.
-                            properties:
-                              headers:
-                                description: |-
-                                  One or more lists of values indexed by header name that will cause this
-                                  route to match if present in the request.
-                                  The `Host` header cannot be used with this attribute: hosts should be
-                                  specified using the `hosts` attribute.
-                                  When `headers` contains only one value and that value starts with the
-                                  special prefix `~*`, the value is interpreted as a regular expression.
-                                x-kubernetes-preserve-unknown-fields: true
-                              hosts:
-                                description: |-
-                                  A list of domain names that match this route.
-                                  Note that the hosts value is case sensitive.
-                                items:
-                                  type: string
-                                type: array
-                              httpsRedirectStatusCode:
-                                description: |-
-                                  The status code Kong responds with when all properties of a route match
-                                  except the protocol i.e.
-                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
-                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
-                                  or 308.
-                                  Note: This config applies only if the route is configured to only accept the
-                                  `https` protocol.
-                                maximum: 599
-                                minimum: 100
-                                type: integer
-                              methods:
-                                description: A list of HTTP methods that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              paths:
-                                description: A list of paths that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              preserveHost:
-                                description: |-
-                                  When matching a route via one of the `hosts` domain names, use the request
-                                  `Host` header in the upstream request headers.
-                                  If set to `false`, the upstream `Host` header will be that of the service's
-                                  `host`.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              protocols:
-                                description: |-
-                                  An array of the protocols this route should allow.
-                                  See the [route Object](#route-object) section for a list of accepted
-                                  protocols.
-                                  When set to only `https`, HTTP requests are answered with an upgrade error.
-                                  When set to only `http`, HTTPS requests are answered with an error.
-                                items:
-                                  type: string
-                                type: array
-                              regexPriority:
-                                description: |-
-                                  A number used to choose which route resolves a given request when several
-                                  routes match it using regexes simultaneously.
-                                  When two routes match the path and have the same `regex_priority`, the older
-                                  one (lowest `created_at`) is used.
-                                  Note that the priority for non-regex routes is different (longer non-regex
-                                  routes are matched before shorter ones).
-                                maximum: 2147483647
-                                minimum: -2147483648
-                                type: integer
-                              requestBuffering:
-                                description: |-
-                                  Whether to enable request body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that receive
-                                  data with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              responseBuffering:
-                                description: |-
-                                  Whether to enable response body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that send data
-                                  with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              stripPath:
-                                description: |-
-                                  When matching a route via one of the `paths`, strip the matching prefix from
-                                  the upstream request URL.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              tags:
-                                description: |-
-                                  An optional set of strings associated with the route for grouping and
-                                  filtering.
-                                items:
-                                  type: string
-                                type: array
+                              Route configuration for an MCP Server that terminates its own listener.
+                              At least one
+                              of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+                              match
+                              incoming requests.
                             type: object
                           server:
                             description: |-
@@ -5505,7 +5287,13 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying consumer groups.
+                                  This is the
+                                  top-level gate: a caller's consumer group must pass this check before any
+                                  MCP protocol
+                                  operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before
+                                  any tool-level
+                                  `default_tool_acls` or per-tool `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -5534,8 +5322,14 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
+                                  Default per-tool access control rules for allowing or denying consumer
+                                  groups access to
                                   tools.
+                                  Evaluated only for callers that already passed the server-level `acls` check
+                                  above.
+                                  Applies to every tool exposed by this MCP Server unless a specific tool
+                                  overrides it via
+                                  that tool's own `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -5608,7 +5402,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Access control rules for allowing or denying consumer groups.
+                                  Server-level access control rules for allowing or denying callers, evaluated
+                                  against the
+                                  value of the configured `access_token_claim_field`.
+                                  This is the top-level gate: a caller
+                                  must pass this check before any MCP protocol operation (`initialize`,
+                                  `tools/list`,
+                                  `tools/call`) is allowed, and before any tool-level `default_tool_acls` or
+                                  per-tool
+                                  `access.acls` check is evaluated.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -5637,8 +5439,15 @@ spec:
                                   **Pre-release Feature**
                                   This feature is currently in beta and is subject to change.
 
-                                  Default access control rules for allowing or denying consumer groups to
-                                  tools.
+                                  Default per-tool access control rules for allowing or denying callers access
+                                  to tools,
+                                  evaluated against the value of the configured `access_token_claim_field`.
+                                  Evaluated only
+                                  for callers that already passed the server-level `acls` check above.
+                                  Applies to every tool
+                                  exposed by this MCP Server unless a specific tool overrides it via that
+                                  tool's own
+                                  `access.acls`.
                                 properties:
                                   allow:
                                     description: List of consumer groups that are permitted access.
@@ -5790,114 +5599,17 @@ spec:
                                 type: string
                             type: object
                           route:
+                            additionalProperties:
+                              type: string
                             description: |-
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
 
-                              Configuration for an AI Gateway route.
-                            properties:
-                              headers:
-                                description: |-
-                                  One or more lists of values indexed by header name that will cause this
-                                  route to match if present in the request.
-                                  The `Host` header cannot be used with this attribute: hosts should be
-                                  specified using the `hosts` attribute.
-                                  When `headers` contains only one value and that value starts with the
-                                  special prefix `~*`, the value is interpreted as a regular expression.
-                                x-kubernetes-preserve-unknown-fields: true
-                              hosts:
-                                description: |-
-                                  A list of domain names that match this route.
-                                  Note that the hosts value is case sensitive.
-                                items:
-                                  type: string
-                                type: array
-                              httpsRedirectStatusCode:
-                                description: |-
-                                  The status code Kong responds with when all properties of a route match
-                                  except the protocol i.e.
-                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
-                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
-                                  or 308.
-                                  Note: This config applies only if the route is configured to only accept the
-                                  `https` protocol.
-                                maximum: 599
-                                minimum: 100
-                                type: integer
-                              methods:
-                                description: A list of HTTP methods that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              paths:
-                                description: A list of paths that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              preserveHost:
-                                description: |-
-                                  When matching a route via one of the `hosts` domain names, use the request
-                                  `Host` header in the upstream request headers.
-                                  If set to `false`, the upstream `Host` header will be that of the service's
-                                  `host`.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              protocols:
-                                description: |-
-                                  An array of the protocols this route should allow.
-                                  See the [route Object](#route-object) section for a list of accepted
-                                  protocols.
-                                  When set to only `https`, HTTP requests are answered with an upgrade error.
-                                  When set to only `http`, HTTPS requests are answered with an error.
-                                items:
-                                  type: string
-                                type: array
-                              regexPriority:
-                                description: |-
-                                  A number used to choose which route resolves a given request when several
-                                  routes match it using regexes simultaneously.
-                                  When two routes match the path and have the same `regex_priority`, the older
-                                  one (lowest `created_at`) is used.
-                                  Note that the priority for non-regex routes is different (longer non-regex
-                                  routes are matched before shorter ones).
-                                maximum: 2147483647
-                                minimum: -2147483648
-                                type: integer
-                              requestBuffering:
-                                description: |-
-                                  Whether to enable request body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that receive
-                                  data with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              responseBuffering:
-                                description: |-
-                                  Whether to enable response body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that send data
-                                  with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              stripPath:
-                                description: |-
-                                  When matching a route via one of the `paths`, strip the matching prefix from
-                                  the upstream request URL.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              tags:
-                                description: |-
-                                  An optional set of strings associated with the route for grouping and
-                                  filtering.
-                                items:
-                                  type: string
-                                type: array
+                              Route configuration for an MCP Server that terminates its own listener.
+                              At least one
+                              of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+                              match
+                              incoming requests.
                             type: object
                           server:
                             description: |-
@@ -6472,14 +6184,25 @@ spec:
                           type: object
                         type: array
                       tools:
-                        description: List of tools exposed by this MCP Server.
+                        description: |-
+                          Per-tool access-control overrides for tools advertised by the remote MCP
+                          Server.
+                          Each
+                          entry is matched to a remote tool by `name`; only its access-control rules
+                          are applied.
                         items:
                           description: |-
-                            AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
-                            HTTP endpoint.
+                            AIGatewayMCPPassthroughTool **Pre-release Feature**
+                            This feature is currently in beta and is subject to change.
+
+                            A tool exposed by an MCP Server in `passthrough-listener` mode.
                           properties:
                             access:
-                              description: AIGatewayMCPToolBaseAccess is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
@@ -6503,201 +6226,13 @@ spec:
                                       type: array
                                   type: object
                               type: object
-                            annotations:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-                              properties:
-                                destructiveHint:
-                                  description: If true, the tool may perform destructive updates
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                idempotentHint:
-                                  description: If true, repeated calls with same args have no additional effect
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                openWorldHint:
-                                  description: If true, tool interacts with external entities
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                readOnlyHint:
-                                  description: If true, the tool does not modify its environment
-                                  enum:
-                                  - Enabled
-                                  - Disabled
-                                  type: string
-                                title:
-                                  description: Human-readable title for the tool
-                                  maxLength: 253
-                                  type: string
-                              type: object
-                            description:
-                              description: A description of what the tool does.
-                              maxLength: 253
-                              minLength: 1
-                              type: string
-                            headers:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The headers of the exported API.
-                                By default, Kong will extract the headers from API configuration.
-                                If the configured headers are not exactly matched, this field is required.
-                              type: object
-                            host:
-                              description: |-
-                                The host of the exported API, which must match the route's hosts.
-                                It should be the route's host.
-                                By default, Kong will extract the host from API configuration.
-                                If the configured host is wildcard, this field is required.
-                              maxLength: 253
-                              type: string
-                            method:
-                              description: |-
-                                For conversion-only and conversion-listener modes, the method of the
-                                exported API, which must match the route's methods.
-                              enum:
-                              - DELETE
-                              - GET
-                              - PATCH
-                              - POST
-                              - PUT
-                              maxLength: 253
-                              type: string
                             name:
-                              description: |-
-                                Tool identifier.
-                                In passthrough-listener mode, used to match remote MCP Server tools for ACL
-                                enforcement.
-                                In other modes, it is also used as the tool name (overrides
-                                annotations.title if present).
+                              description: Tool identifier used to match remote MCP Server tools for ACL enforcement.
                               maxLength: 253
                               minLength: 1
-                              type: string
-                            parameters:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-                              items:
-                                description: |-
-                                  AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
-                                  JSON format.
-                                  For example, '[{"name": "city", "in": "query", "description": "Name of the
-                                  city to get the weather for", "required": true, "schema": {"type":
-                                  "string"}}]'.
-                                  See https://swagger.io/docs/specification/v3_0/describing-parameters/ for
-                                  more details.
-                                properties:
-                                  description:
-                                    description: A description of the parameter.
-                                    maxLength: 253
-                                    type: string
-                                  in:
-                                    description: The location of the parameter in the request.
-                                    enum:
-                                    - query
-                                    - path
-                                    - header
-                                    - body
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  name:
-                                    description: The name of the parameter.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  required:
-                                    description: Whether this parameter is required.
-                                    enum:
-                                    - Enabled
-                                    - Disabled
-                                    type: string
-                                  schema:
-                                    description: |-
-                                      JSON Schema definition for the parameter value.
-                                      See
-                                      https://swagger.io/docs/specification/v3_0/describing-parameters/#schema-vs-content
-                                      for more details.
-                                    x-kubernetes-preserve-unknown-fields: true
-                                required:
-                                - in
-                                - name
-                                type: object
-                              type: array
-                            path:
-                              description: |-
-                                The path of the exported API, which must match the route's paths.
-                                Path not starting with '/' are treated as relative path and the route path
-                                will be added as the prefix.
-                                By default, Kong will extract the path from API configuration.
-                              maxLength: 253
-                              type: string
-                            query:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The query arguments of the exported API.
-                                If the generated query arguments are not exactly matched, this field is
-                                required.
-                              type: object
-                            requestBody:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API requestBody specification defined in OpenAPI JSON format.
-                                For example,
-                                '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-                                See
-                                https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-                                for more details.
-                                Note that `$ref` is not supported.
-                              type: object
-                            responses:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API responses specification defined in OpenAPI JSON format.
-                                This specification will be used to validate the upstream response and map it
-                                back to the structuredOutput.
-                                For example,
-                                '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-                                See https://swagger.io/docs/specification/v3_0/describing-responses/ for
-                                more details.
-                                Only one non-error (status code < 400) response is supported.
-                                Note that `$ref` is not supported.
-                              type: object
-                            scheme:
-                              description: |-
-                                The scheme of the exported API.
-                                By default, Kong will extract the scheme from API configuration.
-                                If the configured scheme is not expected, this field can be used to override
-                                it.
-                              enum:
-                              - http
-                              - https
-                              maxLength: 253
                               type: string
                           required:
-                          - description
+                          - access
                           - name
                           type: object
                         type: array
@@ -6719,114 +6254,6 @@ spec:
                   upstream-server:
                     description: UpstreamServer configuration.
                     properties:
-                      access:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-                        properties:
-                          aclAttributeType:
-                            description: AclAttributeType designates the type of configuration.
-                            enum:
-                            - consumer
-                            - oauthAccessToken
-                            minLength: 1
-                            type: string
-                          consumer:
-                            description: Consumer configuration.
-                            properties:
-                              acls:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Access control rules for allowing or denying consumer groups.
-                                properties:
-                                  allow:
-                                    description: List of consumer groups that are permitted access.
-                                    items:
-                                      type: string
-                                    type: array
-                                  deny:
-                                    description: List of consumer groups that are denied access.
-                                    items:
-                                      type: string
-                                    type: array
-                                type: object
-                              defaultToolAcls:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Default access control rules for allowing or denying consumer groups to
-                                  tools.
-                                properties:
-                                  allow:
-                                    description: List of consumer groups that are permitted access.
-                                    items:
-                                      type: string
-                                    type: array
-                                  deny:
-                                    description: List of consumer groups that are denied access.
-                                    items:
-                                      type: string
-                                    type: array
-                                type: object
-                            type: object
-                          oauthAccessToken:
-                            description: Oauth configuration.
-                            properties:
-                              accessTokenClaimField:
-                                description: |-
-                                  The claim in the OAuth2 access token to use as the subject for ACL
-                                  evaluation when `acl_attribute_type` is set to `oauth_access_token`.
-                                  Nested claim can be fetched by using a jq filter starts with dot, e.g.,
-                                  “.user.email”: https://jqlang.org/manual/#object-identifier-index
-                                maxLength: 253
-                                minLength: 1
-                                type: string
-                              acls:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Access control rules for allowing or denying consumer groups.
-                                properties:
-                                  allow:
-                                    description: List of consumer groups that are permitted access.
-                                    items:
-                                      type: string
-                                    type: array
-                                  deny:
-                                    description: List of consumer groups that are denied access.
-                                    items:
-                                      type: string
-                                    type: array
-                                type: object
-                              defaultToolAcls:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Default access control rules for allowing or denying consumer groups to
-                                  tools.
-                                properties:
-                                  allow:
-                                    description: List of consumer groups that are permitted access.
-                                    items:
-                                      type: string
-                                    type: array
-                                  deny:
-                                    description: List of consumer groups that are denied access.
-                                    items:
-                                      type: string
-                                    type: array
-                                type: object
-                            required:
-                            - accessTokenClaimField
-                            type: object
-                        required:
-                        - aclAttributeType
-                        type: object
                       config:
                         description: |-
                           **Pre-release Feature**
@@ -6858,114 +6285,17 @@ spec:
                             minimum: 0
                             type: integer
                           route:
+                            additionalProperties:
+                              type: string
                             description: |-
                               **Pre-release Feature**
                               This feature is currently in beta and is subject to change.
 
-                              Configuration for an AI Gateway route.
-                            properties:
-                              headers:
-                                description: |-
-                                  One or more lists of values indexed by header name that will cause this
-                                  route to match if present in the request.
-                                  The `Host` header cannot be used with this attribute: hosts should be
-                                  specified using the `hosts` attribute.
-                                  When `headers` contains only one value and that value starts with the
-                                  special prefix `~*`, the value is interpreted as a regular expression.
-                                x-kubernetes-preserve-unknown-fields: true
-                              hosts:
-                                description: |-
-                                  A list of domain names that match this route.
-                                  Note that the hosts value is case sensitive.
-                                items:
-                                  type: string
-                                type: array
-                              httpsRedirectStatusCode:
-                                description: |-
-                                  The status code Kong responds with when all properties of a route match
-                                  except the protocol i.e.
-                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
-                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
-                                  or 308.
-                                  Note: This config applies only if the route is configured to only accept the
-                                  `https` protocol.
-                                maximum: 599
-                                minimum: 100
-                                type: integer
-                              methods:
-                                description: A list of HTTP methods that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              paths:
-                                description: A list of paths that match this route.
-                                items:
-                                  type: string
-                                type: array
-                              preserveHost:
-                                description: |-
-                                  When matching a route via one of the `hosts` domain names, use the request
-                                  `Host` header in the upstream request headers.
-                                  If set to `false`, the upstream `Host` header will be that of the service's
-                                  `host`.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              protocols:
-                                description: |-
-                                  An array of the protocols this route should allow.
-                                  See the [route Object](#route-object) section for a list of accepted
-                                  protocols.
-                                  When set to only `https`, HTTP requests are answered with an upgrade error.
-                                  When set to only `http`, HTTPS requests are answered with an error.
-                                items:
-                                  type: string
-                                type: array
-                              regexPriority:
-                                description: |-
-                                  A number used to choose which route resolves a given request when several
-                                  routes match it using regexes simultaneously.
-                                  When two routes match the path and have the same `regex_priority`, the older
-                                  one (lowest `created_at`) is used.
-                                  Note that the priority for non-regex routes is different (longer non-regex
-                                  routes are matched before shorter ones).
-                                maximum: 2147483647
-                                minimum: -2147483648
-                                type: integer
-                              requestBuffering:
-                                description: |-
-                                  Whether to enable request body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that receive
-                                  data with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              responseBuffering:
-                                description: |-
-                                  Whether to enable response body buffering or not.
-                                  With HTTP 1.1, it may make sense to turn this off on services that send data
-                                  with chunked transfer encoding.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              stripPath:
-                                description: |-
-                                  When matching a route via one of the `paths`, strip the matching prefix from
-                                  the upstream request URL.
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              tags:
-                                description: |-
-                                  An optional set of strings associated with the route for grouping and
-                                  filtering.
-                                items:
-                                  type: string
-                                type: array
+                              Route configuration for an MCP Server that terminates its own listener.
+                              At least one
+                              of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+                              match
+                              incoming requests.
                             type: object
                           server:
                             description: Server-side configuration specific to `upstream-server` mode.
@@ -7660,11 +6990,19 @@ spec:
                           description: |-
                             AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
                             mode.
-                            Extends the base tool with input/output schema overrides for the upstream
-                            server's advertised tool.
+                            Provides optional metadata
+                            overrides (`description`, `annotations`, `input_schema`, `output_schema`) and
+                            per-tool
+                            ACLs for a tool advertised by the upstream MCP server; any field not
+                            overridden here
+                            falls back to the remote tool's own definition.
                           properties:
                             access:
-                              description: AIGatewayMCPUpstreamToolAccess is a type alias.
+                              description: |-
+                                **Pre-release Feature**
+                                This feature is currently in beta and is subject to change.
+
+                                Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
@@ -7725,26 +7063,6 @@ spec:
                             description:
                               description: A description of what the tool does.
                               maxLength: 253
-                              minLength: 1
-                              type: string
-                            headers:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The headers of the exported API.
-                                By default, Kong will extract the headers from API configuration.
-                                If the configured headers are not exactly matched, this field is required.
-                              type: object
-                            host:
-                              description: |-
-                                The host of the exported API, which must match the route's hosts.
-                                It should be the route's host.
-                                By default, Kong will extract the host from API configuration.
-                                If the configured host is wildcard, this field is required.
-                              maxLength: 253
                               type: string
                             inputSchema:
                               description: |-
@@ -7752,25 +7070,11 @@ spec:
                                 Overrides the upstream server's `inputSchema`
                                 for the same tool name, if present.
                               x-kubernetes-preserve-unknown-fields: true
-                            method:
-                              description: |-
-                                When provided, the method of the exported API, which must match the route's
-                                methods.
-                              enum:
-                              - DELETE
-                              - GET
-                              - PATCH
-                              - POST
-                              - PUT
-                              maxLength: 253
-                              type: string
                             name:
                               description: |-
-                                Tool identifier.
-                                In passthrough-listener mode, used to match remote MCP Server tools for ACL
-                                enforcement.
-                                In other modes, it is also used as the tool name (overrides
-                                annotations.title if present).
+                                The MCP tool name.
+                                In upstream-server mode, it also matches the remote MCP Server tool whose
+                                metadata this entry overrides.
                               maxLength: 253
                               minLength: 1
                               type: string
@@ -7780,121 +7084,7 @@ spec:
                                 Overrides the upstream server's `outputSchema`
                                 for the same tool name, if present.
                               x-kubernetes-preserve-unknown-fields: true
-                            parameters:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-                              items:
-                                description: |-
-                                  AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
-                                  JSON format.
-                                  For example, '[{"name": "city", "in": "query", "description": "Name of the
-                                  city to get the weather for", "required": true, "schema": {"type":
-                                  "string"}}]'.
-                                  See https://swagger.io/docs/specification/v3_0/describing-parameters/ for
-                                  more details.
-                                properties:
-                                  description:
-                                    description: A description of the parameter.
-                                    maxLength: 253
-                                    type: string
-                                  in:
-                                    description: The location of the parameter in the request.
-                                    enum:
-                                    - query
-                                    - path
-                                    - header
-                                    - body
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  name:
-                                    description: The name of the parameter.
-                                    maxLength: 253
-                                    minLength: 1
-                                    type: string
-                                  required:
-                                    description: Whether this parameter is required.
-                                    enum:
-                                    - Enabled
-                                    - Disabled
-                                    type: string
-                                  schema:
-                                    description: |-
-                                      JSON Schema definition for the parameter value.
-                                      See
-                                      https://swagger.io/docs/specification/v3_0/describing-parameters/#schema-vs-content
-                                      for more details.
-                                    x-kubernetes-preserve-unknown-fields: true
-                                required:
-                                - in
-                                - name
-                                type: object
-                              type: array
-                            path:
-                              description: |-
-                                The path of the exported API, which must match the route's paths.
-                                Path not starting with '/' are treated as relative path and the route path
-                                will be added as the prefix.
-                                By default, Kong will extract the path from API configuration.
-                              maxLength: 253
-                              type: string
-                            query:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The query arguments of the exported API.
-                                If the generated query arguments are not exactly matched, this field is
-                                required.
-                              type: object
-                            requestBody:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API requestBody specification defined in OpenAPI JSON format.
-                                For example,
-                                '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-                                See
-                                https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-                                for more details.
-                                Note that `$ref` is not supported.
-                              type: object
-                            responses:
-                              additionalProperties:
-                                type: string
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                The API responses specification defined in OpenAPI JSON format.
-                                This specification will be used to validate the upstream response and map it
-                                back to the structuredOutput.
-                                For example,
-                                '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-                                See https://swagger.io/docs/specification/v3_0/describing-responses/ for
-                                more details.
-                                Only one non-error (status code < 400) response is supported.
-                                Note that `$ref` is not supported.
-                              type: object
-                            scheme:
-                              description: |-
-                                The scheme of the exported API.
-                                By default, Kong will extract the scheme from API configuration.
-                                If the configured scheme is not expected, this field can be used to override
-                                it.
-                              enum:
-                              - http
-                              - https
-                              maxLength: 253
-                              type: string
                           required:
-                          - description
                           - name
                           type: object
                         type: array
