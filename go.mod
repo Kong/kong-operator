@@ -19,7 +19,7 @@ require (
 	github.com/goccy/go-json v0.10.6
 	github.com/gohugoio/hashstructure v1.0.0
 	github.com/google/go-cmp v0.7.0
-	github.com/google/go-containerregistry v0.21.9
+	github.com/google/go-containerregistry v0.22.0
 	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
@@ -203,7 +203,7 @@ require (
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
 	github.com/jmoiron/sqlx v1.3.5 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
-	github.com/klauspost/compress v1.19.1 // indirect
+	github.com/klauspost/compress v1.19.2 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
 	github.com/lucasb-eyer/go-colorful v1.4.0 // indirect

@@ -296,8 +296,8 @@ github.com/google/gnostic-models v0.7.1/go.mod h1:whL5G0m6dmc5cPxKc5bdKdEN3UjI7O
 github.com/google/go-cmp v0.6.0/go.mod h1:17dUlkBOakJ0+DkrSSNjCkIjxS6bF9zb3elmeNGIjoY=
 github.com/google/go-cmp v0.7.0 h1:wk8382ETsv4JYUZwIsn6YpYiWiBsYLSJiTsyBybVuN8=
 github.com/google/go-cmp v0.7.0/go.mod h1:pXiqmnSA92OHEEa9HXL2W4E7lf9JzCmGVUdgjX3N/iU=
-github.com/google/go-containerregistry v0.21.9 h1:F+D4uZ3iA3DLMJLfhaqMdHJbzeqm/216WGQq2dokuLs=
-github.com/google/go-containerregistry v0.21.9/go.mod h1:dP5XNKcL7kMFF/TB3LfvWmVhAcv7iqkHb3oDK8aauTo=
+github.com/google/go-containerregistry v0.22.0 h1:eGbCiPeYxAH/7WLLq6zTBALP0tUIFsoyRauhxXDJ53I=
+github.com/google/go-containerregistry v0.22.0/go.mod h1:bJR35SK8XgisYmhg/FMQ/5RK0S/XrOAqLBV5/LR2XE0=
 github.com/google/go-github v17.0.0+incompatible/go.mod h1:zLgOLi98H3fifZn+44m+umXrS52loVEgC2AApnigrVQ=
 github.com/google/go-github/v48 v48.2.0 h1:68puzySE6WqUY9KWmpOsDEQfDZsso98rT6pZcz9HqcE=
 github.com/google/go-github/v48 v48.2.0/go.mod h1:dDlehKBDo850ZPvCTK0sEqTCVWcrGl2LcDiajkYi89Y=
@@ -379,8 +379,8 @@ github.com/jpillora/backoff v1.0.0 h1:uvFg412JmmHBHw7iwprIxkPMI+sGQ4kzOWsMeHnm2E
 github.com/jpillora/backoff v1.0.0/go.mod h1:J/6gKK9jxlEcS3zixgDgUAsiuZ7yrSoa/FX5e0EB2j4=
 github.com/json-iterator/go v1.1.12 h1:PV8peI4a0ysnczrg+LtxykD8LfKY9ML6u2jnxaEnrnM=
 github.com/json-iterator/go v1.1.12/go.mod h1:e30LSqwooZae/UwlEbR2852Gd8hjQvJoHmT4TnhNGBo=
-github.com/klauspost/compress v1.19.1 h1:VsB4HPswih7mmZ8WleSFQ75c/Ui1M4trX5oAsJnhSlk=
-github.com/klauspost/compress v1.19.1/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
+github.com/klauspost/compress v1.19.2 h1:hMRETovs/pu/dVWN7zIT1PGG8t509MwT6bO7XSi26R8=
+github.com/klauspost/compress v1.19.2/go.mod h1:cwPg85FWrGar70rWktvGQj8/hthj3wpl0PGDogxkrSQ=
 github.com/kong/go-database-reconciler v1.42.3 h1:4L1uLDZb/BHnszlDg/SgqOZw8LPFbS+OZ/BHqcFfpUE=
 github.com/kong/go-database-reconciler v1.42.3/go.mod h1:AYYSt3TBXL8QMa1IZwqj4BhSxKMkFXama5ObtgWPoMc=
 github.com/kong/go-kong v0.78.0 h1:VK5g26BCeF+l9o3j3pgU3BOuOdmTd9Vj33x29mKGtkg=
