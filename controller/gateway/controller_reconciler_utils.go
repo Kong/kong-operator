@@ -666,40 +666,42 @@ func generateDataPlaneNetworkPolicy(
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
 		}
 
-		proxyPorts = lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		// Dual-stack listen values name the same port once per address family,
+		// so deduplicate to keep the NetworkPolicy ports stable.
+		proxyPorts = lo.Uniq(lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
-		proxySSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		}))
+		proxySSLPorts = lo.Uniq(lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 	}
 	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
 		}
-		adminAPISSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		adminAPISSLPorts = lo.Uniq(lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 	}
 	if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 		kongListenConfig, err := parseKongListenEnv(streamListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
-		streamUDPListenPorts = lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		streamUDPListenPorts = lo.Uniq(lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 		// Include both plain-TCP entries (TCPRoute) and SSL entries (TLSRoute) — the
 		// NetworkPolicy must allow ingress on every port Kong is listening on for stream.
-		streamListenPorts = append(
+		streamListenPorts = lo.Uniq(append(
 			lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 				return intstr.FromInt(ep.Port)
 			}),
 			lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 				return intstr.FromInt(ep.Port)
 			})...,
-		)
+		))
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
@@ -1422,14 +1424,17 @@ func setDataPlaneDeploymentListenPorts(
 		// One template is derived per user-configured SSL endpoint, so a dual-stack
 		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
 		// bind addresses (with their own options) for every generated Kong port.
-		templates := []streamListenTemplate{{address: "0.0.0.0", options: []string{"reuseport"}}}
+		templates := []streamListenTemplate{
+			{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
+			{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
+		}
 		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
 				templates = templates[:0]
 				for _, ep := range cfg.SSLEndpoints {
 					address := ep.Address
 					if address == "" {
-						address = "0.0.0.0"
+						address = consts.ListenAddressIPv4
 					}
 					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
 				}
