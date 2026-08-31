@@ -341,11 +341,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 					metav1.ConditionTrue,
 					eventgatewayv1alpha1.CertificateProvisionedReason,
 				)
-				// Ready=False because the fake Deployment has no ready replicas yet.
+				// Ready=False because the fake Deployment's rollout is not complete.
 				assertCondition(t, egdp,
 					eventgatewayv1alpha1.ReadyType,
 					metav1.ConditionFalse,
-					eventgatewayv1alpha1.DependenciesNotReadyReason,
+					eventgatewayv1alpha1.WaitingToBecomeReadyReason,
 				)
 
 				// Events: 2nd reconcile must emit DeploymentCreated and ServiceCreated.

@@ -1,0 +1,21 @@
+apiVersion: eventgateway.konghq.com/v1alpha1
+kind: KegDataPlane
+metadata:
+  name: ($keg_dp_name)
+  namespace: ($namespace)
+spec:
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: ($keg_cp_name)
+  deployment:
+    replicas: 1
+    podTemplateSpec:
+      spec:
+        containers:
+          - name: keg
+            image: ($keg_dp_image)
+            # Deliberately slow: gives a wide, deterministic window during a
+            # later rollout in which the new pod exists but is not yet Ready.
+            readinessProbe:
+              initialDelaySeconds: 30

@@ -1,0 +1,43 @@
+# Template for creating and asserting a KonnectEventGateway (Event Gateway
+# control plane).
+#
+# Required bindings:
+#   - keg_cp_name: Name of the KonnectEventGateway to create.
+#   - namespace: Namespace where the KonnectEventGateway will be created.
+#   - konnect_auth_name: Name of the KonnectAPIAuthConfiguration to reference
+#     (same namespace).
+#   - test_name: Identifier used for the "test" label so the hack/cleanup
+#     script can find and prune this control plane from Konnect if it's left
+#     behind by a cancelled/crashed test run.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-konnect-event-gateway
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectEventGateway
+          metadata:
+            name: ($keg_cp_name)
+            namespace: ($namespace)
+          spec:
+            apiSpec:
+              name: ($keg_cp_name)
+              description: Event Gateway chainsaw e2e control plane
+              labels:
+                test: ($test_name)
+            konnect:
+              authRef:
+                name: ($konnect_auth_name)
+    - assert:
+        resource:
+          apiVersion: konnect.konghq.com/v1alpha1
+          kind: KonnectEventGateway
+          metadata:
+            name: ($keg_cp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'

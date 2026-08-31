@@ -1,0 +1,160 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kegdataplane-lifecycle
+spec:
+  description: |
+    Lifecycle test for KegDataPlane cross-reference, condition correctness,
+    and rollout-readiness:
+    1. Creates KegDataPlane before its KonnectEventGateway → asserts
+       KonnectEventGatewayResolved=False/NotFound.
+    2. Creates KonnectEventGateway + backend cluster + virtual cluster +
+       listener → KegDataPlane reaches Ready=True.
+    3. Triggers a second rollout (podTemplateSpec change) → while the new pod
+       is still starting up (and the old pod is still serving), asserts
+       Ready=False/WaitingToBecomeReady.
+    4. Once the new pod passes its (delayed) probe and the old pod is scaled
+       down, asserts Ready=True again.
+    5. Deletes the listener, virtual cluster, and backend cluster (in that
+       order, waiting for each to fully disappear), then the
+       KonnectEventGateway → asserts KegDataPlane conditions degrade. Child
+       resources must be deleted before the parent they reference, or their
+       own cleanup gets stuck (its finalizer logic needs the parent to still
+       exist).
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: virtual_cluster_name
+      value: (join('-', [($test_name), 'vcluster']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+    - name: keg_dp_image
+      value: (env('KEG_DP_IMAGE'))
+    - name: dns_label
+      value: vcluster-1
+    - name: listener_ports
+      value:
+        - "19092-19095"
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-kafka-cluster
+      description: Deploy 3-broker Apache Kafka cluster (KRaft, combined mode) so the backend cluster reference is valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
+    - name: 4-Create-dataplane-before-parent
+      try:
+        - apply:
+            file: 01-kegdataplane.yaml
+        - assert:
+            file: 01-assert-not-found.yaml
+    - name: 5-Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: 6-Create-eventgateway-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: 7-Create-eventgateway-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: 8-Create-eventgateway-listener
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+    - name: 9-Assert-dataplane-ready
+      description: The KegDataPlane from step 4 resolves its ControlPlaneRef now that the KonnectEventGateway (and its backend cluster/virtual cluster/listener) exist, and becomes Ready.
+      try:
+        - assert:
+            file: 02-assert-ready.yaml
+    - name: 10-Trigger-second-rollout
+      description: |
+        Apply an updated podTemplateSpec (new env var) so the Deployment gets
+        a new pod template hash and a real rolling update starts. The old pod
+        keeps serving (default maxUnavailable=0/maxSurge=1 for replicas=1)
+        while the new pod is created and starts its 30s-delayed readiness
+        probe, giving a wide, deterministic window in which Ready must be
+        False.
+      try:
+        - apply:
+            file: 03-kegdataplane-rollout.yaml
+        - assert:
+            file: 03-assert-rolling.yaml
+    - name: 11-Assert-rollout-completes
+      try:
+        - assert:
+            file: 04-assert-ready.yaml
+    - name: 12-Delete-event-gateway-child-resources
+      description: |
+        Delete the child resources (listener, virtual cluster, backend
+        cluster) before the parent KonnectEventGateway they reference.
+        Deleting the parent first would orphan them mid-finalizer, since
+        their own cleanup depends on the parent still existing (e.g. to look
+        up its Konnect gateway ID) — leaving them stuck Terminating forever.
+        Each `delete:` blocks until the object is actually gone, so ordering
+        here is real, not just declaration order.
+      try:
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayListener
+              namespace: ($namespace)
+              name: ($listener_name)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayVirtualCluster
+              namespace: ($namespace)
+              name: ($virtual_cluster_name)
+        - delete:
+            ref:
+              apiVersion: configuration.konghq.com/v1alpha1
+              kind: EventGatewayBackendCluster
+              namespace: ($namespace)
+              name: ($backend_cluster_name)
+    - name: 13-Delete-konnect-eventgateway
+      bindings:
+        - name: resource_type
+          value: konnecteventgateway
+        - name: resource_name
+          value: ($keg_cp_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/delete-resource-non-blocking.yaml
+    - name: 14-Assert-dataplane-degraded
+      try:
+        - assert:
+            file: 05-assert-degraded.yaml
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: kegdataplane-lifecycle
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

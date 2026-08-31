@@ -1,0 +1,43 @@
+# Template for creating and asserting an EventGatewayListener.
+#
+# Required bindings:
+#   - listener_name: Name of the EventGatewayListener to create.
+#   - namespace: Namespace where the EventGatewayListener will be created.
+#   - keg_cp_name: Name of the KonnectEventGateway it attaches to (same
+#     namespace).
+#   - listener_ports: List of ports (or port ranges, e.g. "19092-19095") the
+#     listener accepts.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-event-gateway-listener
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListener
+          metadata:
+            name: ($listener_name)
+            namespace: ($namespace)
+          spec:
+            gatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($keg_cp_name)
+            apiSpec:
+              name: ($listener_name)
+              description: chainsaw e2e listener
+              addresses:
+                - "0.0.0.0"
+              ports: ($listener_ports)
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayListener
+          metadata:
+            name: ($listener_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'

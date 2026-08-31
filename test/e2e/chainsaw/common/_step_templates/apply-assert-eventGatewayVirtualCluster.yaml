@@ -1,0 +1,48 @@
+# Template for creating and asserting a simple, anonymous-auth
+# EventGatewayVirtualCluster (aclMode: enforce_on_gateway, no namespace
+# prefixing). For scenarios needing namespace-prefixed/multi-VC setups (e.g.
+# SNI routing across several virtual clusters), inline the resource instead —
+# this template only covers the common single-VC case.
+#
+# Required bindings:
+#   - virtual_cluster_name: Name of the EventGatewayVirtualCluster to create.
+#   - namespace: Namespace where the EventGatewayVirtualCluster will be
+#     created.
+#   - backend_cluster_name: Name of the EventGatewayBackendCluster it attaches
+#     to (same namespace).
+#   - dns_label: DNS label used to route to this virtual cluster.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-event-gateway-virtual-cluster
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualCluster
+          metadata:
+            name: ($virtual_cluster_name)
+            namespace: ($namespace)
+          spec:
+            eventGatewayBackendClusterRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($backend_cluster_name)
+            apiSpec:
+              name: ($virtual_cluster_name)
+              description: chainsaw e2e virtual cluster
+              dnsLabel: ($dns_label)
+              aclMode: enforce_on_gateway
+              authentication:
+                - type: anonymous
+    - assert:
+        resource:
+          apiVersion: configuration.konghq.com/v1alpha1
+          kind: EventGatewayVirtualCluster
+          metadata:
+            name: ($virtual_cluster_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
