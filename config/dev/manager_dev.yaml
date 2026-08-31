@@ -23,9 +23,11 @@ spec:
             - -zap-log-level=debug
             - -zap-devel=true
             - -enable-controller-kongplugininstallation
+            - -enable-controller-aigateway
             - -enable-controller-aigatewaydataplane
             - -enable-controller-konnect
             - -enable-controller-controlplaneextensions
+            - -feature-gates=mcp-server
           name: manager
           env:
             - name: KONG_OPERATOR_ANONYMOUS_REPORTS

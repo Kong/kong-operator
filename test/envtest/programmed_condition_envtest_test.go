@@ -33,13 +33,14 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 	ns := CreateNamespace(ctx, t, ctrlClient)
 	healthProbePort := helpers.GetFreePort(t)
 
-	RunManager(ctx, t, envcfg,
+	logs := RunManager(ctx, t, envcfg,
 		AdminAPIOptFns(),
 		WithUpdateStatus(),
 		WithHealthProbePort(healthProbePort),
 		WithPublishService(ns.Name),
 		WithKongServiceFacadeFeatureEnabled(),
 	)
+	WaitForManagerStart(t, logs)
 
 	testCases := []struct {
 		name                        string

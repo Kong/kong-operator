@@ -114,6 +114,13 @@
   count. The operator's RBAC now includes `create;get;list;patch;watch;delete`
   on `horizontalpodautoscalers` for the AIGatewayDataPlane controller.
   [#5406](https://github.com/Kong/kong-operator/pull/5406)
+- `MCPServerDataPlane` exposes `spec.deployment.podTemplateSpec.spec.containers[].resources`
+  matched by field `name` to adjust the resource requests and limits of the owned Deployment's
+  containers (e.g. `mcp-server` or `init-mcp-server`). Names that don't match a container the
+  operator manages are ignored.
+- Support using `tags` field in `KongPlugin` and `KongClusterPlugin` to specify
+  tags in generated Kong plugins in on-prem gateways.
+  [#5325](https://github.com/Kong/kong-operator/pull/5325)
 
 ### Changed
 
