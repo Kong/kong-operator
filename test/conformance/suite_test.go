@@ -81,6 +81,14 @@ func TestMain(m *testing.M) {
 	// that would allow e.g. cross namespace traffic.
 	// Related upstream discussion: https://github.com/kubernetes-sigs/gateway-api/discussions/2137
 	env, err = testutils.BuildEnvironment(ctx, existingCluster, func(b *environments.Builder, t clusters.Type) {
+		if existingCluster == "" {
+			switch ipFamily := test.ClusterIPFamily(); ipFamily {
+			case clusters.IPv6:
+				b.WithIPv6Only()
+			case clusters.Dual:
+				exitOnErr(fmt.Errorf("dual-stack test clusters are not yet supported (KONG_TEST_CLUSTER_IP_FAMILY=dual)"))
+			}
+		}
 		if !test.IsMetalLBDisabled() {
 			b.WithAddons(metallb.New())
 		}
