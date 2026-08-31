@@ -348,7 +348,7 @@ func Test_ensureKafkaService(t *testing.T) {
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(r *Reconciler, rec *events.FakeRecorder) {
-				_ = r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
+				_, _ = r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -382,7 +382,7 @@ func Test_ensureKafkaService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			err := r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
+			_, err := r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
 
 			if testcase.wantErr {
 				require.Error(t, err)

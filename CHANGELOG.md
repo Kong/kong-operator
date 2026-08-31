@@ -121,6 +121,14 @@
   count. The operator's RBAC now includes `create;get;list;patch;watch;delete`
   on `horizontalpodautoscalers` for the KegDataPlane controller.
   [#5456](https://github.com/Kong/kong-operator/pull/5456)
+- `KegDataPlane`: added a `ServiceReady` status condition and a
+  `status.addresses` field that expose the Kafka Service's readiness and
+  reachable addresses. For `LoadBalancer`-type Services, `ServiceReady` stays
+  `False` until an external address is allocated, which also blocks the overall
+  `Ready` condition; `ClusterIP` and `NodePort` Services are always considered
+  ready. The external hostname or IP is visible in `status.addresses` once
+  allocated.
+  [#5457](https://github.com/Kong/kong-operator/pull/5457)
 - `MCPServerDataPlane` exposes `spec.deployment.podTemplateSpec.spec.containers[].resources`
   matched by field `name` to adjust the resource requests and limits of the owned Deployment's
   containers (e.g. `mcp-server` or `init-mcp-server`). Names that don't match a container the
