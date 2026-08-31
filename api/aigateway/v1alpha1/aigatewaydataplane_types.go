@@ -25,7 +25,9 @@ import (
 
 // AIGatewayDataPlane is the Schema for the AIGateway data planes API.
 // It manages an AI Gateway binary Deployment that connects to Konnect via
-// a referenced KonnectAIGateway (controlplane) resource.
+// a referenced KonnectAIGateway (controlplane) resource. The control plane
+// reference is optional: when omitted, the AI Gateway must be configured
+// manually (e.g. via Deployment.PodTemplateSpec env vars).
 //
 // +genclient
 // +kubebuilder:object:root=true
@@ -35,6 +37,7 @@ import (
 // +kubebuilder:resource:shortName=aigwdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
+// +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')) ? true : has(self.spec.controlPlaneRef)", message="spec.controlPlaneRef cannot be removed once the AIGatewayDataPlane is Ready"
 // +kong:channels=kong-operator
 type AIGatewayDataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -43,7 +46,7 @@ type AIGatewayDataPlane struct {
 	// Spec defines the desired state of AIGatewayDataPlane.
 	//
 	// +required
-	Spec AIGatewayDataPlaneSpec `json:"spec,omitzero"`
+	Spec AIGatewayDataPlaneSpec `json:"spec,omitempty"`
 
 	// Status defines the observed state of AIGatewayDataPlane.
 	//
@@ -68,8 +71,13 @@ type AIGatewayDataPlaneSpec struct {
 	// Currently only konnectNamespacedRef is supported, which references a
 	// KonnectAIGateway resource in the same namespace.
 	//
-	// +required
-	ControlPlaneRef ControlPlaneRef `json:"controlPlaneRef,omitzero"`
+	// When unset, the operator performs no Konnect lookup or certificate
+	// automation for this AIGatewayDataPlane. The user is expected to configure
+	// Konnect (or any other) connectivity manually, e.g. by supplying the
+	// required env vars and cert volume through Deployment.PodTemplateSpec.
+	//
+	// +optional
+	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
 
 	// Deployment configures the AI Gateway Deployment: image, replicas, resources,
 	// extra env vars, volume mounts, etc.

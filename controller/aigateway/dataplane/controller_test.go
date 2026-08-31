@@ -67,7 +67,7 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 			Kind:       "AIGatewayDataPlane",
 		},
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 					Name: reconcileTestAIGWCPName,
@@ -75,6 +75,14 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 			},
 		},
 	}
+}
+
+// newReconcileAIGWDPNoControlPlaneRef builds an AIGatewayDataPlane with no
+// ControlPlaneRef configured, for the manual/unmanaged control plane path.
+func newReconcileAIGWDPNoControlPlaneRef() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDP()
+	aigwdp.Spec.ControlPlaneRef = nil
+	return aigwdp
 }
 
 // newProgrammedKonnectAIGateway builds a KonnectAIGateway (controlplane)
@@ -351,6 +359,51 @@ func TestReconciler_Reconcile(t *testing.T) {
 				events := drainEvents(recorder)
 				assert.Contains(t, events, "Normal DeploymentCreated Deployment my-dp created")
 				assert.Contains(t, events, "Normal ServiceCreated Ingress Service my-dp-ingress created")
+			},
+		},
+		{
+			name: "no ControlPlaneRef: Deployment and Service created without Konnect resolution or cert registration",
+			objects: []client.Object{
+				newReconcileAIGWDPNoControlPlaneRef(),
+				caSecret(),
+			},
+			// 1st reconcile: cert Secret created → returns early. 2nd: Deployment + Service created.
+			reconcileCount: 2,
+			wantResult:     ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+
+				// Deployment exists, without the Konnect endpoint env vars.
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+				var envNames []string
+				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+					envNames = append(envNames, e.Name)
+				}
+				assert.NotContains(t, envNames, EnvKongClusterControlPlane)
+				assert.NotContains(t, envNames, EnvKongClusterServerName)
+				assert.Contains(t, envNames, EnvClientCertPath)
+
+				// No AIGatewayDataPlaneCertificate is created: there's no KonnectAIGateway to register against.
+				cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, cert)
+				assert.True(t, apierrors.IsNotFound(err))
+
+				aigwdp := getAIGWDP(t, cl)
+				// Konnect-specific conditions are never set, so they can't block Ready.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)))
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectCertificateRegisteredType)))
+				// The mTLS secret is control-plane independent, so it's still provisioned.
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionTrue,
+					aigatewayv1alpha1.CertificateProvisionedReason,
+				)
 			},
 		},
 		{

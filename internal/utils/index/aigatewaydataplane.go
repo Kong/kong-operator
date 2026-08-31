@@ -44,7 +44,7 @@ func aiGatewayDataPlaneControlPlaneRef(object client.Object) []string {
 	if !ok {
 		return nil
 	}
-	if aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
+	if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
 		return nil
 	}
 	return []string{aigwdp.Namespace + "/" + aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}

@@ -114,9 +114,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 	// Ensure the AIGatewayDataPlaneCertificate is registered with Konnect.
 	// Return early if not yet programmed; the Owns() watch retriggeres once
 	// the Konnect controller flips Programmed to True.
-	certProgrammed, err := r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret)
-	if err != nil {
-		return ctrl.Result{}, err
+	// When no ControlPlaneRef is configured, there's no KonnectAIGateway to
+	// register the certificate against, so Konnect cert automation is skipped.
+	certProgrammed := true
+	if aigatewaycp != nil {
+		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 	// If the certificate is not yet programmed on Konnect, return early.
 	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.

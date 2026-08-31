@@ -153,3 +153,12 @@ linters:
           - kubeapilinter
         path: api/konnect/v1alpha1/(konnect_extension_types|konnect_cloudgateway_network_types).go
         text: 'requiredfields: field .* has a valid zero value (.*) and should be a pointer.'
+
+      # NOTE: AIGatewayDataPlaneSpec is intentionally all-optional: with no
+      # spec.controlPlaneRef set, the AIGatewayDataPlane is configured entirely
+      # manually via spec.deployment.podTemplateSpec, so an empty spec ({}) is a
+      # valid, deliberate configuration, not an incomplete one.
+      - linters:
+          - kubeapilinter
+        path: api/aigateway/v1alpha1/aigatewaydataplane_types.go
+        text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'

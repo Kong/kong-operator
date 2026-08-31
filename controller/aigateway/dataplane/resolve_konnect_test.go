@@ -33,6 +33,33 @@ func newKonnectAIGW(ns, name string, programmed metav1.ConditionStatus) *konnect
 	}
 }
 
+func Test_resolveKonnectAIGateway_NoControlPlaneRef(t *testing.T) {
+	r := &Reconciler{Client: fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()}
+
+	tests := []struct {
+		name            string
+		controlPlaneRef *aigatewayv1alpha1.ControlPlaneRef
+	}{
+		{name: "ControlPlaneRef is nil"},
+		{name: "ControlPlaneRef set but KonnectNamespacedRef is nil", controlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{}},
+	}
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+				ObjectMeta: metav1.ObjectMeta{Namespace: "test-ns", Name: "my-dp"},
+				Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{ControlPlaneRef: tc.controlPlaneRef},
+			}
+
+			gotCP, err := r.resolveKonnectAIGateway(context.Background(), zap.New(), aigwdp)
+
+			require.NoError(t, err)
+			assert.Nil(t, gotCP)
+			assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)),
+				"no condition should be set when ControlPlaneRef is not configured")
+		})
+	}
+}
+
 func Test_resolveKonnectAIGateway(t *testing.T) {
 	const (
 		ns       = "test-ns"
@@ -43,7 +70,7 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{
 			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "my-dp"},
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-				ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 					KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
 				},
 			},

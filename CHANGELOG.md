@@ -140,6 +140,13 @@
   tags in generated Kong plugins in on-prem gateways and Konnect hybrid gateways.
   [#5325](https://github.com/Kong/kong-operator/pull/5325)
   [#5354](https://github.com/Kong/kong-operator/pull/5354)
+- `AIGatewayDataPlane`: made `spec.controlPlaneRef` optional. When omitted, the
+  operator performs no `KonnectAIGateway` lookup or certificate registration
+  automation, letting the AI Gateway be configured against a manually-managed
+  control plane and certificate via `spec.deployment.podTemplateSpec`. Once the
+  `AIGatewayDataPlane` reaches `Ready=True`, `controlPlaneRef` can no longer be
+  removed.
+  [#5470](https://github.com/Kong/kong-operator/pull/5470)
 
 ### Changed
 
