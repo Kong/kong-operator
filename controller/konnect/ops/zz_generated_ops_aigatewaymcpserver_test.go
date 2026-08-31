@@ -33,7 +33,7 @@ func testGeneratedAIGatewayMCPServerForSDKOps() *aiconfigurationv1alpha1.AIGatew
 			APISpec: aiconfigurationv1alpha1.AIGatewayMCPServerAPISpec{
 				AIGatewayMCPServerConfig: &aiconfigurationv1alpha1.AIGatewayMCPServerConfig{
 					Type:           aiconfigurationv1alpha1.AIGatewayMCPServerConfigTypeConversionOnly,
-					ConversionOnly: &aiconfigurationv1alpha1.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}},
+					ConversionOnly: &aiconfigurationv1alpha1.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}, Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{{Name: "test-tool", Description: "test-tool-description", Method: "GET"}}},
 				},
 			},
 		},

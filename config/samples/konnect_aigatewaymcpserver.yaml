@@ -50,8 +50,7 @@ spec:
         aclAttributeType: consumer
       config:
         route:
-          paths:
-            - /mcp/flights
+          paths: /mcp/flights
         logging:
           payloads: Disabled
       labels:
@@ -78,8 +77,7 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths:
-            - /mcp/flights
+          paths: /mcp/flights
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date
@@ -118,8 +116,16 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths:
-            - /mcp/flights
+          paths: /mcp/flights
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
       labels:
         domain: flights
 ---
@@ -147,8 +153,7 @@ spec:
         # Upstream MCP server that requests are passed through to unmodified.
         url: https://flights-mcp.kongair.example
         route:
-          paths:
-            - /mcp/flights
+          paths: /mcp/flights
       labels:
         domain: flights
 ---
@@ -168,13 +173,10 @@ spec:
       name: flights-mcp-server-upstream-server
       displayName: KongAir Flights MCP Server (upstream-server)
       enabled: Enabled
-      access:
-        aclAttributeType: consumer
       config:
         url: https://flights-mcp.kongair.example
         route:
-          paths:
-            - /mcp/flights
+          paths: /mcp/flights
         # Refresh the cached tools list every 5 minutes; set to 0 to refresh
         # on every client call.
         toolsCacheTtlSeconds: 300

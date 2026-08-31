@@ -40,8 +40,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 							Name:        "mcpserver1",
 							DisplayName: "Test MCP Server",
 							Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
-								Route: aiconfigurationv1alpha1.AIGatewayRouteConfig{
-									Paths: []string{"/mcp"},
+								Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
+									"paths": "/mcp",
 								},
 							},
 						},

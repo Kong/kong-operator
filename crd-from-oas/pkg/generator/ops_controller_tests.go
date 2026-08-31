@@ -324,7 +324,7 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantField:    "ConversionOnly",
 			VariantTypeName: "AIGatewayMCPServerConversionOnly",
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: %[1]s.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}}`,
+				`&%[1]s.AIGatewayMCPServerConversionOnly{DisplayName: "test-display-name", Name: "test-mcp-server", Config: %[1]s.AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig{URL: "https://example.com/mcp"}, Tools: []%[1]s.AIGatewayMCPConversionTool{{Name: "test-tool", Description: "test-tool-description", Method: "GET"}}}`,
 				apiAlias,
 			),
 		}

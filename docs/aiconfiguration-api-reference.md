@@ -1171,13 +1171,9 @@ This feature is currently in beta and is subject to change.<br /><br />Access co
 
 _Appears in:_
 
-- [AIGatewayMCPConversionToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontoolaccess)
-- [AIGatewayMCPServerBaseACLPropertiesConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)
-- [AIGatewayMCPServerBaseACLPropertiesOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
-- [AIGatewayMCPToolBaseAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbaseaccess)
-- [AIGatewayMCPUpstreamToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtoolaccess)
+- [AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)
 
 #### AIGatewayMCPConversionTool
 
@@ -1189,15 +1185,15 @@ AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPConversionToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontoolaccess)_ |  |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
 | `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
 | `description` _string_ | A description of what the tool does. |
 | `headers` _[AIGatewayMCPToolHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
-| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
-| `method` _string_ | For conversion-only and conversion-listener modes, the method of the exported API, which must match the route's methods. |
-| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
+| `host` _string_ | The host used when forwarding the request to the upstream API. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
+| `method` _string_ | The HTTP method used when forwarding the request to the upstream API. |
+| `name` _string_ | The MCP tool name. In upstream-server mode, it also matches the remote MCP Server tool whose metadata this entry overrides. |
 | `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
+| `path` _string_ | The path of the exported API. Always treated as relative to the path component of `config.url` and simply concatenated onto it — a leading `/` has no special "absolute path" meaning. If this tool's `host` or `scheme` overrides the source's URL, `path` is instead relative to the root of that overridden host, since there is no URL path from a different host to append to. By default, Kong will extract the path from API configuration. |
 | `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
 | `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
 | `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
@@ -1208,20 +1204,22 @@ _Appears in:_
 - [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
 - [AIGatewayMCPServerConversionOnly](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversiononly)
 
-#### AIGatewayMCPConversionToolAccess
+#### AIGatewayMCPPassthroughTool
 
 
-AIGatewayMCPConversionToolAccess is a type alias.
+AIGatewayMCPPassthroughTool **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />A tool exposed by an MCP Server in `passthrough-listener` mode.
 
 
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
+| `name` _string_ | Tool identifier used to match remote MCP Server tools for ACL enforcement. |
 
 _Appears in:_
 
-- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
 
 #### AIGatewayMCPServerAPISpec
 
@@ -1234,65 +1232,6 @@ AIGatewayMCPServerAPISpec defines the API spec fields for AIGatewayMCPServer.
 _Appears in:_
 
 - [AIGatewayMCPServerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverspec)
-
-
-
-#### AIGatewayMCPServerBaseACLPropertiesConsumer
-
-
-AIGatewayMCPServerBaseACLPropertiesConsumer **Pre-release Feature**
-This feature is currently in beta and is subject to change.
-
-
-
-| Field | Description |
-| --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerBaseACLProperties](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
-- [AIGatewayMCPServerUpstreamServerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
-
-#### AIGatewayMCPServerBaseACLPropertiesOauth
-
-
-AIGatewayMCPServerBaseACLPropertiesOauth **Pre-release Feature**
-This feature is currently in beta and is subject to change.
-
-
-
-| Field | Description |
-| --- | --- |
-| `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerBaseACLProperties](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
-- [AIGatewayMCPServerUpstreamServerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
-
-#### AIGatewayMCPServerBaseACLPropertiesType
-
-_Underlying type:_ `string`
-
-AIGatewayMCPServerBaseACLPropertiesType represents the type of AIGatewayMCPServerBaseACLProperties.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPServerBaseACLProperties](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclproperties)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `consumer` |  |
-| `oauthAccessToken` |  |
 
 #### AIGatewayMCPServerConfig
 
@@ -1356,7 +1295,7 @@ This feature is currently in beta and is subject to change.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
+| `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. Each tool's `path`, `method`, and `host` describe the backend HTTP operation on the upstream selected by `config.url` — they do not need to match the public MCP Route configured in `config.route`. |
 
 _Appears in:_
 
@@ -1496,9 +1435,9 @@ for granting access to an MCP server.
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
@@ -1520,9 +1459,9 @@ for granting access to an MCP server.
 | Field | Description |
 | --- | --- |
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups. |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default access control rules for allowing or denying consumer groups to tools. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
@@ -1544,7 +1483,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | --- | --- |
 | `logging` _[AIGatewayMCPServerNoUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
 
 _Appears in:_
@@ -1586,7 +1525,7 @@ This feature is currently in beta and is subject to change.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `tools` _[][AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)_ | List of tools exposed by this MCP Server. |
+| `tools` _[][AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)_ | Per-tool access-control overrides for tools advertised by the remote MCP Server. Each entry is matched to a remote tool by `name`; only its access-control rules are applied. |
 
 _Appears in:_
 
@@ -1652,6 +1591,28 @@ _Appears in:_
 
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
+
+#### AIGatewayMCPServerRouteWithMatcher
+
+_Underlying type:_ `object`
+
+AIGatewayMCPServerRouteWithMatcher **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener.
+At least one
+of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+match
+incoming requests.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
+- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 
 
@@ -1757,7 +1718,6 @@ This feature is currently in beta and is subject to change.
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPServerUpstreamServerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
 | `config` _[AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
@@ -1771,44 +1731,6 @@ _Appears in:_
 
 - [AIGatewayMCPServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconfig)
 
-#### AIGatewayMCPServerUpstreamServerAccess
-
-
-AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
-Only one of the fields should be set based on the AclAttributeType.
-
-
-
-| Field | Description |
-| --- | --- |
-| `aclAttributeType` _[AIGatewayMCPServerUpstreamServerAccessType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccesstype)_ | AclAttributeType designates the type of configuration. |
-| `consumer` _[AIGatewayMCPServerBaseACLPropertiesConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesconsumer)_ | Consumer configuration. |
-| `oauthAccessToken` _[AIGatewayMCPServerBaseACLPropertiesOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverbaseaclpropertiesoauth)_ | Oauth configuration. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
-
-#### AIGatewayMCPServerUpstreamServerAccessType
-
-_Underlying type:_ `string`
-
-AIGatewayMCPServerUpstreamServerAccessType represents the type of access.
-
-
-
-
-_Appears in:_
-
-- [AIGatewayMCPServerUpstreamServerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserveraccess)
-
-Allowed values:
-
-| Value | Description |
-| --- | --- |
-| `consumer` |  |
-| `oauthAccessToken` |  |
-
 #### AIGatewayMCPServerUpstreamServerConfig
 
 
@@ -1821,7 +1743,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | --- | --- |
 | `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
 | `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
@@ -2022,7 +1944,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
@@ -2060,7 +1982,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | --- | --- |
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
@@ -2099,7 +2021,7 @@ This feature is currently in beta and is subject to change.<br /><br />Routing, 
 | --- | --- |
 | `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
@@ -2125,6 +2047,24 @@ _Appears in:_
 
 - [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
+#### AIGatewayMCPToolAccess
+
+
+AIGatewayMCPToolAccess **Pre-release Feature**
+This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool.
+
+
+
+| Field | Description |
+| --- | --- |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
+- [AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)
+- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
+
 #### AIGatewayMCPToolAnnotations
 
 
@@ -2144,51 +2084,7 @@ This feature is currently in beta and is subject to change.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
 - [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
-
-#### AIGatewayMCPToolBase
-
-
-AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
-HTTP endpoint.
-
-
-
-| Field | Description |
-| --- | --- |
-| `access` _[AIGatewayMCPToolBaseAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbaseaccess)_ |  |
-| `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `description` _string_ | A description of what the tool does. |
-| `headers` _[AIGatewayMCPToolHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
-| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
-| `method` _string_ | For conversion-only and conversion-listener modes, the method of the exported API, which must match the route's methods. |
-| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
-| `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
-| `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
-| `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerPassthroughListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlistener)
-
-#### AIGatewayMCPToolBaseAccess
-
-
-AIGatewayMCPToolBaseAccess is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
-
-_Appears in:_
-
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
 
 #### AIGatewayMCPToolHeaders
 
@@ -2205,8 +2101,6 @@ If the configured headers are not exactly matched, this field is required.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMCPToolParameter
 
@@ -2232,8 +2126,6 @@ more details.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMCPToolQuery
 
@@ -2250,8 +2142,6 @@ required.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMCPToolRequestBody
 
@@ -2272,8 +2162,6 @@ Note that `$ref` is not supported.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMCPToolResponses
 
@@ -2296,55 +2184,33 @@ Note that `$ref` is not supported.
 _Appears in:_
 
 - [AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)
-- [AIGatewayMCPToolBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolbase)
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMCPUpstreamTool
 
 
 AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
 mode.
-Extends the base tool with input/output schema overrides for the upstream
-server's advertised tool.
+Provides optional metadata
+overrides (`description`, `annotations`, `input_schema`, `output_schema`) and
+per-tool
+ACLs for a tool advertised by the upstream MCP server; any field not
+overridden here
+falls back to the remote tool's own definition.
 
 
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPUpstreamToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtoolaccess)_ |  |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
 | `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
 | `description` _string_ | A description of what the tool does. |
-| `headers` _[AIGatewayMCPToolHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
-| `host` _string_ | The host of the exported API, which must match the route's hosts. It should be the route's host. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
 | `inputSchema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | The entire `inputSchema` section for the tool. Overrides the upstream server's `inputSchema` for the same tool name, if present. |
-| `method` _string_ | When provided, the method of the exported API, which must match the route's methods. |
-| `name` _string_ | Tool identifier. In passthrough-listener mode, used to match remote MCP Server tools for ACL enforcement. In other modes, it is also used as the tool name (overrides annotations.title if present). |
+| `name` _string_ | The MCP tool name. In upstream-server mode, it also matches the remote MCP Server tool whose metadata this entry overrides. |
 | `outputSchema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | The entire `outputSchema` section for the tool. Overrides the upstream server's `outputSchema` for the same tool name, if present. |
-| `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `path` _string_ | The path of the exported API, which must match the route's paths. Path not starting with '/' are treated as relative path and the route path will be added as the prefix. By default, Kong will extract the path from API configuration. |
-| `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
-| `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
 
 _Appears in:_
 
 - [AIGatewayMCPServerUpstreamServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserver)
-
-#### AIGatewayMCPUpstreamToolAccess
-
-
-AIGatewayMCPUpstreamToolAccess is a type alias.
-
-
-
-| Field | Description |
-| --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
-
-_Appears in:_
-
-- [AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)
 
 #### AIGatewayMistralEmbeddingsModelConfig
 
@@ -5060,11 +4926,6 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
-- [AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
-- [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
-- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 #### AIGatewayServiceTierFactor
 

@@ -1020,10 +1020,13 @@ type AIGatewayMCPACLs struct {
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 // `conversion-only` or `conversion-listener` mode.
 type AIGatewayMCPConversionTool struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Access-control rules for a tool.
 	//
 	// +optional
-	Access AIGatewayMCPConversionToolAccess `json:"access,omitzero"`
+	Access AIGatewayMCPToolAccess `json:"access,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -1044,27 +1047,23 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +optional
 	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
-	// The host of the exported API, which must match the route's hosts.
-	// It should be the route's host.
+	// The host used when forwarding the request to the upstream API.
 	// By default, Kong will extract the host from API configuration.
 	// If the configured host is wildcard, this field is required.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Host string `json:"host,omitzero"`
-	// For conversion-only and conversion-listener modes, the method of the
-	// exported API, which must match the route's methods.
+	// The HTTP method used when forwarding the request to the upstream API.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
 	Method string `json:"method,omitzero"`
-	// Tool identifier.
-	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
-	// enforcement.
-	// In other modes, it is also used as the tool name (overrides
-	// annotations.title if present).
+	// The MCP tool name.
+	// In upstream-server mode, it also matches the remote MCP Server tool whose
+	// metadata this entry overrides.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -1075,10 +1074,18 @@ type AIGatewayMCPConversionTool struct {
 	//
 	// +optional
 	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
-	// The path of the exported API, which must match the route's paths.
-	// Path not starting with '/' are treated as relative path and the route path
-	// will be added as the prefix.
-	// By default, Kong will extract the path from API configuration.
+	// The path of the exported API.
+	// Always treated as relative to the path component of
+	// `config.url` and simply concatenated onto it — a leading `/` has no
+	// special
+	// "absolute path" meaning.
+	// If this tool's `host` or `scheme` overrides the source's
+	// URL, `path` is instead relative to the root of that overridden host, since
+	// there is
+	// no URL path from a different host to append to.
+	// By default, Kong will extract the
+	// path from API configuration.
+	//
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
@@ -1131,167 +1138,24 @@ type AIGatewayMCPConversionTool struct {
 	Scheme string `json:"scheme,omitzero"`
 }
 
-// AIGatewayMCPConversionToolAccess is a type alias.
-type AIGatewayMCPConversionToolAccess struct {
+// AIGatewayMCPPassthroughTool **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// A tool exposed by an MCP Server in `passthrough-listener` mode.
+type AIGatewayMCPPassthroughTool struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Access control rules for allowing or denying consumer groups access to this
-	// tool.
-	// When configured, these will override the default access control rules
-	// defined on the MCP Server.
-	//
-	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
-}
-
-// AIGatewayMCPServerBaseACLProperties represents a union type for AIGatewayMCPServerBaseACLProperties.
-// Only one of the fields should be set based on the AclAttributeType.
-type AIGatewayMCPServerBaseACLProperties struct {
-	// AclAttributeType designates the type of configuration.
+	// Access-control rules for a tool.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
-	AclAttributeType AIGatewayMCPServerBaseACLPropertiesType `json:"aclAttributeType,omitempty"`
-
-	// Consumer configuration.
-	//
-	// +optional
-	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
-	// Oauth configuration.
-	//
-	// +optional
-	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
-}
-
-// AIGatewayMCPServerBaseACLPropertiesType represents the type of AIGatewayMCPServerBaseACLProperties.
-type AIGatewayMCPServerBaseACLPropertiesType string
-
-// AIGatewayMCPServerBaseACLPropertiesType values.
-const (
-	AIGatewayMCPServerBaseACLPropertiesTypeConsumer AIGatewayMCPServerBaseACLPropertiesType = "consumer"
-	AIGatewayMCPServerBaseACLPropertiesTypeOauth    AIGatewayMCPServerBaseACLPropertiesType = "oauthAccessToken"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayMCPServerBaseACLProperties) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AclAttributeType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties aclAttributeType: %w", err)
-	}
-	m["aclAttributeType"] = typeBytes
-	switch u.AclAttributeType {
-	case AIGatewayMCPServerBaseACLPropertiesTypeConsumer:
-		if u.Consumer != nil {
-			raw, err := json.Marshal(u.Consumer)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties consumer: %w", err)
-			}
-			m["consumer"] = raw
-		}
-	case AIGatewayMCPServerBaseACLPropertiesTypeOauth:
-		if u.Oauth != nil {
-			raw, err := json.Marshal(u.Oauth)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayMCPServerBaseACLProperties oauth_access_token: %w", err)
-			}
-			m["oauthAccessToken"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayMCPServerBaseACLProperties) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties: nil receiver")
-	}
-	var probe struct {
-		AclAttributeType string `json:"aclAttributeType"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.AclAttributeType = AIGatewayMCPServerBaseACLPropertiesType(probe.AclAttributeType)
-	switch probe.AclAttributeType {
-	case "consumer":
-		payload, ok := raw["consumer"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayMCPServerBaseACLPropertiesConsumer
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties consumer: %w", err)
-		}
-		u.Consumer = &val
-	case "oauthAccessToken":
-		payload, ok := raw["oauthAccessToken"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayMCPServerBaseACLPropertiesOauth
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayMCPServerBaseACLProperties oauth_access_token: %w", err)
-		}
-		u.Oauth = &val
-	}
-	return nil
-}
-
-// AIGatewayMCPServerBaseACLPropertiesConsumer **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-type AIGatewayMCPServerBaseACLPropertiesConsumer struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Access control rules for allowing or denying consumer groups.
-	//
-	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Default access control rules for allowing or denying consumer groups to
-	// tools.
-	//
-	// +optional
-	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
-}
-
-// AIGatewayMCPServerBaseACLPropertiesOauth **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-type AIGatewayMCPServerBaseACLPropertiesOauth struct {
-	// The claim in the OAuth2 access token to use as the subject for ACL
-	// evaluation when `acl_attribute_type` is set to `oauth_access_token`.
-	// Nested claim can be fetched by using a jq filter starts with dot, e.g.,
-	// “.user.email”: https://jqlang.org/manual/#object-identifier-index
-	//
+	Access AIGatewayMCPToolAccess `json:"access,omitzero"`
+	// Tool identifier used to match remote MCP Server tools for ACL enforcement.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
-	AccessTokenClaimField string `json:"accessTokenClaimField,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Access control rules for allowing or denying consumer groups.
-	//
-	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Default access control rules for allowing or denying consumer groups to
-	// tools.
-	//
-	// +optional
-	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
+	Name string `json:"name,omitzero"`
 }
 
 // AIGatewayMCPServerConversionListener **Pre-release Feature**
@@ -1359,8 +1223,13 @@ type AIGatewayMCPServerConversionListener struct {
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
+	// Each tool's `path`, `method`, and `host`
+	// describe the backend HTTP operation on the upstream selected by `config.url`
+	// — they
+	// do not need to match the public MCP Route configured in `config.route`.
 	//
-	// +optional
+	//
+	// +required
 	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
 }
 
@@ -1542,7 +1411,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
-	// +optional
+	// +required
 	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
 }
 
@@ -1747,7 +1616,13 @@ type AIGatewayMCPServerListenerConsumer struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Access control rules for allowing or denying consumer groups.
+	// Server-level access control rules for allowing or denying consumer groups.
+	// This is the
+	// top-level gate: a caller's consumer group must pass this check before any
+	// MCP protocol
+	// operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before
+	// any tool-level
+	// `default_tool_acls` or per-tool `access.acls` check is evaluated.
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
@@ -1761,8 +1636,14 @@ type AIGatewayMCPServerListenerConsumer struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Default access control rules for allowing or denying consumer groups to
+	// Default per-tool access control rules for allowing or denying consumer
+	// groups access to
 	// tools.
+	// Evaluated only for callers that already passed the server-level `acls` check
+	// above.
+	// Applies to every tool exposed by this MCP Server unless a specific tool
+	// overrides it via
+	// that tool's own `access.acls`.
 	//
 	// +optional
 	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
@@ -1801,7 +1682,15 @@ type AIGatewayMCPServerListenerOauth struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Access control rules for allowing or denying consumer groups.
+	// Server-level access control rules for allowing or denying callers, evaluated
+	// against the
+	// value of the configured `access_token_claim_field`.
+	// This is the top-level gate: a caller
+	// must pass this check before any MCP protocol operation (`initialize`,
+	// `tools/list`,
+	// `tools/call`) is allowed, and before any tool-level `default_tool_acls` or
+	// per-tool
+	// `access.acls` check is evaluated.
 	//
 	// +optional
 	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
@@ -1815,8 +1704,15 @@ type AIGatewayMCPServerListenerOauth struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Default access control rules for allowing or denying consumer groups to
-	// tools.
+	// Default per-tool access control rules for allowing or denying callers access
+	// to tools,
+	// evaluated against the value of the configured `access_token_claim_field`.
+	// Evaluated only
+	// for callers that already passed the server-level `acls` check above.
+	// Applies to every tool
+	// exposed by this MCP Server unless a specific tool overrides it via that
+	// tool's own
+	// `access.acls`.
 	//
 	// +optional
 	DefaultToolAcls AIGatewayMCPACLs `json:"defaultToolAcls,omitzero"`
@@ -1857,10 +1753,14 @@ type AIGatewayMCPServerNoUpstreamConfig struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Configuration for an AI Gateway route.
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
 	//
 	// +optional
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -1951,10 +1851,15 @@ type AIGatewayMCPServerPassthroughListener struct {
 	//
 	// +optional
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
-	// List of tools exposed by this MCP Server.
+	// Per-tool access-control overrides for tools advertised by the remote MCP
+	// Server.
+	// Each
+	// entry is matched to a remote tool by `name`; only its access-control rules
+	// are applied.
+	//
 	//
 	// +optional
-	Tools []AIGatewayMCPToolBase `json:"tools,omitempty"`
+	Tools []AIGatewayMCPPassthroughTool `json:"tools,omitempty"`
 }
 
 // AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
@@ -2107,6 +2012,16 @@ type AIGatewayMCPServerProtectedResourceMetadata struct {
 	ScopesSupported []string `json:"scopesSupported,omitempty"`
 }
 
+// AIGatewayMCPServerRouteWithMatcher **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Route configuration for an MCP Server that terminates its own listener.
+// At least one
+// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+// match
+// incoming requests.
+type AIGatewayMCPServerRouteWithMatcher map[string]string
+
 // AIGatewayMCPServerServerConfigBase **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 //
@@ -2193,11 +2108,6 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// +optional
-	Access *AIGatewayMCPServerUpstreamServerAccess `json:"access,omitempty"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// Routing, logging, and server configuration for the MCP Server.
 	//
 	// +required
@@ -2253,125 +2163,9 @@ type AIGatewayMCPServerUpstreamServer struct {
 	Policies []AIGatewayPolicyRef `json:"policies,omitempty"`
 	// List of tools exposed by this MCP Server.
 	//
+	//
 	// +optional
 	Tools []AIGatewayMCPUpstreamTool `json:"tools,omitempty"`
-}
-
-// AIGatewayMCPServerUpstreamServerAccess represents a union type for access.
-// Only one of the fields should be set based on the AclAttributeType.
-type AIGatewayMCPServerUpstreamServerAccess struct {
-	// AclAttributeType designates the type of configuration.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=consumer;oauthAccessToken
-	AclAttributeType AIGatewayMCPServerUpstreamServerAccessType `json:"aclAttributeType,omitempty"`
-
-	// Consumer configuration.
-	//
-	// +optional
-	Consumer *AIGatewayMCPServerBaseACLPropertiesConsumer `json:"consumer,omitempty"`
-	// Oauth configuration.
-	//
-	// +optional
-	Oauth *AIGatewayMCPServerBaseACLPropertiesOauth `json:"oauthAccessToken,omitempty"`
-}
-
-// AIGatewayMCPServerUpstreamServerAccessType represents the type of access.
-type AIGatewayMCPServerUpstreamServerAccessType string
-
-// AIGatewayMCPServerUpstreamServerAccessType values.
-const (
-	AIGatewayMCPServerUpstreamServerAccessTypeConsumer AIGatewayMCPServerUpstreamServerAccessType = "consumer"
-	AIGatewayMCPServerUpstreamServerAccessTypeOauth    AIGatewayMCPServerUpstreamServerAccessType = "oauthAccessToken"
-)
-
-// MarshalJSON implements json.Marshaler.
-func (u AIGatewayMCPServerUpstreamServerAccess) MarshalJSON() ([]byte, error) {
-	m := map[string]json.RawMessage{}
-	typeBytes, err := json.Marshal(string(u.AclAttributeType))
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess aclAttributeType: %w", err)
-	}
-	m["aclAttributeType"] = typeBytes
-	switch u.AclAttributeType {
-	case AIGatewayMCPServerUpstreamServerAccessTypeConsumer:
-		if u.Consumer != nil {
-			raw, err := json.Marshal(u.Consumer)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess consumer: %w", err)
-			}
-			m["consumer"] = raw
-		}
-	case AIGatewayMCPServerUpstreamServerAccessTypeOauth:
-		if u.Oauth != nil {
-			raw, err := json.Marshal(u.Oauth)
-			if err != nil {
-				return nil, fmt.Errorf("marshaling AIGatewayMCPServerUpstreamServerAccess oauth_access_token: %w", err)
-			}
-			m["oauthAccessToken"] = raw
-		}
-	}
-	return json.Marshal(m)
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (u *AIGatewayMCPServerUpstreamServerAccess) UnmarshalJSON(data []byte) error {
-	if u == nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess: nil receiver")
-	}
-	var probe struct {
-		AclAttributeType string `json:"aclAttributeType"`
-	}
-	if err := json.Unmarshal(data, &probe); err != nil {
-		return err
-	}
-	var raw map[string]json.RawMessage
-	if err := json.Unmarshal(data, &raw); err != nil {
-		return err
-	}
-	u.AclAttributeType = AIGatewayMCPServerUpstreamServerAccessType(probe.AclAttributeType)
-	switch probe.AclAttributeType {
-	case "consumer":
-		payload, ok := raw["consumer"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayMCPServerBaseACLPropertiesConsumer
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess consumer: %w", err)
-		}
-		u.Consumer = &val
-	case "oauthAccessToken":
-		payload, ok := raw["oauthAccessToken"]
-		if !ok || len(payload) == 0 {
-			return nil
-		}
-		var val AIGatewayMCPServerBaseACLPropertiesOauth
-		if err := json.Unmarshal(payload, &val); err != nil {
-			return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServerAccess oauth_access_token: %w", err)
-		}
-		u.Oauth = &val
-	}
-	return nil
-}
-
-// UnmarshalJSON implements json.Unmarshaler.
-func (s *AIGatewayMCPServerUpstreamServer) UnmarshalJSON(data []byte) error {
-	if s == nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServer: nil receiver")
-	}
-	type alias AIGatewayMCPServerUpstreamServer
-	aux := alias{}
-	aux.Access = &AIGatewayMCPServerUpstreamServerAccess{}
-	if err := json.Unmarshal(data, &aux); err != nil {
-		return fmt.Errorf("unmarshaling AIGatewayMCPServerUpstreamServer: %w", err)
-	}
-	if aux.Access != nil && aux.Access.AclAttributeType == "" && aux.Access.Consumer == nil && aux.Access.Oauth == nil {
-		aux.Access = nil
-	}
-	*s = AIGatewayMCPServerUpstreamServer(aux)
-	return nil
 }
 
 // AIGatewayMCPServerUpstreamServerConfig **Pre-release Feature**
@@ -2395,10 +2189,14 @@ type AIGatewayMCPServerUpstreamServerConfig struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Configuration for an AI Gateway route.
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
 	//
 	// +optional
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// Server-side configuration specific to `upstream-server` mode.
 	//
 	// +optional
@@ -2877,10 +2675,14 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Configuration for an AI Gateway route.
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
 	//
 	// +optional
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -2946,10 +2748,14 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Configuration for an AI Gateway route.
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
 	//
 	// +optional
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -3014,10 +2820,14 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig struct {
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
-	// Configuration for an AI Gateway route.
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
 	//
 	// +optional
-	Route AIGatewayRouteConfig `json:"route,omitzero"`
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -3056,6 +2866,23 @@ type AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging struct {
 	Payloads string `json:"payloads,omitzero"`
 }
 
+// AIGatewayMCPToolAccess **Pre-release Feature**
+// This feature is currently in beta and is subject to change.
+//
+// Access-control rules for a tool.
+type AIGatewayMCPToolAccess struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
+	//
+	// Access control rules for allowing or denying consumer groups access to this
+	// tool.
+	// When configured, these will override the default access control rules
+	// defined on the MCP Server.
+	//
+	// +optional
+	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
+}
+
 // AIGatewayMCPToolAnnotations **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
 type AIGatewayMCPToolAnnotations struct {
@@ -3084,133 +2911,6 @@ type AIGatewayMCPToolAnnotations struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Title string `json:"title,omitzero"`
-}
-
-// AIGatewayMCPToolBase A tool exposed by the MCP Server, mapped to a backend
-// HTTP endpoint.
-type AIGatewayMCPToolBase struct {
-	//
-	//
-	// +optional
-	Access AIGatewayMCPToolBaseAccess `json:"access,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// +optional
-	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
-	// A description of what the tool does.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Description string `json:"description,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The headers of the exported API.
-	// By default, Kong will extract the headers from API configuration.
-	// If the configured headers are not exactly matched, this field is required.
-	//
-	// +optional
-	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
-	// The host of the exported API, which must match the route's hosts.
-	// It should be the route's host.
-	// By default, Kong will extract the host from API configuration.
-	// If the configured host is wildcard, this field is required.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Host string `json:"host,omitzero"`
-	// For conversion-only and conversion-listener modes, the method of the
-	// exported API, which must match the route's methods.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
-	Method string `json:"method,omitzero"`
-	// Tool identifier.
-	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
-	// enforcement.
-	// In other modes, it is also used as the tool name (overrides
-	// annotations.title if present).
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// +optional
-	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
-	// The path of the exported API, which must match the route's paths.
-	// Path not starting with '/' are treated as relative path and the route path
-	// will be added as the prefix.
-	// By default, Kong will extract the path from API configuration.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Path string `json:"path,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The query arguments of the exported API.
-	// If the generated query arguments are not exactly matched, this field is
-	// required.
-	//
-	// +optional
-	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The API requestBody specification defined in OpenAPI JSON format.
-	// For example,
-	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-	// See
-	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-	// for more details.
-	// Note that `$ref` is not supported.
-	//
-	// +optional
-	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The API responses specification defined in OpenAPI JSON format.
-	// This specification will be used to validate the upstream response and map it
-	// back to the structuredOutput.
-	// For example,
-	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
-	// more details.
-	// Only one non-error (status code < 400) response is supported.
-	// Note that `$ref` is not supported.
-	//
-	// +optional
-	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
-	// The scheme of the exported API.
-	// By default, Kong will extract the scheme from API configuration.
-	// If the configured scheme is not expected, this field can be used to override
-	// it.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=http;https
-	Scheme string `json:"scheme,omitzero"`
-}
-
-// AIGatewayMCPToolBaseAccess is a type alias.
-type AIGatewayMCPToolBaseAccess struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Access control rules for allowing or denying consumer groups access to this
-	// tool.
-	// When configured, these will override the default access control rules
-	// defined on the MCP Server.
-	//
-	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
 }
 
 // AIGatewayMCPToolHeaders **Pre-release Feature**
@@ -3297,13 +2997,20 @@ type AIGatewayMCPToolResponses map[string]string
 
 // AIGatewayMCPUpstreamTool A tool exposed by an MCP Server in `upstream-server`
 // mode.
-// Extends the base tool with input/output schema overrides for the upstream
-// server's advertised tool.
+// Provides optional metadata
+// overrides (`description`, `annotations`, `input_schema`, `output_schema`) and
+// per-tool
+// ACLs for a tool advertised by the upstream MCP server; any field not
+// overridden here
+// falls back to the remote tool's own definition.
 type AIGatewayMCPUpstreamTool struct {
+	// **Pre-release Feature**
+	// This feature is currently in beta and is subject to change.
 	//
+	// Access-control rules for a tool.
 	//
 	// +optional
-	Access AIGatewayMCPUpstreamToolAccess `json:"access,omitzero"`
+	Access AIGatewayMCPToolAccess `json:"access,omitzero"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -3311,27 +3018,9 @@ type AIGatewayMCPUpstreamTool struct {
 	Annotations AIGatewayMCPToolAnnotations `json:"annotations,omitzero"`
 	// A description of what the tool does.
 	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
+	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	Description string `json:"description,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The headers of the exported API.
-	// By default, Kong will extract the headers from API configuration.
-	// If the configured headers are not exactly matched, this field is required.
-	//
-	// +optional
-	Headers AIGatewayMCPToolHeaders `json:"headers,omitzero"`
-	// The host of the exported API, which must match the route's hosts.
-	// It should be the route's host.
-	// By default, Kong will extract the host from API configuration.
-	// If the configured host is wildcard, this field is required.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Host string `json:"host,omitzero"`
 	// The entire `inputSchema` section for the tool.
 	// Overrides the upstream server's `inputSchema`
 	// for the same tool name, if present.
@@ -3339,18 +3028,9 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +optional
 	InputSchema apiextensionsv1.JSON `json:"inputSchema,omitzero"`
-	// When provided, the method of the exported API, which must match the route's
-	// methods.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=DELETE;GET;PATCH;POST;PUT
-	Method string `json:"method,omitzero"`
-	// Tool identifier.
-	// In passthrough-listener mode, used to match remote MCP Server tools for ACL
-	// enforcement.
-	// In other modes, it is also used as the tool name (overrides
-	// annotations.title if present).
+	// The MCP tool name.
+	// In upstream-server mode, it also matches the remote MCP Server tool whose
+	// metadata this entry overrides.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
@@ -3363,79 +3043,6 @@ type AIGatewayMCPUpstreamTool struct {
 	//
 	// +optional
 	OutputSchema apiextensionsv1.JSON `json:"outputSchema,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// +optional
-	Parameters []AIGatewayMCPToolParameter `json:"parameters,omitempty"`
-	// The path of the exported API, which must match the route's paths.
-	// Path not starting with '/' are treated as relative path and the route path
-	// will be added as the prefix.
-	// By default, Kong will extract the path from API configuration.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	Path string `json:"path,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The query arguments of the exported API.
-	// If the generated query arguments are not exactly matched, this field is
-	// required.
-	//
-	// +optional
-	Query AIGatewayMCPToolQuery `json:"query,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The API requestBody specification defined in OpenAPI JSON format.
-	// For example,
-	// '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
-	// See
-	// https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/
-	// for more details.
-	// Note that `$ref` is not supported.
-	//
-	// +optional
-	RequestBody AIGatewayMCPToolRequestBody `json:"requestBody,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// The API responses specification defined in OpenAPI JSON format.
-	// This specification will be used to validate the upstream response and map it
-	// back to the structuredOutput.
-	// For example,
-	// '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'.
-	// See https://swagger.io/docs/specification/v3_0/describing-responses/ for
-	// more details.
-	// Only one non-error (status code < 400) response is supported.
-	// Note that `$ref` is not supported.
-	//
-	// +optional
-	Responses AIGatewayMCPToolResponses `json:"responses,omitzero"`
-	// The scheme of the exported API.
-	// By default, Kong will extract the scheme from API configuration.
-	// If the configured scheme is not expected, this field can be used to override
-	// it.
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=http;https
-	Scheme string `json:"scheme,omitzero"`
-}
-
-// AIGatewayMCPUpstreamToolAccess is a type alias.
-type AIGatewayMCPUpstreamToolAccess struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
-	// Access control rules for allowing or denying consumer groups access to this
-	// tool.
-	// When configured, these will override the default access control rules
-	// defined on the MCP Server.
-	//
-	// +optional
-	Acls AIGatewayMCPACLs `json:"acls,omitzero"`
 }
 
 // AIGatewayMistralEmbeddingsModelConfig **Pre-release Feature**
