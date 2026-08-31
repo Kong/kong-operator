@@ -171,7 +171,7 @@ spec:
               - name: NAMESPACE
                 value: ($namespace)
               - name: PLUGIN_REFERENCE_NAME
-                value: rate-limit-single
+                value: join('.',[$(namespace),'rate-limiting'])
               - name: KONNECT_TOKEN
                 value: ($konnect_token)
               - name: KONNECT_URL

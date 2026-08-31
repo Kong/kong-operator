@@ -45,7 +45,7 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
     --arg plugin_name "$PLUGIN_REFERENCE_NAME" '
       [
         .items[]
-        | select(.spec.pluginReference.name == $plugin_name)
+        | select(.spec.pluginReference.name | contains($plugin_name))
         | select(.status.konnect.id != null and .status.konnect.controlPlaneID != null)
         | {id: .status.konnect.id, controlPlaneID: .status.konnect.controlPlaneID}
       ][0] // empty
