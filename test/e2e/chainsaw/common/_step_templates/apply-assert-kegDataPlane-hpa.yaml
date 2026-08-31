@@ -1,0 +1,52 @@
+# Template for creating and asserting a KegDataPlane with horizontal autoscaling enabled.
+# The operator reconciles an HPA from the scaling config; spec.deployment.replicas is
+# intentionally absent because the XValidation rule on DeploymentOptions forbids having
+# both replicas and scaling set simultaneously.
+#
+# Required bindings:
+#   - keg_dp_name: Name of the KegDataPlane to create.
+#   - keg_cp_name: Name of the KonnectEventGateway it attaches to (same namespace).
+#   - namespace:   Namespace where the KegDataPlane will be created.
+#
+# Optional bindings (override to customise HPA bounds):
+#   - hpa_min_replicas: Minimum replicas for the HPA (default: 1).
+#   - hpa_max_replicas: Maximum replicas for the HPA (default: 3).
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-keg-dataplane-hpa
+spec:
+  bindings:
+    - name: hpa_min_replicas
+      value: 1
+    - name: hpa_max_replicas
+      value: 3
+  try:
+    - apply:
+        resource:
+          apiVersion: eventgateway.konghq.com/v1alpha1
+          kind: KegDataPlane
+          metadata:
+            name: ($keg_dp_name)
+            namespace: ($namespace)
+          spec:
+            controlPlaneRef:
+              type: konnectNamespacedRef
+              konnectNamespacedRef:
+                name: ($keg_cp_name)
+            deployment:
+              scaling:
+                horizontal:
+                  minReplicas: ($hpa_min_replicas)
+                  maxReplicas: ($hpa_max_replicas)
+    - assert:
+        resource:
+          apiVersion: eventgateway.konghq.com/v1alpha1
+          kind: KegDataPlane
+          metadata:
+            name: ($keg_dp_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Ready']):
+              - status: 'True'
+            (readyReplicas > `0`): true

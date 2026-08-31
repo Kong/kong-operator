@@ -1,0 +1,129 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: kegdataplane-hpa
+spec:
+  description: |
+    Verifies HorizontalPodAutoscaler lifecycle for KegDataPlane.
+    1. Creates a KegDataPlane with spec.deployment.scaling.horizontal configured.
+    2. Asserts the operator reconciles an HPA that targets the owned Deployment.
+    3. Removes horizontal scaling (switches the DataPlane back to a static replica count).
+    4. Asserts the HPA is deleted so it no longer conflicts with the static replica count.
+    5. Asserts the DataPlane remains Ready throughout.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: keg_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: keg_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: backend_cluster_name
+      value: (join('-', [($test_name), 'backend']))
+    - name: virtual_cluster_name
+      value: (join('-', [($test_name), 'vcluster']))
+    - name: listener_name
+      value: (join('-', [($test_name), 'listener']))
+    - name: dns_label
+      value: vcluster-1
+    - name: listener_ports
+      value:
+        - "19092-19095"
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-kafka-cluster
+      description: Deploy 3-broker Apache Kafka cluster so the backend cluster bootstrapServers reference is valid.
+      use:
+        template: ../../common/_step_templates/apply-assert-kafka-cluster.yaml
+    - name: 4-Create-konnect-eventgateway
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: 5-Create-backend-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayBackendCluster.yaml
+    - name: 6-Create-virtual-cluster
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayVirtualCluster.yaml
+    - name: 7-Create-listener
+      use:
+        template: ../../common/_step_templates/apply-assert-eventGatewayListener.yaml
+    - name: 8-Create-kegdataplane-with-hpa
+      use:
+        template: ../../common/_step_templates/apply-assert-kegDataPlane-hpa.yaml
+    - name: 9-Assert-HPA-created
+      description: |
+        The operator must have reconciled an HPA pointing at the owned Deployment
+        with the min/maxReplicas from spec.deployment.scaling.horizontal.
+      use:
+        template: ../../common/_step_templates/assert-kegdataplane-hpa.yaml
+    - name: 10-Remove-scaling-switch-to-static-replica
+      description: |
+        Patch the DataPlane to remove horizontal scaling and restore a static
+        replica count. Setting scaling:null in the merge patch removes the field;
+        the XValidation rule allows replicas and scaling to coexist only when
+        both are absent, so the two must be changed atomically.
+      try:
+        - patch:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              spec:
+                deployment:
+                  scaling: null
+                  replicas: 1
+    - name: 11-Assert-HPA-deleted
+      description: |
+        Wait until the HPA is gone (the operator deletes it when scaling is removed).
+      bindings:
+        - name: resource_type
+          value: hpa
+        - name: resource_name
+          value: ($keg_dp_name)
+        - name: resource_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/wait-for-resource-deleted.yaml
+    - name: 12-Assert-dataplane-still-ready
+      try:
+        - assert:
+            resource:
+              apiVersion: eventgateway.konghq.com/v1alpha1
+              kind: KegDataPlane
+              metadata:
+                name: ($keg_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                readyReplicas: 1
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: kegdataplane-hpa
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

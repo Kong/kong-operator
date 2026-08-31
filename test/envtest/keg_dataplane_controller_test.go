@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -1063,4 +1064,148 @@ func createKEGClusterCASecret(t *testing.T, ctx context.Context, cl client.Clien
 	require.NoError(t, cl.Create(ctx, secret))
 
 	return secret
+}
+
+// waitForKEGHPA waits for exactly one HPA owned by the given KegDataPlane and returns it.
+func waitForKEGHPA(t *testing.T, ctx context.Context, cl client.Client, ns, egdpName string) autoscalingv2.HorizontalPodAutoscaler {
+	t.Helper()
+	var hpaList autoscalingv2.HorizontalPodAutoscalerList
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": egdpName}))
+		assert.Len(ct, hpaList.Items, 1)
+	}, waitTime, tickTime)
+	require.Len(t, hpaList.Items, 1)
+	return hpaList.Items[0]
+}
+
+// waitForNoKEGHPA asserts that no HPA owned by the given KegDataPlane exists.
+func waitForNoKEGHPA(t *testing.T, ctx context.Context, cl client.Client, ns, egdpName string) {
+	t.Helper()
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		var hpaList autoscalingv2.HorizontalPodAutoscalerList
+		assert.NoError(ct, cl.List(ctx, &hpaList, client.InNamespace(ns), client.MatchingLabels{"app": egdpName}))
+		assert.Empty(ct, hpaList.Items)
+	}, waitTime, tickTime)
+}
+
+// TestKEGDataPlaneReconciler_HPA verifies the full HPA lifecycle:
+// create when scaling is configured, update on spec change, delete when scaling is removed.
+func TestKEGDataPlaneReconciler_HPA(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createKEGClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "keg-cluster-ca-hpa")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, kegCRDGroups)
+	require.NoError(t, err)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&egdataplane.Reconciler{
+			Client:                   mgr.GetClient(),
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+	maxReplicas := int32(5)
+
+	t.Run("HPA is created when horizontal scaling is configured", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"keg-hpa-create", "konnect-id-hpa-create", "egdp-hpa-create",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					Scaling: &eventgatewayv1alpha1.Scaling{
+						HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		hpa := waitForKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+		assert.Equal(t, maxReplicas, hpa.Spec.MaxReplicas)
+		assert.Equal(t, egdp.Name, hpa.Spec.ScaleTargetRef.Name)
+
+		waitForKEGDeployment(t, ctx, cl, ns.Name, egdp.Name)
+	})
+
+	t.Run("HPA is deleted when scaling is removed", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"keg-hpa-delete", "konnect-id-hpa-delete", "egdp-hpa-delete",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					Scaling: &eventgatewayv1alpha1.Scaling{
+						HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		// Wait for HPA to be created.
+		_ = waitForKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+
+		// Remove scaling from the spec.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			egdp.Spec.Deployment = nil
+			assert.NoError(ct, cl.Update(ctx, egdp))
+		}, waitTime, tickTime)
+
+		waitForNoKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+	})
+
+	t.Run("HPA spec is updated when maxReplicas changes", func(t *testing.T) {
+		t.Parallel()
+
+		egdp := setupProgrammedKEGDP(t, ctx, cl, ns.Name,
+			"keg-hpa-update", "konnect-id-hpa-update", "egdp-hpa-update",
+			eventgatewayv1alpha1.KegDataPlaneSpec{
+				Deployment: &eventgatewayv1alpha1.DeploymentOptions{
+					Scaling: &eventgatewayv1alpha1.Scaling{
+						HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+							MaxReplicas: maxReplicas,
+						},
+					},
+				},
+			},
+		)
+
+		_ = waitForKEGHPA(t, ctx, cl, ns.Name, egdp.Name)
+
+		// Update maxReplicas to 10.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(egdp), egdp)) {
+				return
+			}
+			egdp.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 10
+			assert.NoError(ct, cl.Update(ctx, egdp))
+		}, waitTime, tickTime)
+
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			var hpa autoscalingv2.HorizontalPodAutoscaler
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKey{Name: egdp.Name, Namespace: ns.Name}, &hpa)) {
+				return
+			}
+			assert.Equal(ct, int32(10), hpa.Spec.MaxReplicas)
+		}, waitTime, tickTime)
+	})
 }

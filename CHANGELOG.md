@@ -114,6 +114,13 @@
   count. The operator's RBAC now includes `create;get;list;patch;watch;delete`
   on `horizontalpodautoscalers` for the AIGatewayDataPlane controller.
   [#5406](https://github.com/Kong/kong-operator/pull/5406)
+- `KegDataPlane`: reconcile a `HorizontalPodAutoscaler` from
+  `spec.deployment.scaling.horizontal`. When horizontal scaling is configured
+  the operator creates and keeps an HPA up to date; when the configuration is
+  removed the HPA is deleted so it no longer conflicts with a static replica
+  count. The operator's RBAC now includes `create;get;list;patch;watch;delete`
+  on `horizontalpodautoscalers` for the KegDataPlane controller.
+  [#5456](https://github.com/Kong/kong-operator/pull/5456)
 - `MCPServerDataPlane` exposes `spec.deployment.podTemplateSpec.spec.containers[].resources`
   matched by field `name` to adjust the resource requests and limits of the owned Deployment's
   containers (e.g. `mcp-server` or `init-mcp-server`). Names that don't match a container the
