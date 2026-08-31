@@ -154,6 +154,19 @@ const (
 
 	// DataPlaneAssignedPortStart is the port to assign when desired port is already occupied for other usage.
 	DataPlaneAssignedPortStart = 16384
+
+	// ListenAddressIPv4 is the IPv4 wildcard address Kong listens on.
+	ListenAddressIPv4 = "0.0.0.0"
+
+	// ListenAddressIPv6 is the IPv6 wildcard address Kong listens on, in its
+	// bare form: it has to be bracketed when joined with a port (which
+	// [net.JoinHostPort] does).
+	//
+	// Kong's listen options are nginx's, and nginx applies ipv6only=on to an
+	// IPv6 listen, so an IPv6 wildcard alone does not accept IPv4 traffic.
+	// Listening on both wildcards is what makes a port reachable on IPv4-only
+	// and IPv6-only clusters alike.
+	ListenAddressIPv6 = "::"
 )
 
 // -----------------------------------------------------------------------------

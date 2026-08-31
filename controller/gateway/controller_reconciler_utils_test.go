@@ -705,7 +705,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport",
+					Value: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport,[::]:9999 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -740,7 +740,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport",
+					Value: "0.0.0.0:7443 ssl reuseport,[::]:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -770,7 +770,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:16384 ssl reuseport",
+					Value: "0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -985,7 +985,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					// TCP listener: stream entry without `ssl`.
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:8888 reuseport",
+					Value: "0.0.0.0:8888 reuseport,[::]:8888 reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -1010,7 +1010,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:16384 reuseport",
+					Value: "0.0.0.0:16384 reuseport,[::]:16384 reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -1039,7 +1039,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					// TCP entries first (sorted), then TLS entries with `ssl`.
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:9000 reuseport,0.0.0.0:9443 ssl reuseport",
+					Value: "0.0.0.0:9000 reuseport,[::]:9000 reuseport,0.0.0.0:9443 ssl reuseport,[::]:9443 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{

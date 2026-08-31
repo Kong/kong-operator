@@ -17,10 +17,9 @@ limitations under the License.
 package dataplane
 
 import (
-	"fmt"
-
 	corev1 "k8s.io/api/core/v1"
 
+	"github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -67,7 +66,7 @@ func RequiredHardcodedEnvVars() []corev1.EnvVar {
 		{Name: "KONG_VITALS", Value: "off"},
 		{Name: "KONG_KONNECT_MODE", Value: "on"},
 		{Name: "KONG_LUA_SSL_TRUSTED_CERTIFICATE", Value: "system"},
-		{Name: "KONG_STATUS_LISTEN", Value: fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort)},
+		{Name: "KONG_STATUS_LISTEN", Value: config.DualStackListen(consts.DataPlaneStatusPort)},
 		{Name: "KONG_PROXY_ACCESS_LOG", Value: "/dev/stdout"},
 		{Name: "KONG_PROXY_ERROR_LOG", Value: "/dev/stderr"},
 		{Name: "KONG_ADMIN_ACCESS_LOG", Value: "/dev/stdout"},
