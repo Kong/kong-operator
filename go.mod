@@ -323,7 +323,7 @@ require (
 // This is a workaround for https://github.com/kong/kong-operator/issues/1384.
 replace (
 	k8s.io/api => k8s.io/api v0.37.0
-	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.36.4
+	k8s.io/apiextensions-apiserver => k8s.io/apiextensions-apiserver v0.37.0
 	k8s.io/apimachinery => k8s.io/apimachinery v0.37.0
 	k8s.io/apiserver => k8s.io/apiserver v0.37.0
 	k8s.io/cli-runtime => k8s.io/cli-runtime v0.37.0
@@ -341,7 +341,7 @@ replace (
 	k8s.io/dynamic-resource-allocation => k8s.io/dynamic-resource-allocation v0.37.0
 	k8s.io/endpointslice => k8s.io/endpointslice v0.37.0
 	k8s.io/externaljwt => k8s.io/externaljwt v0.37.0
-	k8s.io/kms => k8s.io/kms v0.36.4
+	k8s.io/kms => k8s.io/kms v0.37.0
 	k8s.io/kube-aggregator => k8s.io/kube-aggregator v0.37.0
 	k8s.io/kube-controller-manager => k8s.io/kube-controller-manager v0.37.0
 	k8s.io/kube-proxy => k8s.io/kube-proxy v0.37.0

@@ -45,7 +45,7 @@ func TestSpecHash(t *testing.T) {
 					},
 				},
 			},
-			want:    "b4a57287d9466d6",
+			want:    "6ebe93eb4d3f2812",
 			wantErr: false,
 		},
 	}

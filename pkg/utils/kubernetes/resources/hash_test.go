@@ -28,11 +28,11 @@ func TestCalculateHash(t *testing.T) {
 
 		hash, err := CalculateHash(obj)
 		require.NoError(t, err)
-		require.Equal(t, "f9154e6211247b8f", hash)
+		require.Equal(t, "78a63fa696b66ff5", hash)
 
 		hash1, err := CalculateHash(obj)
 		require.NoError(t, err)
-		require.Equal(t, "f9154e6211247b8f", hash1)
+		require.Equal(t, "78a63fa696b66ff5", hash1)
 
 		// Same object should produce the same hash
 		hash2, err := CalculateHash(obj)
