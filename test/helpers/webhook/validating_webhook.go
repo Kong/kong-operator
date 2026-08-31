@@ -11,6 +11,7 @@ import (
 	"os"
 
 	"github.com/avast/retry-go/v5"
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/kubectl"
 	"github.com/samber/lo"
 	admissionv1 "k8s.io/api/admission/v1"
@@ -26,6 +27,7 @@ import (
 	"sigs.k8s.io/yaml"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/validation/consts"
+	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/kcfg"
 )
@@ -196,6 +198,12 @@ func ensureWebhookService(
 		return nil, fmt.Errorf("create service %s/%s: %w", nn.Namespace, nn.Name, err)
 	}
 
+	ipFamily := test.ClusterIPFamily()
+	addressType := discoveryv1.AddressTypeIPv4
+	if ipFamily == clusters.IPv6 {
+		addressType = discoveryv1.AddressTypeIPv6
+	}
+
 	fmt.Println("INFO: creating webhook endpoints")
 	endpoints, err := client.DiscoveryV1().EndpointSlices(nn.Namespace).Create(
 		ctx,
@@ -204,10 +212,10 @@ func ensureWebhookService(
 			Labels: map[string]string{
 				discoveryv1.LabelServiceName: nn.Name,
 			},
-			AddressType: discoveryv1.AddressTypeIPv4,
+			AddressType: addressType,
 			Endpoints: []discoveryv1.Endpoint{
 				{
-					Addresses: []string{getLocalOperatorListenHost()},
+					Addresses: []string{getLocalOperatorListenHost(ipFamily)},
 				},
 			},
 			Ports: []discoveryv1.EndpointPort{

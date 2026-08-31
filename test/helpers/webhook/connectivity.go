@@ -3,8 +3,11 @@ package webhook
 import (
 	"encoding/json"
 	"fmt"
+	"net/netip"
 	"os/exec"
 	"strings"
+
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 )
 
 // NOTE: Copy-pasted from https://github.com/Kong/kubernetes-ingress-controller/blob/4f8b13d069750014fc3c5b78e5b6d4cdb0f9bdb2/internal/util/test/webhooks.go
@@ -26,12 +29,15 @@ import (
 //
 // This works if the test runs against a KIND cluster, and does not work against cloud providers (like GKE).
 
-// getLocalOperatorListenHost returns the host IP address depends on environment where the test is running.
-func getLocalOperatorListenHost() string {
-	return localOperatorListenHost
+// getLocalOperatorListenHost returns the host IP address (in the given IP
+// family) depends on environment where the test is running.
+func getLocalOperatorListenHost(ipFamily clusters.IPFamily) string {
+	ht := getHostType()
+	if ipFamily == clusters.IPv6 {
+		return getHostIPv6ByType(ht)
+	}
+	return getHostIPbyType(ht)
 }
-
-var localOperatorListenHost = getHostIPbyType(getHostType())
 
 type hostType string
 
@@ -41,6 +47,10 @@ const (
 	defaultDocker  hostType = "defaultDocker"
 
 	defaultDockerBridgeGateway = "172.17.0.1"
+
+	// kindNetworkName is the fixed name of the docker network KIND attaches
+	// its node containers to.
+	kindNetworkName = "kind"
 )
 
 func getHostIPbyType(ht hostType) string {
@@ -83,6 +93,58 @@ func getDockerBridgeGateway() string {
 
 	fmt.Printf("WARNING: no gateway found in Docker bridge config, falling back to %s\n", defaultDockerBridgeGateway)
 	return defaultDockerBridgeGateway
+}
+
+// getHostIPv6ByType returns an IPv6 address that a pod inside an IPv6 KIND
+// cluster, mirroring getHostIPbyType's IPv4 mechanism.
+func getHostIPv6ByType(ht hostType) string {
+	switch ht {
+	case defaultDocker:
+		gateway, err := getKindNetworkIPv6Gateway()
+		if err != nil {
+			panic(fmt.Sprintf("failed to determine IPv6 route back to host: %v", err))
+		}
+		return gateway
+	default:
+		panic(fmt.Sprintf("IPv6 test clusters are not yet supported when running on host type %q", ht))
+	}
+}
+
+// getKindNetworkIPv6Gateway returns the IPv6 gateway address of the "kind"
+// Docker network, i.e. the address of the host on that bridge.
+//
+// Docker doesn't always report a Gateway for an IPv6 pool it assigned itself
+// (only the Subnet), so fall back to the subnet's first address, which is what
+// Docker assigns to the bridge in that case.
+func getKindNetworkIPv6Gateway() (string, error) {
+	cmd := exec.Command("docker", "network", "inspect", kindNetworkName, "--format", "{{json .IPAM.Config}}")
+	out, err := cmd.CombinedOutput()
+	if err != nil {
+		return "", fmt.Errorf("docker network inspect %s: %w: %s", kindNetworkName, err, out)
+	}
+
+	var configs []struct {
+		Subnet  string `json:"Subnet"`
+		Gateway string `json:"Gateway"`
+	}
+	if err := json.Unmarshal(out, &configs); err != nil {
+		return "", fmt.Errorf("parse docker network inspect output %q: %w", out, err)
+	}
+
+	for _, c := range configs {
+		if strings.Contains(c.Gateway, ":") {
+			return c.Gateway, nil
+		}
+		if !strings.Contains(c.Subnet, ":") {
+			continue
+		}
+		prefix, err := netip.ParsePrefix(c.Subnet)
+		if err != nil {
+			return "", fmt.Errorf("parse IPv6 subnet %q of docker network %q: %w", c.Subnet, kindNetworkName, err)
+		}
+		return prefix.Masked().Addr().Next().String(), nil
+	}
+	return "", fmt.Errorf("no IPv6 subnet found for docker network %q in %s", kindNetworkName, out)
 }
 
 func getHostType() hostType {
