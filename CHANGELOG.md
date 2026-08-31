@@ -56,6 +56,11 @@
 
 ## Unreleased
 
+- HybridGateway: merge the current Route reference with existing
+  `hybrid-routes` annotations during state enforcement so Routes that share a
+  Kong resource no longer overwrite each other's references and continuously
+  reapply the resource.
+  [#4944](https://github.com/Kong/kong-operator/pull/4944)
 - HybridGateway: shared Kong resources now converge when referenced by Routes
   attached to multiple Gateways, and SSA no-op detection correctly handles
   preserve-unknown fields. This prevents repeated apply loops from blocking
