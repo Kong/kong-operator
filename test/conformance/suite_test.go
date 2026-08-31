@@ -87,6 +87,8 @@ func TestMain(m *testing.M) {
 				b.WithIPv6Only()
 			case clusters.Dual:
 				exitOnErr(fmt.Errorf("dual-stack test clusters are not yet supported (KONG_TEST_CLUSTER_IP_FAMILY=dual)"))
+			case clusters.IPv4:
+				// KIND's default, nothing to configure.
 			}
 		}
 		if !test.IsMetalLBDisabled() {
