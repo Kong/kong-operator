@@ -257,7 +257,7 @@ func deployGatewayWithKPI(
 	gateway = testutils.MustGetGateway(t, ctx, gatewayNSN, clients.MgrClient)
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -406,7 +406,7 @@ func verifyCustomPlugins(t *testing.T, ip string, expectedHeaders ...http.Header
 			assert.NoError(c, err, "failed to read response body")
 			return b.String()
 		}
-		resp, err := httpClient.Get(fmt.Sprintf("http://%s/test", ip))
+		resp, err := httpClient.Get(fmt.Sprintf("http://%s/test", helpers.URLHost(ip)))
 		if !assert.NoError(c, err) {
 			return
 		}

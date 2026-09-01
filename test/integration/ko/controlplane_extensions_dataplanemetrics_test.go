@@ -50,7 +50,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	k8sClient := clients.K8sClient
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", osstestutils.HTTPBinImage, 80)
+	container := osstestutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err := k8sClient.AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

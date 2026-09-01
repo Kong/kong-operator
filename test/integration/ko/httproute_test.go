@@ -70,7 +70,7 @@ func TestHTTPRoute(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -101,7 +101,7 @@ func TestHTTPRoute(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("route to /test path of service httpbin should receive a 200 OK response")
-	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test", "")
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+helpers.URLHost(gatewayIPAddress)+"/test", "")
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
@@ -110,7 +110,7 @@ func TestHTTPRoute(t *testing.T) {
 	)
 
 	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
-	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+gatewayIPAddress+"/test/1234", "")
+	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "http://"+helpers.URLHost(gatewayIPAddress)+"/test/1234", "")
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
@@ -200,7 +200,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	gatewayIPAddress := gateway.Status.Addresses[0].Value
 
 	t.Log("deploying httpbin backend deployment")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -233,7 +233,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	httpClient := helpers.MustCreateHTTPClient(t, secret, host)
 
 	t.Log("route to /test path of service httpbin should receive a 200 OK response")
-	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test", host)
+	request := helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+helpers.URLHost(gatewayIPAddress)+"/test", host)
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<title>httpbin.org</title>"),
@@ -241,7 +241,7 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 		time.Second,
 	)
 	t.Log("route to /test/1234 path of service httpbin should receive a 404 OK response")
-	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+gatewayIPAddress+"/test/1234", host)
+	request = helpers.MustBuildRequest(t, ctx, http.MethodGet, "https://"+helpers.URLHost(gatewayIPAddress)+"/test/1234", host)
 	require.Eventually(
 		t,
 		testutils.GetResponseBodyContains(t, httpClient, request, "<h1>Not Found</h1>"),
