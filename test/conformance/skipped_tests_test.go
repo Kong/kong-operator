@@ -13,7 +13,7 @@ var skippedTestsForStandard = []string{}
 
 var skippedTestsForHybrid = []string{
 
-	// Core profile.
+	// Extended profile.
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
 }
