@@ -71,7 +71,7 @@ spec:
               - name: EXPECT_HEADER
                 value: X-Kong-LLM-Model
             content: |
-              bash ../../common/scripts/aigw_chat_completion.sh
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
   catch:
     - description: Capture debug snapshot on test failure.
       script:
