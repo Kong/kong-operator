@@ -127,7 +127,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NotNil(t, controlPlane)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", gatewayIP)), testutils.DefaultIngressWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", helpers.URLHost(gatewayIP))), testutils.DefaultIngressWait, time.Second)
 
 	t.Log("retrieving the kong-proxy url")
 	services := testutils.MustListDataPlaneServices(t, ctx, dataplane, integration.GetClients().MgrClient, client.MatchingLabels{
@@ -139,7 +139,7 @@ func TestIngressEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)

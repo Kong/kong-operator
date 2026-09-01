@@ -2,7 +2,6 @@ package integration
 
 import (
 	"crypto/x509"
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -207,7 +206,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	certPool := x509.NewCertPool()
 	require.True(t, certPool.AppendCertsFromPEM(cert), "Should add certificate to cert pool successfully")
 	require.Eventually(t, func() bool {
-		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-echo",
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, helpers.HostPort(gatewayIPAddress, tlsPort), "test-tls-echo",
 			helpers.TLSOpt{
 				Hostname:    host,
 				CertPool:    certPool,
@@ -328,7 +327,7 @@ func TestTLSRouteTerminate(t *testing.T) {
 	certPool := x509.NewCertPool()
 	require.True(t, certPool.AppendCertsFromPEM(cert), "Should add certificate to cert pool successfully")
 	require.Eventually(t, func() bool {
-		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-terminate-echo",
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, helpers.HostPort(gatewayIPAddress, tlsPort), "test-tls-terminate-echo",
 			helpers.TLSOpt{
 				Hostname: host,
 				CertPool: certPool,
@@ -472,7 +471,7 @@ func TestTLSRouteHostnameIntersection(t *testing.T) {
 	certPool := x509.NewCertPool()
 	require.True(t, certPool.AppendCertsFromPEM(cert), "Should add certificate to cert pool successfully")
 	require.Eventually(t, func() bool {
-		err := helpers.EchoResponds(t, helpers.ProtocolTLS, fmt.Sprintf("%s:%d", gatewayIPAddress, tlsPort), "test-tls-echo-intersection",
+		err := helpers.EchoResponds(t, helpers.ProtocolTLS, helpers.HostPort(gatewayIPAddress, tlsPort), "test-tls-echo-intersection",
 			helpers.TLSOpt{
 				Hostname:    probeSNI,
 				CertPool:    certPool,
