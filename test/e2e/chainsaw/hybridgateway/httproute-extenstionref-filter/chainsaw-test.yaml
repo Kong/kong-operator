@@ -162,6 +162,27 @@ spec:
       use:
         template: ../../common/_step_templates/verify-rate-limiting-plugin.yaml
 
+    # Step 7e: Verify the KongPlugin's tags propagated to the real Konnect-side plugin.
+    - name: 7e-Verify-single-plugin-tags
+      description: Verify tags on the referenced KongPlugin reached the Konnect plugin
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: PLUGIN_REFERENCE_NAME
+                value: (join('.',[($namespace),'rate-limiting']))
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_TAGS
+                value: "team-payments,env-e2e"
+            content: |
+              bash ../../common/scripts/verify_konnect_plugin_tags.sh
+            check:
+              (json_parse($stdout).success): true
+
     # Step 8a: Create HTTPRoute with multiple ExtensionRef filters.
     - name: 8a-Create-multiple-extensionref-filters
       description: Create an HTTPRoute with 2 ExtensionRef filters (rate-limiting + response-transformer)

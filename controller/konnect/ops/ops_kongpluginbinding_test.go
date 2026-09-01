@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -50,6 +51,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 					Kind: "KongService",
 				},
 			},
+			Tags: commonv1alpha1.Tags{"spec-binding-tag"},
 		},
 		Status: configurationv1alpha1.KongPluginBindingStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -71,6 +73,7 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 				},
 			},
 			PluginName: "basic-auth",
+			Tags:       commonv1alpha1.Tags{"spec-plugin-tag"},
 		},
 		&configurationv1alpha1.KongService{
 			TypeMeta: metav1.TypeMeta{
@@ -106,8 +109,102 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 		"duplicate-tag",
 		"tag3",
 		"tag4",
+		"spec-plugin-tag",
+		"spec-binding-tag",
 	}
 	require.ElementsMatch(t, expectedTags, output.Tags)
+}
+
+// TestKongPluginBindingToSDKPluginInput_TagsTruncationPriority verifies that when the
+// combined tag set exceeds Konnect's tag cap, tags from the referenced KongPlugin's
+// spec.Tags are preserved over the KongPluginBinding's own spec.Tags.
+func TestKongPluginBindingToSDKPluginInput_TagsTruncationPriority(t *testing.T) {
+	ctx := t.Context()
+
+	pluginTags := make(commonv1alpha1.Tags, 15)
+	for i := range pluginTags {
+		pluginTags[i] = fmt.Sprintf("plugin-tag-%02d", i)
+	}
+	bindingTags := make(commonv1alpha1.Tags, 15)
+	for i := range bindingTags {
+		bindingTags[i] = fmt.Sprintf("binding-tag-%02d", i)
+	}
+
+	pb := &configurationv1alpha1.KongPluginBinding{
+		TypeMeta: metav1.TypeMeta{
+			Kind:       "KongPluginBinding",
+			APIVersion: "configuration.konghq.com/v1alpha1",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "plugin-binding-1",
+			Namespace: "default",
+			UID:       k8stypes.UID(uuid.NewString()),
+		},
+		Spec: configurationv1alpha1.KongPluginBindingSpec{
+			PluginReference: configurationv1alpha1.PluginRef{
+				Name: "plugin-1",
+				Kind: new("KongPlugin"),
+			},
+			Targets: &configurationv1alpha1.KongPluginBindingTargets{
+				ServiceReference: &configurationv1alpha1.TargetRefWithGroupKind{
+					Name: "service-1",
+					Kind: "KongService",
+				},
+			},
+			Tags: bindingTags,
+		},
+		Status: configurationv1alpha1.KongPluginBindingStatus{
+			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
+				ControlPlaneID: uuid.NewString(),
+			},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
+		&configurationv1.KongPlugin{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongPlugin",
+				APIVersion: "configuration.konghq.com/v1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "plugin-1",
+				Namespace: "default",
+			},
+			PluginName: "basic-auth",
+			Tags:       pluginTags,
+		},
+		&configurationv1alpha1.KongService{
+			TypeMeta: metav1.TypeMeta{
+				Kind:       "KongService",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+			},
+			ObjectMeta: metav1.ObjectMeta{
+				Name:      "service-1",
+				Namespace: "default",
+			},
+			Status: configurationv1alpha1.KongServiceStatus{
+				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+						ID: "12345",
+					},
+				},
+			},
+		},
+	).Build()
+
+	output, err := kongPluginBindingToSDKPluginInput(ctx, cl, pb)
+	require.NoError(t, err)
+
+	// Capped at 20 tags total: k8s-metadata tags for the binding (7, no namespace tag
+	// since GetNamespace() truncation logic still includes it -> 8) plus the first 12
+	// of the 15 plugin tags. None of the binding's own spec.Tags should survive, since
+	// they are positioned after the plugin's tags in the truncation order.
+	require.Len(t, output.Tags, 20)
+	for i := range 12 {
+		require.Contains(t, output.Tags, fmt.Sprintf("plugin-tag-%02d", i))
+	}
+	for _, tag := range bindingTags {
+		require.NotContains(t, output.Tags, tag)
+	}
 }
 
 func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {

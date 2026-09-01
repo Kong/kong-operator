@@ -98,6 +98,7 @@ func GRPCPluginsForRule(
 			WithAnnotations(grpcRoute, pRef).
 			// Copy the tags annotation from the original plugin to the new plugin copy.
 			WithTagsFromAnnotations(plugin).
+			WithTags(plugin.Tags).
 			Build()
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)

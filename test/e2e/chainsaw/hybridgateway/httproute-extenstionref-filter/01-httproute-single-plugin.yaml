@@ -4,6 +4,9 @@ apiVersion: configuration.konghq.com/v1
 metadata:
   name: rate-limit-single
   namespace: ($namespace)
+tags:
+  - team-payments
+  - env-e2e
 plugin: rate-limiting
 config:
   minute: 1000

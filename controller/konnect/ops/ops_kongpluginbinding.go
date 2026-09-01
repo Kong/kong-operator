@@ -228,7 +228,13 @@ func kongPluginBindingToSDKPluginInput(
 		return nil, err
 	}
 
-	tags := GenerateTagsForObject(pluginBinding, metadata.ExtractTags(plugin)...)
+	// Tags are collected in this order so that, if the merged tag set exceeds the
+	// Konnect tags cap, the typed spec.Tags on the plugin take priority over the
+	// binding's own spec.Tags, which in turn take priority over the legacy
+	// annotation-based tags (see GenerateTagsForObject's truncation behavior).
+	additionalTags := append(append([]string{}, plugin.Tags...), pluginBinding.Spec.Tags...)
+	additionalTags = append(additionalTags, metadata.ExtractTags(plugin)...)
+	tags := GenerateTagsForObject(pluginBinding, additionalTags...)
 	return kongPluginWithTargetsToKongPluginInput(pluginBinding, plugin, targets, tags)
 }
 
