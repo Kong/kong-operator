@@ -9,9 +9,9 @@ name: Muthur
 #
 # kong-operator is public and Kong/ksai is internal, so ksai actions are checked out locally
 # via sparse-checkout and referenced by path rather than by a remote `uses:`, which GitHub
-# won't resolve from a public repo into a private one. codeowners-authz, ai-reviewer-federated
-# and the kreview plugin each version independently in Kong/ksai, so each is pinned to its own
-# release tag, bumped by Renovate.
+# won't resolve from a public repo into a private one. codeowners-authz and ai-reviewer-federated
+# version independently in Kong/ksai, so each is pinned to its own release tag, bumped by
+# Renovate. The kreview plugin and the trusted scripts are read from the reviewer's own tag.
 
 on:
   issue_comment:
@@ -108,10 +108,14 @@ jobs:
             .github/actions/ai-reviewer-federated
           persist-credentials: false
 
-      # A local-path action has no github.action_ref, so it can no longer default the
-      # kreview plugin checkout to its own ref: ksai_ref pins the plugin explicitly instead.
+      # A local-path action has no github.action_ref, so it cannot default its plugin and
+      # trusted-scripts checkout to its own ref: ksai_ref has to name that ref explicitly.
+      # Left unset the action resolves an empty ref, which actions/checkout reads as Kong/ksai's
+      # default branch - so the action stays pinned while the scripts it loads track main, and
+      # any change there breaks this workflow with no change here.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
+          ksai_ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
           trigger_phrase: "/muthur"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
