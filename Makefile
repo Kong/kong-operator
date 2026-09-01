@@ -547,7 +547,7 @@ docker.push:
 .PHONY: docker.run.openssf
 docker.run.openssf:
 	docker run --rm --env GITHUB_TOKEN=$(GITHUB_TOKEN) \
-		gcr.io/openssf/scorecard:stable \
+		ghcr.io/ossf/scorecard:latest \
 		--repo=$(REPO) \
 		--commit=$(COMMIT) \
 		--show-details \
