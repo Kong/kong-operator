@@ -21,6 +21,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	gatewayclient "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -33,6 +34,14 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers"
 	"github.com/kong/kong-operator/v2/test/integration/kic/consts"
 )
+
+func findPluginByUID(plugins []*kong.Plugin, uid types.UID) (*kong.Plugin, bool) {
+	tag := "k8s-uid:" + string(uid)
+	return lo.Find(plugins, func(p *kong.Plugin) bool {
+		return p != nil && slices.Contains(
+			lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }), tag)
+	})
+}
 
 func TestPluginEssentials(t *testing.T) {
 	ctx := t.Context()
@@ -148,13 +157,7 @@ func TestPluginEssentials(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
-		uidTag := "k8s-uid:" + string(kongplugin.UID)
-		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p != nil && slices.Contains(
-				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
-				uidTag,
-			)
-		})
+		plugin, found := findPluginByUID(plugins, kongplugin.UID)
 		if !found {
 			t.Logf("plugin for KongPlugin %s in Kong not found", kongplugin.Name)
 			return false
@@ -198,13 +201,7 @@ func TestPluginEssentials(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
-		uidTag := "k8s-uid:" + string(kongclusterplugin.UID)
-		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p != nil && slices.Contains(
-				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
-				uidTag,
-			)
-		})
+		plugin, found := findPluginByUID(plugins, kongclusterplugin.UID)
 		if !found {
 			t.Logf("plugin for KongClusterPlugin %s in Kong not found", kongclusterplugin.Name)
 			return false
@@ -867,13 +864,7 @@ func TestPluginNullInConfig(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
-		uidTag := "k8s-uid:" + string(kongplugin.UID)
-		datadogPlugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p != nil && slices.Contains(
-				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
-				uidTag,
-			)
-		})
+		datadogPlugin, found := findPluginByUID(plugins, kongplugin.UID)
 		if !found {
 			t.Logf("datadog plugin not found. %d Plugins found: %s",
 				len(plugins),
