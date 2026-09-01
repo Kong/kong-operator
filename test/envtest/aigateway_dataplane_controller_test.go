@@ -132,6 +132,56 @@ func TestAIGatewayDataPlaneReconciler_SelectorStability(t *testing.T) {
 	})
 }
 
+// TestAIGatewayDataPlaneReconciler_NoControlPlaneRef verifies that an
+// AIGatewayDataPlane with no spec.controlPlaneRef gets a Deployment without
+// any Konnect resolution or certificate registration taking place.
+func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-no-cp")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&aigwdataplane.Reconciler{
+			Client:                   mgr.GetClient(),
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "aigwdp-no-cp", Namespace: ns.Name},
+	}
+	require.NoError(t, cl.Create(ctx, aigwdp))
+
+	deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
+	require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+	for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+		assert.NotEqual(t, "KONG_CLUSTER_CONTROL_PLANE", e.Name)
+	}
+
+	// No AIGatewayDataPlaneCertificate should ever be created: there's no
+	// KonnectAIGateway to register a certificate against.
+	assert.Never(t, func() bool {
+		cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
+		return cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), cert) == nil
+	}, waitTime, tickTime)
+}
+
 // setupProgrammedAIGWDP creates a KonnectAIGateway and an AIGatewayDataPlane,
 // programs the control plane and the resulting AIGatewayDataPlaneCertificate,
 // and returns the AIGatewayDataPlane. spec.ControlPlaneRef is populated by the
@@ -160,7 +210,7 @@ func setupProgrammedAIGWDP(
 	require.NoError(t, cl.Create(ctx, aigwcp))
 	updateKonnectAIGatewayStatusWithProgrammed(t, ctx, cl, aigwcp, konnectID)
 
-	spec.ControlPlaneRef = aigatewayv1alpha1.ControlPlaneRef{
+	spec.ControlPlaneRef = &aigatewayv1alpha1.ControlPlaneRef{
 		Type:                 aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 		KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpName},
 	}

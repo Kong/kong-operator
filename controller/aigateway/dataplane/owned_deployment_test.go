@@ -161,6 +161,25 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:   "nil aigwcp (no ControlPlaneRef): Konnect endpoint env vars omitted, no error",
+			aigwcp: nil,
+			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
+				for _, name := range []string{
+					EnvKongClusterControlPlane,
+					EnvKongClusterServerName,
+					EnvKongClusterTelemetryEndpoint,
+					EnvKongClusterTelemetryServerName,
+				} {
+					for _, e := range envs {
+						assert.NotEqual(t, name, e.Name, "env var %q must not be set when aigwcp is nil", name)
+					}
+				}
+				assert.Equal(t, KonnectCertMountPath+"tls.crt", mustEnv(t, envs, EnvClientCertPath))
+				assert.Equal(t, KonnectCertMountPath+"tls.key", mustEnv(t, envs, EnvKonnectClientCertKey))
+				assert.Equal(t, "data_plane", mustEnv(t, envs, "KONG_ROLE"))
+			},
+		},
+		{
 			name:   "env vars set correctly from endpoints",
 			aigwcp: testKonnectAIGateway(cpHost, tpHost),
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {

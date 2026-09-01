@@ -37,7 +37,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	aigwdpMatching := &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-match"},
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
 			},
 		},
@@ -46,7 +46,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	aigwdpOther := &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-other"},
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: "other-aigwcp"},
 			},
 		},
@@ -62,7 +62,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 			index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 			func(obj client.Object) []string {
 				dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
-				if !ok || dp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
+				if !ok || dp.Spec.ControlPlaneRef == nil || dp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
 					return nil
 				}
 				return []string{dp.Namespace + "/" + dp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}

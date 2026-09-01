@@ -287,9 +287,22 @@ func addLabelsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *ap
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables
 // from required hardcoded values and KonnectAIGateway (controlplane) status.
+// aigatewaycp is nil when the AIGatewayDataPlane has no ControlPlaneRef
+// configured; in that case the Konnect-endpoint env vars are omitted and the
+// user is expected to supply them manually (e.g. via PodTemplateSpec).
 func buildAIGatewayEnvVars(
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 ) ([]corev1.EnvVar, error) {
+	envVars := append(
+		RequiredHardcodedEnvVars(),
+		corev1.EnvVar{Name: EnvClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
+		corev1.EnvVar{Name: EnvKonnectClientCertKey, Value: KonnectCertMountPath + "tls.key"},
+	)
+
+	if aigatewaycp == nil {
+		return envVars, nil
+	}
+
 	if aigatewaycp.Status.Endpoints == nil {
 		return nil, fmt.Errorf("KonnectAIGateway %q has no endpoints in status", aigatewaycp.Name)
 	}
@@ -298,12 +311,10 @@ func buildAIGatewayEnvVars(
 	tpHost := aigatewaycp.Status.Endpoints.Telemetry
 
 	return append(
-		RequiredHardcodedEnvVars(),
+		envVars,
 		corev1.EnvVar{Name: EnvKongClusterControlPlane, Value: cpHost + ":443"},
 		corev1.EnvVar{Name: EnvKongClusterServerName, Value: cpHost},
 		corev1.EnvVar{Name: EnvKongClusterTelemetryEndpoint, Value: tpHost + ":443"},
 		corev1.EnvVar{Name: EnvKongClusterTelemetryServerName, Value: tpHost},
-		corev1.EnvVar{Name: EnvClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
-		corev1.EnvVar{Name: EnvKonnectClientCertKey, Value: KonnectCertMountPath + "tls.key"},
 	), nil
 }

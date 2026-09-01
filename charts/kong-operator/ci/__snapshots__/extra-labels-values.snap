@@ -21250,7 +21250,9 @@ spec:
         description: |-
           AIGatewayDataPlane is the Schema for the AIGateway data planes API.
           It manages an AI Gateway binary Deployment that connects to Konnect via
-          a referenced KonnectAIGateway (controlplane) resource.
+          a referenced KonnectAIGateway (controlplane) resource. The control plane
+          reference is optional: when omitted, the AI Gateway must be configured
+          manually (e.g. via Deployment.PodTemplateSpec env vars).
         properties:
           apiVersion:
             description: |-
@@ -21278,6 +21280,14 @@ spec:
                   The type field identifies which kind of control plane is being referenced.
                   Currently only konnectNamespacedRef is supported, which references a
                   KonnectAIGateway resource in the same namespace.
+
+                  When unset, the operator performs no Konnect lookup or certificate
+                  automation for this AIGatewayDataPlane. The user is expected to configure
+                  Konnect (or any other) connectivity manually, e.g. by supplying the
+                  required env vars and cert volume through Deployment.PodTemplateSpec.
+
+                  This field is immutable once set: it can be added later, but not
+                  removed or changed to a different reference.
                 properties:
                   konnectNamespacedRef:
                     description: |-
@@ -30186,8 +30196,6 @@ spec:
                           rule: '!has(self.ports) || !(self.ports.exists(p, has(p.nodePort))) ? true : has(self.type) && [''LoadBalancer'', ''NodePort''].exists(t, t == self.type)'
                     type: object
                 type: object
-            required:
-            - controlPlaneRef
             type: object
           status:
             description: Status defines the observed state of AIGatewayDataPlane.
@@ -30314,6 +30322,9 @@ spec:
         required:
         - spec
         type: object
+        x-kubernetes-validations:
+        - message: spec.controlPlaneRef is immutable once set
+          rule: '!has(oldSelf.spec.controlPlaneRef) || (has(self.spec.controlPlaneRef) && self.spec.controlPlaneRef == oldSelf.spec.controlPlaneRef)'
     served: true
     storage: true
     subresources:

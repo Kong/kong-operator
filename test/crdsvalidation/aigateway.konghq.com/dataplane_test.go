@@ -18,7 +18,7 @@ func validDataPlane(ns string) *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 					Name: "my-ai-gateway",
@@ -46,12 +46,69 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 						},
 					},
 				},
 				ExpectedErrorMessage: new("konnectNamespacedRef must be set when type is konnectNamespacedRef"),
+			},
+			{
+				Name: "controlPlaneRef omitted - valid (manual/unmanaged control plane)",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{},
+				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("controlPlaneRef immutability once set", func(t *testing.T) {
+		konnectNamespacedRef := func(name string) *aigatewayv1alpha1.ControlPlaneRef {
+			return &aigatewayv1alpha1.ControlPlaneRef{
+				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+					Name: name,
+				},
+			}
+		}
+
+		common.TestCasesGroup[*aigatewayv1alpha1.AIGatewayDataPlane]{
+			{
+				Name: "removing controlPlaneRef once set is not allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: konnectNamespacedRef("my-ai-gateway"),
+					},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = nil
+				},
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable once set"),
+			},
+			{
+				Name: "changing controlPlaneRef once set is not allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: konnectNamespacedRef("my-ai-gateway"),
+					},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = konnectNamespacedRef("another-ai-gateway")
+				},
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable once set"),
+			},
+			{
+				Name: "setting controlPlaneRef for the first time is allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = konnectNamespacedRef("my-ai-gateway")
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -67,7 +124,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -88,7 +145,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -112,7 +169,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -136,7 +193,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -166,7 +223,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -183,7 +240,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -204,7 +261,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",
@@ -232,7 +289,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-						ControlPlaneRef: aigatewayv1alpha1.ControlPlaneRef{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
 							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
 								Name: "my-ai-gateway",

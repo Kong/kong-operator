@@ -39,6 +39,10 @@ func (r *Reconciler) resolveKonnectAIGateway(
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 ) (*konnectv1alpha1.KonnectAIGateway, error) {
+	if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
+		return nil, nil
+	}
+
 	aigwcp := &konnectv1alpha1.KonnectAIGateway{}
 	err := r.Get(ctx, types.NamespacedName{
 		Name:      aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,

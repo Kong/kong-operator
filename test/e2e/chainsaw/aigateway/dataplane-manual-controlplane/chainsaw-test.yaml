@@ -1,0 +1,187 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-dataplane-manual-controlplane
+spec:
+  description: |
+    Exercises the fully-manual control plane path: spec.controlPlaneRef is left unset on the
+    AIGatewayDataPlane, so the operator performs no KonnectAIGateway lookup and no certificate
+    registration automation for it. A KonnectAIGateway and a self-signed mTLS certificate are
+    still created, and the certificate is registered with Konnect manually via an
+    AIGatewayDataPlaneCertificate referencing the KonnectAIGateway directly (the same mechanism
+    the operator itself would use, just driven by hand). The AIGatewayDataPlane's Deployment is
+    then wired to them purely through spec.deployment.podTemplateSpec: the four Konnect endpoint
+    env vars are supplied explicitly (read from the KonnectAIGateway's status), and the
+    operator's auto-provisioned cert volume is overridden to mount the manually-registered
+    certificate instead. Verifies the AIGatewayDataPlane still reaches Ready=True with no
+    KonnectAIGatewayResolved/KonnectCertificateRegistered conditions set.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: cert_secret_name
+      value: (join('-', [($test_name), 'dp-cert']))
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: dp_cert_name
+      value: (join('-', [($test_name), 'dp-cert']))
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Generate-and-create-tls-secret
+      bindings:
+        - name: sni_hostname
+          value: (join('', [($test_name), '.example.com']))
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: 5-Register-certificate-with-konnect
+      try:
+        - apply:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayDataPlaneCertificate
+              metadata:
+                name: ($dp_cert_name)
+                namespace: ($namespace)
+              spec:
+                aiGatewayRef:
+                  type: namespacedRef
+                  namespacedRef:
+                    name: ($aigw_cp_name)
+                apiSpec:
+                  title: ($dp_cert_name)
+                  description: Manually-registered certificate for the fully-manual AIGatewayDataPlane (chainsaw e2e)
+                  cert:
+                    type: secretRef
+                    secretRef:
+                      name: ($cert_secret_name)
+                      key: tls.crt
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayDataPlaneCertificate
+              metadata:
+                name: ($dp_cert_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+    - name: 6-Create-aigateway-dataplane-without-controlplaneref
+      try:
+        # Read the Konnect endpoints off the manually-created KonnectAIGateway. With no
+        # controlPlaneRef, the operator never reads these itself; they must be supplied
+        # by hand through podTemplateSpec below.
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CP_NAME
+                value: ($aigw_cp_name)
+            content: |
+              kubectl get konnectaigateway "$CP_NAME" -n "$NAMESPACE" -o jsonpath='{.status.endpoints}'
+            outputs:
+              - name: cp_endpoint
+                value: (json_parse($stdout).configuration)
+              - name: tp_endpoint
+                value: (json_parse($stdout).telemetry)
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                # No controlPlaneRef: the operator does no Konnect lookup or certificate
+                # automation for this AIGatewayDataPlane at all.
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: aigw
+                          image: ($aigw_dp_image)
+                          env:
+                            - name: KONG_CLUSTER_CONTROL_PLANE
+                              value: (join(':', [($cp_endpoint), '443']))
+                            - name: KONG_CLUSTER_SERVER_NAME
+                              value: ($cp_endpoint)
+                            - name: KONG_CLUSTER_TELEMETRY_ENDPOINT
+                              value: (join(':', [($tp_endpoint), '443']))
+                            - name: KONG_CLUSTER_TELEMETRY_SERVER_NAME
+                              value: ($tp_endpoint)
+                      # Overrides the operator's auto-provisioned (but Konnect-unregistered)
+                      # cert secret with the one manually registered above. The operator still
+                      # sets KONG_CLUSTER_CERT/KONG_CLUSTER_CERT_KEY to point at this same
+                      # mount path regardless of controlPlaneRef.
+                      volumes:
+                        - name: konnect-cert
+                          secret:
+                            secretName: ($cert_secret_name)
+                network:
+                  services:
+                    ingress:
+                      type: LoadBalancer
+                      ports:
+                        - name: ingress
+                          port: 443
+                          targetPort: 8443
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'ServiceReady']):
+                  - status: 'True'
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                (length(conditions[?type == 'KonnectAIGatewayResolved'])): 0
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (readyReplicas > `0`): true
+                (addresses[0].value != null): true
+                (addresses[0].value != ''): true
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-dataplane-manual-controlplane
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

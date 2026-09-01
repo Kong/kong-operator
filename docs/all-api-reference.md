@@ -5982,7 +5982,9 @@ Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1
 
 AIGatewayDataPlane is the Schema for the AIGateway data planes API.
 It manages an AI Gateway binary Deployment that connects to Konnect via
-a referenced KonnectAIGateway (controlplane) resource.
+a referenced KonnectAIGateway (controlplane) resource. The control plane
+reference is optional: when omitted, the AI Gateway must be configured
+manually (e.g. via Deployment.PodTemplateSpec env vars).
 
 <!-- ai_gateway_data_plane description placeholder -->
 
@@ -6006,7 +6008,7 @@ AIGatewayDataPlaneSpec defines the desired state of AIGatewayDataPlane.
 
 | Field | Description |
 | --- | --- |
-| `controlPlaneRef` _[ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this AIGatewayDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectAIGateway resource in the same namespace. |
+| `controlPlaneRef` _[ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this AIGatewayDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectAIGateway resource in the same namespace.<br /><br />When unset, the operator performs no Konnect lookup or certificate automation for this AIGatewayDataPlane. The user is expected to configure Konnect (or any other) connectivity manually, e.g. by supplying the required env vars and cert volume through Deployment.PodTemplateSpec.<br /><br />This field is immutable once set: it can be added later, but not removed or changed to a different reference. |
 | `deployment` _[DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the AI Gateway Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the AI Gateway pod is exposed to clients. |
 
