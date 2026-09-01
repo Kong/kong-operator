@@ -39,6 +39,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
+	path := "/" + helpers.LabelValueForTest(t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -54,7 +55,7 @@ func TestPluginEssentials(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test_plugin_essentials", map[string]string{
+	ingress := generators.NewIngressForService(path, map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -64,7 +65,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -131,7 +132,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -147,8 +148,12 @@ func TestPluginEssentials(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
+		uidTag := "k8s-uid:" + string(kongplugin.UID)
 		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p != nil && p.Name != nil && *p.Name == kongplugin.PluginName
+			return p != nil && slices.Contains(
+				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
+				uidTag,
+			)
 		})
 		if !found {
 			t.Logf("plugin for KongPlugin %s in Kong not found", kongplugin.Name)
@@ -177,7 +182,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -193,8 +198,12 @@ func TestPluginEssentials(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
+		uidTag := "k8s-uid:" + string(kongclusterplugin.UID)
 		plugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p != nil && p.Name != nil && *p.Name == kongclusterplugin.PluginName
+			return p != nil && slices.Contains(
+				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
+				uidTag,
+			)
 		})
 		if !found {
 			t.Logf("plugin for KongClusterPlugin %s in Kong not found", kongclusterplugin.Name)
@@ -213,7 +222,7 @@ func TestPluginEssentials(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPSURL, proxyHTTPSURL.String(), "/test_plugin_essentials", &helpers.HTTPSOptions{InsecureSkipVerify: true}, ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPSURL, proxyHTTPSURL.String(), path, &helpers.HTTPSOptions{InsecureSkipVerify: true}, ingressWait, waitTick, nil)
 }
 
 func TestPluginConfigPatch(t *testing.T) {
@@ -221,6 +230,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
+	path := "/" + helpers.LabelValueForTest(t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -236,7 +246,7 @@ func TestPluginConfigPatch(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test_plugin_essentials", map[string]string{
+	ingress := generators.NewIngressForService(path, map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -246,7 +256,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -348,7 +358,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that plugin %s was successfully configured", kongplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -371,7 +381,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Logf("validating that clusterplugin %s was successfully configured", kongclusterplugin.Name)
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -383,7 +393,7 @@ func TestPluginConfigPatch(t *testing.T) {
 
 	t.Log("deleting Ingress and waiting for routes to be torn down")
 	require.NoError(t, clusters.DeleteIngress(ctx, env.Cluster(), ns.Name, ingress))
-	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPSURL, proxyHTTPSURL.String(), "/test_plugin_essentials", &helpers.HTTPSOptions{InsecureSkipVerify: true}, ingressWait, waitTick, nil)
+	helpers.EventuallyExpectHTTP404WithNoRoute(t, proxyHTTPSURL, proxyHTTPSURL.String(), path, &helpers.HTTPSOptions{InsecureSkipVerify: true}, ingressWait, waitTick, nil)
 }
 
 func TestPluginOrdering(t *testing.T) {
@@ -776,6 +786,7 @@ func TestPluginNullInConfig(t *testing.T) {
 
 	t.Parallel()
 	ns, cleaner := helpers.Setup(ctx, t, env)
+	path := "/" + helpers.LabelValueForTest(t)
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -791,7 +802,7 @@ func TestPluginNullInConfig(t *testing.T) {
 	cleaner.Add(service)
 
 	t.Logf("creating an ingress for service %s with ingress.class %s", service.Name, consts.IngressClass)
-	ingress := generators.NewIngressForService("/test_plugin_essentials", map[string]string{
+	ingress := generators.NewIngressForService(path, map[string]string{
 		"konghq.com/strip-path": "true",
 	}, service)
 	ingress.Spec.IngressClassName = kong.String(consts.IngressClass)
@@ -801,7 +812,7 @@ func TestPluginNullInConfig(t *testing.T) {
 
 	t.Log("waiting for routes from Ingress to be operational")
 	assert.Eventually(t, func() bool {
-		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s/test_plugin_essentials", proxyHTTPSURL))
+		resp, err := helpers.DefaultHTTPClient(helpers.WithInsecureSkipVerify()).Get(fmt.Sprintf("%s%s", proxyHTTPSURL, path))
 		if err != nil {
 			t.Logf("WARNING: error while waiting for %s: %v", proxyHTTPSURL, err)
 			return false
@@ -856,8 +867,12 @@ func TestPluginNullInConfig(t *testing.T) {
 		plugins, err := kc.Plugins.ListAll(ctx)
 		require.NoError(t, err, "failed to list plugins")
 
+		uidTag := "k8s-uid:" + string(kongplugin.UID)
 		datadogPlugin, found := lo.Find(plugins, func(p *kong.Plugin) bool {
-			return p.Name != nil && *p.Name == "datadog"
+			return p != nil && slices.Contains(
+				lo.Map(p.Tags, func(t *string, _ int) string { return lo.FromPtrOr(t, "") }),
+				uidTag,
+			)
 		})
 		if !found {
 			t.Logf("datadog plugin not found. %d Plugins found: %s",
