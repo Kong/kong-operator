@@ -153,3 +153,42 @@ spec:
             type: openai
             openai:
               upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
+---
+# no selector: `config.route.model` is left unset entirely. Per the schema's
+# doc comment, this should fall back to the format's default selector
+# (for `openai`, the request body's "model" field) with the target name
+# itself as the implicit selector value.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: model-no-selector
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: model-no-selector
+      displayName: Model routed via no selector (format default)
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          paths:
+            - /model-route/no-selector/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

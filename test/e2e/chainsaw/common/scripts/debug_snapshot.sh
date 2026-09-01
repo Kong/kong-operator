@@ -271,7 +271,7 @@ OPERATOR_LOGS_FILE="${SNAPSHOT_DIR}/operator-logs.txt"
 } > "${OPERATOR_LOGS_FILE}"
 
 # Get all operator pods
-OPERATOR_PODS=$(kubectl get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
+OPERATOR_PODS=$(kubectl get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/instance=kong-operator -o jsonpath='{.items[*].metadata.name}' 2>/dev/null || echo "")
 
 if [ -n "${OPERATOR_PODS}" ]; then
   for pod in ${OPERATOR_PODS}; do
@@ -357,8 +357,8 @@ OPERATOR_STATUS_FILE="${SNAPSHOT_DIR}/operator-pods-status.txt"
   echo ""
 } > "${OPERATOR_STATUS_FILE}"
 
-safe_kubectl "${OPERATOR_STATUS_FILE}" get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator -o wide
-safe_kubectl "${OPERATOR_STATUS_FILE}" describe pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator
+safe_kubectl "${OPERATOR_STATUS_FILE}" get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/instance=kong-operator -o wide
+safe_kubectl "${OPERATOR_STATUS_FILE}" describe pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/instance=kong-operator
 
 # 8. Create summary file
 echo "Creating summary..."
@@ -396,7 +396,7 @@ for ns in ${ALL_NAMESPACES}; do
   echo "" >> "${SUMMARY_FILE}"
 done
 
-echo "Operator pod count: $(kubectl get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/name=kong-operator --no-headers 2>/dev/null | wc -l | tr -d ' ')" >> "${SUMMARY_FILE}"
+echo "Operator pod count: $(kubectl get pods -n "${OPERATOR_NAMESPACE}" -l app.kubernetes.io/instance=kong-operator --no-headers 2>/dev/null | wc -l | tr -d ' ')" >> "${SUMMARY_FILE}"
 
 echo ""
 echo "=== Debug snapshot complete ==="
