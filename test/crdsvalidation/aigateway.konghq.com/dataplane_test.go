@@ -63,48 +63,52 @@ func TestAIGatewayDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
-	t.Run("controlPlaneRef immutability once ready", func(t *testing.T) {
-		newDataPlaneWithConditions := func(conditions ...metav1.Condition) *aigatewayv1alpha1.AIGatewayDataPlane {
-			return &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: common.CommonObjectMeta(ns.Name),
-				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-					ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-						Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-						KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
-							Name: "my-ai-gateway",
-						},
-					},
-				},
-				Status: aigatewayv1alpha1.AIGatewayDataPlaneStatus{
-					Conditions: conditions,
+	t.Run("controlPlaneRef immutability once set", func(t *testing.T) {
+		konnectNamespacedRef := func(name string) *aigatewayv1alpha1.ControlPlaneRef {
+			return &aigatewayv1alpha1.ControlPlaneRef{
+				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+					Name: name,
 				},
 			}
-		}
-		removeControlPlaneRef := func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
-			obj.Spec.ControlPlaneRef = nil
 		}
 
 		common.TestCasesGroup[*aigatewayv1alpha1.AIGatewayDataPlane]{
 			{
-				Name: "removing controlPlaneRef once Ready=True is not allowed",
-				TestObject: newDataPlaneWithConditions(metav1.Condition{
-					Type:               string(aigatewayv1alpha1.ReadyType),
-					Status:             metav1.ConditionTrue,
-					Reason:             "Ready",
-					LastTransitionTime: metav1.Now(),
-				}),
-				Update:                     removeControlPlaneRef,
-				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef cannot be removed once the AIGatewayDataPlane is Ready"),
+				Name: "removing controlPlaneRef once set is not allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: konnectNamespacedRef("my-ai-gateway"),
+					},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = nil
+				},
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable once set"),
 			},
 			{
-				Name: "removing controlPlaneRef when Ready=False is allowed",
-				TestObject: newDataPlaneWithConditions(metav1.Condition{
-					Type:               string(aigatewayv1alpha1.ReadyType),
-					Status:             metav1.ConditionFalse,
-					Reason:             "WaitingToBecomeReady",
-					LastTransitionTime: metav1.Now(),
-				}),
-				Update: removeControlPlaneRef,
+				Name: "changing controlPlaneRef once set is not allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: konnectNamespacedRef("my-ai-gateway"),
+					},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = konnectNamespacedRef("another-ai-gateway")
+				},
+				ExpectedUpdateErrorMessage: new("spec.controlPlaneRef is immutable once set"),
+			},
+			{
+				Name: "setting controlPlaneRef for the first time is allowed",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{},
+				},
+				Update: func(obj *aigatewayv1alpha1.AIGatewayDataPlane) {
+					obj.Spec.ControlPlaneRef = konnectNamespacedRef("my-ai-gateway")
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

@@ -143,9 +143,9 @@
 - `AIGatewayDataPlane`: made `spec.controlPlaneRef` optional. When omitted, the
   operator performs no `KonnectAIGateway` lookup or certificate registration
   automation, letting the AI Gateway be configured against a manually-managed
-  control plane and certificate via `spec.deployment.podTemplateSpec`. Once the
-  `AIGatewayDataPlane` reaches `Ready=True`, `controlPlaneRef` can no longer be
-  removed.
+  control plane and certificate via `spec.deployment.podTemplateSpec`.
+  `controlPlaneRef` is immutable once set: it can be added later, but not
+  removed or changed to a different reference.
   [#5470](https://github.com/Kong/kong-operator/pull/5470)
 
 ### Changed

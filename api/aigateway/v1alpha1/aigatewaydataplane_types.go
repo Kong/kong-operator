@@ -37,7 +37,7 @@ import (
 // +kubebuilder:resource:shortName=aigwdp,categories=kong
 // +kubebuilder:printcolumn:name="Ready",description="The Resource is ready",type=string,JSONPath=`.status.conditions[?(@.type=='Ready')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`
-// +kubebuilder:validation:XValidation:rule="(!has(oldSelf.spec.controlPlaneRef)) ? true : (!has(self.status) || !self.status.conditions.exists(c, c.type == 'Ready' && c.status == 'True')) ? true : has(self.spec.controlPlaneRef)", message="spec.controlPlaneRef cannot be removed once the AIGatewayDataPlane is Ready"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.spec.controlPlaneRef) || (has(self.spec.controlPlaneRef) && self.spec.controlPlaneRef == oldSelf.spec.controlPlaneRef)", message="spec.controlPlaneRef is immutable once set"
 // +kong:channels=kong-operator
 type AIGatewayDataPlane struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -75,6 +75,9 @@ type AIGatewayDataPlaneSpec struct {
 	// automation for this AIGatewayDataPlane. The user is expected to configure
 	// Konnect (or any other) connectivity manually, e.g. by supplying the
 	// required env vars and cert volume through Deployment.PodTemplateSpec.
+	//
+	// This field is immutable once set: it can be added later, but not
+	// removed or changed to a different reference.
 	//
 	// +optional
 	ControlPlaneRef *ControlPlaneRef `json:"controlPlaneRef,omitempty"`
