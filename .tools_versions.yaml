@@ -52,4 +52,4 @@ cert-manager: "1.21.1"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
 chainsaw: "v0.2.15"
 # renovate: datasource=github-releases depName=fullstorydev/grpcurl
-grpcurl: "v1.9.3"
+grpcurl: "v1.9.4"
