@@ -784,7 +784,7 @@ test.integration-bluegreen: download.telepresence
 	-ldflags "$(LDFLAGS_COMMON) $(LDFLAGS) $(LDFLAGS_METADATA)" \
 	-race -v \
 	-coverprofile="coverage.integration-bluegreen.out" \
-	./test/integration/
+	./test/integration/ko
 
 .PHONY: test.integration-validatingwebhook
 test.integration-validatingwebhook: download.telepresence

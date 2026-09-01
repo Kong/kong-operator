@@ -34,7 +34,7 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
     name: ${{ format('{0} {1} {2} {3} - {4}', matrix.suite, matrix.kong-variant, matrix.router_flavor, matrix.ip_family, inputs.cluster_version) }}
-    # Only the ko/ipv6 leg opts into this (see matrix below): IPv6 cluster support
+    # Only the ipv6 legs opt into this (see matrix below): IPv6 cluster support
     # is new (tracked in #5348) and shouldn't block merges yet while it proves out.
     continue-on-error: ${{ matrix.continue-on-error || false }}
     strategy:
@@ -50,6 +50,9 @@ jobs:
           - suite: kic
             kong-variant: oss
           - suite: bluegreen
+          - suite: bluegreen
+            ip_family: ipv6
+            continue-on-error: true
           - suite: validatingwebhook
             router_flavor: traditional_compatible
           - suite: validatingwebhook
