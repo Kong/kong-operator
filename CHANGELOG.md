@@ -378,7 +378,7 @@
   `0.0.0.0:<port> ssl reuseport, [::]:<port> ssl reuseport`) are preserved for each
   listener port. Defaults to `0.0.0.0` and `reuseport` when unset.
   [#4755](https://github.com/Kong/kong-operator/pull/4755)
-- `Konnect: prevent orphaned and duplicate Konnect entities when reconciliation
+- `Konnect`: prevent orphaned and duplicate Konnect entities when reconciliation
   races with the cached client. The cleanup finalizer is now added before the entity
   is created in Konnect, and the freshly created Konnect ID is kept in an in-memory
   store until the cached status reflects it. This lets deletion recover a missing
