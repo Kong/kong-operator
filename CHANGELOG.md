@@ -137,8 +137,9 @@
   containers (e.g. `mcp-server` or `init-mcp-server`). Names that don't match a container the
   operator manages are ignored.
 - Support using `tags` field in `KongPlugin` and `KongClusterPlugin` to specify
-  tags in generated Kong plugins in on-prem gateways.
+  tags in generated Kong plugins in on-prem gateways and Konnect hybrid gateways.
   [#5325](https://github.com/Kong/kong-operator/pull/5325)
+  [#5354](https://github.com/Kong/kong-operator/pull/5354)
 
 ### Changed
 
