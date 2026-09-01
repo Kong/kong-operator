@@ -28,7 +28,7 @@ func testGeneratedKonnectEventGatewayForSDKOps() *konnectv1alpha1.KonnectEventGa
 			Generation: 3,
 		},
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
-			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+			APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{
 				Description:       "test-value",
 				Labels:            konnectv1alpha1.Labels{"test-key": "test-value"},
 				MinRuntimeVersion: "test-value",

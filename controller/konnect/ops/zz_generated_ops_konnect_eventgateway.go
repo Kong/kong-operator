@@ -8,6 +8,7 @@ import (
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -17,6 +18,19 @@ func createKonnectEventGateway(
 	sdk sdkkonnectgo.EventGatewaysSDK,
 	obj *konnectv1alpha1.KonnectEventGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		id := string(obj.Spec.Mirror.Konnect.ID)
+		resp, err := sdk.GetEventGateway(ctx, id)
+		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
+			return errWrap
+		}
+		if resp == nil || resp.EventGatewayInfo == nil {
+			return fmt.Errorf("failed getting mirrored %s: %w", obj.GetTypeName(), ErrNilResponse)
+		}
+		obj.SetKonnectID(id)
+		return nil
+	}
 	req, err := obj.Spec.APISpec.ToCreateGatewayRequest()
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
@@ -40,6 +54,9 @@ func updateKonnectEventGateway(
 	sdk sdkkonnectgo.EventGatewaysSDK,
 	obj *konnectv1alpha1.KonnectEventGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 	req, err := obj.Spec.APISpec.ToUpdateGatewayRequest()
 	if err != nil {
@@ -61,6 +78,9 @@ func deleteKonnectEventGateway(
 	sdk sdkkonnectgo.EventGatewaysSDK,
 	obj *konnectv1alpha1.KonnectEventGateway,
 ) error {
+	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
+		return nil
+	}
 	id := obj.GetKonnectStatus().GetKonnectID()
 
 	_, err := sdk.DeleteEventGateway(ctx, id)

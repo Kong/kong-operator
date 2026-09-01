@@ -256,7 +256,7 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 								Name: "test-auth",
 							},
 						},
-						APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+						APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{
 							Name: "event-cp",
 						},
 					},

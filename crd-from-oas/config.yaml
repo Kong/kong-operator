@@ -759,6 +759,8 @@ apiGroupVersions:
       # Event Gateway APIs
       - path: /v1/event-gateways
         name: KonnectEventGateway
+        source:
+          supportsMirror: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.EventGatewaysSDK
