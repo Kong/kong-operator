@@ -6,10 +6,12 @@
 - [v2.3.0-rc.3](#v230-rc3)
 - [v2.3.0-rc.2](#v230-rc2)
 - [v2.3.0-rc.1](#v230-rc1)
+- [v2.2.4](#v224)
 - [v2.2.3](#v223)
 - [v2.2.2](#v222)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
+- [v2.1.10](#v2110)
 - [v2.1.9](#v219)
 - [v2.1.8](#v218)
 - [v2.1.7](#v217)
@@ -20,6 +22,7 @@
 - [v2.1.2](#v212)
 - [v2.1.1](#v211)
 - [v2.1.0](#v210)
+- [v2.0.12](#v2012)
 - [v2.0.11](#v2011)
 - [v2.0.10](#v2010)
 - [v2.0.9](#v209)
@@ -597,9 +600,43 @@
   whenever a relevant CRD changes at runtime.
   [#4795](https://github.com/Kong/kong-operator/pull/4795)
 
+## [v2.2.4]
+
+> Release date: 2026-08-27
+
+### Fixes
+
+- Konnect entities whose cross-namespace `controlPlaneRef` was permitted by a
+  `KongReferenceGrant` no longer get stuck during deletion when that grant is
+  removed first. The grant is now enforced only while the entity is not being
+  deleted, allowing its Konnect counterpart and cleanup finalizer to be removed.
+  [#5229](https://github.com/Kong/kong-operator/pull/5229) [#5232](https://github.com/Kong/kong-operator/pull/5232)
+- DataPlaneMetricsExtension: the reconciler now returns an error (and gets
+  requeued with backoff) when it fails to create, update or delete the
+  Prometheus `KongPlugin` for a Service, instead of logging and giving up.
+  Previously a single transient failure (e.g. a rejected admission webhook
+  call) left the Service without its `konghq.com/plugins` annotation
+  indefinitely, since nothing else would trigger another reconcile.
+  [#5210](https://github.com/Kong/kong-operator/pull/5210) [#5217](https://github.com/Kong/kong-operator/pull/5217)
+- Dataplane: Fixed the method to compare whether dataplane options are deep
+  equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
+  in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
+  `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
+  is changed in dataplane options.
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5104](https://github.com/Kong/kong-operator/pull/5104)
+- Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
+  to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
+  tags in `KongPlugin`s' annotation to plugins in Konnect.
+  [#5280](https://github.com/Kong/kong-operator/pull/5280)
+  [#5284](https://github.com/Kong/kong-operator/pull/5284)
+  [#5334](https://github.com/Kong/kong-operator/pull/5334)
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5370](https://github.com/Kong/kong-operator/pull/5370)
+
 ## [v2.2.3]
 
-> Relaese date: 2026-07-14
+> Release date: 2026-07-14
 
 ### Fixes
 
@@ -977,6 +1014,28 @@
   the transition, both old and new entries may be present in Konnect
   simultaneously as creation and orphan cleanup are not synchronized.
   [#4509](https://github.com/Kong/kong-operator/pull/4509)
+
+## [v2.1.10]
+
+> Release date: 2026-08-27
+
+### Fixes
+
+- Dataplane: Fixed the method to compare whether dataplane options are deep
+  equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
+  in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
+  `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
+  is changed in dataplane options.
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5105](https://github.com/Kong/kong-operator/pull/5105)
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5371](https://github.com/Kong/kong-operator/pull/5371)
+- Hybrid gateway: Propagate tags in the annotation `konghq.com/tags` in `KongPlugin`s
+  to the copies when attached to `HTTPRoute`s and `GRPCRoute`s to propagate the
+  tags in `KongPlugin`s' annotation to plugins in Konnect.
+  [#5280](https://github.com/Kong/kong-operator/pull/5280)
+  [#5284](https://github.com/Kong/kong-operator/pull/5284)
+  [#5400](https://github.com/Kong/kong-operator/pull/5400)
 
 ## [v2.1.9]
 
@@ -1515,6 +1574,22 @@
   `spec.listeners.tls.certificateRef`, ensuring Gateway status conditions
   are updated when referenced certificates change.
   [#2661](https://github.com/Kong/kong-operator/pull/2661)
+
+## [v2.0.12]
+
+> Release date: 2026-08-27
+
+### Fixes
+
+- Konnect entities: Fix truncating of tags to cut at 128 unicode runes
+  (UTF8 code points).
+  [#5306](https://github.com/Kong/kong-operator/pull/5306) [#5372](https://github.com/Kong/kong-operator/pull/5372)
+- Dataplane: Fixed the method to compare whether dataplane options are deep
+  equal to ensure that `HorizontalPodAutoscaler` is updated when it is changed
+  in `GatewayConfiguration`. Also fixed the calculation of the spec hash in the
+  `Deployment` to skip reconciliation of deployments if only `deployment.scaling`
+  is changed in dataplane options.
+  [#5003](https://github.com/Kong/kong-operator/pull/5003) [#5373](https://github.com/Kong/kong-operator/pull/5373)
 
 ## [v2.0.11]
 
@@ -2955,10 +3030,12 @@ re-installing the operator through the bundle.
 [v2.3.0-rc.3]: https://github.com/Kong/kong-operator/compare/v2.3.0-rc.2..v2.3.0-rc.3
 [v2.3.0-rc.2]: https://github.com/Kong/kong-operator/compare/v2.3.0-rc.1..v2.3.0-rc.2
 [v2.3.0-rc.1]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.3.0-rc.1
+[v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
+[v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
 [v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
 [v2.1.7]: https://github.com/Kong/kong-operator/compare/v2.1.6..v2.1.7
@@ -2969,6 +3046,7 @@ re-installing the operator through the bundle.
 [v2.1.2]: https://github.com/Kong/kong-operator/compare/v2.1.1..v2.1.2
 [v2.1.1]: https://github.com/Kong/kong-operator/compare/v2.1.0..v2.1.1
 [v2.1.0]: https://github.com/Kong/kong-operator/compare/v2.0.5..v2.1.0
+[v2.0.12]: https://github.com/Kong/kong-operator/compare/v2.0.11..v2.0.12
 [v2.0.11]: https://github.com/Kong/kong-operator/compare/v2.0.10..v2.0.11
 [v2.0.10]: https://github.com/Kong/kong-operator/compare/v2.0.9..v2.0.10
 [v2.0.9]: https://github.com/Kong/kong-operator/compare/v2.0.8..v2.0.9
