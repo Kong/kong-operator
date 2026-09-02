@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/samber/lo"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -21,7 +22,12 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	t.Parallel()
 
 	const (
-		waitTime = 10 * time.Second
+		// Waiting for translation-failure events means waiting for the manager to
+		// start and its informer caches to sync. Under `-parallel 4` envtest with
+		// -race + coverage that alone has been observed to take ~9s in CI, so keep
+		// this generous - same as assertExpectedEvents in
+		// configerrorevent_envtest_test.go.
+		waitTime = time.Minute
 		tickTime = 100 * time.Millisecond
 	)
 
@@ -115,27 +121,25 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 
 	RunManager(ctx, t, cfg, AdminAPIOptFns(), WithProxySyncInterval(500*time.Millisecond))
 
-	require.Eventually(t, func() bool {
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
 		events := &corev1.EventList{}
-		err := client.List(ctx, events, &ctrlclient.ListOptions{
+		if !assert.NoError(c, client.List(ctx, events, &ctrlclient.ListOptions{
 			Namespace: ns.Name,
-		})
-		if err != nil {
-			t.Logf("Failed to list events in namespace %s: %v", ns.Name, err)
-			return false
+		})) {
+			return
 		}
 
 		for name, msg := range kongConsumerTranslationFailureMessages {
-			// find the translation failure event attached to each expected KongConumser.
+			// find the translation failure event attached to each expected KongConsumer.
 			_, found := lo.Find(events.Items, func(e corev1.Event) bool {
 				return e.InvolvedObject.Kind == "KongConsumer" && e.InvolvedObject.Name == name &&
 					e.Reason == "KongConfigurationTranslationFailed" &&
 					strings.Contains(e.Message, msg)
 			})
-			if !found {
-				return false
-			}
+			assert.Truef(c, found,
+				"no KongConfigurationTranslationFailed event for KongConsumer %q containing %q; observed events:\n%s",
+				name, msg, formatObservedEvents(events.Items),
+			)
 		}
-		return true
 	}, waitTime, tickTime)
 }
