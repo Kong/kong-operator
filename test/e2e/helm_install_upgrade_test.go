@@ -152,9 +152,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -224,9 +224,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -586,19 +586,6 @@ func gatewayDataPlaneDeploymentIsNotPatched(
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
 		if d.Generation != 1 {
 			return fmt.Errorf("Gateway's DataPlane Deployment %q got patched but it shouldn't:\n%# v",
-				client.ObjectKeyFromObject(d), pretty.Formatter(d),
-			)
-		}
-		return nil
-	})
-}
-
-func gatewayDataPlaneDeploymentIsPatched(
-	gatewayLabelSelector string,
-) func(context.Context, *assert.CollectT, client.Client) {
-	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
-		if d.Generation == 1 {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q is not patched but it should be:\n%# v",
 				client.ObjectKeyFromObject(d), pretty.Formatter(d),
 			)
 		}
