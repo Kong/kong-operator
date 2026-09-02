@@ -46,9 +46,14 @@ func TestTelemetry(t *testing.T) {
 	createK8sObjectsForTelemetryTest(ctx, t, c)
 
 	t.Log("starting the controller manager")
+	// NOTE: the telemetry period also doubles as the per-report context deadline in
+	// kubernetes-telemetry's workflowsLoop (ctx, cancel := context.WithTimeout(ctx, m.period)).
+	// A provider that misses that deadline (e.g. k8s_provider, which makes two sequential API
+	// calls: discovery + node list) is silently dropped from the report rather than failing it.
+	// Keep this generous enough to avoid flakes under CI load.
 	_ = RunManager(ctx, t, envcfg, AdminAPIOptFns(),
 		WithDefaultEnvTestsConfig(envcfg),
-		WithTelemetry(ts.Endpoint(), 100*time.Millisecond),
+		WithTelemetry(ts.Endpoint(), time.Second),
 	)
 
 	dcl, err := discoveryclient.NewDiscoveryClientForConfig(envcfg)
@@ -58,7 +63,7 @@ func TestTelemetry(t *testing.T) {
 
 	t.Log("verifying that eventually we get an expected telemetry report")
 	const (
-		waitTime = 3 * time.Second
+		waitTime = 30 * time.Second
 		tickTime = 10 * time.Millisecond
 	)
 	require.Eventuallyf(t, func() bool {
