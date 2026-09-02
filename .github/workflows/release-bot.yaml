@@ -14,6 +14,15 @@ permissions:
 
 jobs:
   look_for_release:
+    # NOTE: skip the branch-creation echo from create-release-branch (below),
+    # which creates the release branch with PAT_GITHUB (team-k8s-bot) and so
+    # emits its own push event. Without this, that push re-runs this workflow
+    # on the new branch, matches the same release commit again, and
+    # publish-release fails because the GitHub release already exists.
+    # Gated on the actor too (not just `created`) so a manually created
+    # release/X.Y.x branch whose tip already carries a real release commit
+    # is not silently skipped.
+    if: ${{ !(github.event.created && github.actor == 'team-k8s-bot') }}
     outputs:
       release_found: ${{ steps.commit_parser.outputs.release_found }}
       release_type: ${{ steps.commit_parser.outputs.release_type }}
@@ -130,7 +139,7 @@ jobs:
 
   create-release-branch:
     permissions:
-      contents: write
+      contents: read
     needs:
       - look_for_release
       - publish-release
@@ -150,7 +159,11 @@ jobs:
           egress-policy: audit
       - uses: peterjgrainger/action-create-branch@4b81ce657e255acd677cc6c55c9c763654be3aef # v4.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NOTE: secrets.GITHUB_TOKEN (github-actions[bot]) is not a bypass
+          # actor on the release-branches ruleset, so creating refs/heads/release/*
+          # with it is rejected ("Reference update failed"). Use the bot PAT
+          # (team-k8s-bot), which is a bypass actor, instead.
+          GITHUB_TOKEN: ${{ secrets.PAT_GITHUB }}
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
@@ -169,8 +182,13 @@ jobs:
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          branch: ${{ env.RELEASE_BRANCH }}
+          # NOTE: use a dedicated head branch, not RELEASE_BRANCH itself - with
+          # delete-branch: true, merging this PR would otherwise delete the
+          # freshly created release branch. Use PAT_GITHUB so the PR is
+          # attributed to team-k8s-bot: GITHUB_TOKEN-authored PRs don't trigger
+          # pull_request-triggered required checks, so this PR could never merge.
+          token: ${{ secrets.PAT_GITHUB }}
+          branch: "chore/charts-sync-${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
           base: main
           delete-branch: true
           title: "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
@@ -183,7 +201,7 @@ jobs:
 
   create-cherry-pick-branch-to-main:
     permissions:
-      contents: write
+      contents: read
     needs:
       - look_for_release
       - publish-release
@@ -219,7 +237,10 @@ jobs:
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # NOTE: use PAT_GITHUB, not GITHUB_TOKEN - a GITHUB_TOKEN-authored PR
+          # doesn't trigger pull_request-triggered required checks, so it could
+          # never merge into main.
+          token: ${{ secrets.PAT_GITHUB }}
           branch: ${{ env.CHERRYPICK_BRANCH }}
           base: main
           delete-branch: true
