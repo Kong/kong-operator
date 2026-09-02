@@ -223,15 +223,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 
 	t.Log("removing the parentrefs from the HTTPRoute")
 	oldParentRefs := httpRoute.Spec.ParentRefs
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		if !assert.NoError(c, err) {
-			return
-		}
-		httpRoute.Spec.ParentRefs = nil
-		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		assert.NoError(c, err)
-	}, time.Minute, time.Second)
+	httpRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(ns.Name), httpRoute.Name, func(r *gatewayapi.HTTPRoute) {
+		r.Spec.ParentRefs = nil
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback = helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
@@ -241,15 +236,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	helpers.EventuallyGETPath(t, proxyHTTPURL, proxyHTTPURL.Host, "/test-http-route-essentials", nil, http.StatusNotFound, "", emptyHeaderSet, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Get(ctx, httpRoute.Name, metav1.GetOptions{})
-		if !assert.NoError(c, err) {
-			return
-		}
-		httpRoute.Spec.ParentRefs = oldParentRefs
-		httpRoute, err = gatewayClient.GatewayV1().HTTPRoutes(ns.Name).Update(ctx, httpRoute, metav1.UpdateOptions{})
-		assert.NoError(c, err)
-	}, time.Minute, time.Second)
+	httpRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().HTTPRoutes(ns.Name), httpRoute.Name, func(r *gatewayapi.HTTPRoute) {
+		r.Spec.ParentRefs = oldParentRefs
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.HTTPProtocolType, ns.Name, httpRoute.Name)
