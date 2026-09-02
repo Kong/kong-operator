@@ -370,17 +370,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseTCP(t, tcpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-			assert.Eventually(t, func() bool {
-				tcpRoute, err = gatewayClient.GatewayV1().TCPRoutes(namespace).Get(ctx, tcpRoute.Name, metav1.GetOptions{})
-				if err != nil {
-					return false
-				}
+			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TCPRoutes(namespace), tcpRoute.Name, func(r *gatewayapi.TCPRoute) {
 				notExistingPort := gatewayapi.PortNumber(81)
-				tcpRoute.Spec.ParentRefs[0].Port = &notExistingPort
-				tcpRoute.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
-				tcpRoute, err = gatewayClient.GatewayV1().TCPRoutes(namespace).Update(ctx, tcpRoute, metav1.UpdateOptions{})
-				return err == nil
-			}, time.Minute, time.Second)
+				r.Spec.ParentRefs[0].Port = &notExistingPort
+				r.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
+			})
+			assert.NoError(t, err)
 
 			t.Log("verifying that the TCPRoute does not respond after specifying a port not existent in Gateway")
 			assertEventuallyNoResponseTCP(t, tcpGatewayURL)
