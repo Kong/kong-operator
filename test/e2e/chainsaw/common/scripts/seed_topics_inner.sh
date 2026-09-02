@@ -30,31 +30,30 @@ TOPICS="analytics_pageviews analytics_clicks analytics_orders \
         user_actions"
 
 ATTEMPT=0
+LAST_ERR=""
 while [ "${ATTEMPT}" -lt "${MAX_RETRIES}" ]; do
   ATTEMPT=$((ATTEMPT + 1))
 
-  ALL_OK=true
+  # List first and only create what's missing. Previously this created every
+  # topic on every attempt: once a topic already existed from an earlier
+  # (partially successful) attempt, kafkactl's create call for it failed with
+  # a "topic already exists" error, which the loop treated the same as a real
+  # failure. That permanently poisoned every subsequent attempt (the list
+  # verification below was only reached when ALL creates reported success),
+  # so a single transient failure on the first attempt guaranteed the loop
+  # burned through its entire retry budget and failed, no matter how quickly
+  # Kafka actually became ready.
+  LISTED=$(kafkactl -C /tmp/kafkactl.yml --context backend list topics 2>&1) || { LAST_ERR="list topics: ${LISTED}"; LISTED=""; }
+
+  MISSING=""
   for TOPIC in ${TOPICS}; do
-    if ! kafkactl -C /tmp/kafkactl.yml --context backend \
-        create topic "${TOPIC}" \
-        --partitions 3 --replication-factor 3 >/dev/null 2>&1; then
-      ALL_OK=false
+    if ! echo "${LISTED}" | grep -qF "${TOPIC}"; then
+      MISSING="${MISSING} ${TOPIC}"
     fi
   done
 
-  if [ "${ALL_OK}" = "true" ]; then
-    # Verify topics are visible.
-    LISTED=$(kafkactl -C /tmp/kafkactl.yml --context backend \
-      list topics 2>/dev/null || true)
-    MISSING=""
-    for TOPIC in ${TOPICS}; do
-      if ! echo "${LISTED}" | grep -qF "${TOPIC}"; then
-        MISSING="${MISSING} ${TOPIC}"
-      fi
-    done
-
-    if [ -z "${MISSING}" ]; then
-      cat <<EOF
+  if [ -z "${MISSING}" ]; then
+    cat <<EOF
 {
   "success": true,
   "message": "All topics created successfully",
@@ -62,17 +61,29 @@ while [ "${ATTEMPT}" -lt "${MAX_RETRIES}" ]; do
   "max_retries": ${MAX_RETRIES}
 }
 EOF
-      exit 0
-    fi
+    exit 0
   fi
+
+  for TOPIC in ${MISSING}; do
+    if ! OUT=$(kafkactl -C /tmp/kafkactl.yml --context backend \
+        create topic "${TOPIC}" \
+        --partitions 3 --replication-factor 3 2>&1); then
+      LAST_ERR="create ${TOPIC}: ${OUT}"
+    fi
+  done
 
   if [ "${ATTEMPT}" -lt "${MAX_RETRIES}" ]; then sleep "${RETRY_DELAY}"; fi
 done
 
+# Emit the last kafkactl error as JSON-escaped text so a future failure is
+# diagnosable instead of silently exhausting retries (see incident where this
+# ran for the full retry budget with no visible cause).
+ESCAPED_ERR=$(printf '%s' "${LAST_ERR}" | sed 's/\\/\\\\/g; s/"/\\"/g' | tr '\n' ' ')
 cat <<EOF
 {
   "success": false,
   "error": "Failed to create/verify all topics after ${MAX_RETRIES} attempts",
+  "last_error": "${ESCAPED_ERR}",
   "retry_attempt": ${ATTEMPT},
   "max_retries": ${MAX_RETRIES}
 }

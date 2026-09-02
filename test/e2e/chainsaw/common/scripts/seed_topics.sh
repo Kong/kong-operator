@@ -20,4 +20,4 @@ cat "${SCRIPT_DIR}/seed_topics_inner.sh" | kubectl run "${POD_NAME}" \
   --rm -i --restart=Never \
   --env="KAFKA_BOOTSTRAP=${KAFKA_BOOTSTRAP}" \
   -n "${NAMESPACE}" \
-  --command -- sh -s 2>/dev/null | grep -v '^pod "'
+  --command -- sh -s 2>&1 | grep -v '^pod "'

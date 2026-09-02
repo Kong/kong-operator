@@ -116,6 +116,15 @@ spec:
                             -c /tmp/kraft.properties
                         fi
                         exec /opt/kafka/bin/kafka-server-start.sh /tmp/kraft.properties
+                    # Requests (no limits, to avoid OOM-killing the JVM under the
+                    # default ~1G heap) give each broker a guaranteed CPU/memory
+                    # floor so it isn't starved when the CI node is busy running
+                    # other tests, which previously made topic creation slow
+                    # enough to exhaust Seed-kafka-topics' retry budget.
+                    resources:
+                      requests:
+                        cpu: 250m
+                        memory: 768Mi
                     readinessProbe:
                       tcpSocket:
                         port: 9092
