@@ -115,7 +115,22 @@ func Suite(m *testing.M, opts ...SuiteOption) {
 	fmt.Println("INFO: configuring cluster for testing environment")
 	env, err = testutils.BuildEnvironment(GetCtx(), existingCluster,
 		func(b *environments.Builder, ct clusters.Type) {
-			if !test.IsCalicoCNIDisabled() {
+			ipFamily := clusters.IPv4
+			if existingCluster == "" {
+				ipFamily = test.ClusterIPFamily()
+			}
+			switch ipFamily {
+			case clusters.IPv6:
+				b.WithIPv6Only()
+			case clusters.Dual:
+				exitOnErr(fmt.Errorf("dual-stack test clusters are not yet supported (KONG_TEST_CLUSTER_IP_FAMILY=dual)"))
+			case clusters.IPv4:
+				// KIND's default, nothing to configure.
+			}
+			// Calico's default manifest hardcodes an IPv4 pool CIDR, which breaks
+			// pod networking on an IPv6-only cluster. KIND's default CNI already
+			// supports IPv6-only clusters, so skip Calico in that case.
+			if !test.IsCalicoCNIDisabled() && ipFamily != clusters.IPv6 {
 				b.WithCalicoCNI()
 			}
 			if !test.IsCertManagerDisabled() {
