@@ -116,6 +116,17 @@ const (
 )
 
 const (
+	// KongConsumerGroupRefsValidConditionType is the type of the condition that indicates
+	// whether the KongConsumerGroups referenced by the entity are valid and all point to
+	// existing KongConsumerGroups.
+	//
+	// NOTICE: This intentionally keeps the historical "KongConsumerGroupRefsValid" value
+	// (distinct from the shared commonv1alpha1.ConsumerGroupRefsValidConditionType) for compatibility,
+	//  so that upgrades don't leave a stale duplicate condition on existing KongConsumers.
+	KongConsumerGroupRefsValidConditionType = "KongConsumerGroupRefsValid"
+)
+
+const (
 	// KongUpstreamRefValidConditionType is the type of the condition that indicates
 	// whether the KongUpstream reference is valid and points to an existing KongUpstream.
 	KongUpstreamRefValidConditionType = "KongUpstreamRefValid"

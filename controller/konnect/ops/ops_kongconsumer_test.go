@@ -20,6 +20,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
@@ -182,7 +183,7 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 	assert.Equal(t, "cons-2", consumer.GetKonnectID())
 
 	cond, found := lo.Find(consumer.Status.Conditions, func(c metav1.Condition) bool {
-		return c.Type == string(commonv1alpha1.ConsumerGroupRefsValidConditionType)
+		return c.Type == string(konnectv1alpha1.KongConsumerGroupRefsValidConditionType)
 	})
 	require.True(t, found, "expected KongConsumerGroupRefsValid condition to be set")
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
