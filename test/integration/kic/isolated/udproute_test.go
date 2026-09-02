@@ -370,17 +370,12 @@ func TestUDPRouteEssentials(t *testing.T) {
 			assertEventuallyResponseUDP(t, udpGatewayURL, test1UUID)
 
 			t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-			assert.Eventually(t, func() bool {
-				udpRoute, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Get(ctx, udpRoute.Name, metav1.GetOptions{})
-				if err != nil {
-					return false
-				}
+			_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().UDPRoutes(namespace), udpRoute.Name, func(r *gatewayapi.UDPRoute) {
 				notExistingPort := gatewayapi.PortNumber(81)
-				udpRoute.Spec.ParentRefs[0].Port = &notExistingPort
-				udpRoute.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
-				udpRoute, err = gatewayClient.GatewayV1().UDPRoutes(namespace).Update(ctx, udpRoute, metav1.UpdateOptions{})
-				return err == nil
-			}, time.Minute, time.Second)
+				r.Spec.ParentRefs[0].Port = &notExistingPort
+				r.Spec.ParentRefs[0].Name = gatewayapi.ObjectName(service1Name)
+			})
+			assert.NoError(t, err)
 
 			t.Log("verifying that the UDPRoute does not respond after specifying a port not existent in Gateway")
 			assertEventuallyNoResponseUDP(t, udpGatewayURL)
