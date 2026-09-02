@@ -60,7 +60,7 @@ func TestHelmUpgrade(t *testing.T) {
 	// This is the latest Chart available publicly (used by actual users) that we can upgrade from.
 	const (
 		lastReleasedChart        = "oci://docker.io/kong/kong-operator-chart"
-		lastReleasedChartVersion = "1.3.1" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
+		lastReleasedChartVersion = "1.4.0" // renovate: datasource=docker depName=kong/kong-operator-chart versioning=docker
 	)
 	// This is the Chart and image from current state of the repository that we want to upgrade to.
 	// Image has to be loaded into the cluster beforehand and specified via KONG_TEST_KONG_OPERATOR_IMAGE_LOAD
@@ -152,9 +152,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(onPremGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -224,9 +224,9 @@ func TestHelmUpgrade(t *testing.T) {
 							},
 						},
 						{
-							Name: "DataPlane deployment is patched after operator upgrade (adjusting securityContext)",
+							Name: "DataPlane deployment is not patched after operator upgrade",
 							Func: func(c *assert.CollectT, cl *testutils.K8sClients) {
-								gatewayDataPlaneDeploymentIsPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
+								gatewayDataPlaneDeploymentIsNotPatched(hybridGatewayLabelSelector)(ctx, c, cl.MgrClient)
 							},
 						},
 						{
@@ -586,19 +586,6 @@ func gatewayDataPlaneDeploymentIsNotPatched(
 	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
 		if d.Generation != 1 {
 			return fmt.Errorf("Gateway's DataPlane Deployment %q got patched but it shouldn't:\n%# v",
-				client.ObjectKeyFromObject(d), pretty.Formatter(d),
-			)
-		}
-		return nil
-	})
-}
-
-func gatewayDataPlaneDeploymentIsPatched(
-	gatewayLabelSelector string,
-) func(context.Context, *assert.CollectT, client.Client) {
-	return gatewayDataPlaneDeploymentCheck(gatewayLabelSelector, func(d *appsv1.Deployment) error {
-		if d.Generation == 1 {
-			return fmt.Errorf("Gateway's DataPlane Deployment %q is not patched but it should be:\n%# v",
 				client.ObjectKeyFromObject(d), pretty.Formatter(d),
 			)
 		}
