@@ -187,7 +187,7 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 	})
 	require.True(t, found, "expected KongConsumerGroupRefsValid condition to be set")
 	assert.Equal(t, metav1.ConditionTrue, cond.Status)
-	assert.Equal(t, konnectv1alpha1.KongConsumerGroupRefsReasonValid, cond.Reason)
+	assert.Equal(t, commonv1alpha1.ConsumerGroupRefsReasonValid, cond.Reason)
 }
 
 func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {

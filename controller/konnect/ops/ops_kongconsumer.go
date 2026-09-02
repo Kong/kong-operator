@@ -231,7 +231,7 @@ func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidCons
 			k8sutils.NewConditionWithGeneration(
 				konnectv1alpha1.KongConsumerGroupRefsValidConditionType,
 				metav1.ConditionFalse,
-				konnectv1alpha1.KongConsumerGroupRefsReasonInvalid,
+				commonv1alpha1.ConsumerGroupRefsReasonInvalid,
 				fmt.Sprintf("Invalid ConsumerGroup references: %s", strings.Join(reasons, ", ")),
 				consumer.GetGeneration(),
 			),
@@ -242,7 +242,7 @@ func populateConsumerGroupRefsValidCondition(invalidConsumerGroups []invalidCons
 			k8sutils.NewConditionWithGeneration(
 				konnectv1alpha1.KongConsumerGroupRefsValidConditionType,
 				metav1.ConditionTrue,
-				konnectv1alpha1.KongConsumerGroupRefsReasonValid,
+				commonv1alpha1.ConsumerGroupRefsReasonValid,
 				"",
 				consumer.GetGeneration(),
 			),

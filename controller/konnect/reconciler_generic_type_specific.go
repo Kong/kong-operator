@@ -11,10 +11,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
-	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
@@ -148,28 +147,15 @@ type konnectReferenceResolver interface {
 // reference declared on ent's spec (references with
 // SupportCrossNamespaceReference: true whose target namespace differs from
 // the entity's own) that must be authorized by a KongReferenceGrant before
-// ResolveKonnectReferences is called. Each generated API group package emits
-// its own identically-shaped CrossNamespaceReferenceCheck type, so ent's
-// CrossNamespaceSiblingReferences method (if any) is detected against every
-// known package's copy and converted to the common configurationv1alpha1 shape.
-func crossNamespaceSiblingReferences(ent any) []configurationv1alpha1.CrossNamespaceReferenceCheck {
-	switch r := ent.(type) {
-	case interface {
-		CrossNamespaceSiblingReferences() []configurationv1alpha1.CrossNamespaceReferenceCheck
-	}:
-		return r.CrossNamespaceSiblingReferences()
-	case interface {
-		CrossNamespaceSiblingReferences() []aiconfigurationv1alpha1.CrossNamespaceReferenceCheck
-	}:
-		checks := r.CrossNamespaceSiblingReferences()
-		out := make([]configurationv1alpha1.CrossNamespaceReferenceCheck, len(checks))
-		for i, c := range checks {
-			out[i] = configurationv1alpha1.CrossNamespaceReferenceCheck(c)
-		}
-		return out
-	default:
+// ResolveKonnectReferences is called.
+func crossNamespaceSiblingReferences(ent any) []commonv1alpha1.CrossNamespaceReferenceCheck {
+	r, ok := ent.(interface {
+		CrossNamespaceSiblingReferences() []commonv1alpha1.CrossNamespaceReferenceCheck
+	})
+	if !ok {
 		return nil
 	}
+	return r.CrossNamespaceSiblingReferences()
 }
 
 // handleKonnectReferences authorizes any cross-namespace sibling references
@@ -197,7 +183,7 @@ func handleKonnectReferences[
 // handler uses (see ensureKongReferenceGrantForParentRef). Returns nil when
 // checks is empty (the common case today, since no ReferenceConfig entry sets
 // SupportCrossNamespaceReference yet) without listing any KongReferenceGrant.
-func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client, checks []configurationv1alpha1.CrossNamespaceReferenceCheck) error {
+func checkCrossNamespaceSiblingReferences(ctx context.Context, cl client.Client, checks []commonv1alpha1.CrossNamespaceReferenceCheck) error {
 	var errs []error
 	for _, c := range checks {
 		if err := crossnamespace.CheckKongReferenceGrantForResource(ctx, cl, c.FromNamespace, c.ToNamespace, c.ToName, c.FromGVK, c.ToGVK); err != nil {
@@ -217,9 +203,9 @@ func setKonnectReferencesResolvedCondition[
 	if err == nil {
 		updated = patch.SetStatusWithConditionIfDifferent(
 			ent,
-			kcfgconsts.ConditionType(configurationv1alpha1.KonnectReferencesResolvedConditionType),
+			kcfgconsts.ConditionType(commonv1alpha1.KonnectReferencesResolvedConditionType),
 			metav1.ConditionTrue,
-			kcfgconsts.ConditionReason(configurationv1alpha1.KonnectReferencesResolvedReasonResolved),
+			kcfgconsts.ConditionReason(commonv1alpha1.KonnectReferencesResolvedReasonResolved),
 			"",
 		)
 		return updated, false, nil
@@ -232,7 +218,7 @@ func setKonnectReferencesResolvedCondition[
 	reason := konnectReferenceResolutionReason(err)
 	updated = patch.SetStatusWithConditionIfDifferent(
 		ent,
-		kcfgconsts.ConditionType(configurationv1alpha1.KonnectReferencesResolvedConditionType),
+		kcfgconsts.ConditionType(commonv1alpha1.KonnectReferencesResolvedConditionType),
 		metav1.ConditionFalse,
 		kcfgconsts.ConditionReason(reason),
 		err.Error(),
@@ -243,18 +229,18 @@ func setKonnectReferencesResolvedCondition[
 func konnectReferenceResolutionReason(err error) string {
 	reasons := konnectReferenceResolutionReasons(err)
 	if len(reasons) > 1 {
-		return configurationv1alpha1.KonnectReferencesResolvedReasonResolutionFailed
+		return commonv1alpha1.KonnectReferencesResolvedReasonResolutionFailed
 	}
 	if reasons[referenceResolutionReasonInvalid] {
-		return configurationv1alpha1.KonnectReferencesResolvedReasonInvalid
+		return commonv1alpha1.KonnectReferencesResolvedReasonInvalid
 	}
 	if reasons[referenceResolutionReasonNotPermitted] {
-		return configurationv1alpha1.KonnectReferencesResolvedReasonNotPermitted
+		return commonv1alpha1.KonnectReferencesResolvedReasonNotPermitted
 	}
 	if reasons[referenceResolutionReasonNotFound] {
-		return configurationv1alpha1.KonnectReferencesResolvedReasonNotFound
+		return commonv1alpha1.KonnectReferencesResolvedReasonNotFound
 	}
-	return configurationv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
+	return commonv1alpha1.KonnectReferencesResolvedReasonNotProgrammed
 }
 
 type referenceResolutionReasonCategory string
@@ -312,28 +298,16 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 		}
 		return true
 	}
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotFoundError](err); ok {
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotFoundError](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotProgrammedError](err); ok {
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceCrossNamespaceError](err); ok {
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceDifferentGatewayError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceNotFoundError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceNotProgrammedError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceCrossNamespaceError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceDifferentGatewayError](err); ok {
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
 		return true
 	}
 	if crossnamespace.IsReferenceNotGranted(err) {
@@ -343,19 +317,11 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasInvalidKonnectReferenceResolutionError(err error) bool {
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceCrossNamespaceError](err); ok {
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceCrossNamespaceError](err); ok {
 		return true
 	}
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceDifferentGatewayError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceCrossNamespaceError](err); ok {
-		return true
-	}
-	if _, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceDifferentGatewayError](err); ok {
-		return true
-	}
-	return false
+	_, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err)
+	return ok
 }
 
 func hasNotPermittedKonnectReferenceResolutionError(err error) bool {
@@ -363,17 +329,11 @@ func hasNotPermittedKonnectReferenceResolutionError(err error) bool {
 }
 
 func hasNotFoundKonnectReferenceResolutionError(err error) bool {
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotFoundError](err); ok {
-		return true
-	}
-	_, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceNotFoundError](err)
+	_, ok := errors.AsType[commonv1alpha1.ReferenceNotFoundError](err)
 	return ok
 }
 
 func hasNotProgrammedKonnectReferenceResolutionError(err error) bool {
-	if _, ok := errors.AsType[configurationv1alpha1.ReferenceNotProgrammedError](err); ok {
-		return true
-	}
-	_, ok := errors.AsType[aiconfigurationv1alpha1.ReferenceNotProgrammedError](err)
+	_, ok := errors.AsType[commonv1alpha1.ReferenceNotProgrammedError](err)
 	return ok
 }

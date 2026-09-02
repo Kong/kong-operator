@@ -162,3 +162,14 @@ linters:
           - kubeapilinter
         path: api/aigateway/v1alpha1/aigatewaydataplane_types.go
         text: 'requiredfields: field .* has a valid zero value .* but the validation is not complete'
+
+      # NOTE: these are plain Go error/helper types (kubebuilder:object:generate=false),
+      # not serializable API types, so json tags are intentionally absent.
+      - linters:
+          - kubeapilinter
+        path: api/common/v1alpha1/references.go
+        text: 'jsontags: field .* is missing json tag'
+      - linters:
+          - kubeapilinter
+        path: api/common/v1alpha1/references.go
+        text: 'optionalorrequired: field .* must be marked as optional or required'
