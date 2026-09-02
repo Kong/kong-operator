@@ -81,13 +81,10 @@ func TestGatewayClassUpdates(t *testing.T) {
 	}
 
 	t.Log("updating unsupported Gateway to use the supported GatewayClass")
-	require.Eventually(t, func() bool {
-		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		gateway.Spec.GatewayClassName = gatewayv1.ObjectName(gatewayClass.Name)
-		gateway, err = integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name).Update(ctx, gateway, metav1.UpdateOptions{})
-		return err == nil
-	}, testutils.ObjectUpdateTimeout, time.Second)
+	gateway, err = helpers.UpdateWithRetry(ctx, integration.GetClients().GatewayClient.GatewayV1().Gateways(namespace.Name), gateway.Name, func(gw *gwtypes.Gateway) {
+		gw.Spec.GatewayClassName = gatewayv1.ObjectName(gatewayClass.Name)
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the updated Gateway is now considered supported and becomes scheduled")
 	require.Eventually(t, func() bool {

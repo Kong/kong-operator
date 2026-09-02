@@ -238,16 +238,10 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 	}, testutils.GatewayReadyTimeLimit, time.Second)
 
 	t.Log("removing the GatewayConfiguration attachment")
-	require.Eventually(t, func() bool {
-		gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Get(ctx, gatewayClass.Name, metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
-
-		gatewayClass.Spec.ParametersRef = nil
-		gatewayClass, err = integration.GetClients().GatewayClient.GatewayV1().GatewayClasses().Update(ctx, gatewayClass, metav1.UpdateOptions{})
-		return err == nil
-	}, testutils.GatewaySchedulingTimeLimit, time.Second)
+	_, err = helpers.UpdateWithRetry(ctx, integration.GetClients().GatewayClient.GatewayV1().GatewayClasses(), gatewayClass.Name, func(gc *gatewayv1.GatewayClass) {
+		gc.Spec.ParametersRef = nil
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the DataPlane loses the configuration override")
 	require.Eventually(t, func() bool {

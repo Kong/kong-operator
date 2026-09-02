@@ -8,7 +8,6 @@ import (
 	"sync"
 	"syscall"
 	"testing"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
@@ -301,22 +300,25 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("verifying that a Listener has the invalid ref status condition")
-	require.EventuallyWithT(t, func(t *assert.CollectT) {
-		gateway, err = gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gateway.Name, metav1.GetOptions{})
-		require.NoError(t, err)
+	gatewayName := gateway.Name
+	require.EventuallyWithT(t, func(c *assert.CollectT) {
+		gw, err := gatewayClient.GatewayV1().Gateways(ns.Name).Get(ctx, gatewayName, metav1.GetOptions{})
+		if !assert.NoError(c, err) {
+			return
+		}
 		invalid := false
-		for _, status := range gateway.Status.Listeners {
+		for _, status := range gw.Status.Listeners {
 			if ok := util.CheckCondition(
 				status.Conditions,
 				util.ConditionType(gatewayapi.ListenerConditionResolvedRefs),
 				util.ConditionReason(gatewayapi.ListenerReasonRefNotPermitted),
 				metav1.ConditionFalse,
-				gateway.Generation,
+				gw.Generation,
 			); ok {
 				invalid = true
 			}
 		}
-		require.True(t, invalid)
+		assert.True(c, invalid)
 	}, ingressWait, waitTick)
 
 	t.Log("verifying the certificate returns when using a ReferenceGrant with no name restrictions")
@@ -495,13 +497,10 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("removing the parentrefs from the TLSRoute")
 	oldParentRefs := tlsRoute.Spec.ParentRefs
-	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		tlsRoute.Spec.ParentRefs = nil
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
-		return err == nil
-	}, time.Minute, time.Second)
+	tlsRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TLSRoutes(ns.Name), tlsRoute.Name, func(r *gatewayapi.TLSRoute) {
+		r.Spec.ParentRefs = nil
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets unlinked from the route via status")
 	callback := helpers.GetGatewayIsUnlinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
@@ -523,13 +522,10 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("putting the parentRefs back")
-	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
-		require.NoError(t, err)
-		tlsRoute.Spec.ParentRefs = oldParentRefs
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
-		return err == nil
-	}, time.Minute, time.Second)
+	tlsRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TLSRoutes(ns.Name), tlsRoute.Name, func(r *gatewayapi.TLSRoute) {
+		r.Spec.ParentRefs = oldParentRefs
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the Gateway gets linked to the route via status")
 	callback = helpers.GetGatewayIsLinkedCallback(ctx, t, gatewayClient, gatewayapi.TLSProtocolType, ns.Name, tlsRoute.Name)
@@ -644,13 +640,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("adding an additional backendRef to the TLSRoute")
-	require.EventuallyWithT(t, func(c *assert.CollectT) {
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
-		if !assert.NoError(c, err) {
-			return
-		}
-
-		tlsRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
+	tlsRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TLSRoutes(ns.Name), tlsRoute.Name, func(r *gatewayapi.TLSRoute) {
+		r.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 			{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
 					Name: gatewayapi.ObjectName(service.Name),
@@ -664,10 +655,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 				},
 			},
 		}
-
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
-		assert.NoError(c, err)
-	}, ingressWait, waitTick)
+	})
+	require.NoError(t, err)
 
 	t.Log("verifying that the TLSRoute is now load-balanced between two services")
 	require.Eventually(t, func() bool {
@@ -741,6 +730,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 
 	t.Log("putting the GatewayClass back")
 	_, err = helpers.DeployGatewayClass(ctx, gatewayClient, gatewayClassName)
+	require.NoError(t, err)
 
 	t.Log("ensuring tls echo responds after recreating gateway and gateway class")
 	require.Eventually(t, func() bool {
@@ -756,16 +746,11 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	t.Log("setting the port in ParentRef which does not have a matching listener in Gateway")
-	require.Eventually(t, func() bool {
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Get(ctx, tlsRoute.Name, metav1.GetOptions{})
-		if err != nil {
-			return false
-		}
+	_, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TLSRoutes(ns.Name), tlsRoute.Name, func(r *gatewayapi.TLSRoute) {
 		notExistingPort := gatewayapi.PortNumber(81)
-		tlsRoute.Spec.ParentRefs[0].Port = &notExistingPort
-		tlsRoute, err = gatewayClient.GatewayV1().TLSRoutes(ns.Name).Update(ctx, tlsRoute, metav1.UpdateOptions{})
-		return err == nil
-	}, time.Minute, time.Second)
+		r.Spec.ParentRefs[0].Port = &notExistingPort
+	})
+	require.NoError(t, err)
 
 	t.Log("ensuring tls echo does not respond after using not existing port")
 	require.Eventually(t, func() bool {
