@@ -18,7 +18,7 @@ type getUpdater[T any] interface {
 // and updates it, retrying on conflict.
 //
 // On failure it returns the zero value of T alongside the error. This matters: client-go's
-// generated clientsets return a zero-valued object *alongside* an error on failure, so
+// generated clientsets return a zero-valued object alongside an error on failure, so
 // assigning their result straight into a variable that a retry loop later reads back (e.g.
 // for its .Name) silently poisons every subsequent iteration. UpdateWithRetry only assigns
 // its return value on success, so callers can never be handed a half-written object.

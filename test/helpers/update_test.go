@@ -20,13 +20,12 @@ type fakeObj struct {
 }
 
 // fakeGetUpdater mimics a real client-go generated clientset: on failure, Get and
-// Update return a non-nil pointer to a *zero-valued* object alongside the error
-// (client-go's gentype.Client does `result := c.newObject(); ...; return result, err`) --
+// Update return a non-nil pointer to a zero-valued object alongside the error
 // exactly the poisoned value that makes the naive Get-mutate-Update-reassign pattern
 // self-poisoning, since an empty .name is then fed into the next Get.
 type fakeGetUpdater struct {
 	stored          fakeObj
-	updateConflicts int // number of leading Update calls that fail with a conflict
+	updateConflicts int // Number of leading Update calls that fail with a conflict.
 	updateCalls     int
 }
 
@@ -77,7 +76,7 @@ func TestUpdateWithRetry_ReturnsZeroValueOnPermanentFailure(t *testing.T) {
 	require.Error(t, err)
 	// This is the regression this helper guards against: the underlying fake returns a
 	// non-nil poisoned object (empty .name) on every failed attempt, but the caller must
-	// still get back the true zero value (nil, for a pointer T) -- never that half-written
+	// still get back the true zero value (nil, for a pointer T) - never that half-written
 	// object, which would otherwise poison a later retry's lookup key.
 	assert.Nil(t, updated)
 }
