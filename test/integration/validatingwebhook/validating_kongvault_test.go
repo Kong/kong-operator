@@ -37,11 +37,9 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		{
 			name: "should pass the validation if the configuration is correct",
 			kongVault: &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-valid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "vault-valid",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
@@ -56,11 +54,9 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		{
 			name: "should also pass the validation if the description is empty",
 			kongVault: &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-empty-description",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "vault-empty-description",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend: "env",
@@ -74,11 +70,9 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		{
 			name: "should fail the validation if the backend is not supported by Kong gateway",
 			kongVault: &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-unsupported-backend",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "vault-unsupported-backend",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env1",
@@ -94,11 +88,9 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		{
 			name: "should fail the validation if the spec.config does not pass the schema check of Kong gateway",
 			kongVault: &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-invalid-config",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "vault-invalid-config",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
@@ -114,11 +106,9 @@ func TestAdmissionWebhook_KongVault(t *testing.T) {
 		{
 			name: "should fail the validation if spec.prefix is duplicate",
 			kongVault: &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "vault-dupe",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "vault-dupe",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend:     "env",
@@ -161,11 +151,9 @@ func prepareKongVaultAlreadyProgrammedInGateway(
 
 	name := "vault-programmed-" + uuid.NewString()[:8]
 	vault := &configurationv1alpha1.KongVault{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
+		Name: name,
+		Annotations: map[string]string{
+			annotations.IngressClassKey: ingressClass,
 		},
 		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:     "env",

@@ -16,15 +16,11 @@ func resourceErrorsToResourceFailures(resourceErrors []ResourceError, logger log
 	var out []failures.ResourceFailure
 	for _, ee := range resourceErrors {
 		obj := metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       ee.Kind,
-				APIVersion: ee.APIVersion,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ee.Namespace,
-				Name:      ee.Name,
-				UID:       k8stypes.UID(ee.UID),
-			},
+			Kind:       ee.Kind,
+			APIVersion: ee.APIVersion,
+			Namespace:  ee.Namespace,
+			Name:       ee.Name,
+			UID:        k8stypes.UID(ee.UID),
 		}
 		for problemSource, problem := range ee.Problems {
 			logger.V(logging.DebugLevel).Info("Adding failure", "resource_name", ee.Name, "source", problemSource, "problem", problem)

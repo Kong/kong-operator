@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -42,12 +41,10 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "key-auth-cred",
-				Namespace: ns.Name,
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			Name:      "key-auth-cred",
+			Namespace: ns.Name,
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{
 				"key": []byte("whatever"),
@@ -55,12 +52,10 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "empty-cred",
-				Namespace: ns.Name,
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			Name:      "empty-cred",
+			Namespace: ns.Name,
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{},
 		},
@@ -71,23 +66,19 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 
 	kongConsumers := []*configurationv1.KongConsumer{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "consumer-key-auth-cred",
-				Namespace:   ns.Name,
-				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-			},
-			Username: "foo",
+			Name:        "consumer-key-auth-cred",
+			Namespace:   ns.Name,
+			Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+			Username:    "foo",
 			Credentials: []string{
 				"key-auth-cred",
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "consumer-empty-cred",
-				Namespace:   ns.Name,
-				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-			},
-			CustomID: "bar",
+			Name:        "consumer-empty-cred",
+			Namespace:   ns.Name,
+			Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+			CustomID:    "bar",
 			Credentials: []string{
 				"empty-cred",
 			},
@@ -100,11 +91,9 @@ func TestKongStateFillConsumersAndCredentialsFailure(t *testing.T) {
 	// These KongConsumers should fail admission via the CRD Validation Expressions.
 	brokenKongConsumers := []*configurationv1.KongConsumer{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "consumer-no-username-and-no-custom-id",
-				Namespace:   ns.Name,
-				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-			},
+			Name:        "consumer-no-username-and-no-custom-id",
+			Namespace:   ns.Name,
+			Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			Credentials: []string{
 				"key-auth-cred",
 			},

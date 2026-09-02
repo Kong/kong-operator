@@ -35,15 +35,11 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 		{
 			name: "secret referenced by single gateway returns one request",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "default",
-				},
+				Name:      "test-cert",
+				Namespace: "default",
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
@@ -60,11 +56,9 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -83,21 +77,17 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+				{Namespace: "default", Name: "gw-1"},
 			},
 		},
 		{
 			name: "secret referenced by multiple gateways returns multiple requests",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "shared-cert",
-					Namespace: "default",
-				},
+				Name:      "shared-cert",
+				Namespace: "default",
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
@@ -114,11 +104,9 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -136,11 +124,9 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-2",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-2",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -159,22 +145,18 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-2"}},
+				{Namespace: "default", Name: "gw-1"},
+				{Namespace: "default", Name: "gw-2"},
 			},
 		},
 		{
 			name: "secret not referenced by any gateway returns empty",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "unused-cert",
-					Namespace: "default",
-				},
+				Name:      "unused-cert",
+				Namespace: "default",
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
@@ -191,11 +173,9 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -218,15 +198,11 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 		{
 			name: "gateway with non-matching gatewayclass is filtered out",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "default",
-				},
+				Name:      "test-cert",
+				Namespace: "default",
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "other-gatewayclass",
-				},
+				Name: "other-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController("other-controller"),
 				},
@@ -243,11 +219,9 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "other-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -303,28 +277,20 @@ func TestReconciler_listGatewayReconcileRequestsForSecret(t *testing.T) {
 func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 	makeGateway := func() *gwtypes.Gateway {
 		return &gwtypes.Gateway{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Gateway",
-				APIVersion: gatewayv1.GroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-gateway",
-				Namespace: "default",
-				UID:       types.UID(uuid.NewString()),
-			},
+			Kind:       "Gateway",
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Name:       "test-gateway",
+			Namespace:  "default",
+			UID:        types.UID(uuid.NewString()),
 		}
 	}
 
 	makeRoute := func(parentRef gatewayv1.ParentReference) *gatewayv1.HTTPRoute {
 		return &gatewayv1.HTTPRoute{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "HTTPRoute",
-				APIVersion: gatewayv1.GroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Kind:       "HTTPRoute",
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Name:       "test-route",
+			Namespace:  "default",
 			Spec: gatewayv1.HTTPRouteSpec{
 				CommonRouteSpec: gatewayv1.CommonRouteSpec{
 					ParentRefs: []gatewayv1.ParentReference{parentRef},
@@ -347,7 +313,7 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 				Kind:      new(gatewayv1.Kind("Gateway")),
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+				{Namespace: "default", Name: "test-gateway"},
 			},
 		},
 		{
@@ -358,7 +324,7 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 			},
 			includeGateway: true,
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+				{Namespace: "default", Name: "test-gateway"},
 			},
 		},
 		{
@@ -397,9 +363,7 @@ func TestReconciler_listGatewaysAttachedByHTTPRoute(t *testing.T) {
 
 func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 	gatewayClassWithParamsRef := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gatewayclass",
-		},
+		Name: "test-gatewayclass",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 			ParametersRef: &gatewayv1.ParametersReference{
@@ -412,11 +376,9 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 	}
 
 	gatewayUsingClass := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-			UID:       types.UID(uuid.NewString()),
-		},
+		Name:      "test-gateway",
+		Namespace: "default",
+		UID:       types.UID(uuid.NewString()),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-gatewayclass",
 			Listeners: []gatewayv1.Listener{
@@ -430,10 +392,8 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 	}
 
 	gwConfigWithAuthRef := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gwconfig",
-			Namespace: "default",
-		},
+		Name:      "test-gwconfig",
+		Namespace: "default",
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			Konnect: &operatorv2beta1.KonnectOptions{
 				APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -453,10 +413,8 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 		{
 			name: "kong reference grant with matching gateway configuration returns gateway requests",
 			obj: &configurationv1alpha1.KongReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-grant",
-					Namespace: "auth-ns",
-				},
+				Name:      "test-grant",
+				Namespace: "auth-ns",
 				Spec: configurationv1alpha1.KongReferenceGrantSpec{
 					From: []configurationv1alpha1.ReferenceGrantFrom{
 						{
@@ -480,16 +438,14 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 				gatewayUsingClass,
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+				{Namespace: "default", Name: "test-gateway"},
 			},
 		},
 		{
 			name: "kong reference grant with no matching from group returns empty",
 			obj: &configurationv1alpha1.KongReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-grant",
-					Namespace: "auth-ns",
-				},
+				Name:      "test-grant",
+				Namespace: "auth-ns",
 				Spec: configurationv1alpha1.KongReferenceGrantSpec{
 					From: []configurationv1alpha1.ReferenceGrantFrom{
 						{
@@ -517,10 +473,8 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 		{
 			name: "kong reference grant with no matching to kind returns empty",
 			obj: &configurationv1alpha1.KongReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-grant",
-					Namespace: "auth-ns",
-				},
+				Name:      "test-grant",
+				Namespace: "auth-ns",
 				Spec: configurationv1alpha1.KongReferenceGrantSpec{
 					From: []configurationv1alpha1.ReferenceGrantFrom{
 						{
@@ -548,10 +502,8 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 		{
 			name: "kong reference grant allowing any auth name matches gateway configuration",
 			obj: &configurationv1alpha1.KongReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-grant",
-					Namespace: "auth-ns",
-				},
+				Name:      "test-grant",
+				Namespace: "auth-ns",
 				Spec: configurationv1alpha1.KongReferenceGrantSpec{
 					From: []configurationv1alpha1.ReferenceGrantFrom{
 						{
@@ -575,16 +527,14 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 				gatewayUsingClass,
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "test-gateway"}},
+				{Namespace: "default", Name: "test-gateway"},
 			},
 		},
 		{
 			name: "kong reference grant with specific name not matching returns empty",
 			obj: &configurationv1alpha1.KongReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-grant",
-					Namespace: "auth-ns",
-				},
+				Name:      "test-grant",
+				Namespace: "auth-ns",
 				Spec: configurationv1alpha1.KongReferenceGrantSpec{
 					From: []configurationv1alpha1.ReferenceGrantFrom{
 						{
@@ -612,9 +562,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 		{
 			name: "wrong type passed returns empty",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "some-namespace",
-				},
+				Name: "some-namespace",
 			},
 			objects:          nil,
 			expectedRequests: nil,
@@ -646,9 +594,7 @@ func TestReconciler_listGatewaysForKongReferenceGrant(t *testing.T) {
 }
 func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 	commonGatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gatewayclass",
-		},
+		Name: "test-gatewayclass",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -675,19 +621,15 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "namespace with managed gateways returns requests",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 			},
 			watchNamespaces: []string{},
 			gatewayClass:    commonGatewayClass,
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -701,25 +643,21 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+				{Namespace: "default", Name: "gw-1"},
 			},
 		},
 		{
 			name: "multiple gateways in namespace returns multiple requests",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 			},
 			watchNamespaces: []string{},
 			gatewayClass:    commonGatewayClass,
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -732,11 +670,9 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-2",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-2",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "test-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -750,26 +686,22 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-2"}},
+				{Namespace: "default", Name: "gw-1"},
+				{Namespace: "default", Name: "gw-2"},
 			},
 		},
 		{
 			name: "namespace not in watch list returns empty",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "unwatched-ns",
-				},
+				Name: "unwatched-ns",
 			},
 			watchNamespaces: []string{"watched-ns"},
 			gatewayClass:    commonGatewayClass,
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "unwatched-ns",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "unwatched-ns",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: gatewayv1.ObjectName(commonGatewayClass.Name),
 						Listeners: []gatewayv1.Listener{
@@ -787,15 +719,11 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "gateway with unsupported gateway class is filtered out",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 			},
 			watchNamespaces: []string{},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "unsupported-gatewayclass",
-				},
+				Name: "unsupported-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController("other-controller"),
 				},
@@ -812,11 +740,9 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "unsupported-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -834,15 +760,11 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "gateway with not accepted gateway class is filtered out",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 			},
 			watchNamespaces: []string{},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "not-accepted-gatewayclass",
-				},
+				Name: "not-accepted-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
@@ -859,11 +781,9 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 			},
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "not-accepted-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -881,10 +801,8 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "wrong object type returns empty",
 			obj: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "some-secret",
-					Namespace: "default",
-				},
+				Name:      "some-secret",
+				Namespace: "default",
 			},
 			watchNamespaces:  []string{},
 			gatewayClass:     nil,
@@ -894,9 +812,7 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "empty namespace with no gateways returns empty",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "empty-ns",
-				},
+				Name: "empty-ns",
 			},
 			watchNamespaces:  []string{},
 			gatewayClass:     nil,
@@ -906,19 +822,15 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 		{
 			name: "mixed gateways with some having unsupported classes returns only supported",
 			obj: &corev1.Namespace{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "default",
-				},
+				Name: "default",
 			},
 			watchNamespaces: []string{},
 			gatewayClass:    commonGatewayClass,
 			gateways: []*gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-1",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: gatewayv1.ObjectName(commonGatewayClass.Name),
 						Listeners: []gatewayv1.Listener{
@@ -931,11 +843,9 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-2",
-						Namespace: "default",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "gw-2",
+					Namespace: "default",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "unsupported-gatewayclass",
 						Listeners: []gatewayv1.Listener{
@@ -949,7 +859,7 @@ func TestReconciler_listManagedGatewaysInNamespace(t *testing.T) {
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "default", Name: "gw-1"}},
+				{Namespace: "default", Name: "gw-1"},
 			},
 		},
 	}

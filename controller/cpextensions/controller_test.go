@@ -7,7 +7,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -60,17 +59,13 @@ func TestEnsurePrometheusPlugin_DoesNotUpdateWhenPluginIsAlreadyUpToDate(t *test
 	testScheme := scheme.Get()
 
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp",
-			Namespace: "default",
-			UID:       types.UID("cp-uid"),
-		},
+		Name:      "cp",
+		Namespace: "default",
+		UID:       types.UID("cp-uid"),
 	}
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc",
-			Namespace: "default",
-		},
+		Name:      "svc",
+		Namespace: "default",
 	}
 	ext := &operatorv1alpha1.DataPlaneMetricsExtension{
 		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
@@ -107,17 +102,13 @@ func TestEnsurePrometheusPlugin_UpdatesWhenPluginDiffers(t *testing.T) {
 	testScheme := scheme.Get()
 
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp",
-			Namespace: "default",
-			UID:       types.UID("cp-uid"),
-		},
+		Name:      "cp",
+		Namespace: "default",
+		UID:       types.UID("cp-uid"),
 	}
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc",
-			Namespace: "default",
-		},
+		Name:      "svc",
+		Namespace: "default",
 	}
 	oldExt := &operatorv1alpha1.DataPlaneMetricsExtension{
 		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
@@ -173,16 +164,12 @@ func TestReconcile_ReturnsErrorWhenPluginCreateFails(t *testing.T) {
 	testScheme := scheme.Get()
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc",
-			Namespace: "default",
-		},
+		Name:      "svc",
+		Namespace: "default",
 	}
 	ext := &operatorv1alpha1.DataPlaneMetricsExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "metrics-ext",
-			Namespace: "default",
-		},
+		Name:      "metrics-ext",
+		Namespace: "default",
 		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
 			ServiceSelector: operatorv1alpha1.ServiceSelector{
 				MatchNames: []operatorv1alpha1.ServiceSelectorEntry{{Name: svc.Name}},
@@ -191,19 +178,15 @@ func TestReconcile_ReturnsErrorWhenPluginCreateFails(t *testing.T) {
 		},
 	}
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp",
-			Namespace: "default",
-			UID:       types.UID("cp-uid"),
-		},
+		Name:      "cp",
+		Namespace: "default",
+		UID:       types.UID("cp-uid"),
 		Spec: gwtypes.ControlPlaneSpec{
 			Extensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: ext.Name,
-					},
+					Name:  ext.Name,
 				},
 			},
 		},
@@ -241,24 +224,20 @@ func TestReconcile_IgnoresNotFoundOnPluginDelete(t *testing.T) {
 	testScheme := scheme.Get()
 
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp",
-			Namespace: "default",
-			UID:       types.UID("cp-uid"),
-		},
+		Name:      "cp",
+		Namespace: "default",
+		UID:       types.UID("cp-uid"),
 		// No extensions: this Service is no longer selected by anything.
 	}
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc",
-			Namespace: "default",
-			Labels: map[string]string{
-				GatewayOperatorControlPlaneNameManagingPluginsLabel:      cp.Name,
-				GatewayOperatorControlPlaneNamespaceManagingPluginsLabel: cp.Namespace,
-			},
-			Annotations: map[string]string{
-				consts.KongIngressControllerPluginsAnnotation: "svc-metrics-prometheus",
-			},
+		Name:      "svc",
+		Namespace: "default",
+		Labels: map[string]string{
+			GatewayOperatorControlPlaneNameManagingPluginsLabel:      cp.Name,
+			GatewayOperatorControlPlaneNamespaceManagingPluginsLabel: cp.Namespace,
+		},
+		Annotations: map[string]string{
+			consts.KongIngressControllerPluginsAnnotation: "svc-metrics-prometheus",
 		},
 	}
 	// Note: no KongPlugin object exists in the fake client, so r.Delete()

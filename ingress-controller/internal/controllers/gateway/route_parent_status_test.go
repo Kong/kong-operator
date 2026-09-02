@@ -23,10 +23,8 @@ func TestGetParentStatuses(t *testing.T) {
 			{
 				name: "basic",
 				route: &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: uuid.NewString(),
-					},
+					Name:      uuid.NewString(),
+					Namespace: uuid.NewString(),
 					Status: gatewayapi.HTTPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -58,10 +56,8 @@ func TestGetParentStatuses(t *testing.T) {
 			{
 				name: "nil namespace",
 				route: &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: "object-namespace",
-					},
+					Name:      uuid.NewString(),
+					Namespace: "object-namespace",
 					Status: gatewayapi.HTTPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -106,10 +102,8 @@ func TestGetParentStatuses(t *testing.T) {
 			{
 				name: "basic",
 				route: &gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: uuid.NewString(),
-					},
+					Name:      uuid.NewString(),
+					Namespace: uuid.NewString(),
 					Status: gatewayapi.UDPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -154,10 +148,8 @@ func TestGetParentStatuses(t *testing.T) {
 			{
 				name: "basic",
 				route: &gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: uuid.NewString(),
-					},
+					Name:      uuid.NewString(),
+					Namespace: uuid.NewString(),
 					Status: gatewayapi.TCPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -202,10 +194,8 @@ func TestGetParentStatuses(t *testing.T) {
 			{
 				name: "basic",
 				route: &gatewayapi.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      uuid.NewString(),
-						Namespace: uuid.NewString(),
-					},
+					Name:      uuid.NewString(),
+					Namespace: uuid.NewString(),
 					Status: gatewayapi.TLSRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -255,11 +245,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "no Programmed condition on a route, update and return true",
 				route: &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.HTTPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -280,10 +268,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -313,11 +299,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
 				route: &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.HTTPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -341,10 +325,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -397,11 +379,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "no Programmed condition on a route, update and return true",
 				route: &gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.UDPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -421,10 +401,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -452,11 +430,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
 				route: &gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.UDPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -479,10 +455,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -533,11 +507,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "no Programmed condition on a route, update and return true",
 				route: &gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.TCPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -557,10 +529,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -588,11 +558,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
 				route: &gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.TCPRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -615,10 +583,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -669,11 +635,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "no Programmed condition on a route, update and return true",
 				route: &gatewayapi.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.TLSRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -693,10 +657,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -724,11 +686,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
 				route: &gatewayapi.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.TLSRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -751,10 +711,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -805,11 +763,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "no Programmed condition on a route, update and return true",
 				route: &gatewayapi.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.GRPCRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -830,10 +786,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",
@@ -863,11 +817,9 @@ func TestParentStatusesForRoute(t *testing.T) {
 			{
 				name: "Programmed condition is as exptected on a route, don't update and return false",
 				route: &gatewayapi.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       uuid.NewString(),
-						Namespace:  uuid.NewString(),
-						Generation: 7,
-					},
+					Name:       uuid.NewString(),
+					Namespace:  uuid.NewString(),
+					Generation: 7,
 					Status: gatewayapi.GRPCRouteStatus{
 						RouteStatus: gatewayapi.RouteStatus{
 							Parents: []gatewayapi.RouteParentStatus{
@@ -891,10 +843,8 @@ func TestParentStatusesForRoute(t *testing.T) {
 				gateways: []supportedGatewayWithCondition{
 					{
 						gateway: &gatewayapi.Gateway{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "gateway1",
-								Namespace: "namespace",
-							},
+							Name:      "gateway1",
+							Namespace: "namespace",
 						},
 						condition: metav1.Condition{
 							Type:   "Ready",

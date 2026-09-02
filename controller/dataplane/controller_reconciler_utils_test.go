@@ -74,10 +74,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "no existing DataPlane deployment",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
@@ -96,10 +94,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "new DataPlane with custom secret",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret-volume",
-					Namespace: "default",
-				},
+				Name:      "test-secret-volume",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -117,10 +113,8 @@ func TestDeploymentBuilder(t *testing.T) {
 											},
 											{
 												Name: "test-volume",
-												VolumeSource: corev1.VolumeSource{
-													Secret: &corev1.SecretVolumeSource{
-														SecretName: "test-secret",
-													},
+												Secret: &corev1.SecretVolumeSource{
+													SecretName: "test-secret",
 												},
 											},
 										},
@@ -162,8 +156,8 @@ func TestDeploymentBuilder(t *testing.T) {
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 
-				certificateVolume := corev1.Volume{}
-				certificateVolume.Secret = &corev1.SecretVolumeSource{}
+				certificateVolume := corev1.Volume{
+					Secret: &corev1.SecretVolumeSource{}}
 				// Fill in the defaults for the volume after setting the secret volume source
 				// field. This prevents setting the empty dir volume source field which
 				// would conflict with the secret volume source field.
@@ -185,8 +179,8 @@ func TestDeploymentBuilder(t *testing.T) {
 					},
 				}
 
-				testVolume := corev1.Volume{}
-				testVolume.Secret = &corev1.SecretVolumeSource{}
+				testVolume := corev1.Volume{
+					Secret: &corev1.SecretVolumeSource{}}
 				// Fill in the defaults for the volume after setting the secret volume source
 				// field. This prevents setting the empty dir volume source field which
 				// would conflict with the secret volume source field.
@@ -221,10 +215,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "new DataPlane with custom secret (without specifying the base certificate volume or volume mount)",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret-volume",
-					Namespace: "default",
-				},
+				Name:      "test-secret-volume",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -235,10 +227,8 @@ func TestDeploymentBuilder(t *testing.T) {
 										Volumes: []corev1.Volume{
 											{
 												Name: "test-volume",
-												VolumeSource: corev1.VolumeSource{
-													Secret: &corev1.SecretVolumeSource{
-														SecretName: "test-secret",
-													},
+												Secret: &corev1.SecretVolumeSource{
+													SecretName: "test-secret",
 												},
 											},
 										},
@@ -276,8 +266,8 @@ func TestDeploymentBuilder(t *testing.T) {
 				require.Len(t, deployment.Spec.Template.Spec.Containers, 1)
 				require.Len(t, deployment.Spec.Template.Spec.Containers[0].VolumeMounts, 4)
 
-				certificateVolume := corev1.Volume{}
-				certificateVolume.Secret = &corev1.SecretVolumeSource{}
+				certificateVolume := corev1.Volume{
+					Secret: &corev1.SecretVolumeSource{}}
 				// Fill in the defaults for the volume after setting the secret volume source
 				// field. This prevents setting the empty dir volume source field which
 				// would conflict with the secret volume source field.
@@ -299,8 +289,8 @@ func TestDeploymentBuilder(t *testing.T) {
 					},
 				}
 
-				testVolume := corev1.Volume{}
-				testVolume.Secret = &corev1.SecretVolumeSource{}
+				testVolume := corev1.Volume{
+					Secret: &corev1.SecretVolumeSource{}}
 				// Fill in the defaults for the volume after setting the secret volume source
 				// field. This prevents setting the empty dir volume source field which
 				// would conflict with the secret volume source field.
@@ -335,10 +325,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "existing DataPlane deployment gets updated with expected spec.Strategy",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 			},
 			certSecretName: "certificate",
 			testBody: func(t *testing.T, reconciler Reconciler, dataPlane *operatorv1beta1.DataPlane, certSecretName string) {
@@ -369,10 +357,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "existing DataPlane deployment does get updated when it doesn't have the resources equal to defaults",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -434,10 +420,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "existing DataPlane deployment does get updated when it doesn't have the affinity set",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -506,10 +490,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "existing DataPlane deployment does get updated when affinity is unset in the spec but set in the deployment",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -571,10 +553,8 @@ func TestDeploymentBuilder(t *testing.T) {
 		{
 			name: "DataPlane deployment does get created with specified volumes and volume mounts",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-				},
+				Name:      "test",
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

@@ -28,10 +28,8 @@ func TestAdoptMatchNetworkSuccess(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	network := &konnectv1alpha1.KonnectCloudGatewayNetwork{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-network",
-			Namespace: "default",
-		},
+		Name:      "test-network",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 			Name:                          "test-network",
 			CloudGatewayProviderAccountID: "acct-1",
@@ -80,10 +78,8 @@ func TestAdoptMatchNetworkMismatch(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	network := &konnectv1alpha1.KonnectCloudGatewayNetwork{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-network",
-			Namespace: "default",
-		},
+		Name:      "test-network",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 			Name:                          "test-network",
 			CloudGatewayProviderAccountID: "acct-1",

@@ -25,7 +25,6 @@ import (
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -349,10 +348,8 @@ func generateTLSDataSecret(
 	expiration := int32(certTTL.Seconds())
 
 	csr := certificatesv1.CertificateSigningRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: owner.GetNamespace(),
-			Name:      owner.GetName(),
-		},
+		Namespace: owner.GetNamespace(),
+		Name:      owner.GetName(),
 		Spec: certificatesv1.CertificateSigningRequestSpec{
 			Request: pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE REQUEST",

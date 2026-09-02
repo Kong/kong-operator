@@ -8,10 +8,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -85,20 +83,16 @@ func Test_MapRouteForGateway(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		},
+		Namespace: "test-ns",
+		Name:      "test-gw",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-class",
 		},
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -151,26 +145,20 @@ func Test_MapRouteForGatewayClass(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	gatewayClass := &gwtypes.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-class",
-		},
+		Name: "test-class",
 	}
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		},
+		Namespace: "test-ns",
+		Name:      "test-gw",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-class",
 		},
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -233,26 +221,18 @@ func Test_MapRouteForService(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "test-ns",
+		Name:      "test-svc",
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gatewayv1.ObjectName("test-svc"),
-							Port: new(gatewayv1.PortNumber(80)),
-						},
-					},
+					Name: gatewayv1.ObjectName("test-svc"),
+					Port: new(gatewayv1.PortNumber(80)),
 				}},
 			}},
 		},
@@ -278,10 +258,8 @@ func Test_MapRouteForService(t *testing.T) {
 	t.Run("service in different namespace", func(t *testing.T) {
 		// Service in 'other-ns', HTTPRoute in 'test-ns' referencing 'test-svc'
 		otherSvc := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "other-ns",
-				Name:      "test-svc",
-			},
+			Namespace: "other-ns",
+			Name:      "test-svc",
 		}
 		clDiffNS := fake.NewClientBuilder().
 			WithScheme(scheme).
@@ -320,38 +298,28 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "test-ns",
+		Name:      "test-svc",
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gatewayv1.ObjectName("test-svc"),
-							Port: new(gatewayv1.PortNumber(80)),
-						},
-					},
+					Name: gatewayv1.ObjectName("test-svc"),
+					Port: new(gatewayv1.PortNumber(80)),
 				}},
 			}},
 		},
 	}
 
 	epSlice := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "slice-1",
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: "test-svc",
-			},
+		Namespace: "test-ns",
+		Name:      "slice-1",
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: "test-svc",
 		},
 	}
 
@@ -382,10 +350,8 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 	t.Run("missing service label", func(t *testing.T) {
 		ctx := context.Background()
 		badSlice := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test-ns",
-				Name:      "slice-2",
-			},
+			Namespace: "test-ns",
+			Name:      "slice-2",
 		}
 		requests := mapFunc(ctx, badSlice)
 		require.Nil(t, requests)
@@ -394,12 +360,10 @@ func Test_MapRouteForEndpointSlice(t *testing.T) {
 	t.Run("service not found", func(t *testing.T) {
 		ctx := context.Background()
 		missingSvcSlice := &discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test-ns",
-				Name:      "slice-3",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "missing-svc",
-				},
+			Namespace: "test-ns",
+			Name:      "slice-3",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "missing-svc",
 			},
 		}
 		requests := mapFunc(ctx, missingSvcSlice)
@@ -435,68 +399,58 @@ func TestMapRouteForKongResource_HTTPRoute(t *testing.T) {
 		{
 			name: "no annotation",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "unmatched source object type",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "single route without kind",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-ns/test-httproute",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-ns/test-httproute",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-httproute"}},
+				{Namespace: "test-ns", Name: "test-httproute"},
 			},
 		},
 		{
 			name: "multiple routes",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1,ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1,ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
-				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+				{Namespace: "ns1", Name: "route-1"},
+				{Namespace: "ns2", Name: "route-2"},
 			},
 		},
 		{
 			name: "multiple routes with unmatched kind",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
-						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
+					consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+				{Namespace: "ns1", Name: "route-1"},
 			},
 		},
 	}
@@ -519,68 +473,58 @@ func TestMapRouteForKongResource_TLSRoute(t *testing.T) {
 		{
 			name: "no annotation",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "unmatched source object type",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "single route",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-ns/test-route",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-ns/test-route",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-route"}},
+				{Namespace: "test-ns", Name: "test-route"},
 			},
 		},
 		{
 			name: "multiple routes",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route-1,ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route-1,ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
-				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+				{Namespace: "ns1", Name: "route-1"},
+				{Namespace: "ns2", Name: "route-2"},
 			},
 		},
 		{
 			name: "multiple routes with unmatched kind",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
-						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route-1",
+					consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+				{Namespace: "ns2", Name: "route-2"},
 			},
 		},
 	}
@@ -603,68 +547,58 @@ func TestMapRouteForKongResource_GRPCRoute(t *testing.T) {
 		{
 			name: "no annotation",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "unmatched source object type",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-				},
+				Name:      "test-obj",
+				Namespace: "test-ns",
 			},
 			expectedRequests: []reconcile.Request{},
 		},
 		{
 			name: "single route without kind",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "test-ns/test-grpcroute",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "test-ns/test-grpcroute",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "test-grpcroute"}},
+				{Namespace: "test-ns", Name: "test-grpcroute"},
 			},
 		},
 		{
 			name: "multiple routes",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1,ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1,ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
-				{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+				{Namespace: "ns1", Name: "route-1"},
+				{Namespace: "ns2", Name: "route-2"},
 			},
 		},
 		{
 			name: "multiple routes with unmatched kind",
 			obj: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-obj",
-					Namespace: "test-ns",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1",
-						consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
-					},
+				Name:      "test-obj",
+				Namespace: "test-ns",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation: "ns1/route-1",
+					consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "ns2/route-2",
 				},
 			},
 			expectedRequests: []reconcile.Request{
-				{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
+				{Namespace: "ns1", Name: "route-1"},
 			},
 		},
 	}
@@ -693,43 +627,33 @@ func Test_GenericRouteMapFuncs_GRPCRoute(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	gatewayClass := &gwtypes.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-class",
-		},
+		Name: "test-class",
 	}
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		},
+		Namespace: "test-ns",
+		Name:      "test-gw",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-class",
 		},
 	}
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "test-ns",
+		Name:      "test-svc",
 	}
 
 	epSlice := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "slice-1",
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: "test-svc",
-			},
+		Namespace: "test-ns",
+		Name:      "slice-1",
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: "test-svc",
 		},
 	}
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.GRPCRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -738,12 +662,8 @@ func Test_GenericRouteMapFuncs_GRPCRoute(t *testing.T) {
 			},
 			Rules: []gwtypes.GRPCRouteRule{{
 				BackendRefs: []gwtypes.GRPCBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gatewayv1.ObjectName("test-svc"),
-							Port: new(gatewayv1.PortNumber(80)),
-						},
-					},
+					Name: gatewayv1.ObjectName("test-svc"),
+					Port: new(gatewayv1.PortNumber(80)),
 				}},
 			}},
 		},

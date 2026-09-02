@@ -20,14 +20,10 @@ func ToPartialObjectMetadata(s *runtime.Scheme, objs ...runtime.Object) []runtim
 			continue
 		}
 		out = append(out, &metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: gvks[0].GroupVersion().String(),
-				Kind:       gvks[0].Kind,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      accessor.GetName(),
-				Namespace: accessor.GetNamespace(),
-			},
+			APIVersion: gvks[0].GroupVersion().String(),
+			Kind:       gvks[0].Kind,
+			Name:       accessor.GetName(),
+			Namespace:  accessor.GetNamespace(),
 		})
 	}
 	return out

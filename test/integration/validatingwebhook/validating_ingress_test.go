@@ -91,14 +91,10 @@ func newIngress(name string, class string, rules ...netv1.IngressRule) *netv1.In
 		classToSet = &class
 	}
 	return &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        name,
-			Annotations: make(map[string]string),
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Ingress",
-			APIVersion: "networking.k8s.io/v1",
-		},
+		Name:        name,
+		Annotations: make(map[string]string),
+		Kind:        "Ingress",
+		APIVersion:  "networking.k8s.io/v1",
 		Spec: netv1.IngressSpec{
 			IngressClassName: classToSet,
 			Rules:            rules,
@@ -133,10 +129,8 @@ func constructIngressRuleWithPathsImplSpecific(host string, paths ...string) net
 	}
 	return netv1.IngressRule{
 		Host: host,
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: pathsToSet,
-			},
+		HTTP: &netv1.HTTPIngressRuleValue{
+			Paths: pathsToSet,
 		},
 	}
 }

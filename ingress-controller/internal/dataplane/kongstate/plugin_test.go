@@ -18,10 +18,8 @@ func TestKongPluginFromK8SClusterPlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "conf-secret",
-					Namespace: "default",
-				},
+				Name:      "conf-secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"correlation-id-config":            []byte(`{"header_name": "foo"}`),
 					"correlation-id-headername":        []byte(`"foo"`),
@@ -409,10 +407,8 @@ func TestKongPluginFromK8SPlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "conf-secret",
-					Namespace: "default",
-				},
+				Name:      "conf-secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"correlation-id-config":            []byte(`{"header_name": "foo"}`),
 					"correlation-id-headername":        []byte(`"foo"`),

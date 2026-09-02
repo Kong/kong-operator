@@ -7,7 +7,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -38,11 +37,9 @@ func newTestKongObject(namespace, name string, annotations map[string]string) *u
 func TestVerifyAndUpdate(t *testing.T) {
 	ctx := context.Background()
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "ns",
-			Name:      "route-a",
-		},
+		Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace: "ns",
+		Name:      "route-a",
 	}
 	routeKey := client.ObjectKeyFromObject(route).String()
 

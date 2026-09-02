@@ -20,7 +20,7 @@ import (
 
 func newKonnectAIGW(ns, name string, programmed metav1.ConditionStatus) *konnectv1alpha1.KonnectAIGateway {
 	return &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+		Namespace: ns, Name: name,
 		Status: konnectv1alpha1.KonnectAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -46,8 +46,8 @@ func Test_resolveKonnectAIGateway_NoControlPlaneRef(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "test-ns", Name: "my-dp"},
-				Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{ControlPlaneRef: tc.controlPlaneRef},
+				Namespace: "test-ns", Name: "my-dp",
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{ControlPlaneRef: tc.controlPlaneRef},
 			}
 
 			gotCP, err := r.resolveKonnectAIGateway(context.Background(), zap.New(), aigwdp)
@@ -68,7 +68,7 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 
 	newAIGWDP := func() *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "my-dp"},
+			Namespace: ns, Name: "my-dp",
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 					KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},

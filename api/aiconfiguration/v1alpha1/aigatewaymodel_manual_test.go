@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -23,7 +22,7 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 
 	// Mirrors config/samples/konnect_aigatewaymodel.yaml's api.config.route.model.
 	obj := &AIGatewayModel{
-		ObjectMeta: metav1.ObjectMeta{Name: "sample-ai-gw-model", Namespace: "default"},
+		Name: "sample-ai-gw-model", Namespace: "default",
 		Spec: AIGatewayModelSpec{
 			APISpec: AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &AIGatewayModelConfig{
@@ -62,7 +61,7 @@ func TestAIGatewayModel_RouteModel_WireShape(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
-	provider := &AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "ai-gw-provider-openai", Namespace: "default"}}
+	provider := &AIGatewayModelProvider{Name: "ai-gw-provider-openai", Namespace: "default"}
 	provider.SetKonnectID("provider-kid")
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(provider).Build()
 	req, err := obj.ToCreateAIGatewayModelRequest(t.Context(), cl)
@@ -96,7 +95,7 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 	t.Parallel()
 
 	obj := &AIGatewayModel{
-		ObjectMeta: metav1.ObjectMeta{Name: "sample-ai-gw-model", Namespace: "default"},
+		Name: "sample-ai-gw-model", Namespace: "default",
 		Spec: AIGatewayModelSpec{
 			APISpec: AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &AIGatewayModelConfig{
@@ -135,7 +134,7 @@ func TestAIGatewayModel_RouteModel_FreeformHeaderKeyPreserved(t *testing.T) {
 
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
-	provider := &AIGatewayModelProvider{ObjectMeta: metav1.ObjectMeta{Name: "ai-gw-provider-openai", Namespace: "default"}}
+	provider := &AIGatewayModelProvider{Name: "ai-gw-provider-openai", Namespace: "default"}
 	provider.SetKonnectID("provider-kid")
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(provider).Build()
 	req, err := obj.ToCreateAIGatewayModelRequest(t.Context(), cl)

@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -124,16 +123,12 @@ func TestGetAIGatewayModelForUID(t *testing.T) {
 
 func testAIGatewayModel() *aiconfigurationv1alpha1.AIGatewayModel {
 	return &aiconfigurationv1alpha1.AIGatewayModel{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-			Kind:       "AIGatewayModel",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "aigatewaymodel",
-			Namespace:  "default",
-			UID:        "aigatewaymodel-uid",
-			Generation: 2,
-		},
+		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+		Kind:       "AIGatewayModel",
+		Name:       "aigatewaymodel",
+		Namespace:  "default",
+		UID:        "aigatewaymodel-uid",
+		Generation: 2,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

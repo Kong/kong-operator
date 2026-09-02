@@ -44,10 +44,8 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "no credentials",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-consumer",
-						Namespace: "test",
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
 					Credentials: []string{},
 				},
 				wantStop:      true,
@@ -56,11 +54,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "no credentials and outdated status",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-consumer",
-						Namespace:  "test",
-						Generation: 1,
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
+					Generation:  1,
 					Credentials: []string{},
 					Status: configurationv1.KongConsumerStatus{
 						Conditions: []metav1.Condition{
@@ -79,24 +75,18 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "all credentials exist, status needs an update",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-consumer",
-						Namespace: "test",
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
 					Credentials: []string{"secret1", "secret2"},
 				},
 				existingSecrets: []client.Object{
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret1",
-							Namespace: "test",
-						},
+						Name:      "secret1",
+						Namespace: "test",
 					},
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret2",
-							Namespace: "test",
-						},
+						Name:      "secret2",
+						Namespace: "test",
 					},
 				},
 				wantStop:      true,
@@ -105,11 +95,9 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "all credentials exist, status is up to date",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-consumer",
-						Namespace:  "test",
-						Generation: 1,
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
+					Generation:  1,
 					Credentials: []string{"secret1", "secret2"},
 					Status: configurationv1.KongConsumerStatus{
 						Conditions: []metav1.Condition{
@@ -124,16 +112,12 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 				},
 				existingSecrets: []client.Object{
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret1",
-							Namespace: "test",
-						},
+						Name:      "secret1",
+						Namespace: "test",
 					},
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret2",
-							Namespace: "test",
-						},
+						Name:      "secret2",
+						Namespace: "test",
 					},
 				},
 				wantStop:      false,
@@ -142,24 +126,18 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "some credentials missing",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-consumer",
-						Namespace: "test",
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
 					Credentials: []string{"secret1", "secret2", "missing-secret"},
 				},
 				existingSecrets: []client.Object{
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret1",
-							Namespace: "test",
-						},
+						Name:      "secret1",
+						Namespace: "test",
 					},
 					&corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "secret2",
-							Namespace: "test",
-						},
+						Name:      "secret2",
+						Namespace: "test",
 					},
 				},
 				wantStop:      true,
@@ -174,10 +152,8 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 			{
 				name: "all credentials missing",
 				consumer: &configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-consumer",
-						Namespace: "test",
-					},
+					Name:        "test-consumer",
+					Namespace:   "test",
 					Credentials: []string{"missing-secret1", "missing-secret2"},
 				},
 				wantStop:      true,
@@ -223,7 +199,7 @@ func TestHandleKongConsumerSpecific(t *testing.T) {
 
 func TestHandleKonnectReferencesResolution(t *testing.T) {
 	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
-		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
+		Name: "agent", Namespace: "ns",
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Policies: []aiconfigurationv1alpha1.AIGatewayPolicyRef{{Name: "missing-policy"}},
@@ -246,7 +222,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("referenced CR exists but is not programmed sets condition False with NotProgrammed", func(t *testing.T) {
-		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
 		updated, isProblem, err := handleKonnectReferences(t.Context(), cl, ent, ent)
@@ -280,7 +256,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("different GatewayID ref sets condition False with Invalid", func(t *testing.T) {
-		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "policy", Namespace: "ns"}
 		policy.SetKonnectID("kid-123")
 		policy.SetGatewayID("gw-other")
 		ent := agent.DeepCopy()
@@ -359,7 +335,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 	})
 
 	t.Run("programmed referenced CR sets condition True", func(t *testing.T) {
-		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{ObjectMeta: metav1.ObjectMeta{Name: "missing-policy", Namespace: "ns"}}
+		policy := &aiconfigurationv1alpha1.AIGatewayPolicy{Name: "missing-policy", Namespace: "ns"}
 		policy.SetKonnectID("kid-123")
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(agent.DeepCopy(), policy).Build()
 		ent := agent.DeepCopy()
@@ -423,7 +399,7 @@ func TestHandleKonnectReferencesResolution(t *testing.T) {
 
 	t.Run("cross-namespace sibling reference permitted by a KongReferenceGrant proceeds to resolve", func(t *testing.T) {
 		grant := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{Name: "allow-agent", Namespace: "other-ns"},
+			Name: "allow-agent", Namespace: "other-ns",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{{
 					Group:     configurationv1alpha1.Group(aiconfigurationv1alpha1.GroupVersion.Group),

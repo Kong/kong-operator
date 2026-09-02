@@ -210,10 +210,8 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 		gwHostnames = append(gwHostnames, gatewayv1.Hostname(h))
 	}
 	return &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: gwHostnames,
 			Rules: []gwtypes.HTTPRouteRule{
@@ -228,12 +226,8 @@ func newHTTPRouteWithHostnames(hostnames ...string) *gwtypes.HTTPRoute {
 					},
 					BackendRefs: []gwtypes.HTTPBackendRef{
 						{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name: "test-service",
-									Port: new(gwtypes.PortNumber(80)),
-								},
-							},
+							Name: "test-service",
+							Port: new(gwtypes.PortNumber(80)),
 						},
 					},
 				},
@@ -301,14 +295,10 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 	}
 
 	return &gwtypes.Gateway{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Gateway",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-		},
+		Kind:       "Gateway",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-gateway",
+		Namespace:  "default",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-gateway-class",
 			Listeners:        gwListeeners,
@@ -321,23 +311,19 @@ func newGatewayWithListenerHostnames(hostnames ...string) *gwtypes.Gateway {
 
 func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object {
 	konnectExt := &konnectv1alpha2.KonnectExtension{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KonnectExtension",
-			APIVersion: "konnect.konghq.com/v1alpha2",
+		Kind:       "KonnectExtension",
+		APIVersion: "konnect.konghq.com/v1alpha2",
+		Name:       "test-extension",
+		Namespace:  "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-extension",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       gateway.Name,
-					UID:        gateway.UID,
-				},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       gateway.Name,
+				UID:        gateway.UID,
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -358,13 +344,9 @@ func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object 
 	objects := []client.Object{
 		gateway,
 		&gwtypes.GatewayClass{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "GatewayClass",
-				APIVersion: "gateway.networking.k8s.io/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-gateway-class",
-			},
+			Kind:       "GatewayClass",
+			APIVersion: "gateway.networking.k8s.io/v1",
+			Name:       "test-gateway-class",
 			Spec: gwtypes.GatewayClassSpec{
 				ControllerName: "konghq.com/gateway-operator",
 				ParametersRef: &gwtypes.ParametersReference{
@@ -376,37 +358,27 @@ func newKonnectGatewayStandardObjects(gateway *gwtypes.Gateway) []client.Object 
 			},
 		},
 		&gwtypes.GatewayConfiguration{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "GatewayConfiguration",
-				APIVersion: "gateway-operator.konghq.com/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-gateway-config",
-				Namespace: "default",
-			},
+			Kind:       "GatewayConfiguration",
+			APIVersion: "gateway-operator.konghq.com/v1alpha1",
+			Name:       "test-gateway-config",
+			Namespace:  "default",
 			Spec: gwtypes.GatewayConfigurationSpec{
 				Extensions: []commonv1alpha1.ExtensionRef{
 					{
-						Group: "konnect.konghq.com",
-						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name:      "test-extension",
-							Namespace: new("default"),
-						},
+						Group:     "konnect.konghq.com",
+						Kind:      "KonnectExtension",
+						Name:      "test-extension",
+						Namespace: new("default"),
 					},
 				},
 			},
 		},
 		konnectExt,
 		&konnectv1alpha2.KonnectGatewayControlPlane{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KonnectControlPlane",
-				APIVersion: "konnect.konghq.com/v1alpha2",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "default",
-				Namespace: "default",
-			},
+			Kind:       "KonnectControlPlane",
+			APIVersion: "konnect.konghq.com/v1alpha2",
+			Name:       "default",
+			Namespace:  "default",
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 					Name: "default",
@@ -420,10 +392,8 @@ func newExpectedKongRoutesWithHostnames(routeHostnames map[string][]string) []*c
 	var kongRoutes []*configurationv1alpha1.KongRoute
 	for routeKey, hostnames := range routeHostnames {
 		kongRoute := &configurationv1alpha1.KongRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      routeKey,
-				Namespace: "default",
-			},
+			Name:      routeKey,
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongRouteSpec{
 				KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 					Hosts: hostnames,

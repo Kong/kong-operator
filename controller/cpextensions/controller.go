@@ -12,7 +12,6 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/selection"
 	"k8s.io/apimachinery/pkg/types"
@@ -241,10 +240,8 @@ func (r *Reconciler) ensureDataPlaneMetricsExtensions(ctx context.Context, contr
 		}
 
 		prometheusPlugin := configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      prometheusPluginName,
-				Namespace: svc.Namespace,
-			},
+			Name:      prometheusPluginName,
+			Namespace: svc.Namespace,
 		}
 		if err := client.IgnoreNotFound(r.Delete(ctx, &prometheusPlugin)); err != nil {
 			errs = append(errs, fmt.Errorf("failed to delete Prometheus KongPlugin for Service %s: %w", client.ObjectKeyFromObject(&svc), err))

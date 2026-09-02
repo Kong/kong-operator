@@ -40,10 +40,8 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	ns := CreateNamespace(ctx, t, client)
 
 	svc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "backend-udp",
-		},
+		Namespace: ns.Name,
+		Name:      "backend-udp",
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
@@ -75,21 +73,17 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwc) })
 
 	gw := gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "gateway-udp",
-		},
+		Namespace: ns.Name,
+		Name:      "gateway-udp",
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
@@ -151,14 +145,10 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 
 	mkRoute := func(name string) gatewayapi.UDPRoute {
 		return gatewayapi.UDPRoute{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "gateway.networking.k8s.io/v1",
-				Kind:       "UDPRoute",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns.Name,
-				Name:      name,
-			},
+			APIVersion: "gateway.networking.k8s.io/v1",
+			Kind:       "UDPRoute",
+			Namespace:  ns.Name,
+			Name:       name,
 			Spec: gatewayapi.UDPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: []gatewayapi.ParentReference{
@@ -172,11 +162,9 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 					{
 						BackendRefs: []gatewayapi.BackendRef{
 							{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: new(gatewayapi.Kind("Service")),
-									Name: gatewayapi.ObjectName(svc.Name),
-									Port: new(gatewayapi.PortNumber(53)),
-								},
+								Kind: new(gatewayapi.Kind("Service")),
+								Name: gatewayapi.ObjectName(svc.Name),
+								Port: new(gatewayapi.PortNumber(53)),
 							},
 						},
 					},

@@ -53,15 +53,11 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.networking.k8s.io/v1beta1",
-					Kind:       "Gateway",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway.networking.k8s.io/v1beta1",
+				Kind:       "Gateway",
+				Name:       "test-gateway",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "not-existing-gatewayclass",
 				},
@@ -83,23 +79,17 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.networking.k8s.io/v1beta1",
-					Kind:       "Gateway",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway.networking.k8s.io/v1beta1",
+				Kind:       "Gateway",
+				Name:       "test-gateway",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 				},
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController("not-existing-controller"),
 				},
@@ -139,9 +129,7 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},
@@ -159,26 +147,20 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.networking.k8s.io/v1beta1",
-					Kind:       "Gateway",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway.networking.k8s.io/v1beta1",
+				Kind:       "Gateway",
+				Name:       "test-gateway",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 				},
 			},
 			gatewaySubResources: []controllerruntimeclient.Object{
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane",
-						Namespace: "test-namespace",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "test-dataplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
 					Status: operatorv1beta1.DataPlaneStatus{
 						Conditions: []metav1.Condition{
 							k8sutils.NewCondition(kcfgdataplane.ReadyType, metav1.ConditionTrue, kcfgdataplane.ResourceReadyReason, ""),
@@ -186,11 +168,9 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				&gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-controlplane",
-						Namespace: "test-namespace",
-						UID:       types.UID(uuid.NewString()),
-					},
+					Name:      "test-controlplane",
+					Namespace: "test-namespace",
+					UID:       types.UID(uuid.NewString()),
 					Spec: gwtypes.ControlPlaneSpec{
 						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -206,34 +186,28 @@ func TestGatewayReconciler_Reconcile(t *testing.T) {
 					},
 				},
 				&networkingv1.NetworkPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-namespace",
-						Name:      "test-networkpolicy",
-					},
+					Namespace: "test-namespace",
+					Name:      "test-networkpolicy",
 				},
 			},
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-admin-service",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
-						},
+					Name:      "test-admin-service",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+						consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP: corev1.ClusterIPNone,
 					},
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ingress-service",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
-							consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
-						},
+					Name:      "test-ingress-service",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+						consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
 					},
 				},
 			},
@@ -443,27 +417,21 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 	ctx := t.Context()
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-			UID:       types.UID(uuid.NewString()),
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
+		UID:       types.UID(uuid.NewString()),
 	}
 
 	controlPlane := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-controlplane",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-controlplane",
+		Namespace: "test-namespace",
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{},
 			Extensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "sample.group",
 					Kind:  "SampleExtension",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "old-extension",
-					},
+					Name:  "old-extension",
 				},
 			},
 		},
@@ -487,9 +455,7 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 				{
 					Group: "sample.group",
 					Kind:  "SampleExtension",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "new-extension",
-					},
+					Name:  "new-extension",
 				},
 			},
 		},
@@ -512,12 +478,10 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 // GatewayConfiguration was never detected and the patch was skipped forever.
 func Test_deploymentOptionsDeepEqual_Scaling(t *testing.T) {
 	original := &operatorv1beta1.DataPlaneDeploymentOptions{
-		DeploymentOptions: operatorv1beta1.DeploymentOptions{
-			Scaling: &operatorv1beta1.Scaling{
-				HorizontalScaling: &operatorv1beta1.HorizontalScaling{
-					MinReplicas: new(int32(2)),
-					MaxReplicas: 3,
-				},
+		Scaling: &operatorv1beta1.Scaling{
+			HorizontalScaling: &operatorv1beta1.HorizontalScaling{
+				MinReplicas: new(int32(2)),
+				MaxReplicas: 3,
 			},
 		},
 	}
@@ -555,9 +519,7 @@ func Test_deploymentOptionsDeepEqual_Hardened(t *testing.T) {
 func Test_deploymentOptionsDeepEqual_LabelsAndAnnotations(t *testing.T) {
 	t.Run("labels", func(t *testing.T) {
 		original := &operatorv1beta1.DataPlaneDeploymentOptions{
-			DeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Labels: map[string]string{"foo": "bar", "animal": "cat"},
-			},
+			Labels: map[string]string{"foo": "bar", "animal": "cat"},
 		}
 		changed := original.DeepCopy()
 		changed.Labels = map[string]string{"animal": "dog", "foo": "baz"}
@@ -571,9 +533,7 @@ func Test_deploymentOptionsDeepEqual_LabelsAndAnnotations(t *testing.T) {
 
 	t.Run("annotations", func(t *testing.T) {
 		original := &operatorv1beta1.DataPlaneDeploymentOptions{
-			DeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Annotations: map[string]string{"foo": "bar", "animal": "cat"},
-			},
+			Annotations: map[string]string{"foo": "bar", "animal": "cat"},
 		}
 		changed := original.DeepCopy()
 		changed.Annotations = map[string]string{"animal": "dog", "foo": "baz"}
@@ -588,10 +548,8 @@ func Test_deploymentOptionsDeepEqual_LabelsAndAnnotations(t *testing.T) {
 	t.Run("nil and empty map are treated as equal", func(t *testing.T) {
 		nilLabels := &operatorv1beta1.DataPlaneDeploymentOptions{}
 		emptyLabels := &operatorv1beta1.DataPlaneDeploymentOptions{
-			DeploymentOptions: operatorv1beta1.DeploymentOptions{
-				Labels:      map[string]string{},
-				Annotations: map[string]string{},
-			},
+			Labels:      map[string]string{},
+			Annotations: map[string]string{},
 		}
 
 		assert.True(t, deploymentOptionsDeepEqual(nilLabels, emptyLabels),
@@ -758,12 +716,10 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 										ReadinessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											TimeoutSeconds:      1,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   consts.DataPlaneStatusReadyEndpoint,
-													Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   consts.DataPlaneStatusReadyEndpoint,
+												Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -851,12 +807,10 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 											PeriodSeconds:       8,
 											SuccessThreshold:    8,
 											TimeoutSeconds:      9,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/endpoint",
-													Port:   intstr.FromInt(4567),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/endpoint",
+												Port:   intstr.FromInt(4567),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -882,12 +836,10 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 											PeriodSeconds:       8,
 											SuccessThreshold:    8,
 											TimeoutSeconds:      9,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/endpoint",
-													Port:   intstr.FromInt(4567),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/endpoint",
+												Port:   intstr.FromInt(4567),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -910,9 +862,7 @@ func Test_setDataPlaneOptionsDefaults(t *testing.T) {
 
 func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gatewayclass",
-		},
+		Name: "test-gatewayclass",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -930,15 +880,11 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 		},
 	}
 	gateway := &gwtypes.Gateway{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1beta1",
-			Kind:       "Gateway",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-			UID:       types.UID(uuid.NewString()),
-		},
+		APIVersion: "gateway.networking.k8s.io/v1beta1",
+		Kind:       "Gateway",
+		Name:       "test-gateway",
+		Namespace:  "test-namespace",
+		UID:        types.UID(uuid.NewString()),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-gatewayclass",
 		},
@@ -955,10 +901,8 @@ func BenchmarkGatewayReconciler_Reconcile(b *testing.B) {
 	}
 
 	gatewayReq := reconcile.Request{
-		NamespacedName: types.NamespacedName{
-			Namespace: "test-namespace",
-			Name:      "test-gateway",
-		},
+		Namespace: "test-namespace",
+		Name:      "test-gateway",
 	}
 
 	b.ResetTimer()
@@ -981,18 +925,14 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 	)
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gatewayName,
-			Namespace: testNamespace,
-			UID:       types.UID(uuid.NewString()),
-		},
+		Name:      gatewayName,
+		Namespace: testNamespace,
+		UID:       types.UID(uuid.NewString()),
 	}
 
 	konnectControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cpName,
-			Namespace: testNamespace,
-		},
+		Name:      cpName,
+		Namespace: testNamespace,
 	}
 
 	testCases := []struct {
@@ -1011,13 +951,11 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 		{
 			name: "transient failure - CP ref matches current CP, DataPlane and extension preserved",
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      extName,
-					Namespace: testNamespace,
-					UID:       types.UID(uuid.NewString()),
-					Labels: map[string]string{
-						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
-					},
+				Name:      extName,
+				Namespace: testNamespace,
+				UID:       types.UID(uuid.NewString()),
+				Labels: map[string]string{
+					consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 				},
 				Spec: konnectv1alpha2.KonnectExtensionSpec{
 					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
@@ -1041,13 +979,11 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 				},
 			},
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      dpName,
-					Namespace: testNamespace,
-					UID:       types.UID(uuid.NewString()),
-					Labels: map[string]string{
-						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
-					},
+				Name:      dpName,
+				Namespace: testNamespace,
+				UID:       types.UID(uuid.NewString()),
+				Labels: map[string]string{
+					consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 				},
 			},
 			expectDataPlaneExists: true,
@@ -1057,13 +993,11 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 		{
 			name: "stale extension - CP ref differs from current CP, DataPlane preserved, extension deleted",
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      extName,
-					Namespace: testNamespace,
-					UID:       types.UID(uuid.NewString()),
-					Labels: map[string]string{
-						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
-					},
+				Name:      extName,
+				Namespace: testNamespace,
+				UID:       types.UID(uuid.NewString()),
+				Labels: map[string]string{
+					consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 				},
 				Spec: konnectv1alpha2.KonnectExtensionSpec{
 					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
@@ -1087,13 +1021,11 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 				},
 			},
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      dpName,
-					Namespace: testNamespace,
-					UID:       types.UID(uuid.NewString()),
-					Labels: map[string]string{
-						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
-					},
+				Name:      dpName,
+				Namespace: testNamespace,
+				UID:       types.UID(uuid.NewString()),
+				Labels: map[string]string{
+					consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 				},
 			},
 			expectDataPlaneExists: true,

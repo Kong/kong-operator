@@ -117,13 +117,11 @@ func gatewayConfigDataPlaneOptionsV2ToV1(o *operatorv2beta1.GatewayConfigDataPla
 
 	// Convert operatorv2beta1.DataPlaneDeploymentOptions to DataPlaneDeploymentOptions
 	deployment := DataPlaneDeploymentOptions{
-		DeploymentOptions: DeploymentOptions{
-			Replicas:        o.Deployment.Replicas,
-			PodTemplateSpec: o.Deployment.PodTemplateSpec,
-			Annotations:     o.Deployment.Annotations,
-			Labels:          o.Deployment.Labels,
-		},
-		Hardened: o.Deployment.Hardened,
+		Replicas:        o.Deployment.Replicas,
+		PodTemplateSpec: o.Deployment.PodTemplateSpec,
+		Annotations:     o.Deployment.Annotations,
+		Labels:          o.Deployment.Labels,
+		Hardened:        o.Deployment.Hardened,
 	}
 	if o.Deployment.Rollout != nil {
 		deployment.Rollout = &Rollout{
@@ -151,12 +149,10 @@ func gatewayConfigDataPlaneOptionsV2ToV1(o *operatorv2beta1.GatewayConfigDataPla
 	if o.Network.Services != nil && o.Network.Services.Ingress != nil {
 		network.Services = &GatewayConfigDataPlaneServices{
 			Ingress: &GatewayConfigServiceOptions{
-				ServiceOptions: ServiceOptions{
-					Type:                  o.Network.Services.Ingress.Type,
-					Name:                  o.Network.Services.Ingress.Name,
-					Annotations:           o.Network.Services.Ingress.Annotations,
-					ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
-				},
+				Type:                  o.Network.Services.Ingress.Type,
+				Name:                  o.Network.Services.Ingress.Name,
+				Annotations:           o.Network.Services.Ingress.Annotations,
+				ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
 			},
 		}
 	}
@@ -203,13 +199,11 @@ func gatewayConfigDataPlaneOptionsV1ToV2(o *GatewayConfigDataPlaneOptions) *oper
 
 	// Convert DataPlaneDeploymentOptions to operatorv2beta1.DataPlaneDeploymentOptions
 	deployment := operatorv2beta1.DataPlaneDeploymentOptions{
-		DeploymentOptions: operatorv2beta1.DeploymentOptions{
-			Replicas:        o.Deployment.Replicas,
-			PodTemplateSpec: o.Deployment.PodTemplateSpec,
-			Annotations:     o.Deployment.Annotations,
-			Labels:          o.Deployment.Labels,
-		},
-		Hardened: o.Deployment.Hardened,
+		Replicas:        o.Deployment.Replicas,
+		PodTemplateSpec: o.Deployment.PodTemplateSpec,
+		Annotations:     o.Deployment.Annotations,
+		Labels:          o.Deployment.Labels,
+		Hardened:        o.Deployment.Hardened,
 	}
 	if o.Deployment.Rollout != nil &&
 		o.Deployment.Rollout.Strategy.BlueGreen != nil {
@@ -248,12 +242,10 @@ func gatewayConfigDataPlaneOptionsV1ToV2(o *GatewayConfigDataPlaneOptions) *oper
 	if o.Network.Services != nil && o.Network.Services.Ingress != nil {
 		network.Services = &operatorv2beta1.GatewayConfigDataPlaneServices{
 			Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-				ServiceOptions: operatorv2beta1.ServiceOptions{
-					Type:                  o.Network.Services.Ingress.Type,
-					Name:                  o.Network.Services.Ingress.Name,
-					Annotations:           o.Network.Services.Ingress.Annotations,
-					ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
-				},
+				Type:                  o.Network.Services.Ingress.Type,
+				Name:                  o.Network.Services.Ingress.Name,
+				Annotations:           o.Network.Services.Ingress.Annotations,
+				ExternalTrafficPolicy: o.Network.Services.Ingress.ExternalTrafficPolicy,
 			},
 		}
 	}

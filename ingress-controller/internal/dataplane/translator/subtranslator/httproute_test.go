@@ -832,27 +832,21 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 
 	k8sServices := []*corev1.Service{
 		{
-			TypeMeta: serviceTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "infra-backend-v1",
-				Namespace: "default",
-			},
+			TypeMeta:  serviceTypeMeta,
+			Name:      "infra-backend-v1",
+			Namespace: "default",
 		},
 		{
-			TypeMeta: serviceTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "infra-backend-v2",
-				Namespace: "default",
-			},
+			TypeMeta:  serviceTypeMeta,
+			Name:      "infra-backend-v2",
+			Namespace: "default",
 		},
 	}
 	httpRoutes := []*gatewayapi.HTTPRoute{
 		{
-			TypeMeta: httpRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "header-matching",
-			},
+			TypeMeta:  httpRouteTypeMeta,
+			Namespace: "default",
+			Name:      "header-matching",
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 				Rules: []gatewayapi.HTTPRouteRule{
@@ -945,16 +939,12 @@ func TestTranslateHTTPRoutesToKongstateServicesPrioritizesTraditionalHeaderMatch
 
 func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrelatedRoutesWithExistingClasses(t *testing.T) {
 	stableHTTPRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "stable",
-		},
+		Namespace: "default",
+		Name:      "stable",
 	}
 	unrelatedHTTPRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "unrelated",
-		},
+		Namespace: "default",
+		Name:      "unrelated",
 	}
 
 	stableMatches := []SplitHTTPRouteMatch{
@@ -1010,10 +1000,8 @@ func TestAssignTraditionalRoutePriorityToSplitHTTPRouteMatchesStableAcrossUnrela
 
 func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 	testHTTPRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-httproute",
-			Namespace: "default",
-		},
+		Name:      "test-httproute",
+		Namespace: "default",
 	}
 	const (
 		longServiceName = "service-with-a-very-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-long-name-having-251-characters"
@@ -1032,12 +1020,8 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 				Rule: gatewayapi.HTTPRouteRule{
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName("service-1"),
-								},
-							},
+							Kind: kindService,
+							Name: gatewayapi.ObjectName("service-1"),
 						},
 					},
 				},
@@ -1052,32 +1036,20 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 				Rule: gatewayapi.HTTPRouteRule{
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName("service-1"),
-									Port: new(gatewayapi.PortNumber(80)),
-								},
-							},
+							Kind: kindService,
+							Name: gatewayapi.ObjectName("service-1"),
+							Port: new(gatewayapi.PortNumber(80)),
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName("service-2"),
-									Port: new(gatewayapi.PortNumber(8080)),
-								},
-							},
+							Kind: kindService,
+							Name: gatewayapi.ObjectName("service-2"),
+							Port: new(gatewayapi.PortNumber(8080)),
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind:      kindService,
-									Name:      gatewayapi.ObjectName("service-2"),
-									Namespace: new(gatewayapi.Namespace("another-namespace")),
-									Port:      new(gatewayapi.PortNumber(80)),
-								},
-							},
+							Kind:      kindService,
+							Name:      gatewayapi.ObjectName("service-2"),
+							Namespace: new(gatewayapi.Namespace("another-namespace")),
+							Port:      new(gatewayapi.PortNumber(80)),
 						},
 					},
 				},
@@ -1101,24 +1073,16 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 				Rule: gatewayapi.HTTPRouteRule{
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName("service-1"),
-									Port: new(gatewayapi.PortNumber(80)),
-								},
-								Weight: new(int32(75)),
-							},
+							Kind:   kindService,
+							Name:   gatewayapi.ObjectName("service-1"),
+							Port:   new(gatewayapi.PortNumber(80)),
+							Weight: new(int32(75)),
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName("service-1"),
-									Port: new(gatewayapi.PortNumber(1080)),
-								},
-								Weight: new(int32(25)),
-							},
+							Kind:   kindService,
+							Name:   gatewayapi.ObjectName("service-1"),
+							Port:   new(gatewayapi.PortNumber(1080)),
+							Weight: new(int32(25)),
 						},
 					},
 				},
@@ -1133,24 +1097,16 @@ func TestGetKongServiceNameByBackendRefs(t *testing.T) {
 				Rule: gatewayapi.HTTPRouteRule{
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName(longServiceName),
-									Port: new(gatewayapi.PortNumber(80)),
-								},
-								Weight: new(int32(75)),
-							},
+							Kind:   kindService,
+							Name:   gatewayapi.ObjectName(longServiceName),
+							Port:   new(gatewayapi.PortNumber(80)),
+							Weight: new(int32(75)),
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Kind: kindService,
-									Name: gatewayapi.ObjectName(longServiceName),
-									Port: new(gatewayapi.PortNumber(8080)),
-								},
-								Weight: new(int32(25)),
-							},
+							Kind:   kindService,
+							Name:   gatewayapi.ObjectName(longServiceName),
+							Port:   new(gatewayapi.PortNumber(8080)),
+							Weight: new(int32(25)),
 						},
 					},
 				},
@@ -1213,20 +1169,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple rules in one HTTPRoute sharing the same backends",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1271,27 +1223,21 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple backends in one rule of one HTTPRoute",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-2",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-2",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1344,20 +1290,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple HTTPRoutes with the same backends in the same namespace",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1370,11 +1312,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-2",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-2",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1414,20 +1354,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple HTTPRoutes with the same backends in the same namespace with correct referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grant-from-httproute-to-service",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "default",
+					Name:      "grant-from-httproute-to-service",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
@@ -1447,11 +1383,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "another-namespace",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "another-namespace",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1464,11 +1398,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-2",
-						Namespace: "another-namespace",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-2",
+					Namespace: "another-namespace",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1508,20 +1440,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple HTTPRoutes with the same backends in the same namespace without referenceGrant",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "another-namespace",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "another-namespace",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1534,11 +1462,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-2",
-						Namespace: "another-namespace",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-2",
+					Namespace: "another-namespace",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1565,27 +1491,21 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "multiple rules with different backends in the same HTTPRoute",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-2",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-2",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1650,20 +1570,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "rules sharing backends from multiple HTTPRoutes in the different namespaces",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grant-from-httproute-to-service",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "default",
+					Name:      "grant-from-httproute-to-service",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
@@ -1683,11 +1599,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1700,11 +1614,9 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "another-namespace",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "another-namespace",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1764,20 +1676,16 @@ func TestTranslateHTTPRoutesToKongstateServices(t *testing.T) {
 			name: "HTTPRoute with ExtensionRef plugin",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: serviceTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					TypeMeta:  serviceTypeMeta,
+					Name:      "service-1",
+					Namespace: "default",
 				},
 			},
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1886,22 +1794,16 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 	}
 	backendRefList := []gatewayapi.HTTPBackendRef{
 		{
-			BackendRef: gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Kind:      new(gatewayapi.Kind("Service")),
-					Name:      gatewayapi.ObjectName("service-1"),
-					Namespace: new(gatewayapi.Namespace("default")),
-					Port:      new(gatewayapi.PortNumber(80)),
-				},
-			},
+			Kind:      new(gatewayapi.Kind("Service")),
+			Name:      gatewayapi.ObjectName("service-1"),
+			Namespace: new(gatewayapi.Namespace("default")),
+			Port:      new(gatewayapi.PortNumber(80)),
 		},
 	}
 	httpRouteWithoutHost := &gatewayapi.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "httproute-1",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Namespace: "default",
+		Name:      "httproute-1",
 	}
 
 	testCases := []struct {
@@ -1952,19 +1854,17 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 			},
 			expectedRoutes: []kongstate.Route{
 				{
-					Route: kong.Route{
-						Name:         new("httproute.default.httproute-1.0.0"),
-						Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
-						PreserveHost: new(true),
-						StripPath:    new(false),
-						Protocols:    nil,
-						Tags: []*string{
-							new("k8s-name:httproute-1"),
-							new("k8s-namespace:default"),
-							new("k8s-kind:HTTPRoute"),
-							new("k8s-group:gateway.networking.k8s.io"),
-							new("k8s-version:v1"),
-						},
+					Name:         new("httproute.default.httproute-1.0.0"),
+					Paths:        kong.StringSlice("~/foo$", "~/bar$", "~/baz$"),
+					PreserveHost: new(true),
+					StripPath:    new(false),
+					Protocols:    nil,
+					Tags: []*string{
+						new("k8s-name:httproute-1"),
+						new("k8s-namespace:default"),
+						new("k8s-kind:HTTPRoute"),
+						new("k8s-group:gateway.networking.k8s.io"),
+						new("k8s-version:v1"),
 					},
 					Ingress: util.FromK8sObject(httpRouteWithoutHost),
 				},
@@ -1995,10 +1895,8 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxRegexPriority(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "httproute-1",
-		},
+		Namespace: "default",
+		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
@@ -2053,10 +1951,8 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxR
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFromPathMatches(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "httproute-1",
-		},
+		Namespace: "default",
+		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
@@ -2116,10 +2012,8 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFrom
 
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNoPathMatch(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "httproute-1",
-		},
+		Namespace: "default",
+		Name:      "httproute-1",
 	}
 	rulesMeta := []httpRouteRuleMeta{
 		{
@@ -2253,10 +2147,8 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			name: "gateway with only HTTP listener and no section name results in http protocol",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -2274,10 +2166,8 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			name: "gateway with only HTTPS listener and no section name results in https protocol",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -2295,10 +2185,8 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			name: "gateway with both HTTP and HTTPS listeners and no section name results in both protocols",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -2320,10 +2208,8 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			name: "gateway with both HTTP and HTTPS listeners and section name pointing to HTTP listener results in http protocol only",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -2357,10 +2243,8 @@ func TestProtocolsFromHTTPRoutesGatewayListeners(t *testing.T) {
 			require.NoError(t, err)
 
 			route := &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{

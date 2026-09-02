@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -30,7 +29,7 @@ func TestKongVaultOnKonnectConfigStoreRef(t *testing.T) {
 			name: "indexes the referenced KonnectConfigStore",
 			input: &configurationv1alpha1.KongVault{
 				// KongVault is cluster-scoped, so the reference namespace is used as-is.
-				ObjectMeta: metav1.ObjectMeta{Name: "certvault"},
+				Name: "certvault",
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend: "konnect",
 					Prefix:  "certvault",

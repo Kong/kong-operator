@@ -879,7 +879,7 @@ var konnectGatewayControlPlaneTestCases = []konnectEntityReconcilerTestCase{
 		objectOps: func(ctx context.Context, t *testing.T, cl client.Client, ns *corev1.Namespace) {
 			// Reference a KonnectAPIAuthConfiguration that does not exist.
 			fakeAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "nonexistent-auth"},
+				Name: "nonexistent-auth",
 			}
 			deploy.KonnectGatewayControlPlane(t, ctx, cl, fakeAuth,
 				func(obj client.Object) {
@@ -981,7 +981,7 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 	// Reference a KonnectAPIAuthConfiguration in the auth namespace.
 	// It doesn't need to exist — the cross-namespace grant check runs first.
 	fakeAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Name: "auth-in-other-ns"},
+		Name: "auth-in-other-ns",
 	}
 	deploy.KonnectGatewayControlPlane(t, ctx, cl, fakeAuth,
 		func(obj client.Object) {

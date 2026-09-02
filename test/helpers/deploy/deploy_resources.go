@@ -206,9 +206,7 @@ func KonnectAPIAuthConfiguration(
 	t.Helper()
 
 	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "api-auth-config-",
-		},
+		GenerateName: "api-auth-config-",
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 			Token:     "kpat_xxxxxx",
@@ -262,9 +260,7 @@ func KonnectGatewayControlPlane(
 
 	name := "cp-" + randomSuffix()
 	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -393,9 +389,7 @@ func KonnectCloudGatewayDataPlaneGroupConfiguration(
 ) *konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration {
 	t.Helper()
 	obj := konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "data-plane-group-configuration-",
-		},
+		GenerateName: "data-plane-group-configuration-",
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version:         consts.DefaultDataPlaneTag,
 			APIAccess:       new(sdkkonnectcomp.APIAccessPrivatePlusPublic),
@@ -422,9 +416,7 @@ func Portal(
 	t.Helper()
 	name := "portal-" + randomSuffix()
 	obj := konnectv1alpha1.Portal{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha1.PortalSpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -459,9 +451,7 @@ func KonnectAIGateway(
 	t.Helper()
 	name := "ai-gw-cp-" + randomSuffix()
 	obj := konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -495,9 +485,7 @@ func AIGatewayAgent(
 	t.Helper()
 	name := "ai-agent-" + randomSuffix()
 	obj := aiconfigurationv1alpha1.AIGatewayAgent{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -536,9 +524,7 @@ func KonnectEventGateway(
 	t.Helper()
 	name := "event-gateway-" + randomSuffix()
 	obj := konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -571,9 +557,7 @@ func EventGatewayVirtualCluster(
 	t.Helper()
 	name := "virtual-cluster-" + randomSuffix()
 	obj := configurationv1alpha1.EventGatewayVirtualCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -619,9 +603,7 @@ func EventGatewayBackendCluster(
 	t.Helper()
 	name := "backend-cluster-" + randomSuffix()
 	obj := configurationv1alpha1.EventGatewayBackendCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -674,9 +656,7 @@ func KonnectConfigStore(
 	t.Helper()
 	name := "config-store-" + randomSuffix()
 	obj := konnectv1alpha1.KonnectConfigStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 			ControlPlaneRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -751,9 +731,7 @@ func KonnectCloudGatewayNetwork(
 	t.Helper()
 	name := "network-" + randomSuffix()
 	obj := konnectv1alpha1.KonnectCloudGatewayNetwork{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 			Name:                          name,
 			CloudGatewayProviderAccountID: "1111111111111111111",
@@ -847,9 +825,7 @@ func KongService(
 
 	name := "kongservice-" + randomSuffix()
 	kongService := configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 				Name: new(name),
@@ -879,9 +855,7 @@ func KongRoute(
 
 	name := "kongroute-" + randomSuffix()
 	kongRoute := configurationv1alpha1.KongRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				Name: new(name),
@@ -959,9 +933,7 @@ func KongCredentialAPIKey(
 	t.Helper()
 
 	c := &configurationv1alpha1.KongCredentialAPIKey{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "api-key-",
-		},
+		GenerateName: "api-key-",
 		Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
@@ -990,9 +962,7 @@ func KongCredentialBasicAuth(
 	t.Helper()
 
 	c := &configurationv1alpha1.KongCredentialBasicAuth{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "basic-auth-",
-		},
+		GenerateName: "basic-auth-",
 		Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
@@ -1021,9 +991,7 @@ func KongCredentialACL(
 	t.Helper()
 
 	c := &configurationv1alpha1.KongCredentialACL{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "acl-",
-		},
+		GenerateName: "acl-",
 		Spec: configurationv1alpha1.KongCredentialACLSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
@@ -1050,9 +1018,7 @@ func KongCredentialHMAC(
 	t.Helper()
 
 	c := &configurationv1alpha1.KongCredentialHMAC{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "hmac-",
-		},
+		GenerateName: "hmac-",
 		Spec: configurationv1alpha1.KongCredentialHMACSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
@@ -1079,9 +1045,7 @@ func KongCredentialJWT(
 	t.Helper()
 
 	c := &configurationv1alpha1.KongCredentialJWT{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "jwt-",
-		},
+		GenerateName: "jwt-",
 		Spec: configurationv1alpha1.KongCredentialJWTSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: consumerName,
@@ -1109,9 +1073,7 @@ func KongCACertificateAttachedToCP(
 	t.Helper()
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "cacert-",
-		},
+		GenerateName: "cacert-",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -1144,9 +1106,7 @@ func KongCertificateAttachedToCP(
 	t.Helper()
 
 	cert := &configurationv1alpha1.KongCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "cert-",
-		},
+		GenerateName: "cert-",
 		Spec: configurationv1alpha1.KongCertificateSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -1209,10 +1169,8 @@ func KongUpstream(
 	t.Helper()
 
 	u := &configurationv1alpha1.KongUpstream{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "upstream-",
-		},
-		Spec: configurationv1alpha1.KongUpstreamSpec{},
+		GenerateName: "upstream-",
+		Spec:         configurationv1alpha1.KongUpstreamSpec{},
 	}
 	for _, opt := range opts {
 		opt(u)
@@ -1235,9 +1193,7 @@ func KongTargetAttachedToUpstream(
 	t.Helper()
 
 	u := &configurationv1alpha1.KongTarget{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "upstream-",
-		},
+		GenerateName: "upstream-",
 		Spec: configurationv1alpha1.KongTargetSpec{
 			UpstreamRef: commonv1alpha1.NamespacedRef{
 				Name: upstream.Name,
@@ -1265,10 +1221,8 @@ func Secret(
 	t.Helper()
 
 	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "secret-",
-		},
-		Data: data,
+		GenerateName: "secret-",
+		Data:         data,
 	}
 	for _, opt := range opts {
 		opt(s)
@@ -1290,10 +1244,8 @@ func KongConsumer(
 	t.Helper()
 
 	c := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "consumer-",
-		},
-		Username: username,
+		GenerateName: "consumer-",
+		Username:     username,
 	}
 	for _, opt := range opts {
 		opt(c)
@@ -1316,9 +1268,7 @@ func KongConsumerGroupAttachedToCP(
 
 	name := "consumer-group-" + randomSuffix()
 	cg := configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: name,
 		},
@@ -1347,9 +1297,7 @@ func KongVaultAttachedToCP(
 	t.Helper()
 
 	vault := &configurationv1alpha1.KongVault{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "vault-",
-		},
+		GenerateName: "vault-",
 		Spec: configurationv1alpha1.KongVaultSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -1387,9 +1335,7 @@ func KongKey(
 	t.Helper()
 
 	key := &configurationv1alpha1.KongKey{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "key-",
-		},
+		GenerateName: "key-",
 		Spec: configurationv1alpha1.KongKeySpec{
 			KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
 				KID:  kid,
@@ -1416,10 +1362,8 @@ func ProxyCachePlugin(
 	t.Helper()
 
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "proxy-cache-kp-",
-		},
-		PluginName: "proxy-cache",
+		GenerateName: "proxy-cache-kp-",
+		PluginName:   "proxy-cache",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"response_code": [200], "request_method": ["GET", "HEAD"], "content_type": ["text/plain; charset=utf-8"], "cache_ttl": 300, "strategy": "memory"}`),
 		},
@@ -1439,10 +1383,8 @@ func RateLimitingPlugin(
 	t.Helper()
 
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "rate-limiting-kp-",
-		},
-		PluginName: "rate-limiting",
+		GenerateName: "rate-limiting-kp-",
+		PluginName:   "rate-limiting",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"minute": 5, "policy": "local"}`),
 		},
@@ -1462,10 +1404,8 @@ func RequestTransformerPlugin(
 	t.Helper()
 
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "request-transformer-kp-",
-		},
-		PluginName: "request-transformer",
+		GenerateName: "request-transformer-kp-",
+		PluginName:   "request-transformer",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"add":{"headers":["X-Kong-Test:test"]}}`),
 		},
@@ -1484,10 +1424,8 @@ func ResponseTransformerPlugin(t *testing.T,
 	t.Helper()
 
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "response-transformer-kp-",
-		},
-		PluginName: "response-transformer",
+		GenerateName: "response-transformer-kp-",
+		PluginName:   "response-transformer",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"add":{"headers":["X-Kong-Test:test"]}}`),
 		},
@@ -1508,9 +1446,7 @@ func KongKeySet(
 	t.Helper()
 
 	keySet := &configurationv1alpha1.KongKeySet{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.KongKeySetSpec{
 			KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
 				Name: name,
@@ -1540,9 +1476,7 @@ func KongSNIAttachedToCertificate(
 
 	name := "sni-" + randomSuffix()
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{
 				Name: cert.Name,
@@ -1572,9 +1506,7 @@ func KongDataPlaneClientCertificateAttachedToCP(
 	t.Helper()
 
 	cert := &configurationv1alpha1.KongDataPlaneClientCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "dp-cert-",
-		},
+		GenerateName: "dp-cert-",
 		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{
 				Cert: TestValidCACertPEM,
@@ -1602,9 +1534,7 @@ func KonnectExtension(
 	t.Helper()
 
 	ke := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "konnect-extension-",
-		},
+		GenerateName: "konnect-extension-",
 	}
 	for _, opt := range opts {
 		opt(ke)
@@ -1731,10 +1661,8 @@ func KongReferenceGrant(
 	t.Helper()
 
 	krg := configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kongreferencegrant-",
-		},
-		Spec: configurationv1alpha1.KongReferenceGrantSpec{},
+		GenerateName: "kongreferencegrant-",
+		Spec:         configurationv1alpha1.KongReferenceGrantSpec{},
 	}
 
 	for _, opt := range opts {
@@ -1778,9 +1706,7 @@ func Namespace(
 	t.Helper()
 
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ns-",
-		},
+		GenerateName: "ns-",
 	}
 
 	require.NoError(t, cl.Create(ctx, ns))

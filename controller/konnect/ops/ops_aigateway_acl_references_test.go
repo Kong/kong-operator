@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -25,7 +24,7 @@ func aclReferencesScheme(t *testing.T) *runtime.Scheme {
 // and a Konnect name, i.e. a reference target that resolves successfully.
 func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayConsumerGroup {
 	c := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayConsumerGroupAPISpec{
 				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
@@ -43,7 +42,7 @@ func programmedConsumerGroup(name, namespace, konnectName, konnectID string) *ai
 // since these tests only need the reference to resolve, not a specific name.
 func programmedModelProvider(name, namespace, konnectID string) *aiconfigurationv1alpha1.AIGatewayModelProvider {
 	p := &aiconfigurationv1alpha1.AIGatewayModelProvider{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 	}
 	p.SetKonnectID(konnectID)
 	return p
@@ -54,7 +53,7 @@ func programmedModelProvider(name, namespace, konnectID string) *aiconfiguration
 // successfully.
 func programmedAuthStrategy(name, namespace, konnectName, konnectID string) *aiconfigurationv1alpha1.AIGatewayAuthStrategy {
 	s := &aiconfigurationv1alpha1.AIGatewayAuthStrategy{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayAuthStrategySpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAuthStrategyAPISpec{
 				AIGatewayAuthStrategyConfig: &aiconfigurationv1alpha1.AIGatewayAuthStrategyConfig{
@@ -73,7 +72,7 @@ func programmedAuthStrategy(name, namespace, konnectName, konnectID string) *aic
 
 func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *aiconfigurationv1alpha1.AIGatewayPolicy {
 	p := &aiconfigurationv1alpha1.AIGatewayPolicy{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
 				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier(specName),
@@ -87,7 +86,7 @@ func programmedPolicy(name, namespace, konnectID, gatewayID, specName string) *a
 
 func testAgentWithPolicyRef(namespace string, ref aiconfigurationv1alpha1.AIGatewayPolicyRef) *aiconfigurationv1alpha1.AIGatewayAgent {
 	return &aiconfigurationv1alpha1.AIGatewayAgent{
-		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: namespace},
+		Name: "agent", Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier("agent-name"),
@@ -109,7 +108,7 @@ func TestToCreateAIGatewayAgentRequest_ResolvesACLAllowRefs(t *testing.T) {
 	consumerGroup := programmedConsumerGroup("consumer-group-1", "ns", "konnect-consumer-group-name", "kid-consumer-group-1")
 
 	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
-		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
+		Name: "agent", Namespace: "ns",
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Name: aiconfigurationv1alpha1.AIGatewayEntityIdentifier("agent-name"),
@@ -145,11 +144,11 @@ func TestToCreateAIGatewayAgentRequest_ACLRefNotProgrammed(t *testing.T) {
 	t.Parallel()
 
 	consumerGroup := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{Name: "consumer-group-1", Namespace: "ns"},
+		Name: "consumer-group-1", Namespace: "ns",
 	}
 
 	agent := &aiconfigurationv1alpha1.AIGatewayAgent{
-		ObjectMeta: metav1.ObjectMeta{Name: "agent", Namespace: "ns"},
+		Name: "agent", Namespace: "ns",
 		Spec: aiconfigurationv1alpha1.AIGatewayAgentSpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayAgentAPISpec{
 				Access: aiconfigurationv1alpha1.AIGatewayAgentAccess{

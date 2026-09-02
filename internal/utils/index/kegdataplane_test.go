@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
@@ -26,15 +25,15 @@ func TestKegDataPlaneKonnectNamespacedRef(t *testing.T) {
 		{
 			name: "returns nil when KonnectNamespacedRef is not set",
 			input: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
-				Spec:       eventgatewayv1alpha1.KegDataPlaneSpec{},
+				Namespace: "default",
+				Spec:      eventgatewayv1alpha1.KegDataPlaneSpec{},
 			},
 			expected: nil,
 		},
 		{
 			name: "returns namespace/name when KonnectNamespacedRef is set",
 			input: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 						KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{
@@ -48,7 +47,7 @@ func TestKegDataPlaneKonnectNamespacedRef(t *testing.T) {
 		{
 			name: "uses the KegDataPlane namespace, not a separate one",
 			input: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "other-ns"},
+				Namespace: "other-ns",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 						KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{

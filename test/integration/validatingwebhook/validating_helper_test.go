@@ -36,9 +36,7 @@ func bootstrapGateway(ctx context.Context, t *testing.T, env environments.Enviro
 
 	gatewayConfig := helpers.GenerateGatewayConfiguration(namespace.Name, func(gc *operatorv2beta1.GatewayConfiguration) {
 		gc.Spec.ControlPlaneOptions = &operatorv2beta1.GatewayConfigControlPlaneOptions{
-			ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-				IngressClass: new(ingressClass),
-			},
+			IngressClass: new(ingressClass),
 		}
 		gc.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env = append(
 			gc.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].Env,

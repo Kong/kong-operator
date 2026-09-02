@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -22,18 +21,14 @@ import (
 
 func TestKongRouteToSDKRouteInput_Tags(t *testing.T) {
 	route := &configurationv1alpha1.KongRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongRoute",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "route-1",
-			Namespace:  "default",
-			UID:        k8stypes.UID(uuid.NewString()),
-			Generation: 2,
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
-			},
+		Kind:       "KongRoute",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "route-1",
+		Namespace:  "default",
+		UID:        k8stypes.UID(uuid.NewString()),
+		Generation: 2,
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 		},
 		Spec: configurationv1alpha1.KongRouteSpec{
 			ServiceRef: &configurationv1alpha1.ServiceRef{
@@ -78,11 +73,9 @@ func TestCreateKongRoute(t *testing.T) {
 	t.Run("upsert route using UID when name is missing", func(t *testing.T) {
 		sdk := mocks.NewMockRoutesSDK(t)
 		route := &configurationv1alpha1.KongRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "route-1",
-				Namespace: "default",
-				UID:       k8stypes.UID("abcd-1234"),
-			},
+			Name:      "route-1",
+			Namespace: "default",
+			UID:       k8stypes.UID("abcd-1234"),
 			Spec: configurationv1alpha1.KongRouteSpec{
 				KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 					Hosts: []string{"example.com"},
@@ -130,11 +123,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -193,11 +184,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -236,11 +225,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -284,11 +271,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -339,11 +324,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -395,11 +378,9 @@ func TestAdoptRoute(t *testing.T) {
 			mockRoutePair: func(t *testing.T) (*mocks.MockRoutesSDK, *configurationv1alpha1.KongRoute) {
 				sdk := mocks.NewMockRoutesSDK(t)
 				route := &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "route-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongRouteSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,

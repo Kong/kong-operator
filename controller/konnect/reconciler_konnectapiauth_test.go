@@ -31,10 +31,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "valid Token",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-api-auth",
-					Namespace: "default",
-				},
+				Name:      "test-api-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:  konnectv1alpha1.KonnectAPIAuthTypeToken,
 					Token: "kpat_xxxxxxxxxxxx",
@@ -45,10 +43,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "valid Secret Reference",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-api-auth",
-					Namespace: "default",
-				},
+				Name:      "test-api-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -58,12 +54,10 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						"konghq.com/credential": "konnect",
-					},
+				Name:      "test-secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/credential": "konnect",
 				},
 				Data: map[string][]byte{
 					"token": []byte("test-token"),
@@ -74,10 +68,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "Secret is missing konghq.com/credential=konnect label",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-api-auth",
-					Namespace: "default",
-				},
+				Name:      "test-api-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -87,10 +79,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "default",
-				},
+				Name:      "test-secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"token": []byte("test-token"),
 				},
@@ -100,10 +90,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "missing token from referred Secret",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-api-auth",
-					Namespace: "default",
-				},
+				Name:      "test-api-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -113,12 +101,10 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 				},
 			},
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						"konghq.com/credential": "konnect",
-					},
+				Name:      "test-secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/credential": "konnect",
 				},
 				Data: map[string][]byte{
 					"random_key": []byte("dummy"),
@@ -130,10 +116,8 @@ func TestGetTokenFromKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "Invalid Secret Reference",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-api-auth",
-					Namespace: "default",
-				},
+				Name:      "test-api-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -182,17 +166,13 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "adds finalizer when KonnectGatewayControlPlane references the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -208,17 +188,13 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "adds finalizer when KonnectCloudGatewayNetwork references the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha1.KonnectCloudGatewayNetwork{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cgn",
-						Namespace: "default",
-					},
+					Name:      "test-cgn",
+					Namespace: "default",
 					Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 						Name:                          "test-cgn",
 						CloudGatewayProviderAccountID: "test-provider-id",
@@ -239,17 +215,13 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "adds finalizer when KonnectExtension references the auth in status",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-					},
+					Name:      "test-ext",
+					Namespace: "default",
 					Status: konnectv1alpha2.KonnectExtensionStatus{
 						Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 							ControlPlaneID: "test-cp-id",
@@ -271,17 +243,13 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "adds finalizer when KonnectEventGateway references the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha1.KonnectEventGateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-event-cp",
-						Namespace: "default",
-					},
+					Name:      "test-event-cp",
+					Namespace: "default",
 					Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 						KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -300,17 +268,13 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "adds finalizer when multiple resources reference the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -320,10 +284,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 					},
 				},
 				&konnectv1alpha1.KonnectCloudGatewayNetwork{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cgn",
-						Namespace: "default",
-					},
+					Name:      "test-cgn",
+					Namespace: "default",
 					Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 						Name:                          "test-cgn",
 						CloudGatewayProviderAccountID: "test-provider-id",
@@ -344,11 +306,9 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "removes finalizer when no resources reference the auth",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-auth",
-					Namespace:  "default",
-					Finalizers: []string{APIAuthInUseFinalizer},
-				},
+				Name:       "test-auth",
+				Namespace:  "default",
+				Finalizers: []string{APIAuthInUseFinalizer},
 			},
 			referencingResources:   []client.Object{},
 			expectedFinalizerAdded: false,
@@ -357,18 +317,14 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "does not add finalizer when auth already has it",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-auth",
-					Namespace:  "default",
-					Finalizers: []string{APIAuthInUseFinalizer},
-				},
+				Name:       "test-auth",
+				Namespace:  "default",
+				Finalizers: []string{APIAuthInUseFinalizer},
 			},
 			referencingResources: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -384,10 +340,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "does not remove finalizer when it's not present",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 			},
 			referencingResources:   []client.Object{},
 			expectedFinalizerAdded: false,
@@ -540,7 +494,7 @@ func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
 		{
 			name: "token type",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeToken,
 				},
@@ -550,7 +504,7 @@ func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
 		{
 			name: "secretRef with nil SecretRef",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 				},
@@ -560,7 +514,7 @@ func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
 		{
 			name: "secretRef with empty namespace defaults to same namespace",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: ""},
@@ -571,7 +525,7 @@ func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
 		{
 			name: "secretRef with same namespace",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},
@@ -582,7 +536,7 @@ func TestApiAuthHasCrossNamespaceSecretRef(t *testing.T) {
 		{
 			name: "secretRef with different namespace",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns-a"},
+				Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
@@ -609,7 +563,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 		{
 			name: "token type: no ResolvedRefs condition",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Name: "auth", Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeToken,
 				},
@@ -619,7 +573,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 		{
 			name: "same-namespace secretRef: no ResolvedRefs condition",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Name: "auth", Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},
@@ -630,7 +584,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 		{
 			name: "cross-namespace secretRef: ResolvedRefs=True",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Name: "auth", Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
@@ -642,7 +596,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 		{
 			name: "cross-namespace secretRef with a stale ResolvedRefs=False is flipped to True",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Name: "auth", Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-b"},
@@ -664,7 +618,7 @@ func TestReconcileSecretRefResolvedRefs(t *testing.T) {
 		{
 			name: "same-namespace secretRef removes a stale ResolvedRefs condition",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Name: "auth", Namespace: "ns-a"},
+				Name: "auth", Namespace: "ns-a",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "secret", Namespace: "ns-a"},

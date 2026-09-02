@@ -204,10 +204,8 @@ func (r *Reconciler) createKonnectExtension(
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (*konnectv1alpha2.KonnectExtension, error) {
 	konnectExt := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    gateway.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
-		},
+		Namespace:    gateway.Namespace,
+		GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-", gateway.Name)),
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
 			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -322,13 +320,11 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-					ServiceOptions: operatorv1beta1.ServiceOptions{
-						Type:                  opts.Network.Services.Ingress.Type,
-						Annotations:           opts.Network.Services.Ingress.Annotations,
-						Labels:                ingressLabels,
-						ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
-						Name:                  opts.Network.Services.Ingress.Name,
-					},
+					Type:                  opts.Network.Services.Ingress.Type,
+					Annotations:           opts.Network.Services.Ingress.Annotations,
+					Labels:                ingressLabels,
+					ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
+					Name:                  opts.Network.Services.Ingress.Name,
 				},
 			},
 		}
@@ -336,9 +332,7 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 		dataPlaneOptions.Network = operatorv1beta1.DataPlaneNetworkOptions{
 			Services: &operatorv1beta1.DataPlaneServices{
 				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-					ServiceOptions: operatorv1beta1.ServiceOptions{
-						Type: corev1.ServiceTypeLoadBalancer,
-					},
+					Type: corev1.ServiceTypeLoadBalancer,
 				},
 			},
 		}
@@ -777,10 +771,8 @@ func generateDataPlaneNetworkPolicy(
 	}
 
 	return &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    dataplane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-limit-admin-api-", dataplane.Name)),
-		},
+		Namespace:    dataplane.Namespace,
+		GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-limit-admin-api-", dataplane.Name)),
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{
 				MatchLabels: map[string]string{

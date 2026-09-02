@@ -39,9 +39,7 @@ func TestGatewayConfiguration(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -56,9 +54,7 @@ func TestGatewayConfiguration(t *testing.T) {
 							{
 								Group: "wrong.konghq.com",
 								Kind:  "wrongExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -75,9 +71,7 @@ func TestGatewayConfiguration(t *testing.T) {
 								{
 									Group: "konnect.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},
@@ -95,9 +89,7 @@ func TestGatewayConfiguration(t *testing.T) {
 								{
 									Group: "konnect.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},

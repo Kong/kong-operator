@@ -34,10 +34,8 @@ type handleUpstreamRefTestCase[T constraints.SupportedKonnectEntityType, TEnt co
 }
 
 var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-ok",
-		Namespace: "default",
-	},
+	Name:      "upstream-ok",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongUpstreamSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -51,9 +49,7 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -66,10 +62,8 @@ var testKongUpstreamOK = &configurationv1alpha1.KongUpstream{
 }
 
 var testKongUpstreamNotProgrammed = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-not-programmed",
-		Namespace: "default",
-	},
+	Name:      "upstream-not-programmed",
+	Namespace: "default",
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Conditions: []metav1.Condition{
 			{
@@ -81,10 +75,8 @@ var testKongUpstreamNotProgrammed = &configurationv1alpha1.KongUpstream{
 }
 
 var testKongUpstreamNoControlPlaneRef = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-no-cp-ref",
-		Namespace: "default",
-	},
+	Name:      "upstream-no-cp-ref",
+	Namespace: "default",
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Conditions: []metav1.Condition{
 			{
@@ -96,19 +88,15 @@ var testKongUpstreamNoControlPlaneRef = &configurationv1alpha1.KongUpstream{
 }
 
 var testKongUpstreamBeingDeleted = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:              "upstream-being-deleted",
-		Namespace:         "default",
-		DeletionTimestamp: &metav1.Time{Time: time.Now()},
-		Finalizers:        []string{"target-0"},
-	},
+	Name:              "upstream-being-deleted",
+	Namespace:         "default",
+	DeletionTimestamp: &metav1.Time{Time: time.Now()},
+	Finalizers:        []string{"target-0"},
 }
 
 var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-cpref-not-found",
-		Namespace: "default",
-	},
+	Name:      "upstream-cpref-not-found",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongUpstreamSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -122,9 +110,7 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -137,10 +123,8 @@ var testKongUpstreamControlPlaneRefNotFound = &configurationv1alpha1.KongUpstrea
 }
 
 var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-cpref-not-programmed",
-		Namespace: "default",
-	},
+	Name:      "upstream-cpref-not-programmed",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongUpstreamSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -154,9 +138,7 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -169,11 +151,9 @@ var testKongUpstreamControlPlaneRefNotProgrammed = &configurationv1alpha1.KongUp
 }
 
 var testControlPlaneOK = &konnectv1alpha2.KonnectGatewayControlPlane{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cp-ok",
-		Namespace: "default",
-	},
-	Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
+	Name:      "cp-ok",
+	Namespace: "default",
+	Spec:      konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID: "123456789",
@@ -188,11 +168,9 @@ var testControlPlaneOK = &konnectv1alpha2.KonnectGatewayControlPlane{
 }
 
 var testControlPlaneNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cp-not-programmed",
-		Namespace: "default",
-	},
-	Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
+	Name:      "cp-not-programmed",
+	Namespace: "default",
+	Spec:      konnectv1alpha2.KonnectGatewayControlPlaneSpec{},
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		Conditions: []metav1.Condition{
 			{
@@ -204,10 +182,8 @@ var testControlPlaneNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
 }
 
 var testKongUpstreamOKInOtherNS = &configurationv1alpha1.KongUpstream{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "upstream-xns-ok",
-		Namespace: "other-namespace",
-	},
+	Name:      "upstream-xns-ok",
+	Namespace: "other-namespace",
 	Spec: configurationv1alpha1.KongUpstreamSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -221,9 +197,7 @@ var testKongUpstreamOKInOtherNS = &configurationv1alpha1.KongUpstream{
 	},
 	Status: configurationv1alpha1.KongUpstreamStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "99999",
-			},
+			ID:             "99999",
 			ControlPlaneID: "987654321",
 		},
 		Conditions: []metav1.Condition{
@@ -236,10 +210,8 @@ var testKongUpstreamOKInOtherNS = &configurationv1alpha1.KongUpstream{
 }
 
 var testControlPlaneOKInOtherNSForUpstream = &konnectv1alpha2.KonnectGatewayControlPlane{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cp-other",
-		Namespace: "other-namespace",
-	},
+	Name:      "cp-other",
+	Namespace: "other-namespace",
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID: "987654321",
@@ -260,10 +232,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "has upstream ref and control plane ref",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-ok",
-					Namespace: "default",
-				},
+				Name:      "target-ok",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-ok",
@@ -298,10 +268,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "upstream ref not found",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-notfound",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-notfound",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-nonexist",
@@ -321,10 +289,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "referenced KongUpstream not programmed",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-not-programmed",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-not-programmed",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-not-programmed",
@@ -347,10 +313,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "referenced KongUpstream has no ControlPlaneRef",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-no-cpref",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-no-cpref",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-no-cp-ref",
@@ -372,10 +336,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "referenced KongUpstream is being deleted",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-being-deleted",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-being-deleted",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-being-deleted",
@@ -389,10 +351,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "ControlPlaneRef not found",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-cpref-not-found",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-cpref-not-found",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-cpref-not-found",
@@ -408,10 +368,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "ControlPlaneRef not programmed",
 			ent: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-upstream-cpref-not-programmed",
-					Namespace: "default",
-				},
+				Name:      "target-upstream-cpref-not-programmed",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: "upstream-cpref-not-programmed",
@@ -440,14 +398,10 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "cross-namespace upstream ref with no KongReferenceGrant",
 			ent: &configurationv1alpha1.KongTarget{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "configuration.konghq.com/v1alpha1",
-					Kind:       "KongTarget",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-xns-no-grant",
-					Namespace: "default",
-				},
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Kind:       "KongTarget",
+				Name:       "target-xns-no-grant",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name:      "upstream-xns-ok",
@@ -475,14 +429,10 @@ func TestHandleUpstreamRef(t *testing.T) {
 		{
 			name: "cross-namespace upstream ref with KongReferenceGrant",
 			ent: &configurationv1alpha1.KongTarget{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "configuration.konghq.com/v1alpha1",
-					Kind:       "KongTarget",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "target-xns-with-grant",
-					Namespace: "default",
-				},
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Kind:       "KongTarget",
+				Name:       "target-xns-with-grant",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name:      "upstream-xns-ok",
@@ -507,10 +457,8 @@ func TestHandleUpstreamRef(t *testing.T) {
 				testKongUpstreamOKInOtherNS,
 				testControlPlaneOKInOtherNSForUpstream,
 				&configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "target-to-upstream",
-						Namespace: "other-namespace",
-					},
+					Name:      "target-to-upstream",
+					Namespace: "other-namespace",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{

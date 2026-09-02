@@ -82,10 +82,8 @@ func TestKonnectAPIAuthConfigurationReferenceGrant(t *testing.T) {
 
 	t.Log("Creating a KonnectAPIAuthConfiguration referencing the Secret cross-namespace (no grant yet)")
 	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "api-auth-xns-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "api-auth-xns-",
+		Namespace:    ns.Name,
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 			SecretRef: &corev1.SecretReference{

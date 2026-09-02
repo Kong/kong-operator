@@ -11,7 +11,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
@@ -70,14 +69,14 @@ spec:
 	t.Log("verifying the integrity of the cache store")
 	assert.Len(t, cs.IngressV1.List(), 1)
 	assert.Len(t, cs.Service.List(), 1)
-	_, exists, err = cs.Get(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "doesntexist", Name: "doesntexist"}})
+	_, exists, err = cs.Get(&corev1.Service{Namespace: "doesntexist", Name: "doesntexist"})
 	assert.NoError(t, err)
 	assert.False(t, exists)
 
 	var got any
 	t.Log("ensuring that we can Get() the objects back out of the cache store")
-	svc := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-deployment"}}
-	ing := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "httpbin-ingress"}}
+	svc := &corev1.Service{Namespace: "default", Name: "httpbin-deployment"}
+	ing := &netv1.Ingress{Namespace: "default", Name: "httpbin-ingress"}
 	got, exists, err = cs.Get(svc)
 	assert.NoError(t, err)
 	assert.True(t, exists)
@@ -108,9 +107,7 @@ func TestGetIngressClassHandling(t *testing.T) {
 			objs: FakeObjects{
 				IngressClassesV1: []*netv1.IngressClass{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: annotations.DefaultIngressClass,
-						},
+						Name: annotations.DefaultIngressClass,
 						Spec: netv1.IngressClassSpec{
 							Controller: IngressClassKongController,
 						},
@@ -124,11 +121,9 @@ func TestGetIngressClassHandling(t *testing.T) {
 			objs: FakeObjects{
 				IngressClassesV1: []*netv1.IngressClass{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: annotations.DefaultIngressClass,
-							Annotations: map[string]string{
-								"ingressclass.kubernetes.io/is-default-class": "true",
-							},
+						Name: annotations.DefaultIngressClass,
+						Annotations: map[string]string{
+							"ingressclass.kubernetes.io/is-default-class": "true",
 						},
 						Spec: netv1.IngressClassSpec{
 							Controller: IngressClassKongController,
@@ -160,10 +155,8 @@ func TestStore_Getters(t *testing.T) {
 		require.ErrorAs(t, err, &NotFoundError{})
 
 		upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kong-upstream-policy",
-				Namespace: "default",
-			},
+			Name:      "kong-upstream-policy",
+			Namespace: "default",
 			Spec: configurationv1beta1.KongUpstreamPolicySpec{
 				Algorithm: new("least-connections"),
 			},
@@ -185,10 +178,8 @@ func benchmarkListHTTPRoutes(b *testing.B, count int) {
 	// Add some HTTPRoutes to the cache store
 	for i := range count {
 		route := &gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("route-%d", i),
-				Namespace: "default",
-			},
+			Name:      fmt.Sprintf("route-%d", i),
+			Namespace: "default",
 			Spec: gatewayapi.HTTPRouteSpec{
 				Rules: []gatewayapi.HTTPRouteRule{
 					{

@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -124,10 +123,8 @@ func TestEventGatewayDataPlaneCertificate_ToCreateEventGatewayDataPlaneCertifica
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme.Get()).
 		WithObjects(&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "tls-secret",
-				Namespace: "default",
-			},
+			Name:      "tls-secret",
+			Namespace: "default",
 			Data: map[string][]byte{
 				"tls.crt": []byte("secret-cert"),
 			},
@@ -152,10 +149,8 @@ func TestEventGatewayDataPlaneCertificate_ToUpdateEventGatewayDataPlaneCertifica
 	cl := fake.NewClientBuilder().
 		WithScheme(scheme.Get()).
 		WithObjects(&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "tls-secret",
-				Namespace: "default",
-			},
+			Name:      "tls-secret",
+			Namespace: "default",
 			Data: map[string][]byte{
 				"tls.crt": []byte("secret-cert"),
 			},
@@ -171,15 +166,11 @@ func TestEventGatewayDataPlaneCertificate_ToUpdateEventGatewayDataPlaneCertifica
 
 func testEventGatewayDataPlaneCertificate() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayDataPlaneCertificate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "event-dp-cert",
-			Namespace: "default",
-			UID:       "event-dp-cert-uid",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayDataPlaneCertificate",
+		Name:       "event-dp-cert",
+		Namespace:  "default",
+		UID:        "event-dp-cert-uid",
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

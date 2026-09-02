@@ -83,7 +83,7 @@ func TestIsGatewayProgrammedSettledForRoute(t *testing.T) {
 		{
 			name: "gateway not programmed even when matching listener is programmed",
 			gateway: &gatewayapi.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Generation: 1,
 				Spec: gatewayapi.GatewaySpec{
 					Listeners: []gatewayapi.Listener{udpListener},
 				},
@@ -286,7 +286,7 @@ func programmedGatewayForRouteReadinessTest(
 	listenerStatuses []gatewayapi.ListenerStatus,
 ) *gatewayapi.Gateway {
 	return &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		Generation: 1,
 		Spec: gatewayapi.GatewaySpec{
 			Listeners: listeners,
 		},
@@ -658,18 +658,14 @@ func TestFilterHostnames_TLSRoute(t *testing.T) {
 
 func TestGetSupportedGatewayForRoute(t *testing.T) {
 	gatewayClass := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-gatewayclass",
-		},
+		Name: "test-gatewayclass",
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gatewayapi.GatewayController("konghq.com/kic-gateway-controller"),
 		},
 	}
 
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-namespace",
-		},
+		Name: "test-namespace",
 	}
 
 	routeConditionAccepted := func(status metav1.ConditionStatus, reason gatewayapi.RouteConditionReason) metav1.Condition {
@@ -690,11 +686,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	goodKind := gatewayapi.Kind("Gateway")
 	basicHTTPRoute := func() *gatewayapi.HTTPRoute {
 		return &gatewayapi.HTTPRoute{
-			TypeMeta: gatewayapi.V1GatewayTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "basic-httproute",
-				Namespace: "test-namespace",
-			},
+			TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+			Name:      "basic-httproute",
+			Namespace: "test-namespace",
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: []gatewayapi.ParentReference{
@@ -718,12 +712,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("HTTPRoute", func(t *testing.T) {
 		gatewayWithHTTP80Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
@@ -1095,11 +1087,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("TCPRoute", func(t *testing.T) {
 		basicTCPRoute := func() *gatewayapi.TCPRoute {
 			return &gatewayapi.TCPRoute{
-				TypeMeta: gatewayapi.TCPRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-tcproute",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  gatewayapi.TCPRouteTypeMeta,
+				Name:      "basic-tcproute",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.TCPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -1115,12 +1105,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithTCP80Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("tcp").WithPort(80).TCP().IntoSlice(),
@@ -1364,11 +1352,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("UDPRoute", func(t *testing.T) {
 		basicUDPRoute := func() *gatewayapi.UDPRoute {
 			return &gatewayapi.UDPRoute{
-				TypeMeta: gatewayapi.UDPRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-udproute",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  gatewayapi.UDPRouteTypeMeta,
+				Name:      "basic-udproute",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.UDPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -1384,12 +1370,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithUDP53Ready := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("udp").WithPort(53).UDP().IntoSlice(),
@@ -1598,11 +1582,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("TLSRoute", func(t *testing.T) {
 		basicTLSRoute := func() *gatewayapi.TLSRoute {
 			return &gatewayapi.TLSRoute{
-				TypeMeta: gatewayapi.TLSRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-tlsroute",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  gatewayapi.TLSRouteTypeMeta,
+				Name:      "basic-tlsroute",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.TLSRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -1618,12 +1600,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 		}
 		gatewayWithTLS443PassthroughReady := func() *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "test-namespace",
-					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      "test-gateway",
+				Namespace: "test-namespace",
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners: builder.NewListener("tls").
@@ -1840,12 +1820,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 	t.Run("single Gateway", func(t *testing.T) {
 		namedGateway := func(name string) *gatewayapi.Gateway {
 			return &gatewayapi.Gateway{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      name,
-					Namespace: "test-namespace",
-					UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      name,
+				Namespace: "test-namespace",
+				UID:       "ce7f0678-f59a-483c-80d1-243d3738d22c",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "test-gatewayclass",
 					Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
@@ -1869,11 +1847,9 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 
 		basicHTTPRoute := func(gateway string) *gatewayapi.HTTPRoute {
 			return &gatewayapi.HTTPRoute{
-				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+				Name:      "basic-httproute",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -1972,12 +1948,10 @@ func TestGetSupportedGatewayForRoute(t *testing.T) {
 func TestEnsureParentsProgrammedCondition(t *testing.T) {
 	createGateway := func(nn k8stypes.NamespacedName) *gatewayapi.Gateway {
 		return &gatewayapi.Gateway{
-			TypeMeta: gatewayapi.V1GatewayTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      nn.Name,
-				Namespace: nn.Namespace,
-				UID:       k8stypes.UID(uuid.NewString()),
-			},
+			TypeMeta:  gatewayapi.V1GatewayTypeMeta,
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
+			UID:       k8stypes.UID(uuid.NewString()),
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: "test-gatewayclass",
 				Listeners:        builder.NewListener("http").WithPort(80).HTTP().IntoSlice(),
@@ -2032,12 +2006,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when parent status is already set in route",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2093,33 +2065,31 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				},
 				expectedUpdate: true,
 				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:      new(gatewayapi.Kind("Gateway")),
-									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+					Parents: []gatewayapi.RouteParentStatus{
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:      new(gatewayapi.Kind("Gateway")),
+								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(gatewayapi.GatewayConditionAccepted),
+									Message:            "",
+									ObservedGeneration: 1,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               string(gatewayapi.GatewayConditionAccepted),
-										Message:            "",
-										ObservedGeneration: 1,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
@@ -2135,12 +2105,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2188,33 +2156,31 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				},
 				expectedUpdate: true,
 				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:      new(gatewayapi.Kind("Gateway")),
-									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+					Parents: []gatewayapi.RouteParentStatus{
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:      new(gatewayapi.Kind("Gateway")),
+								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               string(gatewayapi.GatewayConditionAccepted),
+									Message:            "",
+									ObservedGeneration: 1,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               string(gatewayapi.GatewayConditionAccepted),
-										Message:            "",
-										ObservedGeneration: 1,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
@@ -2230,12 +2196,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when Programmed condition is not present in route's parent status and Parent Section is specified",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2276,26 +2240,24 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				},
 				expectedUpdate: true,
 				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:        new(gatewayapi.Kind("Gateway")),
-									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
-									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-									SectionName: new(gatewayapi.SectionName("http-2")),
-								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+					Parents: []gatewayapi.RouteParentStatus{
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:        new(gatewayapi.Kind("Gateway")),
+								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:        gatewayapi.ObjectName(gatewayNN1.Name),
+								Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+								SectionName: new(gatewayapi.SectionName("http-2")),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
@@ -2314,12 +2276,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly set to Status True when route's parent status is not set and Parent Section is specified with 2 gateways both with section name specified",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2350,46 +2310,44 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				},
 				expectedUpdate: true,
 				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:        new(gatewayapi.Kind("Gateway")),
-									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:        gatewayapi.ObjectName(gatewayNN1.Name),
-									Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-									SectionName: new(gatewayapi.SectionName("http-2")),
-								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+					Parents: []gatewayapi.RouteParentStatus{
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:        new(gatewayapi.Kind("Gateway")),
+								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:        gatewayapi.ObjectName(gatewayNN1.Name),
+								Namespace:   (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+								SectionName: new(gatewayapi.SectionName("http-2")),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:        new(gatewayapi.Kind("Gateway")),
-									Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:        gatewayapi.ObjectName(gatewayNN2.Name),
-									Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
-									SectionName: new(gatewayapi.SectionName("http-1")),
-								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+						},
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:        new(gatewayapi.Kind("Gateway")),
+								Group:       new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:        gatewayapi.ObjectName(gatewayNN2.Name),
+								Namespace:   (*gatewayapi.Namespace)(&gatewayNN2.Namespace),
+								SectionName: new(gatewayapi.SectionName("http-1")),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
@@ -2412,12 +2370,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "Programmed condition gets properly added to route's parents status when no status for that parent is present yet",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2440,25 +2396,23 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				},
 				expectedUpdate: true,
 				expectedStatus: &gatewayapi.HTTPRouteStatus{
-					RouteStatus: gatewayapi.RouteStatus{
-						Parents: []gatewayapi.RouteParentStatus{
-							{
-								ParentRef: gatewayapi.ParentReference{
-									Kind:      new(gatewayapi.Kind("Gateway")),
-									Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
-									Name:      gatewayapi.ObjectName(gatewayNN1.Name),
-									Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
-								},
-								ControllerName: "konghq.com/kic-gateway-controller",
-								Conditions: []metav1.Condition{
-									{
-										Type:               ConditionTypeProgrammed,
-										Message:            "",
-										ObservedGeneration: 42,
-										Status:             metav1.ConditionTrue,
-										Reason:             string(gatewayapi.RouteConditionAccepted),
-										LastTransitionTime: metav1.Now(),
-									},
+					Parents: []gatewayapi.RouteParentStatus{
+						{
+							ParentRef: gatewayapi.ParentReference{
+								Kind:      new(gatewayapi.Kind("Gateway")),
+								Group:     new(gatewayapi.Group(gatewayv1.GroupName)),
+								Name:      gatewayapi.ObjectName(gatewayNN1.Name),
+								Namespace: (*gatewayapi.Namespace)(&gatewayNN1.Namespace),
+							},
+							ControllerName: "konghq.com/kic-gateway-controller",
+							Conditions: []metav1.Condition{
+								{
+									Type:               ConditionTypeProgrammed,
+									Message:            "",
+									ObservedGeneration: 42,
+									Status:             metav1.ConditionTrue,
+									Reason:             string(gatewayapi.RouteConditionAccepted),
+									LastTransitionTime: metav1.Now(),
 								},
 							},
 						},
@@ -2474,12 +2428,10 @@ func TestEnsureParentsProgrammedCondition(t *testing.T) {
 				name: "no update is being done when an expected Programmed condition is already in place",
 				httpRouteFunc: func() *gatewayapi.HTTPRoute {
 					return &gatewayapi.HTTPRoute{
-						TypeMeta: gatewayapi.V1HTTPRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Name:       "basic-httproute",
-							Namespace:  gatewayNN1.Namespace,
-							Generation: 42,
-						},
+						TypeMeta:   gatewayapi.V1HTTPRouteTypeMeta,
+						Name:       "basic-httproute",
+						Namespace:  gatewayNN1.Namespace,
+						Generation: 42,
 						Spec: gatewayapi.HTTPRouteSpec{
 							CommonRouteSpec: gatewayapi.CommonRouteSpec{
 								ParentRefs: []gatewayapi.ParentReference{
@@ -2588,10 +2540,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "accepted, allowedRoutes from the same namespace",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2642,10 +2592,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "accepted, allowedRoutes from selected namespace",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "other-namespace",
-				},
+				Name:      "route",
+				Namespace: "other-namespace",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2700,10 +2648,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "route accepted but listener not programmed",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2754,10 +2700,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "not accepted, not in listener's supportedKinds",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2808,10 +2752,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "not accepted, wrong sectionName",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2862,10 +2804,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "not accepted, wrong port",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2918,10 +2858,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "not accepted, wrong protocol",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -2972,10 +2910,8 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 		{
 			name: "not accepted, wrong hostnames",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route",
-					Namespace: "default",
-				},
+				Name:      "route",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -3034,11 +2970,9 @@ func TestIsRouteAcceptedByListener(t *testing.T) {
 			var (
 				ctx       = t.Context()
 				namespace = &corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "other-namespace",
-						Labels: map[string]string{
-							"konghq.com/allowed-namespace": "true",
-						},
+					Name: "other-namespace",
+					Labels: map[string]string{
+						"konghq.com/allowed-namespace": "true",
 					},
 				}
 				fakeClient = fakeclient.

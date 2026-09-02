@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -49,10 +48,8 @@ func mapPluginsFromAnnotation[
 
 		for _, p := range plugins {
 			requests = append(requests, ctrl.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: namespace,
-					Name:      p,
-				},
+				Namespace: namespace,
+				Name:      p,
 			})
 		}
 		return requests
@@ -79,10 +76,8 @@ func (r *KongPluginReconciler) mapKongPluginBindings(ctx context.Context, obj cl
 
 	return []ctrl.Request{
 		{
-			NamespacedName: types.NamespacedName{
-				Namespace: ns,
-				Name:      kongPluginBinding.Spec.PluginReference.Name,
-			},
+			Namespace: ns,
+			Name:      kongPluginBinding.Spec.PluginReference.Name,
 		},
 	}
 }

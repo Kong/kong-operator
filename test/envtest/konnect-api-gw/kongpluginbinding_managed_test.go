@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -120,10 +119,8 @@ func TestKongPluginBindingManaged(t *testing.T) {
 	}
 
 	rateLimitingkongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "rate-limiting-kp-",
-		},
-		PluginName: "rate-limiting",
+		GenerateName: "rate-limiting-kp-",
+		PluginName:   "rate-limiting",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"minute": 5, "policy": "local"}`),
 		},

@@ -7,7 +7,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -181,10 +180,8 @@ func testEnvtestPortalPage(
 	namespace, portalName, title, slug, content, description string,
 ) *konnectv1alpha1.PortalPage {
 	return &konnectv1alpha1.PortalPage{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal-page",
-			Namespace: namespace,
-		},
+		Name:      "portal-page",
+		Namespace: namespace,
 		Spec: konnectv1alpha1.PortalPageSpec{
 			PortalRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

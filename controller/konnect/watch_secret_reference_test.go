@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,24 +45,24 @@ func Test_enqueueSecretsFromAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "secretRef with empty namespace",
 			obj: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: ctrl.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "sec1", Namespace: ""},
 				},
 			},
-			want: []ctrl.Request{{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "sec1"}}},
+			want: []ctrl.Request{{Namespace: "ns1", Name: "sec1"}},
 		},
 		{
 			name: "secretRef with explicit namespace",
 			obj: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: ctrl.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "sec2", Namespace: "ns2"},
 				},
 			},
-			want: []ctrl.Request{{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "sec2"}}},
+			want: []ctrl.Request{{Namespace: "ns2", Name: "sec2"}},
 		},
 	}
 

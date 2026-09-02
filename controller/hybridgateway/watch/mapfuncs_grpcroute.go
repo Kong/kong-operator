@@ -24,10 +24,8 @@ func listGRPCRoutesForGateway(ctx context.Context, cl client.Client, gatewayName
 	requests := make([]reconcile.Request, len(grpcRoutes.Items))
 	for i, grpcRoute := range grpcRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: grpcRoute.Namespace,
-				Name:      grpcRoute.Name,
-			},
+			Namespace: grpcRoute.Namespace,
+			Name:      grpcRoute.Name,
 		}
 	}
 	return requests, nil
@@ -50,10 +48,8 @@ func listGRPCRoutesForService(ctx context.Context, cl client.Client, svcNamespac
 	requests := make([]reconcile.Request, len(grpcRoutes.Items))
 	for i, grpcRoute := range grpcRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: grpcRoute.Namespace,
-				Name:      grpcRoute.Name,
-			},
+			Namespace: grpcRoute.Namespace,
+			Name:      grpcRoute.Name,
 		}
 	}
 
@@ -95,10 +91,8 @@ func MapGRPCRouteForKongPlugin(cl client.Client) handler.MapFunc {
 		indexRequests := make([]reconcile.Request, len(grpcRoutes.Items))
 		for i, grpcRoute := range grpcRoutes.Items {
 			indexRequests[i] = reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: grpcRoute.Namespace,
-					Name:      grpcRoute.Name,
-				},
+				Namespace: grpcRoute.Namespace,
+				Name:      grpcRoute.Name,
 			}
 		}
 

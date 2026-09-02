@@ -395,10 +395,8 @@ func objectsToDeployForMode(
 	testService := generators.NewServiceForDeployment(testDeployment, corev1.ServiceTypeClusterIP)
 	testService.Namespace = e.Namespace.Name
 	kongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: e.Namespace.Name,
-			Name:      fmt.Sprintf("response-transformer-add-header-%s", gatewayMode),
-		},
+		Namespace:  e.Namespace.Name,
+		Name:       fmt.Sprintf("response-transformer-add-header-%s", gatewayMode),
 		PluginName: "response-transformer",
 		Config: apiextensionsv1.JSON{
 			Raw: fmt.Appendf(nil, `{"add":{"headers":["%s:%s"]}}`, testHeaderKey, gatewayMode),
@@ -444,10 +442,8 @@ func objectsToDeployForMode(
 		require.NotEmpty(t, konnectServerURL, "hybrid deployment mode requires KONG_TEST_KONNECT_SERVER_URL")
 
 		konnectAPIAuthConfiguration := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: e.Namespace.Name,
-				Name:      fmt.Sprintf("api-auth-config-%s", gatewayMode),
-			},
+			Namespace: e.Namespace.Name,
+			Name:      fmt.Sprintf("api-auth-config-%s", gatewayMode),
 			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 				Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 				Token:     konnectAccessToken,

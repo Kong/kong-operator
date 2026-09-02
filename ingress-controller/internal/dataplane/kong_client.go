@@ -18,7 +18,6 @@ import (
 	"github.com/samber/mo"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/record"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -1091,10 +1090,8 @@ func (c *KongClient) recordApplyConfigurationEvents(err error, rootURL string, i
 	}
 
 	pod := &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      podNN.Name,
-			Namespace: podNN.Namespace,
-		},
+		Name:      podNN.Name,
+		Namespace: podNN.Namespace,
 	}
 	c.eventRecorder.Event(pod, eventType, reason, message)
 }

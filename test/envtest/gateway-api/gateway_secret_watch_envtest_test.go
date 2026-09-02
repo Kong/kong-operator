@@ -41,7 +41,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 
 	// Create a GatewayClass accepted by the controller.
 	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "gc-ko"},
+		Name: "gc-ko",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -54,8 +54,8 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	// Create an initial INVALID TLS Secret referenced by the Gateway listener.
 	secretName := "test-cert"
 	bad := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: secretName},
-		Type:       corev1.SecretTypeTLS,
+		Namespace: ns.Name, Name: secretName,
+		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       []byte("not-a-cert"),
 			corev1.TLSPrivateKeyKey: []byte("not-a-key"),
@@ -65,7 +65,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 
 	// Create a Gateway with a TLS listener referencing the Secret.
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: "gw"},
+		Namespace: ns.Name, Name: "gw",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gc.Name),
 			Listeners: []gatewayv1.Listener{
@@ -92,8 +92,8 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	t.Log("rotating the Secret with a valid TLS certificate and key")
 	certPEM, keyPEM := certhelper.MustGenerateCertPEMFormat()
 	require.NoError(t, c.Patch(ctx, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns.Name, Name: secretName},
-		Type:       corev1.SecretTypeTLS,
+		Namespace: ns.Name, Name: secretName,
+		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       certPEM,
 			corev1.TLSPrivateKeyKey: keyPEM,

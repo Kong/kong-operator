@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
@@ -49,15 +48,11 @@ func TestGetPortalIPAllowListForUID_MatchesAllowedIPs(t *testing.T) {
 
 func testPortalIPAllowListForGetForUID() *konnectv1alpha1.PortalIPAllowList {
 	return &konnectv1alpha1.PortalIPAllowList{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "PortalIPAllowList",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal-ip-allow-list",
-			Namespace: "default",
-			UID:       "portal-ip-allow-list-uid",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "PortalIPAllowList",
+		Name:       "portal-ip-allow-list",
+		Namespace:  "default",
+		UID:        "portal-ip-allow-list-uid",
 		Spec: konnectv1alpha1.PortalIPAllowListSpec{
 			APISpec: konnectv1alpha1.PortalIPAllowListAPISpec{
 				AllowedIps: []string{"10.0.0.0/24", "2001:db8::/32"},

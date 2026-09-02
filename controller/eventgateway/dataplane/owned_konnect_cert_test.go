@@ -49,25 +49,19 @@ const (
 
 func newTestEGDP() *eventgatewayv1alpha1.KegDataPlane {
 	return &eventgatewayv1alpha1.KegDataPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventgateway.konghq.com/v1alpha1",
-			Kind:       "KegDataPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-dp",
-			Namespace:  "default",
-			UID:        types.UID("egdp-uid-123"),
-			Generation: 1,
-		},
+		APIVersion: "eventgateway.konghq.com/v1alpha1",
+		Kind:       "KegDataPlane",
+		Name:       "test-dp",
+		Namespace:  "default",
+		UID:        types.UID("egdp-uid-123"),
+		Generation: 1,
 	}
 }
 
 func newTestKEG() *konnectv1alpha1.KonnectEventGateway {
 	return &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-keg",
-			Namespace: "default",
-		},
+		Name:      "test-keg",
+		Namespace: "default",
 		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -87,10 +81,8 @@ func newTestKEG() *konnectv1alpha1.KonnectEventGateway {
 
 func newTestCertSecret() *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testCertSecretName,
-			Namespace: "default",
-		},
+		Name:      testCertSecretName,
+		Namespace: "default",
 		Data: map[string][]byte{
 			"tls.crt": []byte("---- BEGIN CERTIFICATE ----"),
 			"tls.key": []byte("---- BEGIN KEY ----"),
@@ -141,11 +133,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 		{
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True", extraObjs: []client.Object{
 				&configurationv1alpha1.EventGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: konnectv1alpha1.GroupVersion.String(),
-						Kind:       "EventGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					APIVersion: konnectv1alpha1.GroupVersion.String(),
+					Kind:       "EventGatewayDataPlaneCertificate",
+					Name:       "test-dp", Namespace: "default",
 					Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -190,11 +180,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "cert exists with Programmed=False: returns not-programmed condition",
 			extraObjs: []client.Object{
 				&configurationv1alpha1.EventGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: konnectv1alpha1.GroupVersion.String(),
-						Kind:       "EventGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					APIVersion: konnectv1alpha1.GroupVersion.String(),
+					Kind:       "EventGatewayDataPlaneCertificate",
+					Name:       "test-dp", Namespace: "default",
 					Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

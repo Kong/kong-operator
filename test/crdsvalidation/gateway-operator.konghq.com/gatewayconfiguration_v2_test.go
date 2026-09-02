@@ -41,9 +41,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -58,9 +56,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "gateway-operator.konghq.com",
 								Kind:  "DataPlaneMetricsExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-dataplane-metrics-extension",
-								},
+								Name:  "my-dataplane-metrics-extension",
 							},
 						},
 					},
@@ -75,16 +71,12 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "gateway-operator.konghq.com",
 								Kind:  "DataPlaneMetricsExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-dataplane-metrics-extension",
-								},
+								Name:  "my-dataplane-metrics-extension",
 							},
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -99,23 +91,17 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "gateway-operator.konghq.com",
 								Kind:  "DataPlaneMetricsExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-dataplane-metrics-extension",
-								},
+								Name:  "my-dataplane-metrics-extension",
 							},
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension-2",
-								},
+								Name:  "my-konnect-extension-2",
 							},
 						},
 					},
@@ -131,9 +117,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "wrong.konghq.com",
 								Kind:  "wrongExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -223,10 +207,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-									Type: operatorv2beta1.WatchNamespacesTypeAll,
-								},
+							WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+								Type: operatorv2beta1.WatchNamespacesTypeAll,
 							},
 						},
 					},
@@ -238,10 +220,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-									Type: operatorv2beta1.WatchNamespacesTypeOwn,
-								},
+							WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+								Type: operatorv2beta1.WatchNamespacesTypeOwn,
 							},
 						},
 					},
@@ -253,13 +233,11 @@ func TestGatewayConfigurationV2(t *testing.T) {
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-							ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-								WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-									Type: operatorv2beta1.WatchNamespacesTypeList,
-									List: []string{
-										"namespace1",
-										"namespace2",
-									},
+							WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+								Type: operatorv2beta1.WatchNamespacesTypeList,
+								List: []string{
+									"namespace1",
+									"namespace2",
 								},
 							},
 						},
@@ -376,9 +354,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							{
 								Group: "konnect.konghq.com",
 								Kind:  "KonnectExtension",
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "my-konnect-extension",
-								},
+								Name:  "my-konnect-extension",
 							},
 						},
 					},
@@ -551,9 +527,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Type: corev1.ServiceTypeNodePort,
-										},
+										Type: corev1.ServiceTypeNodePort,
 									},
 								},
 							},
@@ -576,9 +550,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Type: corev1.ServiceTypeNodePort,
-										},
+										Type: corev1.ServiceTypeNodePort,
 									},
 								},
 							},
@@ -602,9 +574,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Type: corev1.ServiceTypeClusterIP,
-										},
+										Type: corev1.ServiceTypeClusterIP,
 									},
 								},
 							},
@@ -672,11 +642,9 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
-												"environment": "production",
-												"team":        "platform",
-											},
+										Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+											"environment": "production",
+											"team":        "platform",
 										},
 									},
 								},
@@ -694,10 +662,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
-												"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
-											},
+										Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+											"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
 										},
 									},
 								},
@@ -719,10 +685,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
-												"key": "-starts-with-dash",
-											},
+										Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+											"key": "-starts-with-dash",
 										},
 									},
 								},
@@ -741,10 +705,8 @@ func TestGatewayConfigurationV2(t *testing.T) {
 							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-										ServiceOptions: operatorv2beta1.ServiceOptions{
-											Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
-												"key": "ends-with-dash-",
-											},
+										Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+											"key": "ends-with-dash-",
 										},
 									},
 								},

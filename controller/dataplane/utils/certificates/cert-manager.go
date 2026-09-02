@@ -11,7 +11,6 @@ import (
 	certmanagerv1 "github.com/cert-manager/cert-manager/pkg/apis/certmanager/v1"
 	cmmeta "github.com/cert-manager/cert-manager/pkg/apis/meta/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -121,11 +120,9 @@ func GenerateCMCertificateForOwner(
 	kind := strings.ToLower(owner.GetObjectKind().GroupVersionKind().Kind)
 	cn := sha256.Sum256(fmt.Appendf([]byte{}, "%s.%s", owner.GetName(), owner.GetNamespace()))
 	cert := &certmanagerv1.Certificate{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", kind, owner.GetName())),
-			Namespace:    owner.GetNamespace(),
-			Labels:       labels,
-		},
+		GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", kind, owner.GetName())),
+		Namespace:    owner.GetNamespace(),
+		Labels:       labels,
 		Spec: certmanagerv1.CertificateSpec{
 			SecretName: secretName,
 			// TODO TRC 1222 we're labeling this but not cleaning it up. Unsure if we should. By default cert-manager

@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -25,10 +24,8 @@ func TestOptionsForKonnectAPIAuthConfiguration(t *testing.T) {
 
 	// Test that the extract function works as expected.
 	testAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-auth",
-			Namespace: "default",
-		},
+		Name:      "test-auth",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 			SecretRef: &corev1.SecretReference{
@@ -61,10 +58,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "returns nil if auth type is not SecretRef",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:  konnectv1alpha1.KonnectAPIAuthTypeToken,
 					Token: "some-token",
@@ -75,10 +70,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "returns nil if SecretRef is nil",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: nil,
@@ -89,10 +82,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "returns correct index if SecretRef is set with explicit namespace",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -106,10 +97,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "returns correct index if SecretRef is set without namespace (uses object namespace)",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -123,10 +112,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "returns correct index for secret in different namespace",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "konnect-system",
-				},
+				Name:      "test-auth",
+				Namespace: "konnect-system",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -140,10 +127,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "handles empty secret name",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{
@@ -157,10 +142,8 @@ func TestSecretsOnKonnectAPIAuthConfiguration(t *testing.T) {
 		{
 			name: "SecretRef type with both Token and SecretRef set (SecretRef should win)",
 			input: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-auth",
-					Namespace: "default",
-				},
+				Name:      "test-auth",
+				Namespace: "default",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:  konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					Token: "should-be-ignored",

@@ -85,28 +85,24 @@ func TestIngressRegexMatchPath(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d: %s", i, tc.pathRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "ingress-regex-path-" + strconv.Itoa(i),
-					Annotations: map[string]string{
-						"konghq.com/strip-path": "true",
-					},
+				Namespace: ns.Name,
+				Name:      "ingress-regex-path-" + strconv.Itoa(i),
+				Annotations: map[string]string{
+					"konghq.com/strip-path": "true",
 				},
 				Spec: netv1.IngressSpec{
 					IngressClassName: new(consts.IngressClass),
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path:     pathRegexPrefix + tc.pathRegex,
-											PathType: &pathTypeImplementationSpecific,
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: service.Name,
-													Port: netv1.ServiceBackendPort{Number: int32(80)},
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     pathRegexPrefix + tc.pathRegex,
+										PathType: &pathTypeImplementationSpecific,
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: service.Name,
+												Port: netv1.ServiceBackendPort{Number: int32(80)},
 											},
 										},
 									},
@@ -181,29 +177,25 @@ func TestIngressRegexMatchHeader(t *testing.T) {
 		t.Run(fmt.Sprintf("case-%d: %s", i, tc.headerRegex), func(t *testing.T) {
 			t.Log("create an ingress")
 			ingress := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: ns.Name,
-					Name:      "ingress-regex-header-" + strconv.Itoa(i),
-					Annotations: map[string]string{
-						"konghq.com/strip-path":                                 "true",
-						"konghq.com/headers." + strings.ToLower(matchHeaderKey): headerRegexPrefix + tc.headerRegex,
-					},
+				Namespace: ns.Name,
+				Name:      "ingress-regex-header-" + strconv.Itoa(i),
+				Annotations: map[string]string{
+					"konghq.com/strip-path":                                 "true",
+					"konghq.com/headers." + strings.ToLower(matchHeaderKey): headerRegexPrefix + tc.headerRegex,
 				},
 				Spec: netv1.IngressSpec{
 					IngressClassName: new(consts.IngressClass),
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path:     "/",
-											PathType: &pathTypePrefix,
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: service.Name,
-													Port: netv1.ServiceBackendPort{Number: int32(80)},
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/",
+										PathType: &pathTypePrefix,
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: service.Name,
+												Port: netv1.ServiceBackendPort{Number: int32(80)},
 											},
 										},
 									},

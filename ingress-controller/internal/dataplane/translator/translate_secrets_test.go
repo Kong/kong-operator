@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -17,9 +16,7 @@ import (
 func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 	kongPluginWithSecret := func(name, secretID string) *configurationv1.KongPlugin {
 		return &configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-			},
+			Name: name,
 			Config: apiextensionsv1.JSON{
 				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},
@@ -27,10 +24,8 @@ func TestGetPluginsAssociatedWithCACertSecret(t *testing.T) {
 	}
 	kongClusterPluginWithSecret := func(name, secretID string) *configurationv1.KongClusterPlugin {
 		return &configurationv1.KongClusterPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-			},
+			Name:        name,
+			Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 			Config: apiextensionsv1.JSON{
 				Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, secretID),
 			},

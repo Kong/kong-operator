@@ -88,12 +88,10 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Log("Deploying CA configmap")
 			caConfigmap := &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: caConfigMapName,
-					Labels: map[string]string{
-						configuration.CACertLabelKey:       "true",
-						constsmgr.DefaultConfigMapSelector: "true",
-					},
+				Name: caConfigMapName,
+				Labels: map[string]string{
+					configuration.CACertLabelKey:       "true",
+					constsmgr.DefaultConfigMapSelector: "true",
 				},
 				Data: map[string]string{
 					"id":     uuid.NewString(),
@@ -106,9 +104,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Log("Deploying goecho certificate")
 			goechoSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: goEchoTLSSecretName,
-				},
+				Name: goEchoTLSSecretName,
 				StringData: map[string]string{
 					"tls.crt": string(bundle),
 					"tls.key": string(key),
@@ -123,11 +119,9 @@ func TestBackendTLSPolicy(t *testing.T) {
 				certificate.WithCATrue(),
 			)
 			caSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: caSecretName,
-					Labels: map[string]string{
-						configuration.CACertLabelKey: "true",
-					},
+				Name: caSecretName,
+				Labels: map[string]string{
+					configuration.CACertLabelKey: "true",
 				},
 				Data: map[string][]byte{
 					"id":     []byte(uuid.NewString()),
@@ -186,10 +180,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 			deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 				{
 					Name: certsVolumeName,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: goEchoTLSSecretName,
-						},
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: goEchoTLSSecretName,
 					},
 				},
 			}
@@ -207,9 +199,7 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Logf("Expose service %s via HTTPRoute", service.Name)
 			httpRoute := &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -222,12 +212,8 @@ func TestBackendTLSPolicy(t *testing.T) {
 						{
 							BackendRefs: []gatewayapi.HTTPBackendRef{
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: gatewayapi.ObjectName(service.Name),
-											Port: new(gatewayapi.PortNumber(1028)),
-										},
-									},
+									Name: gatewayapi.ObjectName(service.Name),
+									Port: new(gatewayapi.PortNumber(1028)),
 								},
 							},
 						},
@@ -239,17 +225,13 @@ func TestBackendTLSPolicy(t *testing.T) {
 
 			t.Logf("Targeting service %s with backendTLSPolicy", service.Name)
 			backendTLSPolicy := &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "goecho-tls-policy",
-				},
+				Name: "goecho-tls-policy",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  gatewayapi.ObjectName(service.Name),
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  gatewayapi.ObjectName(service.Name),
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{

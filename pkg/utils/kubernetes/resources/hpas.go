@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	pkgapisautoscalingv2 "k8s.io/kubernetes/pkg/apis/autoscaling/v2"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -33,11 +32,9 @@ func GenerateHPA(owner client.Object, scaling *HPAScalingSpec, deploymentName st
 	labels["app"] = owner.GetName()
 
 	hpa := &autoscalingv2.HorizontalPodAutoscaler{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      owner.GetName(),
-			Namespace: owner.GetNamespace(),
-			Labels:    labels,
-		},
+		Name:      owner.GetName(),
+		Namespace: owner.GetNamespace(),
+		Labels:    labels,
 		Spec: autoscalingv2.HorizontalPodAutoscalerSpec{
 			ScaleTargetRef: autoscalingv2.CrossVersionObjectReference{
 				APIVersion: "apps/v1",

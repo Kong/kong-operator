@@ -39,7 +39,7 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "non-KongPluginBinding object is a no-op",
 			ent: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{Name: "plugin", Namespace: "ns"},
+				Name: "plugin", Namespace: "ns",
 			},
 			expectStop:  false,
 			expectError: false,
@@ -47,11 +47,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "same-namespace pluginRef with existing plugin sets PluginRefValid=True",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -60,7 +58,7 @@ func TestHandlePluginRef(t *testing.T) {
 				},
 			},
 			plugins: []configurationv1.KongPlugin{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-plugin", Namespace: "ns"}},
+				{Name: "my-plugin", Namespace: "ns"},
 			},
 			expectStop:          false,
 			expectError:         false,
@@ -71,11 +69,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "same-namespace pluginRef with missing plugin sets PluginRefValid=False",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -94,16 +90,12 @@ func TestHandlePluginRef(t *testing.T) {
 			ent: func() client.Object {
 				now := metav1.Now()
 				return &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "pb",
-						Namespace:         "ns",
-						DeletionTimestamp: &now,
-						Finalizers:        []string{KonnectCleanupFinalizer},
-					},
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
-						Kind:       "KongPluginBinding",
-					},
+					Name:              "pb",
+					Namespace:         "ns",
+					DeletionTimestamp: &now,
+					Finalizers:        []string{KonnectCleanupFinalizer},
+					APIVersion:        configurationv1alpha1.GroupVersion.String(),
+					Kind:              "KongPluginBinding",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name:      "my-plugin",
@@ -118,11 +110,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "empty pluginRef namespace with existing plugin sets PluginRefValid=True",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -131,7 +121,7 @@ func TestHandlePluginRef(t *testing.T) {
 				},
 			},
 			plugins: []configurationv1.KongPlugin{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-plugin", Namespace: "ns"}},
+				{Name: "my-plugin", Namespace: "ns"},
 			},
 			expectStop:          false,
 			expectError:         false,
@@ -142,11 +132,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "cross-namespace pluginRef with valid grant sets PluginRefValid=True",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -156,15 +144,13 @@ func TestHandlePluginRef(t *testing.T) {
 			},
 			plugins: []configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-plugin", Namespace: "plugin-ns"},
+					Name: "my-plugin", Namespace: "plugin-ns",
 				},
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-pb-to-plugin",
-						Namespace: "plugin-ns",
-					},
+					Name:      "allow-pb-to-plugin",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -191,11 +177,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "cross-namespace pluginRef without grant sets PluginRefValid=False",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -213,11 +197,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "cross-namespace pluginRef with grant for wrong namespace sets PluginRefValid=False",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -227,10 +209,8 @@ func TestHandlePluginRef(t *testing.T) {
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-pb-to-plugin",
-						Namespace: "plugin-ns",
-					},
+					Name:      "allow-pb-to-plugin",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -257,11 +237,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "cross-namespace pluginRef with grant for wrong kind sets PluginRefValid=False",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -271,10 +249,8 @@ func TestHandlePluginRef(t *testing.T) {
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-pb-to-plugin",
-						Namespace: "plugin-ns",
-					},
+					Name:      "allow-pb-to-plugin",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -303,16 +279,12 @@ func TestHandlePluginRef(t *testing.T) {
 			ent: func() client.Object {
 				now := metav1.Now()
 				return &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "pb",
-						Namespace:         "binding-ns",
-						DeletionTimestamp: &now,
-						Finalizers:        []string{KonnectCleanupFinalizer},
-					},
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
-						Kind:       "KongPluginBinding",
-					},
+					Name:              "pb",
+					Namespace:         "binding-ns",
+					DeletionTimestamp: &now,
+					Finalizers:        []string{KonnectCleanupFinalizer},
+					APIVersion:        configurationv1alpha1.GroupVersion.String(),
+					Kind:              "KongPluginBinding",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name:      "my-plugin",
@@ -328,11 +300,9 @@ func TestHandlePluginRef(t *testing.T) {
 		{
 			name: "cross-namespace pluginRef with valid grant but missing plugin sets PluginRefValid=False",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -344,10 +314,8 @@ func TestHandlePluginRef(t *testing.T) {
 			plugins: []configurationv1.KongPlugin{},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-pb-to-plugin",
-						Namespace: "plugin-ns",
-					},
+					Name:      "allow-pb-to-plugin",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -376,16 +344,12 @@ func TestHandlePluginRef(t *testing.T) {
 			ent: func() client.Object {
 				now := metav1.Now()
 				return &configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "pb",
-						Namespace:         "binding-ns",
-						DeletionTimestamp: &now,
-						Finalizers:        []string{KonnectCleanupFinalizer},
-					},
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
-						Kind:       "KongPluginBinding",
-					},
+					Name:              "pb",
+					Namespace:         "binding-ns",
+					DeletionTimestamp: &now,
+					Finalizers:        []string{KonnectCleanupFinalizer},
+					APIVersion:        configurationv1alpha1.GroupVersion.String(),
+					Kind:              "KongPluginBinding",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name:      "my-plugin",
@@ -397,10 +361,8 @@ func TestHandlePluginRef(t *testing.T) {
 			plugins: []configurationv1.KongPlugin{},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-pb-to-plugin",
-						Namespace: "plugin-ns",
-					},
+					Name:      "allow-pb-to-plugin",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -425,11 +387,9 @@ func TestHandlePluginRef(t *testing.T) {
 			// covers: return ctrl.Result{}, true, err (non-ReferenceNotGranted grant check error)
 			name: "cross-namespace grant check returns unexpected error stops reconciliation",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -452,11 +412,9 @@ func TestHandlePluginRef(t *testing.T) {
 			// covers: StatusWithCondition error path for RefNotPermitted
 			name: "cross-namespace RefNotPermitted patch error stops reconciliation with error",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "binding-ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "binding-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -477,11 +435,9 @@ func TestHandlePluginRef(t *testing.T) {
 			// covers: !apierrors.IsNotFound(err) branch when cl.Get returns a generic error
 			name: "cl.Get returns non-NotFound error sets PluginRefValid=False/Invalid",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -507,11 +463,9 @@ func TestHandlePluginRef(t *testing.T) {
 			// covers: StatusWithCondition error path for Invalid (plugin not found)
 			name: "plugin not found patch error stops reconciliation with error",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -532,11 +486,9 @@ func TestHandlePluginRef(t *testing.T) {
 			// covers: StatusWithCondition error path for Valid (plugin exists)
 			name: "plugin exists patch error stops reconciliation with error",
 			ent: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{Name: "pb", Namespace: "ns"},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongPluginBinding",
-				},
+				Name: "pb", Namespace: "ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongPluginBinding",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					PluginReference: configurationv1alpha1.PluginRef{
 						Name:      "my-plugin",
@@ -545,7 +497,7 @@ func TestHandlePluginRef(t *testing.T) {
 				},
 			},
 			plugins: []configurationv1.KongPlugin{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-plugin", Namespace: "ns"}},
+				{Name: "my-plugin", Namespace: "ns"},
 			},
 			interceptorFuncs: &interceptor.Funcs{
 				SubResourcePatch: func(ctx context.Context, c client.Client, subResourceName string, obj client.Object, p client.Patch, opts ...client.SubResourcePatchOption) error {

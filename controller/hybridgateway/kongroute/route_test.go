@@ -38,11 +38,9 @@ func TestRoutesForRule(t *testing.T) {
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -91,10 +89,8 @@ func TestRoutesForRule(t *testing.T) {
 
 	// Gateway with both HTTP and HTTPS listeners.
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -223,10 +219,8 @@ func TestRoutesForGRPCRouteRule(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -266,10 +260,8 @@ func TestRoutesForGRPCRouteRule(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -313,7 +305,7 @@ func TestRoutesForGRPCRouteRule_NoMatches(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Name: "test-route", Namespace: "test-namespace",
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
@@ -328,7 +320,7 @@ func TestRoutesForGRPCRouteRule_NoMatches(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Name: "test-gateway", Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -353,7 +345,7 @@ func TestRoutesForGRPCRouteRule_NoMatchesHasLowerPriorityThanSpecificMatch(t *te
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Name: "test-route", Namespace: "test-namespace",
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
@@ -376,7 +368,7 @@ func TestRoutesForGRPCRouteRule_NoMatchesHasLowerPriorityThanSpecificMatch(t *te
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Name: "test-gateway", Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -408,7 +400,7 @@ func TestRoutesForGRPCRouteRule_NoMatchesRulesHaveDistinctNames(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+		Name: "test-route", Namespace: "test-namespace",
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
@@ -424,7 +416,7 @@ func TestRoutesForGRPCRouteRule_NoMatchesRulesHaveDistinctNames(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Name: "test-gateway", Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -512,10 +504,8 @@ func TestRoutesForTCPRouteRule(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "tcp",
@@ -526,22 +516,16 @@ func TestRoutesForTCPRouteRule(t *testing.T) {
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 	tcpRoute := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -577,10 +561,8 @@ func TestRoutesForTCPRouteRule_NoTCPListener(t *testing.T) {
 	// The parent Gateway only exposes a non-TCP listener, so no destination ports
 	// can be derived for the TCPRoute.
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "http",
@@ -591,22 +573,16 @@ func TestRoutesForTCPRouteRule_NoTCPListener(t *testing.T) {
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 	tcpRoute := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -632,10 +608,8 @@ func TestRoutesForUDPRouteRule(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "udp",
@@ -646,22 +620,16 @@ func TestRoutesForUDPRouteRule(t *testing.T) {
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 	udpRoute := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -697,10 +665,8 @@ func TestRoutesForUDPRouteRule_NoUDPListener(t *testing.T) {
 	// The parent Gateway only exposes a non-UDP listener, so no destination ports
 	// can be derived for the UDPRoute.
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "http",
@@ -711,22 +677,16 @@ func TestRoutesForUDPRouteRule_NoUDPListener(t *testing.T) {
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
 	udpRoute := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -752,11 +712,9 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "header-matching",
-			Namespace: "gateway-conformance-infra",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "header-matching",
+		Namespace: "gateway-conformance-infra",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "same-namespace"}},
@@ -803,10 +761,8 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "same-namespace",
-			Namespace: "gateway-conformance-infra",
-		},
+		Name:      "same-namespace",
+		Namespace: "gateway-conformance-infra",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -891,10 +847,8 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -927,10 +881,8 @@ func TestRoutesForRule_ExactPathMatch(t *testing.T) {
 	}
 
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -999,10 +951,8 @@ func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1032,12 +982,10 @@ func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				TypeMeta:    httpRouteTypeMeta,
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -1078,17 +1026,13 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 	}
 	rule := gwtypes.TLSRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "backend",
-				Port: new(gatewayv1.PortNumber(443)),
-			},
+			Name: "backend",
+			Port: new(gatewayv1.PortNumber(443)),
 		}},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1118,11 +1062,9 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tlsRoute := &gwtypes.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 				Spec: gatewayv1.TLSRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -1164,10 +1106,8 @@ func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1197,11 +1137,9 @@ func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			grpcRoute := &gwtypes.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 				Spec: gatewayv1.GRPCRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -1228,10 +1166,8 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "tcp",
@@ -1252,10 +1188,8 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 
@@ -1279,11 +1213,9 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			tcpRoute := &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 			}
 
 			results, err := RoutesForRule(ctx, logger, cl, tcpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
@@ -1303,10 +1235,8 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "udp",
@@ -1327,10 +1257,8 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 
@@ -1354,11 +1282,9 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			udpRoute := &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 			}
 
 			results, err := RoutesForRule(ctx, logger, cl, udpRoute, rule, 0, pRef, cp, nil, "test-service", nil)
@@ -1396,7 +1322,7 @@ func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 		}},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "test-namespace"},
+		Name: "test-gateway", Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1427,11 +1353,9 @@ func TestRoutesForHTTPRouteRule_MalformedAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-route",
-					Namespace:   "test-namespace",
-					Annotations: tt.annotations,
-				},
+				Name:        "test-route",
+				Namespace:   "test-namespace",
+				Annotations: tt.annotations,
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},

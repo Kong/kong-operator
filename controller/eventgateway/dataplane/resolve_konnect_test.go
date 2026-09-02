@@ -21,7 +21,7 @@ import (
 
 func newKeg(ns, name string, programmed metav1.ConditionStatus) *konnectv1alpha1.KonnectEventGateway {
 	return &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+		Namespace: ns, Name: name,
 		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -43,7 +43,7 @@ func Test_resolveKonnectEventGateway(t *testing.T) {
 
 	newEGDP := func() *eventgatewayv1alpha1.KegDataPlane {
 		return &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "my-dp"},
+			Namespace: ns, Name: "my-dp",
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: kegName},

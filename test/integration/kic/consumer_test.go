@@ -72,10 +72,8 @@ func TestConsumerCredential(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "basicbasic",
-		},
+		Namespace:  ns.Name,
+		Name:       "basicbasic",
 		PluginName: "basic-auth",
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
@@ -110,11 +108,9 @@ func TestConsumerCredential(t *testing.T) {
 	// stored with values different from the configuration provided (the password gets converted to its HTTP Basic Auth
 	// form)
 	credential := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Labels: map[string]string{
-				labels.CredentialTypeLabel: "basic-auth",
-			},
+		Name: uuid.NewString(),
+		Labels: map[string]string{
+			labels.CredentialTypeLabel: "basic-auth",
 		},
 		StringData: map[string]string{
 			"username": "test_consumer_credential",
@@ -126,11 +122,9 @@ func TestConsumerCredential(t *testing.T) {
 	cleaner.Add(credential)
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		Username:    uuid.NewString(),
 		Credentials: []string{credential.Name},

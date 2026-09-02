@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -165,14 +164,10 @@ func TestHandleRefResult(t *testing.T) {
 
 func testEventGatewayDataPlaneCertificateForEventGatewayRefResult() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayDataPlaneCertificate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "event-dp-cert",
-			Namespace: "default",
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayDataPlaneCertificate",
+		Name:       "event-dp-cert",
+		Namespace:  "default",
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

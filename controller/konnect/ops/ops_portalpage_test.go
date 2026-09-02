@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -193,16 +192,12 @@ func TestGetPortalPageForUID(t *testing.T) {
 
 func testPortalPage() *konnectv1alpha1.PortalPage {
 	return &konnectv1alpha1.PortalPage{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "PortalPage",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "portal-page",
-			Namespace:  "default",
-			UID:        "portal-page-uid",
-			Generation: 2,
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "PortalPage",
+		Name:       "portal-page",
+		Namespace:  "default",
+		UID:        "portal-page-uid",
+		Generation: 2,
 		Spec: konnectv1alpha1.PortalPageSpec{
 			PortalRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

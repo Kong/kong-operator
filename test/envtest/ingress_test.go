@@ -16,7 +16,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/test"
@@ -70,12 +69,10 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, service))
 
 	pod := corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "pod-1",
-			Namespace: ns.Name,
-			Labels: map[string]string{
-				"app": "httpbin",
-			},
+		Name:      "pod-1",
+		Namespace: ns.Name,
+		Labels: map[string]string{
+			"app": "httpbin",
 		},
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
@@ -90,12 +87,10 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &pod))
 
 	es := discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "endpointslice-",
-			Namespace:    ns.Name,
-			Labels: map[string]string{
-				"kubernetes.io/service-name": service.Name,
-			},
+		GenerateName: "endpointslice-",
+		Namespace:    ns.Name,
+		Labels: map[string]string{
+			"kubernetes.io/service-name": service.Name,
 		},
 		AddressType: discoveryv1.AddressTypeIPv4,
 		Endpoints: []discoveryv1.Endpoint{
@@ -113,29 +108,25 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, &es))
 
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      service.Name,
-			Namespace: ns.Name,
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name:      service.Name,
+		Namespace: ns.Name,
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Name: service.Spec.Ports[0].Name,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Name: service.Spec.Ports[0].Name,
 										},
 									},
 								},

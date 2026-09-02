@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -182,10 +181,8 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context,
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      grpcroute.Name,
-						},
+						Namespace: grpcroute.Namespace,
+						Name:      grpcroute.Name,
 					})
 				}
 			}
@@ -244,10 +241,8 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: grpcroute.Namespace,
-						Name:      grpcroute.Name,
-					},
+					Namespace: grpcroute.Namespace,
+					Name:      grpcroute.Name,
 				})
 			}
 		}

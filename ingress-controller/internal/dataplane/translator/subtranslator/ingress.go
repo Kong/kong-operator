@@ -359,20 +359,18 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 		}
 
 		return kongstate.Service{
-			Namespace: m.parentIngress.GetNamespace(),
-			Service: kong.Service{
-				Name:           new(kongServiceName),
-				Host:           new(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
-				Port:           new(defaultHTTPPort),
-				Protocol:       new("http"),
-				Path:           new("/"),
-				ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-				ReadTimeout:    defaultServiceTimeoutInKongFormat(),
-				WriteTimeout:   defaultServiceTimeoutInKongFormat(),
-				Retries:        new(defaultRetries),
-			},
-			Backends: []kongstate.ServiceBackend{serviceBackend},
-			Parent:   m.backend.parentKongServiceFacade,
+			Namespace:      m.parentIngress.GetNamespace(),
+			Name:           new(kongServiceName),
+			Host:           new(fmt.Sprintf("%s.%s.svc.facade", m.parentIngress.GetNamespace(), m.backend.name)),
+			Port:           new(defaultHTTPPort),
+			Protocol:       new("http"),
+			Path:           new("/"),
+			ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+			ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
+			Retries:        new(defaultRetries),
+			Backends:       []kongstate.ServiceBackend{serviceBackend},
+			Parent:         m.backend.parentKongServiceFacade,
 		}, nil
 	}
 
@@ -389,20 +387,18 @@ func (m *ingressTranslationMeta) translateIntoKongStateService(
 
 	// Otherwise, we assume it's a Kubernetes Service.
 	return kongstate.Service{
-		Namespace: m.parentIngress.GetNamespace(),
-		Service: kong.Service{
-			Name:           new(kongServiceName),
-			Host:           new(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
-			Port:           new(defaultHTTPPort),
-			Protocol:       new("http"),
-			Path:           new("/"),
-			ConnectTimeout: defaultServiceTimeoutInKongFormat(),
-			ReadTimeout:    defaultServiceTimeoutInKongFormat(),
-			WriteTimeout:   defaultServiceTimeoutInKongFormat(),
-			Retries:        new(defaultRetries),
-		},
-		Backends: []kongstate.ServiceBackend{serviceBackend},
-		Parent:   m.parentIngress,
+		Namespace:      m.parentIngress.GetNamespace(),
+		Name:           new(kongServiceName),
+		Host:           new(fmt.Sprintf("%s.%s.%s.svc", m.backend.name, m.parentIngress.GetNamespace(), portDef.CanonicalString())),
+		Port:           new(defaultHTTPPort),
+		Protocol:       new("http"),
+		Path:           new("/"),
+		ConnectTimeout: defaultServiceTimeoutInKongFormat(),
+		ReadTimeout:    defaultServiceTimeoutInKongFormat(),
+		WriteTimeout:   defaultServiceTimeoutInKongFormat(),
+		Retries:        new(defaultRetries),
+		Backends:       []kongstate.ServiceBackend{serviceBackend},
+		Parent:         m.parentIngress,
 	}, nil
 }
 
@@ -432,17 +428,15 @@ func (m *ingressTranslationMeta) translateIntoKongRoute() *kongstate.Route {
 	routeName := m.backend.intoKongRouteName(k8stypes.NamespacedName{Namespace: m.ingressNamespace, Name: m.ingressName}, ingressHost)
 
 	route := &kongstate.Route{
-		Ingress: util.FromK8sObject(m.parentIngress),
-		Route: kong.Route{
-			Name:              new(routeName),
-			StripPath:         new(false),
-			PreserveHost:      new(true),
-			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
-			RegexPriority:     new(0),
-			RequestBuffering:  new(true),
-			ResponseBuffering: new(true),
-			Tags:              m.ingressTags,
-		},
+		Ingress:           util.FromK8sObject(m.parentIngress),
+		Name:              new(routeName),
+		StripPath:         new(false),
+		PreserveHost:      new(true),
+		Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
+		RegexPriority:     new(0),
+		RequestBuffering:  new(true),
+		ResponseBuffering: new(true),
+		Tags:              m.ingressTags,
 	}
 
 	if m.ingressHost != "" {

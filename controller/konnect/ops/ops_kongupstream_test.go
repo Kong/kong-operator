@@ -10,7 +10,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -32,10 +31,8 @@ func TestCreateKongUpstream(t *testing.T) {
 			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
 				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: "svc-1",
@@ -72,10 +69,8 @@ func TestCreateKongUpstream(t *testing.T) {
 			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
 				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: "svc-1",
@@ -96,10 +91,8 @@ func TestCreateKongUpstream(t *testing.T) {
 			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
 				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: "svc-1",
@@ -171,9 +164,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -203,9 +194,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -237,9 +226,7 @@ func TestDeleteKongUpstream(t *testing.T) {
 					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -300,9 +287,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -337,10 +322,8 @@ func TestUpdateKongUpstream(t *testing.T) {
 			mockUpstreamPair: func(t *testing.T) (*mocks.MockUpstreamsSDK, *configurationv1alpha1.KongUpstream) {
 				sdk := mocks.NewMockUpstreamsSDK(t)
 				svc := &configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongUpstreamSpec{
 						KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 							Name: "svc-1",
@@ -349,9 +332,7 @@ func TestUpdateKongUpstream(t *testing.T) {
 					Status: configurationv1alpha1.KongUpstreamStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -490,18 +471,14 @@ func TestResolveUpstreamClientCertificate(t *testing.T) {
 
 func TestCreateAndUpdateKongUpstream_KubernetesMetadataConsistency(t *testing.T) {
 	svc := &configurationv1alpha1.KongUpstream{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongUpstream",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "svc-1",
-			Namespace:  "default",
-			UID:        k8stypes.UID(uuid.NewString()),
-			Generation: 2,
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
-			},
+		Kind:       "KongUpstream",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "svc-1",
+		Namespace:  "default",
+		UID:        k8stypes.UID(uuid.NewString()),
+		Generation: 2,
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 		},
 		Status: configurationv1alpha1.KongUpstreamStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateRefs{

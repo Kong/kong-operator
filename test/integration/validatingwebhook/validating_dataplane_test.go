@@ -38,10 +38,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace,
 		{
 			name: "reconciler:validating_error_with_empty_deployoptions",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace.Name,
-					Name:      uuid.NewString(),
-				},
+				Namespace: namespace.Name,
+				Name:      uuid.NewString(),
 			},
 			creationErr:      true,
 			conditionMessage: "DataPlane requires an image",
@@ -64,10 +62,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace,
 			if tc.validatingOK {
 				t.Logf("%s: verifying deployments managed by the dataplane", t.Name())
 				w, err := clients.K8sClient.AppsV1().Deployments(namespace.Name).Watch(ctx, metav1.ListOptions{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "Deployment",
-						APIVersion: "apps/v1",
-					},
+					Kind:          "Deployment",
+					APIVersion:    "apps/v1",
 					LabelSelector: fmt.Sprintf("%s=%s", consts.GatewayOperatorManagedByLabel, consts.DataPlaneManagedLabelValue),
 				})
 				require.NoError(t, err)
@@ -94,10 +90,8 @@ func testDataPlaneReconcileValidation(t *testing.T, namespace *corev1.Namespace,
 			} else {
 				t.Logf("%s: verifying DataPlane conditions", t.Name())
 				w, err := dataplaneClient.Watch(ctx, metav1.ListOptions{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "DataPlane",
-						APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
-					},
+					Kind:          "DataPlane",
+					APIVersion:    operatorv1beta1.SchemeGroupVersion.String(),
 					FieldSelector: "metadata.name=" + tc.dataplane.Name,
 				})
 				require.NoError(t, err)

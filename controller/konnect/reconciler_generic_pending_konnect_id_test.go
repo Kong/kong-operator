@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -20,15 +19,13 @@ import (
 // object whose status already reflects the persisted Konnect ID.
 func newKongServiceForPendingTest(id string) *configurationv1alpha1.KongService {
 	svc := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc",
-			Namespace: "ns",
-		},
+		Name:      "svc",
+		Namespace: "ns",
 	}
 	if id != "" {
 		svc.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: id},
-			ControlPlaneID:      "cp-id",
+			ID:             id,
+			ControlPlaneID: "cp-id",
 		}
 	}
 	return svc

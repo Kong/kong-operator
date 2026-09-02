@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -20,7 +19,7 @@ func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 		{
 			name: "single parentref, default ns",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -36,7 +35,7 @@ func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 		{
 			name: "parentref with explicit ns",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -53,7 +52,7 @@ func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 		{
 			name: "parentref with non-Gateway kind",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -70,7 +69,7 @@ func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 		{
 			name: "parentref with non-gateway group",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -87,7 +86,7 @@ func TestGatewaysOnRoute_HTTPRoute(t *testing.T) {
 		{
 			name: "multiple parentrefs, dedup",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -124,7 +123,7 @@ func TestGatewaysOnRoute_TCPRoute(t *testing.T) {
 		{
 			name: "single parentref, default ns",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.TCPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -140,7 +139,7 @@ func TestGatewaysOnRoute_TCPRoute(t *testing.T) {
 		{
 			name: "parentref with explicit ns",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.TCPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -157,7 +156,7 @@ func TestGatewaysOnRoute_TCPRoute(t *testing.T) {
 		{
 			name: "parentref with non-Gateway kind",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.TCPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -174,7 +173,7 @@ func TestGatewaysOnRoute_TCPRoute(t *testing.T) {
 		{
 			name: "parentref with non-gateway group",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.TCPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -191,7 +190,7 @@ func TestGatewaysOnRoute_TCPRoute(t *testing.T) {
 		{
 			name: "multiple parentrefs, dedup",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.TCPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{

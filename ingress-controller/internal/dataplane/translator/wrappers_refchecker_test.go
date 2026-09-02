@@ -5,7 +5,6 @@ import (
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 )
@@ -21,10 +20,8 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		{
 			name: "allowed by grant",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "example-namespace",
-					Name:      "example-name",
-				},
+				Namespace: "example-namespace",
+				Name:      "example-name",
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
@@ -47,10 +44,8 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		{
 			name: "allowed by grant with namespace",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "example-namespace",
-					Name:      "example-name",
-				},
+				Namespace: "example-namespace",
+				Name:      "example-name",
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
@@ -74,10 +69,8 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		{
 			name: "allowed because backendRef and route use the same namespace",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "example-namespace",
-					Name:      "example-name",
-				},
+				Namespace: "example-namespace",
+				Name:      "example-name",
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{
@@ -92,10 +85,8 @@ func TestRefChecker_IsRefAllowedByGrant(t *testing.T) {
 		{
 			name: "not allowed when not in grant and using different namespace",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "example-namespace-2",
-					Name:      "example-name",
-				},
+				Namespace: "example-namespace-2",
+				Name:      "example-name",
 			},
 			backendRef: gatewayapi.BackendRef{
 				BackendObjectReference: gatewayapi.BackendObjectReference{

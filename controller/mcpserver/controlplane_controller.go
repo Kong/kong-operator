@@ -51,10 +51,8 @@ func (r *MCPServerCPReconciler) Reconcile(ctx context.Context, req ctrl.Request)
 			r.SignalManager.EmitControlPlaneEvent(ctx, CPEvent{
 				Type: EventTypeDeregister,
 				ControlPlane: &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      req.Name,
-						Namespace: req.Namespace,
-					},
+					Name:      req.Name,
+					Namespace: req.Namespace,
 				},
 			})
 		}

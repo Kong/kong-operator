@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -29,18 +28,14 @@ func TestKongKeyToKeyInput(t *testing.T) {
 		{
 			name: "kong key with all fields set without key set",
 			key: &configurationv1alpha1.KongKey{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongKey",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "key-1",
-					Namespace:  "default",
-					Generation: 2,
-					UID:        k8stypes.UID("key-uid"),
-					Annotations: map[string]string{
-						metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
-					},
+				Kind:       "KongKey",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "key-1",
+				Namespace:  "default",
+				Generation: 2,
+				UID:        k8stypes.UID("key-uid"),
+				Annotations: map[string]string{
+					metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
 				},
 				Spec: configurationv1alpha1.KongKeySpec{
 					KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
@@ -83,18 +78,14 @@ func TestKongKeyToKeyInput(t *testing.T) {
 		{
 			name: "kong key with all fields set with key set",
 			key: &configurationv1alpha1.KongKey{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongKey",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "key-1",
-					Namespace:  "default",
-					Generation: 2,
-					UID:        k8stypes.UID("key-uid"),
-					Annotations: map[string]string{
-						metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
-					},
+				Kind:       "KongKey",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "key-1",
+				Namespace:  "default",
+				Generation: 2,
+				UID:        k8stypes.UID("key-uid"),
+				Annotations: map[string]string{
+					metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
 				},
 				Spec: configurationv1alpha1.KongKeySpec{
 					KongKeyAPISpec: configurationv1alpha1.KongKeyAPISpec{
@@ -182,11 +173,9 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 				})).Return(&sdkkonnectops.UpsertKeyResponse{}, nil)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -222,11 +211,9 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 				)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -271,11 +258,9 @@ func TestAdoptKongKeyOverride(t *testing.T) {
 				)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -349,11 +334,9 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -404,11 +387,9 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -454,11 +435,9 @@ func TestAdoptKongKeyMatch(t *testing.T) {
 				)
 
 				key := &configurationv1alpha1.KongKey{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "key-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "key-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongKeySpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,

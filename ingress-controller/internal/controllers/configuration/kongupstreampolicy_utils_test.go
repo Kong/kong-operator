@@ -52,68 +52,48 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+					},
+					CreationTimestamp: now,
+				},
+				&corev1.Service{
+					Name:      "svc-2",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+					},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(10 * time.Second),
 					},
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(10 * time.Second),
-						},
+					Name:      "svc-3",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
-				},
-				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-3",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(5 * time.Second),
-						},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(5 * time.Second),
 					},
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-1",
-											},
-										},
+										Name: "svc-1",
 									},
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-2",
-											},
-										},
+										Name: "svc-2",
 									},
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-3",
-											},
-										},
+										Name: "svc-3",
 									},
 								},
 							},
@@ -248,47 +228,33 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-2",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-1",
-											},
-										},
+										Name: "svc-1",
 									},
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-2",
-											},
-										},
+										Name: "svc-2",
 									},
 								},
 							},
@@ -355,49 +321,35 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(10 * time.Second),
-						},
+					Name:      "svc-2",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
+					},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(10 * time.Second),
 					},
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-1",
-											},
-										},
+										Name: "svc-1",
 									},
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-2",
-											},
-										},
+										Name: "svc-2",
 									},
 								},
 							},
@@ -443,53 +395,39 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(10 * time.Second),
-						},
+					Name:      "svc-2",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: anotherPolicyName,
+					},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(10 * time.Second),
 					},
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-1",
-											},
-										},
+										Name: "svc-1",
 									},
 								},
 							},
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "svc-2",
-											},
-										},
+										Name: "svc-2",
 									},
 								},
 							},
@@ -535,32 +473,26 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-facade-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(10 * time.Second),
-						},
+					Name:      "svc-facade-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+					},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(10 * time.Second),
 					},
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -631,32 +563,26 @@ func TestEnforceKongUpstreamPolicyStatus(t *testing.T) {
 			},
 			inputObjects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: now,
+					Name:      "svc-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
 					},
+					CreationTimestamp: now,
 				},
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-facade-1",
-						Namespace: testNamespace,
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
-						},
-						CreationTimestamp: metav1.Time{
-							Time: now.Add(10 * time.Second),
-						},
+					Name:      "svc-facade-1",
+					Namespace: testNamespace,
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: policyName,
+					},
+					CreationTimestamp: metav1.Time{
+						Time: now.Add(10 * time.Second),
 					},
 				},
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httpRoute",
-						Namespace: testNamespace,
-					},
+					Name:      "httpRoute",
+					Namespace: testNamespace,
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{

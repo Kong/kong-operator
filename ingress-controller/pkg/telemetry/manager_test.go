@@ -263,12 +263,10 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 
 	return []runtime.Object{
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pod.Namespace,
-				Name:      pod.Name,
-				Annotations: map[string]string{
-					"linkerd.io/proxy-version": "1.0.0",
-				},
+			Namespace: pod.Namespace,
+			Name:      pod.Name,
+			Annotations: map[string]string{
+				"linkerd.io/proxy-version": "1.0.0",
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
@@ -292,19 +290,15 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 		},
 		// service with no endpoints.
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pod.Namespace,
-				Name:      "kong-proxy",
-			},
+			Namespace: pod.Namespace,
+			Name:      "kong-proxy",
 		},
 		// Service with multiple EndpointSlices.
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: pod.Namespace,
-				Name:      "kong-proxy-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "kong-proxy",
-				},
+			Namespace: pod.Namespace,
+			Name:      "kong-proxy-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "kong-proxy",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -334,86 +328,60 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 
 		// services.
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kuma-control-plane",
-			},
+			Name: "kuma-control-plane",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "kong-mesh-control-plane",
-			},
+			Name: "kong-mesh-control-plane",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "linkerd-proxy-injector",
-			},
+			Name: "linkerd-proxy-injector",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "traefik-mesh-controller",
-			},
+			Name: "traefik-mesh-controller",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "istiod",
-			},
+			Name: "istiod",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service1",
-			},
+			Namespace: "ns1",
+			Name:      "service1",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service2",
-			},
+			Namespace: "ns1",
+			Name:      "service2",
 		},
 		&corev1.Service{
 			// service with no available endpoints.
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service3",
-			},
+			Namespace: "ns1",
+			Name:      "service3",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service1",
-			},
+			Namespace: "ns2",
+			Name:      "service1",
 		},
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service2",
-				Annotations: map[string]string{
-					"mesh.traefik.io/traffic-type": "TCP",
-				},
+			Namespace: "ns2",
+			Name:      "service2",
+			Annotations: map[string]string{
+				"mesh.traefik.io/traffic-type": "TCP",
 			},
 		},
 		// Service with no EndpointSlices.
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service3",
-			},
+			Namespace: "ns2",
+			Name:      "service3",
 		},
 		// Service with multiple EndpointSlices.
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service4",
-			},
+			Namespace: "ns2",
+			Name:      "service4",
 		},
 		// EndpointSlices for Pods.
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service1-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service1",
-				},
+			Namespace: "ns1",
+			Name:      "service1-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service1",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -422,12 +390,10 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service2-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service2",
-				},
+			Namespace: "ns1",
+			Name:      "service2-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service2",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -436,22 +402,18 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "service3-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service3",
-				},
+			Namespace: "ns1",
+			Name:      "service3-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service3",
 			},
 			// EndpointSlice with no endpoints.
 		},
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service1-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service1",
-				},
+			Namespace: "ns2",
+			Name:      "service1-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service1",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -460,12 +422,10 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service2-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service2",
-				},
+			Namespace: "ns2",
+			Name:      "service2-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service2",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -476,12 +436,10 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 		},
 		// Two EndpointSlices for the same service.
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service3-1",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service3",
-				},
+			Namespace: "ns2",
+			Name:      "service3-1",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service3",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -490,12 +448,10 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "service3-2",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service3",
-				},
+			Namespace: "ns2",
+			Name:      "service3-2",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service3",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -505,10 +461,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 		},
 		// Pods referenced by EndpointSlices.
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "pod1",
-			},
+			Namespace: "ns1",
+			Name:      "pod1",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -517,10 +471,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns1",
-				Name:      "pod2",
-			},
+			Namespace: "ns1",
+			Name:      "pod2",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -529,10 +481,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "pod1",
-			},
+			Namespace: "ns2",
+			Name:      "pod1",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -542,10 +492,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "pod2",
-			},
+			Namespace: "ns2",
+			Name:      "pod2",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -554,10 +502,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 		},
 		// One Pod has service mesh sidecar, the other doesn't.
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "pod3-1",
-			},
+			Namespace: "ns2",
+			Name:      "pod3-1",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -566,10 +512,8 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 			},
 		},
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "ns2",
-				Name:      "pod3-2",
-			},
+			Namespace: "ns2",
+			Name:      "pod3-2",
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{
 					{Name: "worker"},
@@ -578,18 +522,14 @@ func prepareObjects(pod k8stypes.NamespacedName) []runtime.Object {
 		},
 
 		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: openShiftVersionPodNamespace,
-			},
+			Name: openShiftVersionPodNamespace,
 			Spec: corev1.NamespaceSpec{},
 		},
 		&corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: openShiftVersionPodNamespace,
-				Name:      openShiftVersionPodApp + "-85c4c6dbb7-zbrkm",
-				Labels: map[string]string{
-					"app": openShiftVersionPodApp,
-				},
+			Namespace: openShiftVersionPodNamespace,
+			Name:      openShiftVersionPodApp + "-85c4c6dbb7-zbrkm",
+			Labels: map[string]string{
+				"app": openShiftVersionPodApp,
 			},
 			Spec: corev1.PodSpec{
 				Containers: []corev1.Container{

@@ -65,12 +65,10 @@ func GenerateNewDeploymentForDataPlane(
 	}
 
 	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    dataplane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name)),
-			Labels: map[string]string{
-				"app": dataplane.Name,
-			},
+		Namespace:    dataplane.Namespace,
+		GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", consts.DataPlanePrefix, dataplane.Name)),
+		Labels: map[string]string{
+			"app": dataplane.Name,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Selector: &metav1.LabelSelector{
@@ -211,10 +209,8 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 		volumes,
 		corev1.Volume{
 			Name: volumeTMP,
-			VolumeSource: corev1.VolumeSource{
-				EmptyDir: &corev1.EmptyDirVolumeSource{
-					SizeLimit: new(resource.MustParse("1Gi")),
-				},
+			EmptyDir: &corev1.EmptyDirVolumeSource{
+				SizeLimit: new(resource.MustParse("1Gi")),
 			},
 		},
 	)
@@ -237,10 +233,8 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 		volumes = append(
 			volumes,
 			corev1.Volume{
-				Name: volumeVarKong,
-				VolumeSource: corev1.VolumeSource{
-					EmptyDir: &corev1.EmptyDirVolumeSource{},
-				},
+				Name:     volumeVarKong,
+				EmptyDir: &corev1.EmptyDirVolumeSource{},
 			},
 		)
 		env := corev1.EnvVar{
@@ -339,12 +333,10 @@ func GenerateDataPlaneReadinessProbe(endpoint string) *corev1.Probe {
 		PeriodSeconds:       10,
 		SuccessThreshold:    1,
 		TimeoutSeconds:      1,
-		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path:   endpoint,
-				Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-				Scheme: corev1.URISchemeHTTP,
-			},
+		HTTPGet: &corev1.HTTPGetAction{
+			Path:   endpoint,
+			Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+			Scheme: corev1.URISchemeHTTP,
 		},
 	}
 }
@@ -358,12 +350,10 @@ func GenerateControlPlaneProbe(endpoint string, port intstr.IntOrString) *corev1
 		PeriodSeconds:       10,
 		SuccessThreshold:    1,
 		TimeoutSeconds:      1,
-		ProbeHandler: corev1.ProbeHandler{
-			HTTPGet: &corev1.HTTPGetAction{
-				Path:   endpoint,
-				Port:   port,
-				Scheme: corev1.URISchemeHTTP,
-			},
+		HTTPGet: &corev1.HTTPGetAction{
+			Path:   endpoint,
+			Port:   port,
+			Scheme: corev1.URISchemeHTTP,
 		},
 	}
 }
@@ -393,8 +383,8 @@ func DefaultDataPlaneResources() *corev1.ResourceRequirements {
 
 // ClusterCertificateVolume returns a volume holding a cluster certificate given a Secret holding a certificate.
 func ClusterCertificateVolume(certSecretName string) corev1.Volume {
-	clusterCertificateVolume := corev1.Volume{}
-	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{}
+	clusterCertificateVolume := corev1.Volume{
+		Secret: &corev1.SecretVolumeSource{}}
 	SetDefaultsVolume(&clusterCertificateVolume)
 	clusterCertificateVolume.Name = consts.ClusterCertificateVolume
 	clusterCertificateVolume.Secret = &corev1.SecretVolumeSource{

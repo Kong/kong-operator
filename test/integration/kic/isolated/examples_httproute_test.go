@@ -179,13 +179,11 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 
 			t.Log("adding additional properly configured route with plugin")
 			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Create(ctx, &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      additionalRouteName,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-						annotations.AnnotationPrefix + annotations.PluginsKey:   "response-transformer",
-					},
+				Namespace: namespace,
+				Name:      additionalRouteName,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+					annotations.AnnotationPrefix + annotations.PluginsKey:   "response-transformer",
 				},
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -207,13 +205,9 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 							},
 							BackendRefs: []gatewayapi.HTTPBackendRef{
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: new(gatewayapi.Kind("Service")),
-											Name: additionalRouteServiceTarget,
-											Port: new(gatewayapi.PortNumber(80)),
-										},
-									},
+									Kind: new(gatewayapi.Kind("Service")),
+									Name: additionalRouteServiceTarget,
+									Port: new(gatewayapi.PortNumber(80)),
 								},
 							},
 						},
@@ -226,10 +220,8 @@ func TestHTTPRouteUseLastValidConfigWithBrokenPluginFallback(t *testing.T) {
 			ctx = SetInCtxForT(ctx, t, client)
 
 			workingPlugin := &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: namespace,
-					Name:      "response-transformer",
-				},
+				Namespace:  namespace,
+				Name:       "response-transformer",
 				PluginName: "response-transformer",
 				Config: apiextensionsv1.JSON{
 					Raw: fmt.Appendf(nil, `

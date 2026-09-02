@@ -179,10 +179,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 				from.Kind == ("HTTPRoute") &&
 				from.Group == ("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      httproute.Name,
-					},
+					Namespace: httproute.Namespace,
+					Name:      httproute.Name,
 				})
 			}
 		}
@@ -292,10 +290,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      httproute.Name,
-						},
+						Namespace: httproute.Namespace,
+						Name:      httproute.Name,
 					})
 				}
 			}
@@ -354,10 +350,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      httproute.Name,
-					},
+					Namespace: httproute.Namespace,
+					Name:      httproute.Name,
 				})
 			}
 		}

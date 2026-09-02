@@ -72,11 +72,7 @@ func TestSplitGRPCRoute(t *testing.T) {
 		for _, name := range names {
 			backendRefs = append(backendRefs,
 				gatewayapi.GRPCBackendRef{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(name),
-						},
-					},
+					Name: gatewayapi.ObjectName(name),
 				},
 			)
 		}
@@ -85,11 +81,9 @@ func TestSplitGRPCRoute(t *testing.T) {
 
 	testGRPCRoutes := []*gatewayapi.GRPCRoute{
 		{
-			TypeMeta: grpcRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "grpcroute-no-hostname-one-match",
-			},
+			TypeMeta:  grpcRouteTypeMeta,
+			Namespace: "default",
+			Name:      "grpcroute-no-hostname-one-match",
 			Spec: gatewayapi.GRPCRouteSpec{
 				Rules: []gatewayapi.GRPCRouteRule{
 					{
@@ -107,11 +101,9 @@ func TestSplitGRPCRoute(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: grpcRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "grpcroute-one-hostname-multiple-matches",
-			},
+			TypeMeta:  grpcRouteTypeMeta,
+			Namespace: "default",
+			Name:      "grpcroute-one-hostname-multiple-matches",
 			Spec: gatewayapi.GRPCRouteSpec{
 				Hostnames: []gatewayapi.Hostname{
 					gatewayapi.Hostname("petstore.com"),
@@ -155,11 +147,9 @@ func TestSplitGRPCRoute(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: grpcRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "grpcroute-multiple-hostnames",
-			},
+			TypeMeta:  grpcRouteTypeMeta,
+			Namespace: "default",
+			Name:      "grpcroute-multiple-hostnames",
 			Spec: gatewayapi.GRPCRouteSpec{
 				Hostnames: []gatewayapi.Hostname{
 					gatewayapi.Hostname("petstore.com"),
@@ -181,11 +171,9 @@ func TestSplitGRPCRoute(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: grpcRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "grpcroute-multiple-hostnames-no-match",
-			},
+			TypeMeta:  grpcRouteTypeMeta,
+			Namespace: "default",
+			Name:      "grpcroute-multiple-hostnames-no-match",
 			Spec: gatewayapi.GRPCRouteSpec{
 				Hostnames: []gatewayapi.Hostname{
 					gatewayapi.Hostname("pets.com"),
@@ -199,11 +187,9 @@ func TestSplitGRPCRoute(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: grpcRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "grpcroute-no-spec-hostname-inherits-from-listener",
-			},
+			TypeMeta:  grpcRouteTypeMeta,
+			Namespace: "default",
+			Name:      "grpcroute-no-spec-hostname-inherits-from-listener",
 			Spec: gatewayapi.GRPCRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: []gatewayapi.ParentReference{{
@@ -231,10 +217,8 @@ func TestSplitGRPCRoute(t *testing.T) {
 	// testGRPCRoutes[4], providing the listener hostnames the route inherits
 	// when it specifies no hostnames of its own.
 	gatewayWithListenerHostnames := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "test-gateway",
-		},
+		Namespace: "default",
+		Name:      "test-gateway",
 		Spec: gatewayapi.GatewaySpec{
 			Listeners: []gatewayapi.Listener{
 				{
@@ -516,11 +500,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-1",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"foo.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -549,11 +531,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				},
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-2",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-2",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"*.bar.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -611,11 +591,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-1",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"foo.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -644,12 +622,10 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				},
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "grpcroute-2",
-							// created earlier
-							CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-						},
+						Namespace: "default",
+						Name:      "grpcroute-2",
+						// created earlier
+						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"bar.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -709,11 +685,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-1",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"foo.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -742,11 +716,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				},
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-2",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-2",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"bar.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -806,11 +778,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 			splitGRPCRouteMatches: []SplitGRPCRouteMatch{
 				{
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-1",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"foo.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -846,11 +816,9 @@ func TestAssignRoutePriorityToSplitGRPCRouteMatches(t *testing.T) {
 				{
 					// The same as the one above
 					Source: &gatewayapi.GRPCRoute{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace:         "default",
-							Name:              "grpcroute-1",
-							CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						},
+						Namespace:         "default",
+						Name:              "grpcroute-1",
+						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{"foo.com"},
 							Rules: []gatewayapi.GRPCRouteRule{
@@ -946,11 +914,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
 					Source: &gatewayapi.GRPCRoute{
-						TypeMeta: grpcRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "no-hostname-exact-method",
-						},
+						TypeMeta:  grpcRouteTypeMeta,
+						Namespace: "default",
+						Name:      "no-hostname-exact-method",
 						Spec: gatewayapi.GRPCRouteSpec{
 							Rules: []gatewayapi.GRPCRouteRule{
 								{
@@ -995,11 +961,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
 					Source: &gatewayapi.GRPCRoute{
-						TypeMeta: grpcRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "precise-hostname-regex-method",
-						},
+						TypeMeta:  grpcRouteTypeMeta,
+						Namespace: "default",
+						Name:      "precise-hostname-regex-method",
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{
 								"foo.com",
@@ -1048,11 +1012,9 @@ func TestKongExpressionRouteFromSplitGRPCRouteWithPriority(t *testing.T) {
 			splitGRPCMatchWithPriority: SplitGRPCRouteMatchToPriority{
 				Match: SplitGRPCRouteMatch{
 					Source: &gatewayapi.GRPCRoute{
-						TypeMeta: grpcRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "wildcard-hostname-header-match",
-						},
+						TypeMeta:  grpcRouteTypeMeta,
+						Namespace: "default",
+						Name:      "wildcard-hostname-header-match",
 						Spec: gatewayapi.GRPCRouteSpec{
 							Hostnames: []gatewayapi.Hostname{
 								"*.foo.com",

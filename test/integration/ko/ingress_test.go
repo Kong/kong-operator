@@ -46,9 +46,7 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource")
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -59,10 +57,8 @@ func TestIngressEssentials(t *testing.T) {
 
 	t.Log("deploying Gateway resource")
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{

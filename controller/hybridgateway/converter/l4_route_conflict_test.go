@@ -69,11 +69,9 @@ func TestWinningL4RoutePortsByParentRefReturnsNoPortsForLosingRoute(t *testing.T
 
 func newUDPRouteForL4ConflictTest(name string, creationTimestamp time.Time) *gwtypes.UDPRoute {
 	return &gwtypes.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:              name,
-			Namespace:         "default",
-			CreationTimestamp: metav1.NewTime(creationTimestamp),
-		},
+		Name:              name,
+		Namespace:         "default",
+		CreationTimestamp: metav1.NewTime(creationTimestamp),
 		Spec: gwtypes.UDPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{

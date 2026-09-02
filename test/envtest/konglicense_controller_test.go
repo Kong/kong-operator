@@ -46,9 +46,7 @@ func TestKongLicenseController(t *testing.T) {
 
 	t.Log("Create a KongLicense and verify that it is reconciled")
 	kongLicense1 := &configurationv1alpha1.KongLicense{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "license-1",
-		},
+		Name:             "license-1",
 		RawLicenseString: "test-license-1",
 		Enabled:          true,
 	}
@@ -80,9 +78,7 @@ func TestKongLicenseController(t *testing.T) {
 	// CreationTimestamp precision upstream issue: https://github.com/kubernetes/kubernetes/issues/81026
 	time.Sleep(time.Second)
 	kongLicense2 := &configurationv1alpha1.KongLicense{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "license-2",
-		},
+		Name:             "license-2",
 		RawLicenseString: "test-license-2",
 		Enabled:          true,
 	}
@@ -157,9 +153,7 @@ func TestKongLicenseControllerValidation(t *testing.T) {
 
 	t.Log("Create a KongLicense and verify that it is reconciled")
 	kongLicense1 := &configurationv1alpha1.KongLicense{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "license-1",
-		},
+		Name:             "license-1",
 		RawLicenseString: "invalid-license-for-testing",
 		Enabled:          true,
 	}

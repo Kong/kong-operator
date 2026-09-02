@@ -152,10 +152,8 @@ func enqueueKongUpstreamForKonnectAPIAuthConfiguration(
 				}
 
 				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: upstream.Namespace,
-						Name:      upstream.Name,
-					},
+					Namespace: upstream.Namespace,
+					Name:      upstream.Name,
 				})
 
 			default:

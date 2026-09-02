@@ -50,12 +50,8 @@ func withCustomPlugins(customPlugins ...customPlugin) k8sresources.DeploymentOpt
 		})
 		kpisVolumes = append(kpisVolumes, corev1.Volume{
 			Name: cp.Name,
-			VolumeSource: corev1.VolumeSource{
-				ConfigMap: &corev1.ConfigMapVolumeSource{
-					LocalObjectReference: corev1.LocalObjectReference{
-						Name: cp.ConfigMapNN.Name,
-					},
-				},
+			ConfigMap: &corev1.ConfigMapVolumeSource{
+				Name: cp.ConfigMapNN.Name,
 			},
 		})
 	}

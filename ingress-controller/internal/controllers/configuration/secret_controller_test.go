@@ -28,10 +28,8 @@ func TestCoreV1SecretReconciler_shouldReconcileSecret(t *testing.T) {
 		{
 			name: "Secret with konghq.com/ca-cert:true label",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
 				},
 			},
 			want: true,
@@ -39,10 +37,8 @@ func TestCoreV1SecretReconciler_shouldReconcileSecret(t *testing.T) {
 		{
 			name: "Secret with konghq.com/ca-cert:false label",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "false",
-					},
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "false",
 				},
 			},
 			want: false,
@@ -50,10 +46,8 @@ func TestCoreV1SecretReconciler_shouldReconcileSecret(t *testing.T) {
 		{
 			name: "Secret without konghq.com/ca-cert label",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"some-other-label": "true",
-					},
+				Labels: map[string]string{
+					"some-other-label": "true",
 				},
 			},
 			want: false,
@@ -61,10 +55,8 @@ func TestCoreV1SecretReconciler_shouldReconcileSecret(t *testing.T) {
 		{
 			name: "Secret with labels.CredentialTypeLabel label",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 			},
 			want: true,

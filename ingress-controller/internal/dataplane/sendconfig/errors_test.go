@@ -7,7 +7,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/sendconfig"
@@ -21,14 +20,10 @@ func (t testError) Error() string {
 
 func TestUpdateError(t *testing.T) {
 	someResourceFailure := lo.Must(failures.NewResourceFailure("some reason", &corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "name",
-			Namespace: "namespace",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: "v1",
-		},
+		Name:       "name",
+		Namespace:  "namespace",
+		Kind:       "Pod",
+		APIVersion: "v1",
 	}))
 
 	updateErr := sendconfig.NewUpdateErrorWithoutResponseBody([]failures.ResourceFailure{someResourceFailure}, testError{})

@@ -24,11 +24,9 @@ func GeneratePodDisruptionBudgetForDataPlane(dataplane *operatorv1beta1.DataPlan
 
 	pdbSpec := dataplane.Spec.Resources.PodDisruptionBudget.Spec
 	pdb := &policyv1.PodDisruptionBudget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      dataplane.Name,
-			Namespace: dataplane.Namespace,
-			Labels:    labels,
-		},
+		Name:      dataplane.Name,
+		Namespace: dataplane.Namespace,
+		Labels:    labels,
 		Spec: policyv1.PodDisruptionBudgetSpec{
 			// Selector is defined dynamically based on the labels of the DataPlane.
 			Selector: &metav1.LabelSelector{
