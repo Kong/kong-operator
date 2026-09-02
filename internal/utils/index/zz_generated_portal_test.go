@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -23,10 +22,8 @@ func TestOptionsForPortal(t *testing.T) {
 	assert.NotNil(t, option.ExtractValueFn)
 
 	result := option.ExtractValueFn(&konnectv1alpha1.Portal{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal",
-			Namespace: "default",
-		},
+		Name:      "portal",
+		Namespace: "default",
 		Spec: konnectv1alpha1.PortalSpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -57,9 +54,7 @@ func TestPortalAPIAuthConfigurationRef(t *testing.T) {
 		{
 			name: "returns nil when auth ref name is empty",
 			input: &konnectv1alpha1.Portal{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: konnectv1alpha1.PortalSpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{},
 				},
@@ -69,9 +64,7 @@ func TestPortalAPIAuthConfigurationRef(t *testing.T) {
 		{
 			name: "returns namespace scoped auth ref key",
 			input: &konnectv1alpha1.Portal{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: konnectv1alpha1.PortalSpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{

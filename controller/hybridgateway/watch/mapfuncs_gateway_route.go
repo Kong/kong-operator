@@ -321,10 +321,8 @@ func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.Supp
 		for _, backendRef := range backendRefs {
 			if backendRef.Namespace != nil && string(*backendRef.Namespace) == rg.Namespace && rPtr.GetNamespace() != rg.Namespace {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{
-						Namespace: rPtr.GetNamespace(),
-						Name:      rPtr.GetName(),
-					},
+					Namespace: rPtr.GetNamespace(),
+					Name:      rPtr.GetName(),
 				})
 				break
 			}

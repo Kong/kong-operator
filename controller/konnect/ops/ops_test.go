@@ -45,10 +45,8 @@ func TestCreate(t *testing.T) {
 		{
 			name: "BadRequest error is not propagated to the caller but object's status condition is updated",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
@@ -109,10 +107,8 @@ func TestCreate(t *testing.T) {
 		{
 			name: "SDKError (data constraint error) is not propagated to the caller but object's status condition is updated",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
@@ -176,10 +172,8 @@ func TestCreate(t *testing.T) {
 		{
 			name: "other types of errors are propagated to the caller and object's status condition is updated",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
@@ -230,11 +224,9 @@ func TestUpdateAIGatewayConsumerCredential_NoopsBecauseImmutable(t *testing.T) {
 	t.Parallel()
 
 	credential := &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-credential",
-			Namespace:  "test-ns",
-			Generation: 2,
-		},
+		Name:       "test-credential",
+		Namespace:  "test-ns",
+		Generation: 2,
 		Status: aiconfigurationv1alpha1.AIGatewayConsumerCredentialStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: "credential-id",
@@ -306,10 +298,8 @@ func TestDelete(t *testing.T) {
 		{
 			name: "no Konnect ID and entity not found in Konnect - delete is not called",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 			},
 			sdkFunc: func(t *testing.T, sdk *sdkmocks.MockSDKWrapper) *sdkmocks.MockSDKWrapper {
 				// With no Konnect ID in the status, Delete probes Konnect by UID to
@@ -328,10 +318,8 @@ func TestDelete(t *testing.T) {
 		{
 			name: "no Konnect ID and Programmed=False status condition - delete is not called",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
@@ -362,10 +350,8 @@ func TestDelete(t *testing.T) {
 		{
 			name: "no Konnect ID but entity found in Konnect by UID - delete recovers ID and deletes it",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",
@@ -398,10 +384,8 @@ func TestDelete(t *testing.T) {
 		{
 			name: "no Konnect ID in status, UID probe returns the ID wrapped in a group-membership error but delete proceeds with that ID",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp-group",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp-group",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name:        "test-cp-group",
@@ -438,10 +422,8 @@ func TestDelete(t *testing.T) {
 		{
 			name: "Konnect ID and Programmed=True status condition",
 			entity: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "test-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "test-ns",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						Name: "test-cp",

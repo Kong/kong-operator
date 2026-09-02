@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -69,9 +68,7 @@ func TestLabelObjectAsKonnectExtensionManaged(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			konnectExtension := &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: tt.input,
-				},
+				Labels: tt.input,
 			}
 			LabelObjectAsKonnectExtensionManaged(konnectExtension)
 			assert.Equal(t, tt.output, konnectExtension.GetLabels())

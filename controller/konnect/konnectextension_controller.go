@@ -135,10 +135,8 @@ func listExtendableReferencedExtensions[t extensions.ExtendableT](_ context.Cont
 			continue
 		}
 		recs = append(recs, reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: namespace,
-				Name:      ext.Name,
-			},
+			Namespace: namespace,
+			Name:      ext.Name,
 		})
 	}
 	return recs

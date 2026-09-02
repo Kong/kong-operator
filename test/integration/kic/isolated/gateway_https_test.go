@@ -67,9 +67,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 						certificate.WithDNSNames(domainName),
 					)
 					certificateSecret := &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: nn.Name,
-						},
+						Name: nn.Name,
 						Type: corev1.SecretTypeTLS,
 						Data: map[string][]byte{
 							"tls.crt": certificateCrt,
@@ -145,9 +143,7 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 
 				t.Logf("creating a HTTPRoute to access deployment %q via Kong", deployment.Name)
 				httpRoute := &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "echo-httproute",
-					},
+					Name: "echo-httproute",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{{
@@ -162,13 +158,9 @@ func TestGatewayHTTPSMultipleCertificates(t *testing.T) {
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: gatewayapi.ObjectName(service.Name),
-												Port: new(gatewayapi.PortNumber(test.EchoHTTPPort)),
-												Kind: new(gatewayapi.Kind("Service")),
-											},
-										},
+										Name: gatewayapi.ObjectName(service.Name),
+										Port: new(gatewayapi.PortNumber(test.EchoHTTPPort)),
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},

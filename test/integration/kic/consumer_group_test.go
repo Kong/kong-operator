@@ -252,11 +252,9 @@ func deployMinimalSvcWithKeyAuth(
 	pluginKeyAuth, err := c.ConfigurationV1().KongPlugins(namespace).Create(
 		ctx,
 		&configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: pluginKeyAuthName,
-				Annotations: map[string]string{
-					annotations.IngressClassKey: consts.IngressClass,
-				},
+			Name: pluginKeyAuthName,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 			PluginName: "key-auth",
 		},
@@ -296,11 +294,9 @@ func configurePlugin(
 	pluginRespTrans, err := c.ConfigurationV1().KongPlugins(namespace).Create(
 		ctx,
 		&configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Annotations: map[string]string{
-					annotations.IngressClassKey: consts.IngressClass,
-				},
+			Name: name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 			PluginName: pluginName,
 			Config: apiextensionsv1.JSON{
@@ -330,10 +326,8 @@ func configureConsumerGroupWithPlugins(
 	cg, err := c.ConfigurationV1beta1().KongConsumerGroups(namespace).Create(
 		ctx,
 		&configurationv1beta1.KongConsumerGroup{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Annotations: a,
-			},
+			Name:        name,
+			Annotations: a,
 		},
 		metav1.CreateOptions{},
 	)
@@ -353,11 +347,9 @@ func configureConsumerWithAPIKey(
 	secret, err := env.Cluster().Client().CoreV1().Secrets(namespace).Create(
 		ctx,
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			Name: name,
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			StringData: map[string]string{
 				"key": name,
@@ -371,11 +363,9 @@ func configureConsumerWithAPIKey(
 	consumer, err := c.ConfigurationV1().KongConsumers(namespace).Create(
 		ctx,
 		&configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: name,
-				Annotations: map[string]string{
-					annotations.IngressClassKey: consts.IngressClass,
-				},
+			Name: name,
+			Annotations: map[string]string{
+				annotations.IngressClassKey: consts.IngressClass,
 			},
 			Username:       name,
 			ConsumerGroups: consumerGroups,

@@ -41,10 +41,8 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "condition is already set and as expected",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
+				Name:       "dp1",
+				Generation: 1,
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -75,10 +73,8 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "condition needs to be updated due to different condition status",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
+				Name:       "dp1",
+				Generation: 1,
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -109,10 +105,8 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "condition needs to be updated due to different condition observed generation",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 2,
-				},
+				Name:       "dp1",
+				Generation: 2,
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -143,10 +137,8 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "condition needs to be updated due to different condition reason",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
+				Name:       "dp1",
+				Generation: 1,
 				Status: operatorv1beta1.DataPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -177,11 +169,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "new condition needs to be set on object without conditions",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				Name:       "dp1",
+				Generation: 1,
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
@@ -201,11 +191,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "conflict triggers requeue",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				Name:       "dp1",
+				Generation: 1,
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
@@ -228,11 +216,9 @@ func TestPatchStatusWithCondition(t *testing.T) {
 		{
 			name: "error",
 			obj: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "dp1",
-					Generation: 1,
-				},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				Name:       "dp1",
+				Generation: 1,
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 			conditionType:    kcfgdataplane.ReadyType,
 			conditionStatus:  metav1.ConditionTrue,
@@ -309,10 +295,8 @@ func TestPatchStatusWithoutCondition(t *testing.T) {
 
 	newDataPlane := func(conditions ...metav1.Condition) *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "dp1",
-				Generation: 1,
-			},
+			Name:       "dp1",
+			Generation: 1,
 			Status: operatorv1beta1.DataPlaneStatus{
 				Conditions: conditions,
 			},

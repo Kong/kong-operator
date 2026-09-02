@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -30,7 +29,7 @@ import (
 
 func minimalAIGWDP(ns, name string) *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+		Namespace: ns, Name: name,
 	}
 }
 
@@ -80,7 +79,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "type LoadBalancer propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -98,7 +97,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "labels and annotations propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -118,7 +117,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "custom ports mapped correctly",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -148,7 +147,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "externalTrafficPolicy propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -166,7 +165,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "trafficDistribution propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -185,7 +184,7 @@ func Test_generateIngressServiceOverlay(t *testing.T) {
 		{
 			name: "internalTrafficPolicy propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -235,7 +234,7 @@ func Test_buildIngressService(t *testing.T) {
 		{
 			name: "network set but ingress nil: returns base service",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{Services: nil},
 				},
@@ -250,7 +249,7 @@ func Test_buildIngressService(t *testing.T) {
 			// Service with two ports that share the same name.
 			name: "user port with same name as base port replaces it (no duplicate names)",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -282,7 +281,7 @@ func Test_buildIngressService(t *testing.T) {
 		{
 			name: "ingress service options merged: type propagated",
 			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 					Network: &aigatewayv1alpha1.NetworkOptions{
 						Services: &aigatewayv1alpha1.Services{
@@ -328,7 +327,7 @@ func Test_ensureIngressService(t *testing.T) {
 	scheme := managerscheme.Get()
 
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: dpName},
+		Namespace: ns, Name: dpName,
 	}
 
 	tests := []struct {

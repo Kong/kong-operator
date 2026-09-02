@@ -35,13 +35,13 @@ const (
 
 func minimalMCPServerDataPlane() *mcpv1alpha1.MCPServerDataPlane {
 	return &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: testMCPServerName},
+		Namespace: testMCPServerNamespace, Name: testMCPServerName,
 	}
 }
 
 func minimalAPIAuth() *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	return &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+		Namespace: testMCPServerNamespace, Name: "api-auth",
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 			Token:     "test-token",
@@ -66,7 +66,7 @@ func mcpServerMetadataWithContainers() mcpServerMetadata {
 // ensureTokenSecret's body (see Test_ensureTokenSecret for that).
 func tokenSecret(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) *corev1.Secret {
 	nn := generateWorkloadNN(mcpDataPlane)
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nn.Name, Namespace: nn.Namespace}}
+	return &corev1.Secret{Name: nn.Name, Namespace: nn.Namespace}
 }
 
 func Test_ensureDeployment(t *testing.T) {
@@ -212,7 +212,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "secretRef type in the same namespace returns the referenced name and deletes a stale generated Secret",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "user-provided-secret"},
@@ -231,7 +231,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "secretRef type in a different namespace is rejected",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "other-ns-secret", Namespace: "other-ns"},
@@ -242,8 +242,8 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "unsupported auth type returns an error",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
-				Spec:       konnectv1alpha1.KonnectAPIAuthConfigurationSpec{Type: "bogus"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{Type: "bogus"},
 			},
 			wantErr: true,
 		},
@@ -601,7 +601,7 @@ func Test_addAnnotationsForMCPServerDataPlaneDeployment(t *testing.T) {
 					Deployment: &mcpv1alpha1.DeploymentOptions{Annotations: tc.specAnnotations},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			deployment := &appsv1.Deployment{Annotations: tc.existingAnnotations}
 			var infoCount int
 			addAnnotationsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
 			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
@@ -649,7 +649,7 @@ func Test_addLabelsForMCPServerDataPlaneDeployment(t *testing.T) {
 					Deployment: &mcpv1alpha1.DeploymentOptions{Labels: tc.specLabels},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			deployment := &appsv1.Deployment{Labels: tc.existingLabels}
 			var infoCount int
 			addLabelsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
 			require.Equal(t, tc.expectedLabels, deployment.Labels)

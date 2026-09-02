@@ -31,7 +31,7 @@ func Test_ensureReadyStatus(t *testing.T) {
 
 	egdp := func() *eventgatewayv1alpha1.KegDataPlane {
 		return &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testDPName},
+			Namespace: testCASecretNamespace, Name: testDPName,
 		}
 	}
 
@@ -39,8 +39,8 @@ func Test_ensureReadyStatus(t *testing.T) {
 	// tests can control DeploymentRolloutComplete's inputs precisely.
 	deploy := func(generation, observedGeneration int64, specReplicas, replicas, updatedReplicas, availableReplicas, readyReplicas int32) *appsv1.Deployment {
 		d := &appsv1.Deployment{
-			ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testDPName, Generation: generation},
-			Spec:       appsv1.DeploymentSpec{Replicas: new(specReplicas)},
+			Namespace: testCASecretNamespace, Name: testDPName, Generation: generation,
+			Spec: appsv1.DeploymentSpec{Replicas: new(specReplicas)},
 		}
 		d.Status = appsv1.DeploymentStatus{
 			ObservedGeneration: observedGeneration,

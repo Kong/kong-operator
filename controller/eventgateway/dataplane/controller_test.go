@@ -58,15 +58,11 @@ const (
 // newReconcileEGDP builds the standard KegDataPlane used across Reconcile tests.
 func newReconcileEGDP() *eventgatewayv1alpha1.KegDataPlane {
 	return &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reconcileTestNS,
-			Name:      reconcileTestDPName,
-			UID:       types.UID("egdp-uid"),
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "eventgateway.konghq.com/v1alpha1",
-			Kind:       "KegDataPlane",
-		},
+		Namespace:  reconcileTestNS,
+		Name:       reconcileTestDPName,
+		UID:        types.UID("egdp-uid"),
+		APIVersion: "eventgateway.konghq.com/v1alpha1",
+		Kind:       "KegDataPlane",
 		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 			ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 				Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -81,10 +77,8 @@ func newReconcileEGDP() *eventgatewayv1alpha1.KegDataPlane {
 // newProgrammedKEG builds a KonnectEventGateway with Programmed=True.
 func newProgrammedKEG() *konnectv1alpha1.KonnectEventGateway {
 	return &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reconcileTestNS,
-			Name:      reconcileTestKEGName,
-		},
+		Namespace: reconcileTestNS,
+		Name:      reconcileTestKEGName,
 		Status: konnectv1alpha1.KonnectEventGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -175,7 +169,7 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 // modelling the state after the Konnect controller has registered it.
 func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
+		Namespace: reconcileTestNS, Name: reconcileTestDPName,
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

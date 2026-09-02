@@ -13,7 +13,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,10 +45,8 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			pairs: []pair{
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
+						Name:      "cp1",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -63,11 +60,9 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp1",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid1"),
-								},
+								Name:      "dp1",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid1"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -91,10 +86,8 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			pairs: []pair{
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
+						Name:      "cp1",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -108,11 +101,9 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp1",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid1"),
-								},
+								Name:      "dp1",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid1"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -122,10 +113,8 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 				},
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
+						Name:      "cp1",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -139,11 +128,9 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp2",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid2"),
-								},
+								Name:      "dp2",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid2"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -167,10 +154,8 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 			pairs: []pair{
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
+						Name:      "cp1",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -184,11 +169,9 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp1",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid1"),
-								},
+								Name:      "dp1",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid1"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -198,10 +181,8 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 				},
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp2",
-							Namespace: "ns1",
-						},
+						Name:      "cp2",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -215,11 +196,9 @@ func TestMetricsScrapeManagerAdd(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp2",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid2"),
-								},
+								Name:      "dp2",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid2"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -277,10 +256,8 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 			addPairs: []pair{
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp1",
-							Namespace: "ns1",
-						},
+						Name:      "cp1",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -294,11 +271,9 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp1",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid1"),
-								},
+								Name:      "dp1",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid1"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -308,10 +283,8 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 				},
 				{
 					controlplane: &gwtypes.ControlPlane{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "cp2",
-							Namespace: "ns1",
-						},
+						Name:      "cp2",
+						Namespace: "ns1",
 						Spec: gwtypes.ControlPlaneSpec{
 							DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 								Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -325,11 +298,9 @@ func TestMetricsScrapeManager_RemoveForControlPlaneNN(t *testing.T) {
 						MetricsScraper: NewPrometheusMetricsScraper(
 							logr.Discard(),
 							&operatorv1beta1.DataPlane{
-								ObjectMeta: metav1.ObjectMeta{
-									Name:      "dp2",
-									Namespace: "ns1",
-									UID:       types.UID("dp-uid2"),
-								},
+								Name:      "dp2",
+								Namespace: "ns1",
+								UID:       types.UID("dp-uid2"),
 							},
 							http.DefaultClient,
 							&metricsmocks.MockAdminAPIAddressProvider{},
@@ -406,10 +377,8 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 		return []pair{
 			{
 				controlplane: &gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp1",
-						Namespace: "ns1",
-					},
+					Name:      "cp1",
+					Namespace: "ns1",
 					Spec: gwtypes.ControlPlaneSpec{
 						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -429,10 +398,8 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 			},
 			{
 				controlplane: &gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp2",
-						Namespace: "ns1",
-					},
+					Name:      "cp2",
+					Namespace: "ns1",
 					Spec: gwtypes.ControlPlaneSpec{
 						DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 							Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -477,10 +444,8 @@ func TestMetricsScrapeManager_Start(t *testing.T) {
 		t.Run(fmt.Sprintf("%s (CA key type %s)", tc.name, tc.keyType), func(t *testing.T) {
 			cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(tc.keyType))
 			caSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ca-secret",
-					Namespace: "kong-system",
-				},
+				Name:      "ca-secret",
+				Namespace: "kong-system",
 				Data: map[string][]byte{
 					"ca.crt":  cert,
 					"tls.crt": cert,
@@ -534,10 +499,8 @@ func TestMetricsScrapeManager_CertRotation(t *testing.T) {
 
 	certPEM, keyPEM := certificate.MustGenerateCertPEMFormat(certificate.WithCATrue())
 	caSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca-secret",
-			Namespace: "kong-system",
-		},
+		Name:      "ca-secret",
+		Namespace: "kong-system",
 		Data: map[string][]byte{
 			"ca.crt":  certPEM,
 			"tls.crt": certPEM,
@@ -545,17 +508,13 @@ func TestMetricsScrapeManager_CertRotation(t *testing.T) {
 		},
 	}
 	dp := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "dp1",
-			Namespace: "ns1",
-			UID:       types.UID("dp-uid1"),
-		},
+		Name:      "dp1",
+		Namespace: "ns1",
+		UID:       types.UID("dp-uid1"),
 	}
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp1",
-			Namespace: "ns1",
-		},
+		Name:      "cp1",
+		Namespace: "ns1",
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,

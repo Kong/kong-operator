@@ -35,9 +35,7 @@ func TestGet(t *testing.T) {
 			name:             "gateway class not supported",
 			gatewayClassName: "gateway-class-1",
 			objectsToAdd: []client.Object{&gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "gateway-class-1",
-				},
+				Name: "gateway-class-1",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: "some-other-controller",
 				},
@@ -60,9 +58,7 @@ func TestGet(t *testing.T) {
 			gatewayClassName: "gateway-class-not-accepted",
 			objectsToAdd: []client.Object{
 				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gateway-class-not-accepted",
-					},
+					Name: "gateway-class-not-accepted",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 					},
@@ -93,9 +89,7 @@ func TestGet(t *testing.T) {
 			gatewayClassName: "gateway-class-2",
 			objectsToAdd: []client.Object{
 				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "gateway-class-2",
-					},
+					Name: "gateway-class-2",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 					},

@@ -172,10 +172,8 @@ func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		"konghq.com/protocol":    "tls",
 	}
 	clientCertSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-client-cert",
-			Namespace: "default",
-		},
+		Name:      "backend-client-cert",
+		Namespace: "default",
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       []byte("cert-data"),
 			corev1.TLSPrivateKeyKey: []byte("key-data"),
@@ -240,14 +238,10 @@ func TestTCPRouteConverter_GetHybridGatewayParentsIsHostless(t *testing.T) {
 func newTCPRouteForTranslation() *gwtypes.TCPRoute {
 	port := gwtypes.PortNumber(80)
 	return &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "default",
 		Spec: gwtypes.TCPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -258,12 +252,10 @@ func newTCPRouteForTranslation() *gwtypes.TCPRoute {
 			},
 			Rules: []gwtypes.TCPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  "backend-service",
-						Port:  &port,
-						Kind:  new(gwtypes.Kind("Service")),
-						Group: new(gwtypes.Group("")),
-					},
+					Name:  "backend-service",
+					Port:  &port,
+					Kind:  new(gwtypes.Kind("Service")),
+					Group: new(gwtypes.Group("")),
 				}},
 			}},
 		},

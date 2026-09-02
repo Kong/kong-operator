@@ -36,12 +36,10 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 		{
 			name: "not all replicas are ready",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:        "test-uid",
-					Name:       "test",
-					Namespace:  "default",
-					Generation: 102,
-				},
+				UID:        "test-uid",
+				Name:       "test",
+				Namespace:  "default",
+				Generation: 102,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -63,29 +61,23 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			},
 			objectLists: []client.ObjectList{
 				&appsv1.DeploymentList{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "DeploymentList",
-						APIVersion: "apps/v1",
-					},
+					Kind:       "DeploymentList",
+					APIVersion: "apps/v1",
 					Items: []appsv1.Deployment{
 						{
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Deployment",
-								APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+							Name:       "dataplane-deployment-1",
+							Namespace:  "default",
+							Labels: map[string]string{
+								"app":                                "test",
+								consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "dataplane-deployment-1",
-								Namespace: "default",
-								Labels: map[string]string{
-									"app":                                "test",
-									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
-								},
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										APIVersion: "gateway-operator.konghq.com/v1beta1",
-										Kind:       "DataPlane",
-										UID:        "test-uid",
-									},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway-operator.konghq.com/v1beta1",
+									Kind:       "DataPlane",
+									UID:        "test-uid",
 								},
 							},
 							Spec: appsv1.DeploymentSpec{},
@@ -117,20 +109,16 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 		{
 			name: "all replicas are ready but ingress service of type LoadBalancer doesn't have an IP",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:        "test-uid",
-					Name:       "test",
-					Namespace:  "default",
-					Generation: 102,
-				},
+				UID:        "test-uid",
+				Name:       "test",
+				Namespace:  "default",
+				Generation: 102,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Type: corev1.ServiceTypeLoadBalancer,
-									},
+									Type: corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -153,29 +141,23 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			},
 			objectLists: []client.ObjectList{
 				&appsv1.DeploymentList{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "DeploymentList",
-						APIVersion: "apps/v1",
-					},
+					Kind:       "DeploymentList",
+					APIVersion: "apps/v1",
 					Items: []appsv1.Deployment{
 						{
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Deployment",
-								APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+							Name:       "dataplane-deployment-1",
+							Namespace:  "default",
+							Labels: map[string]string{
+								"app":                                "test",
+								consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "dataplane-deployment-1",
-								Namespace: "default",
-								Labels: map[string]string{
-									"app":                                "test",
-									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
-								},
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										APIVersion: "gateway-operator.konghq.com/v1beta1",
-										Kind:       "DataPlane",
-										UID:        "test-uid",
-									},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway-operator.konghq.com/v1beta1",
+									Kind:       "DataPlane",
+									UID:        "test-uid",
 								},
 							},
 							Spec: appsv1.DeploymentSpec{},
@@ -188,30 +170,24 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 					},
 				},
 				&corev1.ServiceList{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "ServiceList",
-						APIVersion: "apps/v1",
-					},
+					Kind:       "ServiceList",
+					APIVersion: "apps/v1",
 					Items: []corev1.Service{
 						{
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Service",
-								APIVersion: "v1",
+							Kind:       "Service",
+							APIVersion: "v1",
+							Name:       "dataplane-service-1",
+							Namespace:  "default",
+							Labels: map[string]string{
+								"app":                             "test",
+								consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+								consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "dataplane-service-1",
-								Namespace: "default",
-								Labels: map[string]string{
-									"app":                             "test",
-									consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-									consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
-								},
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										APIVersion: "gateway-operator.konghq.com/v1beta1",
-										Kind:       "DataPlane",
-										UID:        "test-uid",
-									},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway-operator.konghq.com/v1beta1",
+									Kind:       "DataPlane",
+									UID:        "test-uid",
 								},
 							},
 							Spec: corev1.ServiceSpec{
@@ -243,20 +219,16 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 		{
 			name: "all replicas are ready and ingress service of type load balancer has an IP",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:        "test-uid",
-					Name:       "test",
-					Namespace:  "default",
-					Generation: 102,
-				},
+				UID:        "test-uid",
+				Name:       "test",
+				Namespace:  "default",
+				Generation: 102,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Type: corev1.ServiceTypeLoadBalancer,
-									},
+									Type: corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -279,29 +251,23 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 			},
 			objectLists: []client.ObjectList{
 				&appsv1.DeploymentList{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "DeploymentList",
-						APIVersion: "apps/v1",
-					},
+					Kind:       "DeploymentList",
+					APIVersion: "apps/v1",
 					Items: []appsv1.Deployment{
 						{
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Deployment",
-								APIVersion: "apps/v1",
+							Kind:       "Deployment",
+							APIVersion: "apps/v1",
+							Name:       "dataplane-deployment-1",
+							Namespace:  "default",
+							Labels: map[string]string{
+								"app":                                "test",
+								consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
 							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "dataplane-deployment-1",
-								Namespace: "default",
-								Labels: map[string]string{
-									"app":                                "test",
-									consts.DataPlaneDeploymentStateLabel: consts.DataPlaneStateLabelValueLive,
-								},
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										APIVersion: "gateway-operator.konghq.com/v1beta1",
-										Kind:       "DataPlane",
-										UID:        "test-uid",
-									},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway-operator.konghq.com/v1beta1",
+									Kind:       "DataPlane",
+									UID:        "test-uid",
 								},
 							},
 							Spec: appsv1.DeploymentSpec{},
@@ -314,30 +280,24 @@ func TestEnsureDataPlaneReadyStatus(t *testing.T) {
 					},
 				},
 				&corev1.ServiceList{
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "DeploymentList",
-						APIVersion: "apps/v1",
-					},
+					Kind:       "DeploymentList",
+					APIVersion: "apps/v1",
 					Items: []corev1.Service{
 						{
-							TypeMeta: metav1.TypeMeta{
-								Kind:       "Service",
-								APIVersion: "v1",
+							Kind:       "Service",
+							APIVersion: "v1",
+							Name:       "dataplane-service-1",
+							Namespace:  "default",
+							Labels: map[string]string{
+								"app":                             "test",
+								consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
+								consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
 							},
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "dataplane-service-1",
-								Namespace: "default",
-								Labels: map[string]string{
-									"app":                             "test",
-									consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValueLive,
-									consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
-								},
-								OwnerReferences: []metav1.OwnerReference{
-									{
-										APIVersion: "gateway-operator.konghq.com/v1beta1",
-										Kind:       "DataPlane",
-										UID:        "test-uid",
-									},
+							OwnerReferences: []metav1.OwnerReference{
+								{
+									APIVersion: "gateway-operator.konghq.com/v1beta1",
+									Kind:       "DataPlane",
+									UID:        "test-uid",
 								},
 							},
 							Spec: corev1.ServiceSpec{},
@@ -458,10 +418,8 @@ func TestExtractDataPlaneIngressServiceLabels(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-											"my-label": "my-value",
-										},
+									Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+										"my-label": "my-value",
 									},
 								},
 							},
@@ -503,9 +461,7 @@ func TestAddAnnotationsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Annotations: map[string]string{"new-annotation": "new-val"},
-									},
+									Annotations: map[string]string{"new-annotation": "new-val"},
 								},
 							},
 						},
@@ -527,9 +483,7 @@ func TestAddAnnotationsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Annotations: map[string]string{"conflict": "new"},
-									},
+									Annotations: map[string]string{"conflict": "new"},
 								},
 							},
 						},
@@ -550,9 +504,7 @@ func TestAddAnnotationsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Annotations: map[string]string{"k": "v"},
-									},
+									Annotations: map[string]string{"k": "v"},
 								},
 							},
 						},
@@ -598,9 +550,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"new-label": "new-val"},
-									},
+									Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"new-label": "new-val"},
 								},
 							},
 						},
@@ -621,9 +571,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"conflict": "new"},
-									},
+									Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"conflict": "new"},
 								},
 							},
 						},
@@ -641,9 +589,7 @@ func TestAddLabelsForDataPlaneIngressService(t *testing.T) {
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"k": "v"},
-									},
+									Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{"k": "v"},
 								},
 							},
 						},
@@ -721,7 +667,7 @@ func TestAddAnnotationsForDataPlaneDeployment(t *testing.T) {
 					},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			deployment := &appsv1.Deployment{Annotations: tc.existingAnnotations}
 			var infoCount int
 			addAnnotationsForDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, dataplane)
 			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
@@ -773,7 +719,7 @@ func TestAddLabelsForDataPlaneDeployment(t *testing.T) {
 					},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			deployment := &appsv1.Deployment{Labels: tc.existingLabels}
 			var infoCount int
 			addLabelsForDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, dataplane)
 			require.Equal(t, tc.expectedLabels, deployment.Labels)

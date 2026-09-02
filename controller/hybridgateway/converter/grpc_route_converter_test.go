@@ -25,16 +25,12 @@ func TestGRPCRouteConverter_GetOutputStore(t *testing.T) {
 	logger := logr.Discard()
 
 	validUpstream := &configurationv1alpha1.KongUpstream{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "upstream-1",
-			Namespace: "default",
-		},
+		Name:      "upstream-1",
+		Namespace: "default",
 	}
 	validService := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-1",
-			Namespace: "default",
-		},
+		Name:      "service-1",
+		Namespace: "default",
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
@@ -98,13 +94,13 @@ func TestGRPCRouteConverter_DesiredResourcesReady(t *testing.T) {
 		}
 		if konnectID != "" {
 			svc.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: konnectID},
+				ID: konnectID,
 			}
 		}
 		return svc
 	}
 
-	baseRoute := &gwtypes.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: ns}}
+	baseRoute := &gwtypes.GRPCRoute{Name: "test-route", Namespace: ns}
 
 	tests := []struct {
 		name            string

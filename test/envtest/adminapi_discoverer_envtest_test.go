@@ -53,16 +53,14 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 			var (
 				ns         = CreateNamespace(ctx, t, client)
 				serviceObj = corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: ns.Name,
-						Name:      serviceName,
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "v1",
-								Kind:       "Service",
-								Name:       ns.Name,
-								UID:        ns.UID,
-							},
+					Namespace: ns.Name,
+					Name:      serviceName,
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "v1",
+							Kind:       "Service",
+							Name:       ns.Name,
+							UID:        ns.UID,
 						},
 					},
 					Spec: corev1.ServiceSpec{
@@ -81,19 +79,17 @@ func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThro
 			for i := range tc.subnetC {
 				for j := range tc.subnetD {
 					es := discoveryv1.EndpointSlice{
-						ObjectMeta: metav1.ObjectMeta{
-							GenerateName: "endpointslice-",
-							Namespace:    ns.Name,
-							Labels: map[string]string{
-								"kubernetes.io/service-name": serviceName,
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       serviceName,
-									UID:        serviceObj.UID,
-								},
+						GenerateName: "endpointslice-",
+						Namespace:    ns.Name,
+						Labels: map[string]string{
+							"kubernetes.io/service-name": serviceName,
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       serviceName,
+								UID:        serviceObj.UID,
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,

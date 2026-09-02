@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -20,7 +19,7 @@ func TestBackendRefOnUDPRoute(t *testing.T) {
 		{
 			name: "no backendRefs",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.UDPRouteSpec{
 					Rules: []gwtypes.UDPRouteRule{
 						{},
@@ -32,16 +31,14 @@ func TestBackendRefOnUDPRoute(t *testing.T) {
 		{
 			name: "single backendRef with default group/kind in single rule",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.UDPRouteSpec{
 					Rules: []gwtypes.UDPRouteRule{
 						{
 							BackendRefs: []gwtypes.BackendRef{
 								{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Name: gatewayv1.ObjectName("svc1"),
-										Port: ptrPort(80),
-									},
+									Name: gatewayv1.ObjectName("svc1"),
+									Port: ptrPort(80),
 								},
 							},
 						},
@@ -53,29 +50,25 @@ func TestBackendRefOnUDPRoute(t *testing.T) {
 		{
 			name: "backendRef in different namespaces",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.UDPRouteSpec{
 					Rules: []gwtypes.UDPRouteRule{
 						{
 							BackendRefs: []gwtypes.BackendRef{
 								{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Group: ptrGroup("core"),
-										Kind:  ptrKind("Service"),
-										Name:  gatewayv1.ObjectName("svc1"),
-										Port:  ptrPort(80),
-									},
+									Group: ptrGroup("core"),
+									Kind:  ptrKind("Service"),
+									Name:  gatewayv1.ObjectName("svc1"),
+									Port:  ptrPort(80),
 								},
 							},
 						},
 						{
 							BackendRefs: []gwtypes.BackendRef{
 								{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Namespace: ptrNamespace("ns2"),
-										Name:      gatewayv1.ObjectName("svc2"),
-										Port:      ptrPort(80),
-									},
+									Namespace: ptrNamespace("ns2"),
+									Name:      gatewayv1.ObjectName("svc2"),
+									Port:      ptrPort(80),
 								},
 							},
 						},
@@ -87,18 +80,16 @@ func TestBackendRefOnUDPRoute(t *testing.T) {
 		{
 			name: "unmatched group/kind",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.UDPRouteSpec{
 					Rules: []gwtypes.UDPRouteRule{
 						{
 							BackendRefs: []gwtypes.BackendRef{
 								{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Group: ptrGroup("configuration.konghq.com"),
-										Kind:  ptrKind("KongService"),
-										Name:  gatewayv1.ObjectName("svc1"),
-										Port:  ptrPort(8080),
-									},
+									Group: ptrGroup("configuration.konghq.com"),
+									Kind:  ptrKind("KongService"),
+									Name:  gatewayv1.ObjectName("svc1"),
+									Port:  ptrPort(8080),
 								},
 							},
 						},
@@ -110,15 +101,13 @@ func TestBackendRefOnUDPRoute(t *testing.T) {
 		{
 			name: "empty port",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.UDPRouteSpec{
 					Rules: []gwtypes.UDPRouteRule{
 						{
 							BackendRefs: []gwtypes.BackendRef{
 								{
-									BackendObjectReference: gatewayv1.BackendObjectReference{
-										Name: gatewayv1.ObjectName("svc1"),
-									},
+									Name: gatewayv1.ObjectName("svc1"),
 								},
 							},
 						},

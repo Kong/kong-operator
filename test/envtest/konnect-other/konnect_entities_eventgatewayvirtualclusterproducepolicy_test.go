@@ -223,10 +223,8 @@ func testEnvtestEventGatewayVirtualClusterProducePolicy(
 	namespace, virtualClusterName, name, description, headerValue string,
 ) *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
 	return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "virtual-cluster-produce-policy",
-			Namespace: namespace,
-		},
+		Name:      "virtual-cluster-produce-policy",
+		Namespace: namespace,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

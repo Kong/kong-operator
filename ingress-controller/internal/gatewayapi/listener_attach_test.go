@@ -28,7 +28,7 @@ var errNamespaceNotFound = errors.New("namespace not found")
 
 func mkRoute(namespace string) *UDPRoute {
 	return &UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: namespace, Name: "route"},
+		Namespace: namespace, Name: "route",
 	}
 }
 
@@ -78,7 +78,7 @@ func TestListenerAllowsNamespace(t *testing.T) {
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
 		}}}
 		getNamespace := mkNamespaceGetter(&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "app", Labels: map[string]string{"team": "checkout"}},
+			Name: "app", Labels: map[string]string{"team": "checkout"},
 		})
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("app"), "gw-ns", nil, getNamespace)
 		require.NoError(t, err)
@@ -91,7 +91,7 @@ func TestListenerAllowsNamespace(t *testing.T) {
 			Selector: &metav1.LabelSelector{MatchLabels: map[string]string{"team": "checkout"}},
 		}}}
 		getNamespace := mkNamespaceGetter(&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: "app", Labels: map[string]string{"team": "platform"}},
+			Name: "app", Labels: map[string]string{"team": "platform"},
 		})
 		ok, err := ListenerAllowsNamespace(listener, mkRoute("app"), "gw-ns", nil, getNamespace)
 		require.NoError(t, err)

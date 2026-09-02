@@ -24,7 +24,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/util/workqueue"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,11 +63,11 @@ func Test_enqueueMCPServerForMCPServerDataPlane(t *testing.T) {
 	// user-chosen name -- this is the shape that broke with
 	// handler.EnqueueRequestForObject.
 	mcpServer := &konnectv1alpha1.MCPServer{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "test-cp-1a2b3c4d"},
+		Namespace: ns, Name: "test-cp-1a2b3c4d",
 	}
 
 	dpMatching := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "mcpserver1"},
+		Namespace: ns, Name: "mcpserver1",
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
@@ -77,7 +76,7 @@ func Test_enqueueMCPServerForMCPServerDataPlane(t *testing.T) {
 		},
 	}
 	dpMatchingSecond := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "mcpserver1-second"},
+		Namespace: ns, Name: "mcpserver1-second",
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
@@ -86,7 +85,7 @@ func Test_enqueueMCPServerForMCPServerDataPlane(t *testing.T) {
 		},
 	}
 	dpOther := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "unrelated"},
+		Namespace: ns, Name: "unrelated",
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
@@ -95,7 +94,7 @@ func Test_enqueueMCPServerForMCPServerDataPlane(t *testing.T) {
 		},
 	}
 	dpOtherNamespace := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "other-ns", Name: "mcpserver1"},
+		Namespace: "other-ns", Name: "mcpserver1",
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
@@ -117,8 +116,8 @@ func Test_enqueueMCPServerForMCPServerDataPlane(t *testing.T) {
 			cl:   cl,
 			obj:  mcpServer,
 			want: []ctrl.Request{
-				{NamespacedName: types.NamespacedName{Namespace: ns, Name: dpMatching.Name}},
-				{NamespacedName: types.NamespacedName{Namespace: ns, Name: dpMatchingSecond.Name}},
+				{Namespace: ns, Name: dpMatching.Name},
+				{Namespace: ns, Name: dpMatchingSecond.Name},
 			},
 		},
 		{
@@ -162,10 +161,10 @@ func Test_MCPServerDataPlaneReconciler_reconcileEventHandler(t *testing.T) {
 	const ns = "default"
 
 	mcpServer := &konnectv1alpha1.MCPServer{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "test-cp-1a2b3c4d"},
+		Namespace: ns, Name: "test-cp-1a2b3c4d",
 	}
 	mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "mcpserver1"},
+		Namespace: ns, Name: "mcpserver1",
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,
@@ -189,7 +188,7 @@ func Test_MCPServerDataPlaneReconciler_reconcileEventHandler(t *testing.T) {
 	require.False(t, shutdown)
 	q.Done(got)
 
-	assert.Equal(t, ctrl.Request{NamespacedName: types.NamespacedName{Namespace: ns, Name: mcpDataPlane.Name}}, got)
+	assert.Equal(t, ctrl.Request{Namespace: ns, Name: mcpDataPlane.Name}, got)
 	assert.NotEqual(t, mcpServer.Name, got.Name, "request must be keyed by the MCPServerDataPlane, not the MCPServer")
 }
 
@@ -209,24 +208,20 @@ func Test_MCPServerDataPlaneReconciler_DeletionDoesNotResetSignalOffset(t *testi
 	)
 
 	mcpServer := &konnectv1alpha1.MCPServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      "mcp-1",
-			OwnerReferences: []metav1.OwnerReference{
-				cpOwnerRef(cpName),
-			},
+		Namespace: ns,
+		Name:      "mcp-1",
+		OwnerReferences: []metav1.OwnerReference{
+			cpOwnerRef(cpName),
 		},
 	}
 	now := metav1.NewTime(time.Now())
 	mcpDataPlane := &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns,
-			Name:      "mcpserver1",
-			// Kept alive by an unrelated finalizer so the fake client accepts a
-			// DeletionTimestamp on an object this reconciler no longer finalizes.
-			Finalizers:        []string{"test.example.com/hold"},
-			DeletionTimestamp: &now,
-		},
+		Namespace: ns,
+		Name:      "mcpserver1",
+		// Kept alive by an unrelated finalizer so the fake client accepts a
+		// DeletionTimestamp on an object this reconciler no longer finalizes.
+		Finalizers:        []string{"test.example.com/hold"},
+		DeletionTimestamp: &now,
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type:                 mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,

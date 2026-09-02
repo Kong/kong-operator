@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -43,11 +42,9 @@ func TestAdoptKongSNIOverride(t *testing.T) {
 	})).Return(&sdkkonnectops.UpsertSniWithCertificateResponse{}, nil)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -89,11 +86,9 @@ func TestAdoptKongSNIMatchSuccess(t *testing.T) {
 	)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -135,11 +130,9 @@ func TestAdoptKongSNIMatchMismatch(t *testing.T) {
 	)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -184,11 +177,9 @@ func TestAdoptKongSNIUIDConflict(t *testing.T) {
 	)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -225,11 +216,9 @@ func TestAdoptKongSNIFetchFailure(t *testing.T) {
 	)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -262,11 +251,9 @@ func TestAdoptKongSNIMissingCertificateID(t *testing.T) {
 	sdk := mocks.NewMockSNIsSDK(t)
 
 	sni := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "sni",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongSNISpec{
 			CertificateRef: commonv1alpha1.NamespacedRef{Name: "cert"},
 			Adopt: &commonv1alpha1.AdoptOptions{

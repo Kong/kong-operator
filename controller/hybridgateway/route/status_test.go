@@ -544,10 +544,8 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 	ctx := context.Background()
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "gw",
-		},
+		Namespace: "default",
+		Name:      "gw",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{
 				{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType},
@@ -567,11 +565,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 	}
 
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Namespace: "default",
+		Name:      "route",
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: []gwtypes.Hostname{"example.com"},
 		},
@@ -583,7 +579,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 	s := runtime.NewScheme()
 	_ = gatewayv1.Install(s)
 	_ = corev1.AddToScheme(s)
-	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}).Build()
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{Name: "default"}).Build()
 
 	tests := []struct {
 		name       string
@@ -599,8 +595,8 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "no matching listeners",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
-				Spec:       gwtypes.GatewaySpec{Listeners: []gwtypes.Listener{}},
+				Namespace: "default", Name: "gw",
+				Spec: gwtypes.GatewaySpec{Listeners: []gwtypes.Listener{}},
 			},
 			route:      route,
 			pRef:       pRef,
@@ -626,7 +622,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "hostname mismatch",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
@@ -640,9 +636,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec:       gwtypes.HTTPRouteSpec{Hostnames: []gwtypes.Hostname{"not-matching.com"}},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{Hostnames: []gwtypes.Hostname{"not-matching.com"}},
 			},
 			pRef:       pRef,
 			client:     cl,
@@ -653,7 +649,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "accepted route",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{Name: "listener1", Port: 80, Protocol: gatewayv1.HTTPProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("example.com")},
@@ -676,7 +672,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "accepted route through unresolved but accepted listener",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{
@@ -708,9 +704,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec:       gwtypes.HTTPRouteSpec{},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{},
 			},
 			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("tls")},
 			client:     cl,
@@ -721,7 +717,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "accepted route without hostnames on hostname listener",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{Name: "listener1", Port: 443, Protocol: gatewayv1.HTTPSProtocolType, AllowedRoutes: &gatewayv1.AllowedRoutes{Namespaces: &gatewayv1.RouteNamespaces{From: new(gatewayv1.NamespacesFromAll)}}, Hostname: strPtr("second-example.org"), TLS: &gatewayv1.ListenerTLSConfig{Mode: func() *gatewayv1.TLSModeType { mode := gatewayv1.TLSModeTerminate; return &mode }()}},
@@ -735,9 +731,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec:       gwtypes.HTTPRouteSpec{},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{},
 			},
 			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     cl,
@@ -748,7 +744,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "missing namespace triggers error branch",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType},
@@ -761,9 +757,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "nonexistent", Name: "route"},
-				Spec:       gwtypes.HTTPRouteSpec{},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "nonexistent", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{},
 			},
 			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     fake.NewClientBuilder().WithScheme(s).Build(), // no namespace object
@@ -774,7 +770,7 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 		{
 			name: "invalid label selector triggers error branch",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw"},
+				Namespace: "default", Name: "gw",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -803,9 +799,9 @@ func Test_BuildAcceptedCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
-				Spec:       gwtypes.HTTPRouteSpec{},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
+				Spec: gwtypes.HTTPRouteSpec{},
 			},
 			pRef:       gwtypes.ParentReference{Kind: kindPtr("Gateway"), Group: groupPtr(gwtypes.GroupName), Name: "gw", SectionName: sectionPtr("listener1")},
 			client:     cl,
@@ -839,8 +835,8 @@ func Test_BuildProgrammedCondition(t *testing.T) {
 	ctx := context.Background()
 	pRef := gwtypes.ParentReference{Name: "gw"}
 	route := &gwtypes.HTTPRoute{
-		TypeMeta:   metav1.TypeMeta{Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+		Kind: "HTTPRoute", APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace: "default", Name: "route",
 	}
 	gvk := schema.GroupVersionKind{Group: "example.com", Version: "v1", Kind: "FakeResource"}
 	kongServiceGVK := configurationv1alpha1.SchemeGroupVersion.WithKind("KongService")
@@ -973,15 +969,11 @@ func Test_UpdateRouteStatus(t *testing.T) {
 	}
 	newRoute := func(hostnames ...gwtypes.Hostname) *gwtypes.HTTPRoute {
 		return &gwtypes.HTTPRoute{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "HTTPRoute",
-				APIVersion: gatewayv1.GroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:  "default",
-				Name:       "route",
-				Generation: 1,
-			},
+			Kind:       "HTTPRoute",
+			APIVersion: gatewayv1.GroupVersion.String(),
+			Namespace:  "default",
+			Name:       "route",
+			Generation: 1,
 			Spec: gwtypes.HTTPRouteSpec{
 				CommonRouteSpec: gwtypes.CommonRouteSpec{
 					ParentRefs: []gwtypes.ParentReference{pRef},
@@ -993,17 +985,13 @@ func Test_UpdateRouteStatus(t *testing.T) {
 	newSupportedGatewayObjects := func() []client.Object {
 		gatewayUID := k8stypes.UID("gateway-uid")
 		return []client.Object{
-			&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}},
+			&corev1.Namespace{Name: "default"},
 			&gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gatewayv1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "gw",
-					UID:       gatewayUID,
-				},
+				Kind:       "Gateway",
+				APIVersion: gatewayv1.GroupVersion.String(),
+				Namespace:  "default",
+				Name:       "gw",
+				UID:        gatewayUID,
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{{
 						Name:          "listener1",
@@ -1024,19 +1012,17 @@ func Test_UpdateRouteStatus(t *testing.T) {
 				},
 			},
 			&konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "konnect-extension",
-					Labels: map[string]string{
-						consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
-					},
-					OwnerReferences: []metav1.OwnerReference{{
-						APIVersion: gatewayv1.GroupVersion.String(),
-						Kind:       "Gateway",
-						Name:       "gw",
-						UID:        gatewayUID,
-					}},
+				Namespace: "default",
+				Name:      "konnect-extension",
+				Labels: map[string]string{
+					consts.GatewayOperatorManagedByLabel: consts.GatewayManagedLabelValue,
 				},
+				OwnerReferences: []metav1.OwnerReference{{
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					Name:       "gw",
+					UID:        gatewayUID,
+				}},
 				Spec: konnectv1alpha2.KonnectExtensionSpec{
 					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 						ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -1051,10 +1037,8 @@ func Test_UpdateRouteStatus(t *testing.T) {
 				},
 			},
 			&konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "control-plane",
-				},
+				Namespace: "default",
+				Name:      "control-plane",
 			},
 		}
 	}
@@ -1131,14 +1115,10 @@ func Test_UpdateRouteStatus(t *testing.T) {
 		{
 			name: "removes owned status for unsupported parent",
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HTTPRoute",
-					APIVersion: gatewayv1.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				Kind:       "HTTPRoute",
+				APIVersion: gatewayv1.GroupVersion.String(),
+				Namespace:  "default",
+				Name:       "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{{
@@ -1380,9 +1360,9 @@ func Test_CleanupOrphanedParentStatus(t *testing.T) {
 		{
 			name: "mixed ownership and orphaned status",
 			init: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "route1", Namespace: "default"},
-				Spec:       gwtypes.HTTPRouteSpec{CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gwtypes.ParentReference{pRef}}},
-				Status:     gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{parentStatus, parentStatusOrphan, parentStatusOther}}},
+				Name: "route1", Namespace: "default",
+				Spec:   gwtypes.HTTPRouteSpec{CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gwtypes.ParentReference{pRef}}},
+				Status: gatewayv1.HTTPRouteStatus{RouteStatus: gatewayv1.RouteStatus{Parents: []gatewayv1.RouteParentStatus{parentStatus, parentStatusOrphan, parentStatusOther}}},
 			},
 			want: true,
 			verify: func(t *testing.T, route *gwtypes.HTTPRoute) {
@@ -1645,13 +1625,13 @@ func Test_FilterMatchingListeners(t *testing.T) {
 }
 
 func Test_FilterListenersByAllowedRoutes(t *testing.T) {
-	gw := &gwtypes.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "default"}}
+	gw := &gwtypes.Gateway{Name: "gw", Namespace: "default"}
 	pRef := gwtypes.ParentReference{Name: "listener1"}
 	listener := gwtypes.Listener{Name: "listener1", Port: 80, Protocol: gwtypes.HTTPProtocolType}
 	kind := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "HTTPRoute"}
 	kindGRPCRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "GRPCRoute"}
 	kindTLSRoute := gwtypes.RouteGroupKind{Group: groupPtr(gwtypes.GroupName), Kind: "TLSRoute"}
-	routeNS := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}
+	routeNS := &corev1.Namespace{Name: "default"}
 
 	selector := &metav1.LabelSelector{MatchLabels: map[string]string{"foo": "bar"}}
 	invalidSelector := &metav1.LabelSelector{MatchExpressions: []metav1.LabelSelectorRequirement{{Key: "foo", Operator: "InvalidOperator", Values: []string{"bar"}}}}
@@ -1789,7 +1769,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 			name:      "Namespaces From Selector (match)",
 			listeners: []gwtypes.Listener{listenerNSSelector},
 			kind:      kind,
-			routeNS:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: map[string]string{"foo": "bar"}}},
+			routeNS:   &corev1.Namespace{Name: "default", Labels: map[string]string{"foo": "bar"}},
 			wantLen:   1,
 			wantCond:  false,
 			wantErr:   false,
@@ -1798,7 +1778,7 @@ func Test_FilterListenersByAllowedRoutes(t *testing.T) {
 			name:      "Namespaces From Selector (no match)",
 			listeners: []gwtypes.Listener{listenerNSSelectorNoMatch},
 			kind:      kind,
-			routeNS:   &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default", Labels: map[string]string{"foo": "baz"}}},
+			routeNS:   &corev1.Namespace{Name: "default", Labels: map[string]string{"foo": "baz"}},
 			wantLen:   0,
 			wantCond:  true,
 			wantErr:   false,
@@ -2241,25 +2221,19 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 	// Create test services
 	serviceDefault := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "svc",
-		},
+		Namespace: "default",
+		Name:      "svc",
 	}
 
 	serviceOtherNS := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "other-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "other-ns",
+		Name:      "test-svc",
 	}
 
 	// Create test KongPlugin
 	kongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "test-plugin",
-		},
+		Namespace:  "default",
+		Name:       "test-plugin",
 		PluginName: "rate-limiting",
 	}
 
@@ -2270,21 +2244,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 
 	// Create base route
 	routeBase := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Namespace: "default",
+		Name:      "route",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name:  gwtypes.ObjectName("svc"),
-							Kind:  kindPtr("Service"),
-							Group: groupPtr("core"),
-						},
-					},
+					Name:  gwtypes.ObjectName("svc"),
+					Kind:  kindPtr("Service"),
+					Group: groupPtr("core"),
 				}},
 			}},
 		},
@@ -2310,17 +2278,13 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "unsupported group/kind",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Unsupported"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Unsupported"),
+							Group: groupPtr("core"),
 						}},
 					}},
 				},
@@ -2341,18 +2305,14 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "cross-namespace, no grants found",
 			clientObjs: []client.Object{serviceOtherNS},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("test-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
+							Name:      gwtypes.ObjectName("test-svc"),
+							Kind:      kindPtr("Service"),
+							Group:     groupPtr("core"),
+							Namespace: nsPtr("other-ns"),
 						}},
 					}},
 				},
@@ -2365,16 +2325,12 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name: "cross-namespace, grant exists but not permitted",
 			clientObjs: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other-ns",
-						Name:      "other-svc",
-					},
+					Namespace: "other-ns",
+					Name:      "other-svc",
 				},
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other-ns",
-						Name:      "grant",
-					},
+					Namespace: "other-ns",
+					Name:      "grant",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gwtypes.GroupName,
@@ -2390,19 +2346,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("other-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
+							Name:      gwtypes.ObjectName("other-svc"),
+							Kind:      kindPtr("Service"),
+							Group:     groupPtr("core"),
+							Namespace: nsPtr("other-ns"),
 						}},
 					}},
 				},
@@ -2416,10 +2368,8 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			clientObjs: []client.Object{
 				serviceOtherNS,
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other-ns",
-						Name:      "grant",
-					},
+					Namespace: "other-ns",
+					Name:      "grant",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gwtypes.GroupName,
@@ -2435,19 +2385,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("test-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
+							Name:      gwtypes.ObjectName("test-svc"),
+							Kind:      kindPtr("Service"),
+							Group:     groupPtr("core"),
+							Namespace: nsPtr("other-ns"),
 						}},
 					}},
 				},
@@ -2460,22 +2406,16 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name: "partially invalid cross-namespace sibling backends still report ref not permitted",
 			clientObjs: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "app-backend",
-						Name:      "app-backend-v1",
-					},
+					Namespace: "app-backend",
+					Name:      "app-backend-v1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "app-backend",
-						Name:      "app-backend-v2",
-					},
+					Namespace: "app-backend",
+					Name:      "app-backend-v2",
 				},
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "app-backend",
-						Name:      "grant-v1-only",
-					},
+					Namespace: "app-backend",
+					Name:      "grant-v1-only",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gwtypes.GroupName,
@@ -2491,31 +2431,23 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      gwtypes.ObjectName("app-backend-v2"),
-										Kind:      kindPtr("Service"),
-										Group:     groupPtr("core"),
-										Namespace: nsPtr("app-backend"),
-									},
-								},
+								Name:      gwtypes.ObjectName("app-backend-v2"),
+								Kind:      kindPtr("Service"),
+								Group:     groupPtr("core"),
+								Namespace: nsPtr("app-backend"),
 							}},
 						},
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      gwtypes.ObjectName("app-backend-v1"),
-										Kind:      kindPtr("Service"),
-										Group:     groupPtr("core"),
-										Namespace: nsPtr("app-backend"),
-									},
-								},
+								Name:      gwtypes.ObjectName("app-backend-v1"),
+								Kind:      kindPtr("Service"),
+								Group:     groupPtr("core"),
+								Namespace: nsPtr("app-backend"),
 							}},
 						},
 					},
@@ -2529,28 +2461,20 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "multiple refs, first fails",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{
 							{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:  gwtypes.ObjectName("not-found"),
-										Kind:  kindPtr("Service"),
-										Group: groupPtr("core"),
-									},
-								},
+								Name:  gwtypes.ObjectName("not-found"),
+								Kind:  kindPtr("Service"),
+								Group: groupPtr("core"),
 							},
 							{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:  gwtypes.ObjectName("svc"),
-										Kind:  kindPtr("Service"),
-										Group: groupPtr("core"),
-									},
-								},
+								Name:  gwtypes.ObjectName("svc"),
+								Kind:  kindPtr("Service"),
+								Group: groupPtr("core"),
 							},
 						},
 					}},
@@ -2564,17 +2488,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "empty group uses implicit core",
 			clientObjs: []client.Object{serviceDefault},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta:   httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr(""), // Empty group
-								},
+							BackendObjectReference: gwtypes.BackendObjectReference{
+								Name:  gwtypes.ObjectName("svc"),
+								Kind:  kindPtr("Service"),
+								Group: groupPtr(""), // Empty group
 							},
 						}},
 					}},
@@ -2589,11 +2511,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef resolved - KongPlugin exists",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -2615,11 +2535,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef unsupported group/kind",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -2641,11 +2559,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef not found",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -2667,11 +2583,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "ExtensionRef nil but type is ExtensionRef - skips validation",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -2689,11 +2603,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Multiple filters with ExtensionRef - first fails",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{
@@ -2725,21 +2637,15 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Mixed BackendRef and ExtensionRef - BackendRef fails",
 			clientObjs: []client.Object{kongPlugin},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("nonexistent-svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("nonexistent-svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 						Filters: []gwtypes.HTTPRouteFilter{{
 							Type: gwtypes.HTTPRouteFilterExtensionRef,
@@ -2760,28 +2666,20 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name: "Mixed BackendRef and ExtensionRef - ExtensionRef fails",
 			clientObjs: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-svc",
-					},
+					Namespace: "default",
+					Name:      "test-svc",
 				},
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("test-svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("test-svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 						Filters: []gwtypes.HTTPRouteFilter{{
 							Type: gwtypes.HTTPRouteFilterExtensionRef,
@@ -2802,29 +2700,21 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name: "Mixed BackendRef and ExtensionRef - both succeed",
 			clientObjs: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "test-svc",
-					},
+					Namespace: "default",
+					Name:      "test-svc",
 				},
 				kongPlugin,
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("test-svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("test-svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 						Filters: []gwtypes.HTTPRouteFilter{{
 							Type: gwtypes.HTTPRouteFilterExtensionRef,
@@ -2845,11 +2735,9 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "Non-ExtensionRef filter - should be ignored",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Namespace: "default",
+				Name:      "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -2879,18 +2767,14 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "error listing reference grants",
 			clientObjs: []client.Object{serviceOtherNS},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gwtypes.ObjectName("test-svc"),
-									Kind:      kindPtr("Service"),
-									Group:     groupPtr("core"),
-									Namespace: nsPtr("other-ns"),
-								},
-							},
+							Name:      gwtypes.ObjectName("test-svc"),
+							Kind:      kindPtr("Service"),
+							Group:     groupPtr("core"),
+							Namespace: nsPtr("other-ns"),
 						}},
 					}},
 				},
@@ -2910,17 +2794,13 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "error getting service",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 					}},
 				},
@@ -2940,7 +2820,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			name:       "error getting KongPlugin",
 			clientObjs: []client.Object{},
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{{
 						Filters: []gwtypes.HTTPRouteFilter{{
@@ -3035,16 +2915,12 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "svc",
-		},
+		Namespace: "default",
+		Name:      "svc",
 	}
 	kongPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "test-plugin",
-		},
+		Namespace:  "default",
+		Name:       "test-plugin",
 		PluginName: "rate-limiting",
 	}
 
@@ -3065,18 +2941,14 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 			name:       "all references resolved - BackendRef and ExtensionRef filter",
 			clientObjs: []client.Object{service, kongPlugin},
 			route: &gwtypes.GRPCRoute{
-				TypeMeta:   grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  grpcRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.GRPCRouteSpec{
 					Rules: []gwtypes.GRPCRouteRule{{
 						BackendRefs: []gwtypes.GRPCBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 						Filters: []gatewayv1.GRPCRouteFilter{{
 							Type: gwtypes.GRPCRouteFilterExtensionRef,
@@ -3097,18 +2969,14 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 			name:       "unsupported group/kind",
 			clientObjs: []client.Object{service},
 			route: &gwtypes.GRPCRoute{
-				TypeMeta:   grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  grpcRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.GRPCRouteSpec{
 					Rules: []gwtypes.GRPCRouteRule{{
 						BackendRefs: []gwtypes.GRPCBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Unsupported"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Unsupported"),
+							Group: groupPtr("core"),
 						}},
 					}},
 				},
@@ -3121,18 +2989,14 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 			name:       "service not found",
 			clientObjs: []client.Object{},
 			route: &gwtypes.GRPCRoute{
-				TypeMeta:   grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  grpcRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.GRPCRouteSpec{
 					Rules: []gwtypes.GRPCRouteRule{{
 						BackendRefs: []gwtypes.GRPCBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  gwtypes.ObjectName("svc"),
-									Kind:  kindPtr("Service"),
-									Group: groupPtr("core"),
-								},
-							},
+							Name:  gwtypes.ObjectName("svc"),
+							Kind:  kindPtr("Service"),
+							Group: groupPtr("core"),
 						}},
 					}},
 				},
@@ -3145,8 +3009,8 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 			name:       "ExtensionRef KongPlugin not found",
 			clientObjs: []client.Object{service},
 			route: &gwtypes.GRPCRoute{
-				TypeMeta:   grpcRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+				TypeMeta:  grpcRouteTypeMeta,
+				Namespace: "default", Name: "route",
 				Spec: gwtypes.GRPCRouteSpec{
 					Rules: []gwtypes.GRPCRouteRule{{
 						Filters: []gatewayv1.GRPCRouteFilter{{
@@ -3196,16 +3060,12 @@ func TestValidateAnnotationsForGRPCRoute(t *testing.T) {
 
 	port := gatewayv1.PortNumber(50051)
 	route := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "route"},
+		Namespace: "default", Name: "route",
 		Spec: gwtypes.GRPCRouteSpec{
 			Rules: []gwtypes.GRPCRouteRule{{
 				BackendRefs: []gwtypes.GRPCBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: "svc",
-							Port: &port,
-						},
-					},
+					Name: "svc",
+					Port: &port,
 				}},
 			}},
 		},
@@ -3215,12 +3075,10 @@ func TestValidateAnnotationsForGRPCRoute(t *testing.T) {
 		cl := fake.NewClientBuilder().
 			WithScheme(s).
 			WithObjects(&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "svc",
-					Annotations: map[string]string{
-						"konghq.com/connect-timeout": "5000",
-					},
+				Namespace: "default",
+				Name:      "svc",
+				Annotations: map[string]string{
+					"konghq.com/connect-timeout": "5000",
 				},
 			}).
 			Build()
@@ -3232,12 +3090,10 @@ func TestValidateAnnotationsForGRPCRoute(t *testing.T) {
 		cl := fake.NewClientBuilder().
 			WithScheme(s).
 			WithObjects(&corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "svc",
-					Annotations: map[string]string{
-						"konghq.com/connect-timeout": "invalid",
-					},
+				Namespace: "default",
+				Name:      "svc",
+				Annotations: map[string]string{
+					"konghq.com/connect-timeout": "invalid",
 				},
 			}).
 			Build()
@@ -3251,28 +3107,20 @@ func TestBuildResolvedRefsConditionForTCPRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "svc",
-		},
+		Namespace: "default",
+		Name:      "svc",
 	}
 	port := gwtypes.PortNumber(80)
 	route := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace:  "default",
+		Name:       "route",
 		Spec: gwtypes.TCPRouteSpec{
 			Rules: []gwtypes.TCPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc",
-						Port: &port,
-					},
+					Name: "svc",
+					Port: &port,
 				}},
 			}},
 		},
@@ -3294,21 +3142,15 @@ func TestBuildAcceptedConditionForTCPRoute(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 	route := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace:  "default",
+		Name:       "route",
 	}
 	pRef := gwtypes.ParentReference{Name: "gateway"}
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "gateway",
-		},
+		Namespace: "default",
+		Name:      "gateway",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "tcp",
@@ -3330,7 +3172,7 @@ func TestBuildAcceptedConditionForTCPRoute(t *testing.T) {
 	s := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(s))
 	require.NoError(t, gatewayv1.Install(s))
-	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}).Build()
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{Name: "default"}).Build()
 
 	cond, err := BuildAcceptedCondition(ctx, logger, cl, gateway, route, pRef)
 	require.NoError(t, err)
@@ -3344,28 +3186,20 @@ func TestBuildResolvedRefsConditionForUDPRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "svc",
-		},
+		Namespace: "default",
+		Name:      "svc",
 	}
 	port := gwtypes.PortNumber(80)
 	route := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace:  "default",
+		Name:       "route",
 		Spec: gwtypes.UDPRouteSpec{
 			Rules: []gwtypes.UDPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc",
-						Port: &port,
-					},
+					Name: "svc",
+					Port: &port,
 				}},
 			}},
 		},
@@ -3387,21 +3221,15 @@ func TestBuildAcceptedConditionForUDPRoute(t *testing.T) {
 	ctx := context.Background()
 	logger := logr.Discard()
 	route := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "route",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Namespace:  "default",
+		Name:       "route",
 	}
 	pRef := gwtypes.ParentReference{Name: "gateway"}
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "gateway",
-		},
+		Namespace: "default",
+		Name:      "gateway",
 		Spec: gwtypes.GatewaySpec{
 			Listeners: []gwtypes.Listener{{
 				Name:     "udp",
@@ -3423,7 +3251,7 @@ func TestBuildAcceptedConditionForUDPRoute(t *testing.T) {
 	s := runtime.NewScheme()
 	require.NoError(t, corev1.AddToScheme(s))
 	require.NoError(t, gatewayv1.Install(s))
-	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: "default"}}).Build()
+	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(&corev1.Namespace{Name: "default"}).Build()
 
 	cond, err := BuildAcceptedCondition(ctx, logger, cl, gateway, route, pRef)
 	require.NoError(t, err)
@@ -3448,11 +3276,7 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "nil namespace returns error",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "service",
-					},
-				},
+				Name: "service",
 			},
 			routeNamespace:   "default",
 			wantPermitted:    false,
@@ -3463,12 +3287,8 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "empty namespace returns error",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr(""),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr(""),
 			},
 			routeNamespace:   "default",
 			wantPermitted:    false,
@@ -3479,13 +3299,9 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "no reference grants found",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs:     []client.Object{},
@@ -3496,21 +3312,15 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "reference grants exist but none permit the reference",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3536,21 +3346,15 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "reference grant permits the reference",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3576,21 +3380,15 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "reference grant permits with wildcard service name",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "any-service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "any-service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3616,21 +3414,15 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "multiple grants, first doesn't match but second does",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3649,10 +3441,8 @@ func TestCheckReferenceGrant(t *testing.T) {
 					},
 				},
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-2",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-2",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3678,22 +3468,16 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "backend ref with explicit group",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-						Group:     groupPtr("core"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
+				Group:     groupPtr("core"),
 			},
 			routeNamespace: "source-ns",
 			clientObjs: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -3729,13 +3513,9 @@ func TestCheckReferenceGrant(t *testing.T) {
 		{
 			name: "error listing reference grants",
 			bRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:      "service",
-						Namespace: nsPtr("target-ns"),
-						Kind:      kindPtr("Service"),
-					},
-				},
+				Name:      "service",
+				Namespace: nsPtr("target-ns"),
+				Kind:      kindPtr("Service"),
 			},
 			routeNamespace:   "source-ns",
 			wantError:        true,

@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -82,10 +81,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "single listener with one certificate",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -103,10 +100,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "multiple listeners with multiple certificates",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -132,10 +127,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "cross-namespace certificate references",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -155,10 +148,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "duplicate references are deduplicated",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -184,10 +175,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "listener without TLS is skipped",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -208,10 +197,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "non-Secret group is filtered out",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -230,10 +217,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "non-Secret kind is filtered out",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -252,10 +237,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "explicit Secret group and kind are accepted",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -273,10 +256,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "empty certificate name is skipped",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -295,10 +276,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "no listeners returns nil",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{},
 				},
@@ -308,10 +287,8 @@ func TestTLSCertificateSecretsOnGateway(t *testing.T) {
 		{
 			name: "no TLS certificates returns nil",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gw",
-					Namespace: "default",
-				},
+				Name:      "test-gw",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{

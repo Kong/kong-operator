@@ -72,10 +72,8 @@ func enqueueKonnectExtensionsForSecret(cl client.Client) func(context.Context, c
 				ke.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name == obj.GetName()) ||
 				k8sutils.IsOwnedByRefUID(secret, ke.UID) {
 				reqs = append(reqs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: ke.Namespace,
-						Name:      ke.Name,
-					},
+					Namespace: ke.Namespace,
+					Name:      ke.Name,
 				})
 			}
 		}

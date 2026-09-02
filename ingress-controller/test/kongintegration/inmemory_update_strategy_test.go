@@ -60,22 +60,20 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 				FormatVersion: "3.0",
 				Services: []file.FService{
 					{
-						Service: kong.Service{
-							Name:     new("test-service"),
-							Host:     new("konghq.com"),
-							Port:     new(80),
-							Protocol: new("grpc"),
-							// Paths are not supported for gRPC services. This will trigger an error.
-							Path: new("/test"),
-							Tags: []*string{
-								// Tags are used to identify the resource in the flattened errors response.
-								new("k8s-name:test-service"),
-								new("k8s-namespace:default"),
-								new("k8s-kind:Service"),
-								new("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
-								new("k8s-group:"),
-								new("k8s-version:v1"),
-							},
+						Name:     new("test-service"),
+						Host:     new("konghq.com"),
+						Port:     new(80),
+						Protocol: new("grpc"),
+						// Paths are not supported for gRPC services. This will trigger an error.
+						Path: new("/test"),
+						Tags: []*string{
+							// Tags are used to identify the resource in the flattened errors response.
+							new("k8s-name:test-service"),
+							new("k8s-namespace:default"),
+							new("k8s-kind:Service"),
+							new("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
+							new("k8s-group:"),
+							new("k8s-version:v1"),
 						},
 					},
 				},
@@ -84,15 +82,11 @@ func TestUpdateStrategyInMemory_PropagatesResourcesErrors(t *testing.T) {
 	}
 	expectedCausingObjects := []client.Object{
 		&metav1.PartialObjectMetadata{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Service",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "test-service",
-				UID:       "a3b8afcc-9f19-42e4-aa8f-5866168c2ad3",
-			},
+			Kind:       "Service",
+			APIVersion: "v1",
+			Namespace:  "default",
+			Name:       "test-service",
+			UID:        "a3b8afcc-9f19-42e4-aa8f-5866168c2ad3",
 		},
 	}
 	expectedMessage := "invalid path: value must be null"

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -16,10 +15,8 @@ func TestResolveDependencies_Service(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-service",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testKongPlugin(t, "1"),
@@ -30,13 +27,11 @@ func TestResolveDependencies_Service(t *testing.T) {
 		{
 			name: "Service -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name) and KongUpstreamPolicy",
 			object: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "1",
-					},
+				Name:      "test-service",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "1",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -50,12 +45,10 @@ func TestResolveDependencies_Service(t *testing.T) {
 		{
 			name: "Service -> plugins - annotation (KongPlugin and KongClusterPlugin with different names)",
 			object: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
-					},
+				Name:      "test-service",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -69,13 +62,11 @@ func TestResolveDependencies_Service(t *testing.T) {
 		{
 			name: "Service -> plugins - annotation (KongClusterPlugin) and KongUpstreamPolicy",
 			object: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "3",
-					},
+				Name:      "test-service",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "3",
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -89,12 +80,10 @@ func TestResolveDependencies_Service(t *testing.T) {
 		{
 			name: "Service -> KongUpstreamPolicy - the same name in different namespaces",
 			object: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "1",
-					},
+				Name:      "test-service",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey: "1",
 				},
 			},
 			cache: cacheStoresFromObjs(t,

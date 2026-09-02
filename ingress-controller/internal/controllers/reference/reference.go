@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -42,25 +41,17 @@ func UpdateReferencesToSecretOrConfigMap[t secretOrConfigMapT](
 		switch (any)(referencedObject).(type) {
 		case *corev1.Secret:
 			obj = &corev1.Secret{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: VersionV1,
-					Kind:       KindSecret,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: nsName.Namespace,
-					Name:      nsName.Name,
-				},
+				APIVersion: VersionV1,
+				Kind:       KindSecret,
+				Namespace:  nsName.Namespace,
+				Name:       nsName.Name,
 			}
 		case *corev1.ConfigMap:
 			obj = &corev1.ConfigMap{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: VersionV1,
-					Kind:       KindConfigMap,
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: nsName.Namespace,
-					Name:      nsName.Name,
-				},
+				APIVersion: VersionV1,
+				Kind:       KindConfigMap,
+				Namespace:  nsName.Namespace,
+				Name:       nsName.Name,
 			}
 		}
 

@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -141,14 +140,10 @@ func generateBaseIngressService(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *c
 		}
 	}
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      aigwdp.Name + "-ingress",
-			Namespace: aigwdp.Namespace,
-		},
+		APIVersion: "v1",
+		Kind:       "Service",
+		Name:       aigwdp.Name + "-ingress",
+		Namespace:  aigwdp.Namespace,
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
 				consts.GatewayOperatorManagedByLabel:     consts.AIGatewayDataPlaneManagedByLabelValue,
@@ -191,16 +186,12 @@ func generateIngressServiceOverlay(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane)
 	}
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        aigwdp.Name + "-ingress",
-			Namespace:   aigwdp.Namespace,
-			Labels:      extraLabels,
-			Annotations: ingress.Annotations,
-		},
+		APIVersion:  "v1",
+		Kind:        "Service",
+		Name:        aigwdp.Name + "-ingress",
+		Namespace:   aigwdp.Namespace,
+		Labels:      extraLabels,
+		Annotations: ingress.Annotations,
 		Spec: corev1.ServiceSpec{
 			Type:  ingress.Type,
 			Ports: ports,

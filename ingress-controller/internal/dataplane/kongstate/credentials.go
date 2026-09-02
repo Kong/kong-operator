@@ -183,73 +183,63 @@ func (c *KeyAuth) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KeyAuth {
 		redactedKey = randRedactedString(uuidGenerator)
 	}
 	return &KeyAuth{
-		KeyAuth: kong.KeyAuth{
-			// Consumer field omitted
-			CreatedAt: c.CreatedAt,
-			ID:        c.ID,
-			Key:       redactedKey,
-			Tags:      c.Tags,
-		},
+		// Consumer field omitted
+		CreatedAt: c.CreatedAt,
+		ID:        c.ID,
+		Key:       redactedKey,
+		Tags:      c.Tags,
 	}
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *HMACAuth) SanitizedCopy() *HMACAuth {
 	return &HMACAuth{
-		HMACAuth: kong.HMACAuth{
-			// Consumer field omitted
-			CreatedAt: c.CreatedAt,
-			ID:        c.ID,
-			Username:  c.Username,
-			Secret:    redactedString,
-			Tags:      c.Tags,
-		},
+		// Consumer field omitted
+		CreatedAt: c.CreatedAt,
+		ID:        c.ID,
+		Username:  c.Username,
+		Secret:    redactedString,
+		Tags:      c.Tags,
 	}
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *JWTAuth) SanitizedCopy() *JWTAuth {
 	return &JWTAuth{
-		JWTAuth: kong.JWTAuth{
-			// Consumer field omitted
-			CreatedAt:    c.CreatedAt,
-			ID:           c.ID,
-			Algorithm:    c.Algorithm,
-			Key:          c.Key, // despite field name, "key" is an identifier
-			RSAPublicKey: c.RSAPublicKey,
-			Secret:       redactedString,
-			Tags:         c.Tags,
-		},
+		// Consumer field omitted
+		CreatedAt:    c.CreatedAt,
+		ID:           c.ID,
+		Algorithm:    c.Algorithm,
+		Key:          c.Key, // despite field name, "key" is an identifier
+		RSAPublicKey: c.RSAPublicKey,
+		Secret:       redactedString,
+		Tags:         c.Tags,
 	}
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *BasicAuth) SanitizedCopy() *BasicAuth {
 	return &BasicAuth{
-		BasicAuth: kong.BasicAuth{
-			// Consumer field omitted
-			CreatedAt: c.CreatedAt,
-			ID:        c.ID,
-			Username:  c.Username,
-			Password:  redactedString,
-			Tags:      c.Tags,
-		},
+		// Consumer field omitted
+		CreatedAt: c.CreatedAt,
+		ID:        c.ID,
+		Username:  c.Username,
+		Password:  redactedString,
+		Tags:      c.Tags,
 	}
 }
 
 // SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
 func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 	return &Oauth2Credential{
-		Oauth2Credential: kong.Oauth2Credential{
-			// Consumer field omitted
-			CreatedAt:    c.CreatedAt,
-			ID:           c.ID,
-			Name:         c.Name,
-			ClientID:     c.ClientID,
-			ClientSecret: redactedString,
-			RedirectURIs: c.RedirectURIs,
-			Tags:         c.Tags,
-		},
+		// Consumer field omitted
+		CreatedAt:    c.CreatedAt,
+		ID:           c.ID,
+		Name:         c.Name,
+		ClientID:     c.ClientID,
+		ClientSecret: redactedString,
+		RedirectURIs: c.RedirectURIs,
+		Tags:         c.Tags,
 	}
 }
 

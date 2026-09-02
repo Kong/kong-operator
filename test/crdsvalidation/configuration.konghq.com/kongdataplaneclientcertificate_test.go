@@ -20,10 +20,8 @@ func TestKongDataPlaneClientCertificate(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongDataPlaneClientCertificate{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongDataPlaneClientCertificate",
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-		},
+		Kind:       "KongDataPlaneClientCertificate",
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		ObjectMeta: common.CommonObjectMeta(ns.Name),
 		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{

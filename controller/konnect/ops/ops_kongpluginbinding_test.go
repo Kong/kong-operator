@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -27,18 +26,14 @@ import (
 func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 	ctx := t.Context()
 	pb := &configurationv1alpha1.KongPluginBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPluginBinding",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "plugin-binding-1",
-			Namespace:  "default",
-			UID:        k8stypes.UID(uuid.NewString()),
-			Generation: 2,
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
-			},
+		Kind:       "KongPluginBinding",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "plugin-binding-1",
+		Namespace:  "default",
+		UID:        k8stypes.UID(uuid.NewString()),
+		Generation: 2,
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 		},
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
@@ -61,34 +56,24 @@ func TestKongPluginBindingToSDKPluginInput_Tags(t *testing.T) {
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
 		&configurationv1.KongPlugin{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongPlugin",
-				APIVersion: "configuration.konghq.com/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "plugin-1",
-				Namespace: "default",
-				Annotations: map[string]string{
-					metadata.AnnotationKeyTags: "tag3,tag4,duplicate-tag",
-				},
+			Kind:       "KongPlugin",
+			APIVersion: "configuration.konghq.com/v1",
+			Name:       "plugin-1",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				metadata.AnnotationKeyTags: "tag3,tag4,duplicate-tag",
 			},
 			PluginName: "basic-auth",
 			Tags:       commonv1alpha1.Tags{"spec-plugin-tag"},
 		},
 		&configurationv1alpha1.KongService{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongService",
-				APIVersion: "configuration.konghq.com/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service-1",
-				Namespace: "default",
-			},
+			Kind:       "KongService",
+			APIVersion: "configuration.konghq.com/v1alpha1",
+			Name:       "service-1",
+			Namespace:  "default",
 			Status: configurationv1alpha1.KongServiceStatus{
 				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-						ID: "12345",
-					},
+					ID: "12345",
 				},
 			},
 		},
@@ -131,15 +116,11 @@ func TestKongPluginBindingToSDKPluginInput_TagsTruncationPriority(t *testing.T) 
 	}
 
 	pb := &configurationv1alpha1.KongPluginBinding{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPluginBinding",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plugin-binding-1",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Kind:       "KongPluginBinding",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "plugin-binding-1",
+		Namespace:  "default",
+		UID:        k8stypes.UID(uuid.NewString()),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: "plugin-1",
@@ -161,31 +142,21 @@ func TestKongPluginBindingToSDKPluginInput_TagsTruncationPriority(t *testing.T) 
 	}
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
 		&configurationv1.KongPlugin{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongPlugin",
-				APIVersion: "configuration.konghq.com/v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "plugin-1",
-				Namespace: "default",
-			},
+			Kind:       "KongPlugin",
+			APIVersion: "configuration.konghq.com/v1",
+			Name:       "plugin-1",
+			Namespace:  "default",
 			PluginName: "basic-auth",
 			Tags:       pluginTags,
 		},
 		&configurationv1alpha1.KongService{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongService",
-				APIVersion: "configuration.konghq.com/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service-1",
-				Namespace: "default",
-			},
+			Kind:       "KongService",
+			APIVersion: "configuration.konghq.com/v1alpha1",
+			Name:       "service-1",
+			Namespace:  "default",
 			Status: configurationv1alpha1.KongServiceStatus{
 				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-						ID: "12345",
-					},
+					ID: "12345",
 				},
 			},
 		},
@@ -221,11 +192,9 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 	}
 
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-binding",
-			Namespace: "default",
-		},
-		Spec: configurationv1alpha1.KongPluginBindingSpec{},
+		Name:      "test-binding",
+		Namespace: "default",
+		Spec:      configurationv1alpha1.KongPluginBindingSpec{},
 	}
 
 	tests := []struct {
@@ -255,10 +224,8 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 		{
 			name: "no targets with target-only scope should fail",
 			binding: &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-binding",
-					Namespace: "default",
-				},
+				Name:      "test-binding",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongPluginBindingSpec{
 					Scope: configurationv1alpha1.KongPluginBindingScopeOnlyTargets,
 				},
@@ -274,15 +241,11 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  plugin,
 			targets: []pluginTarget{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					Name:      "service-1",
+					Namespace: "default",
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "service-id-123",
-							},
+							ID: "service-id-123",
 						},
 					},
 				},
@@ -306,15 +269,11 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  plugin,
 			targets: []pluginTarget{
 				&configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "default",
-					},
+					Name:      "route-1",
+					Namespace: "default",
 					Status: configurationv1alpha1.KongRouteStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndServiceRefs{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "route-id-123",
-							},
+							ID: "route-id-123",
 						},
 					},
 				},
@@ -338,15 +297,11 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  plugin,
 			targets: []pluginTarget{
 				&configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-1",
-						Namespace: "default",
-					},
+					Name:      "consumer-1",
+					Namespace: "default",
 					Status: configurationv1.KongConsumerStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "consumer-id-123",
-							},
+							ID: "consumer-id-123",
 						},
 					},
 				},
@@ -370,18 +325,18 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  plugin,
 			targets: []pluginTarget{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{Name: "service-1"},
+					Name: "service-1",
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "service-id-123"},
+							ID: "service-id-123",
 						},
 					},
 				},
 				&configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{Name: "consumer-1"},
+					Name: "consumer-1",
 					Status: configurationv1.KongConsumerStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "consumer-id-123"},
+							ID: "consumer-id-123",
 						},
 					},
 				},
@@ -408,11 +363,9 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  plugin,
 			targets: []pluginTarget{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
-					Status: configurationv1alpha1.KongServiceStatus{},
+					Name:      "service-1",
+					Namespace: "default",
+					Status:    configurationv1alpha1.KongServiceStatus{},
 				},
 			},
 			tags:          []string{"tag1", "tag2"},
@@ -424,15 +377,11 @@ func TestKongPluginWithTargetsToKongPluginInput(t *testing.T) {
 			plugin:  pluginWithoutInstanceName,
 			targets: []pluginTarget{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-1",
-						Namespace: "default",
-					},
+					Name:      "service-1",
+					Namespace: "default",
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "service-id-123",
-							},
+							ID: "service-id-123",
 						},
 					},
 				},
@@ -471,14 +420,10 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 	)
 
 	plugin := &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: "configuration.konghq.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "rate-limit",
-			Namespace: "default",
-		},
+		Kind:         "KongPlugin",
+		APIVersion:   "configuration.konghq.com/v1",
+		Name:         "rate-limit",
+		Namespace:    "default",
 		PluginName:   "rate-limiting",
 		InstanceName: "rl-instance",
 		Protocols:    []configurationv1.KongProtocol{"http", "https"},
@@ -487,28 +432,20 @@ func TestAdoptKongPluginBindingOverride(t *testing.T) {
 		},
 	}
 	service := &configurationv1alpha1.KongService{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongService",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-override",
-			Namespace: "default",
-		},
+		Kind:       "KongService",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "svc-override",
+		Namespace:  "default",
 		Status: configurationv1alpha1.KongServiceStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-					ID: serviceKonnectID,
-				},
+				ID: serviceKonnectID,
 			},
 		},
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "binding-override",
-			Namespace: "default",
-			UID:       k8stypes.UID("uid-binding-override"),
-		},
+		Name:      "binding-override",
+		Namespace: "default",
+		UID:       k8stypes.UID("uid-binding-override"),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
@@ -572,42 +509,30 @@ func TestAdoptKongPluginBindingMatch(t *testing.T) {
 	)
 
 	plugin := &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: "configuration.konghq.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "key-auth",
-			Namespace: "default",
-		},
+		Kind:       "KongPlugin",
+		APIVersion: "configuration.konghq.com/v1",
+		Name:       "key-auth",
+		Namespace:  "default",
 		PluginName: "key-auth",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"key_in_header": true}`),
 		},
 	}
 	service := &configurationv1alpha1.KongService{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongService",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-match",
-			Namespace: "default",
-		},
+		Kind:       "KongService",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "svc-match",
+		Namespace:  "default",
 		Status: configurationv1alpha1.KongServiceStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-					ID: serviceKonnectID,
-				},
+				ID: serviceKonnectID,
 			},
 		},
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "binding-match",
-			Namespace: "default",
-			UID:       k8stypes.UID("uid-binding-match"),
-		},
+		Name:      "binding-match",
+		Namespace: "default",
+		UID:       k8stypes.UID("uid-binding-match"),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
@@ -666,25 +591,19 @@ func TestAdoptKongPluginBindingMatchMismatch(t *testing.T) {
 	)
 
 	plugin := &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: "configuration.konghq.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "acl",
-			Namespace: "default",
-		},
+		Kind:       "KongPlugin",
+		APIVersion: "configuration.konghq.com/v1",
+		Name:       "acl",
+		Namespace:  "default",
 		PluginName: "acl",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"allow": ["group1"]}`),
 		},
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "binding-mismatch",
-			Namespace: "default",
-			UID:       k8stypes.UID("uid-binding-mismatch"),
-		},
+		Name:      "binding-mismatch",
+		Namespace: "default",
+		UID:       k8stypes.UID("uid-binding-mismatch"),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
@@ -737,22 +656,16 @@ func TestAdoptKongPluginBindingFetchError(t *testing.T) {
 	)
 
 	plugin := &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: "configuration.konghq.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "jwt",
-			Namespace: "default",
-		},
+		Kind:       "KongPlugin",
+		APIVersion: "configuration.konghq.com/v1",
+		Name:       "jwt",
+		Namespace:  "default",
 		PluginName: "jwt",
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "binding-fetch",
-			Namespace: "default",
-			UID:       k8stypes.UID("uid-binding-fetch"),
-		},
+		Name:      "binding-fetch",
+		Namespace: "default",
+		UID:       k8stypes.UID("uid-binding-fetch"),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,
@@ -799,22 +712,16 @@ func TestAdoptKongPluginBindingUIDConflict(t *testing.T) {
 	)
 
 	plugin := &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: "configuration.konghq.com/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cors",
-			Namespace: "default",
-		},
+		Kind:       "KongPlugin",
+		APIVersion: "configuration.konghq.com/v1",
+		Name:       "cors",
+		Namespace:  "default",
 		PluginName: "cors",
 	}
 	binding := &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "binding-uid",
-			Namespace: "default",
-			UID:       k8stypes.UID("uid-binding-original"),
-		},
+		Name:      "binding-uid",
+		Namespace: "default",
+		UID:       k8stypes.UID("uid-binding-original"),
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: plugin.Name,

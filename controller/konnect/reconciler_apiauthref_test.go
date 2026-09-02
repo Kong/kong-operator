@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,14 +69,10 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 
 	makeCP := func(authRefNamespace *string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha2.GroupVersion.String(),
-				Kind:       "KonnectGatewayControlPlane",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      cpName,
-				Namespace: cpNamespace,
-			},
+			APIVersion: konnectv1alpha2.GroupVersion.String(),
+			Kind:       "KonnectGatewayControlPlane",
+			Name:       cpName,
+			Namespace:  cpNamespace,
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -90,10 +85,8 @@ func TestGetCPAuthRefForRef(t *testing.T) {
 	}
 
 	grant := &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cp-to-auth",
-			Namespace: authNamespace,
-		},
+		Name:      "cp-to-auth",
+		Namespace: authNamespace,
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{
@@ -206,10 +199,8 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 	)
 
 	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cpName,
-			Namespace: serviceNs,
-		},
+		Name:      cpName,
+		Namespace: serviceNs,
 		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -220,10 +211,8 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 	}
 
 	svc := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcName,
-			Namespace: serviceNs,
-		},
+		Name:      svcName,
+		Namespace: serviceNs,
 		Spec: configurationv1alpha1.KongServiceSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -236,18 +225,14 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 	}
 
 	svcNoCPRef := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      svcName,
-			Namespace: serviceNs,
-		},
+		Name:      svcName,
+		Namespace: serviceNs,
 	}
 
 	makeRoute := func(svcRefNamespace *string) *configurationv1alpha1.KongRoute {
 		return &configurationv1alpha1.KongRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "route",
-				Namespace: routeNs,
-			},
+			Name:      "route",
+			Namespace: routeNs,
 			Spec: configurationv1alpha1.KongRouteSpec{
 				ServiceRef: &configurationv1alpha1.ServiceRef{
 					Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -286,7 +271,7 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 			objects: []client.Object{
 				// In the same-namespace case the service is co-located with the route.
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{Name: svcName, Namespace: routeNs},
+					Name: svcName, Namespace: routeNs,
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -298,7 +283,7 @@ func TestGetAPIAuthRefNN_ServiceRef(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{Name: cpName, Namespace: routeNs},
+					Name: cpName, Namespace: routeNs,
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 							APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -364,7 +349,7 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 
 	makeCP := func(ns string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: cpName, Namespace: ns},
+			Name: cpName, Namespace: ns,
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -377,7 +362,7 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 
 	makeUpstream := func(ns string) *configurationv1alpha1.KongUpstream {
 		return &configurationv1alpha1.KongUpstream{
-			ObjectMeta: metav1.ObjectMeta{Name: upstreamName, Namespace: ns},
+			Name: upstreamName, Namespace: ns,
 			Spec: configurationv1alpha1.KongUpstreamSpec{
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -392,7 +377,7 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 
 	makeTarget := func(upstreamRefNs *string) *configurationv1alpha1.KongTarget {
 		return &configurationv1alpha1.KongTarget{
-			ObjectMeta: metav1.ObjectMeta{Name: "target", Namespace: targetNs},
+			Name: "target", Namespace: targetNs,
 			Spec: configurationv1alpha1.KongTargetSpec{
 				UpstreamRef: commonv1alpha1.NamespacedRef{
 					Name:      upstreamName,
@@ -448,7 +433,7 @@ func TestGetAPIAuthRefNN_UpstreamRef(t *testing.T) {
 			target: makeTarget(new(upstreamNs)),
 			objects: []client.Object{
 				&configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{Name: upstreamName, Namespace: upstreamNs},
+					Name: upstreamName, Namespace: upstreamNs,
 				},
 			},
 			wantErrorContains: "does not have a ControlPlaneRef",
@@ -488,14 +473,10 @@ func TestGetAPIAuthRefNN_PortalPage(t *testing.T) {
 
 	makePortal := func() *konnectv1alpha1.Portal {
 		return &konnectv1alpha1.Portal{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "Portal",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      portalName,
-				Namespace: portalNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "Portal",
+			Name:       portalName,
+			Namespace:  portalNamespace,
 			Spec: konnectv1alpha1.PortalSpec{
 				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -508,10 +489,8 @@ func TestGetAPIAuthRefNN_PortalPage(t *testing.T) {
 
 	makePortalPage := func(portalRefNamespace *string) *konnectv1alpha1.PortalPage {
 		return &konnectv1alpha1.PortalPage{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "page",
-				Namespace: pageNamespace,
-			},
+			Name:      "page",
+			Namespace: pageNamespace,
 			Spec: konnectv1alpha1.PortalPageSpec{
 				PortalRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -585,14 +564,10 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 
 	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
 		return &konnectv1alpha1.KonnectEventGateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "KonnectEventGateway",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      gatewayName,
-				Namespace: gatewayNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectEventGateway",
+			Name:       gatewayName,
+			Namespace:  gatewayNamespace,
 			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -605,14 +580,10 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 
 	makeBackendCluster := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayBackendCluster {
 		return &configurationv1alpha1.EventGatewayBackendCluster{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "EventGatewayBackendCluster",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      backendClusterName,
-				Namespace: backendClusterNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayBackendCluster",
+			Name:       backendClusterName,
+			Namespace:  backendClusterNamespace,
 			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -627,10 +598,8 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualCluster(t *testing.T) {
 
 	makeVirtualCluster := func(backendClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualCluster {
 		return &configurationv1alpha1.EventGatewayVirtualCluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "virtual-cluster",
-				Namespace: virtualClusterNamespace,
-			},
+			Name:      "virtual-cluster",
+			Namespace: virtualClusterNamespace,
 			Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -713,14 +682,10 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 
 	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
 		return &konnectv1alpha1.KonnectEventGateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "KonnectEventGateway",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      gatewayName,
-				Namespace: gatewayNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectEventGateway",
+			Name:       gatewayName,
+			Namespace:  gatewayNamespace,
 			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -733,14 +698,10 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 
 	makeListener := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayListener {
 		return &configurationv1alpha1.EventGatewayListener{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "EventGatewayListener",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      listenerName,
-				Namespace: listenerNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayListener",
+			Name:       listenerName,
+			Namespace:  listenerNamespace,
 			Spec: configurationv1alpha1.EventGatewayListenerSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -755,10 +716,8 @@ func TestGetAPIAuthRefNN_EventGatewayListenerPolicy(t *testing.T) {
 
 	makePolicy := func(listenerRefNamespace *string) *configurationv1alpha1.EventGatewayListenerPolicy {
 		return &configurationv1alpha1.EventGatewayListenerPolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "listener-policy",
-				Namespace: policyNamespace,
-			},
+			Name:      "listener-policy",
+			Namespace: policyNamespace,
 			Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 				EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -843,14 +802,10 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	makeGateway := func() *konnectv1alpha1.KonnectEventGateway {
 		return &konnectv1alpha1.KonnectEventGateway{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "KonnectEventGateway",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      gatewayName,
-				Namespace: gatewayNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "KonnectEventGateway",
+			Name:       gatewayName,
+			Namespace:  gatewayNamespace,
 			Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 				KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 					APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -863,14 +818,10 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	makeBackendCluster := func(gatewayRefNamespace *string) *configurationv1alpha1.EventGatewayBackendCluster {
 		return &configurationv1alpha1.EventGatewayBackendCluster{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "EventGatewayBackendCluster",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      backendClusterName,
-				Namespace: backendClusterNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayBackendCluster",
+			Name:       backendClusterName,
+			Namespace:  backendClusterNamespace,
 			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 				GatewayRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -885,14 +836,10 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	makeVirtualCluster := func(backendClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualCluster {
 		return &configurationv1alpha1.EventGatewayVirtualCluster{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: konnectv1alpha1.GroupVersion.String(),
-				Kind:       "EventGatewayVirtualCluster",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      virtualClusterName,
-				Namespace: virtualClusterNamespace,
-			},
+			APIVersion: konnectv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayVirtualCluster",
+			Name:       virtualClusterName,
+			Namespace:  virtualClusterNamespace,
 			Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 				EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -907,10 +854,8 @@ func TestGetAPIAuthRefNN_EventGatewayVirtualClusterConsumePolicy(t *testing.T) {
 
 	makePolicy := func(virtualClusterRefNamespace *string) *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
 		return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "consume-policy",
-				Namespace: policyNamespace,
-			},
+			Name:      "consume-policy",
+			Namespace: policyNamespace,
 			Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 				EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

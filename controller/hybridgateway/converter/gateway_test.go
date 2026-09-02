@@ -34,19 +34,15 @@ func TestNewGatewayConverter(t *testing.T) {
 		{
 			name: "creates converter with empty gateway",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 		},
 		{
 			name: "creates converter with gateway with listeners",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-with-listeners",
-					Namespace: "test-ns",
-				},
+				Name:      "gateway-with-listeners",
+				Namespace: "test-ns",
 				Spec: gatewayv1.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{
@@ -103,10 +99,8 @@ func TestBuildKongCertificate(t *testing.T) {
 		{
 			name: "builds certificate with basic listener",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -127,10 +121,8 @@ func TestBuildKongCertificate(t *testing.T) {
 		{
 			name: "builds certificate with cross-namespace secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-cross-ns",
-					Namespace: "default",
-				},
+				Name:      "gateway-cross-ns",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "tls-listener",
@@ -151,10 +143,8 @@ func TestBuildKongCertificate(t *testing.T) {
 		{
 			name: "builds certificate with high port number",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "high-port-gateway",
-					Namespace: "test-ns",
-				},
+				Name:      "high-port-gateway",
+				Namespace: "test-ns",
 			},
 			listener: &gwtypes.Listener{
 				Name: "custom-port",
@@ -175,10 +165,8 @@ func TestBuildKongCertificate(t *testing.T) {
 		{
 			name: "builds certificate with tags from Secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tagged-gateway",
-					Namespace: "default",
-				},
+				Name:      "tagged-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -231,10 +219,8 @@ func TestBuildKongCertificate(t *testing.T) {
 
 func TestBuildKongCertificate_SamePortDifferentListenersDifferentNames(t *testing.T) {
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-		},
+		Name:      "test-gateway",
+		Namespace: "default",
 	}
 
 	controlPlaneRef := &commonv1alpha1.ControlPlaneRef{
@@ -275,10 +261,8 @@ func TestBuildKongSNI(t *testing.T) {
 		{
 			name: "builds SNI with explicit hostname",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "https",
@@ -286,10 +270,8 @@ func TestBuildKongSNI(t *testing.T) {
 				Hostname: new(gatewayv1.Hostname("example.com")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-test-gateway-443",
-					Namespace: "default",
-				},
+				Name:      "cert-test-gateway-443",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectedSNI: "example.com",
@@ -297,20 +279,16 @@ func TestBuildKongSNI(t *testing.T) {
 		{
 			name: "builds SNI with wildcard when no hostname",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "wildcard-gateway",
-					Namespace: "test-ns",
-				},
+				Name:      "wildcard-gateway",
+				Namespace: "test-ns",
 			},
 			listener: &gwtypes.Listener{
 				Name: "tls",
 				Port: 8443,
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-wildcard-gateway-8443",
-					Namespace: "test-ns",
-				},
+				Name:      "cert-wildcard-gateway-8443",
+				Namespace: "test-ns",
 			},
 			expectError: false,
 			expectedSNI: "*",
@@ -318,10 +296,8 @@ func TestBuildKongSNI(t *testing.T) {
 		{
 			name: "builds SNI with wildcard when empty hostname",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "empty-hostname-gateway",
-					Namespace: "default",
-				},
+				Name:      "empty-hostname-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "listener",
@@ -329,10 +305,8 @@ func TestBuildKongSNI(t *testing.T) {
 				Hostname: new(gatewayv1.Hostname("")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-empty-hostname-gateway-443",
-					Namespace: "default",
-				},
+				Name:      "cert-empty-hostname-gateway-443",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectedSNI: "*",
@@ -340,10 +314,8 @@ func TestBuildKongSNI(t *testing.T) {
 		{
 			name: "builds SNI with wildcard hostname",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "wildcard-domain-gateway",
-					Namespace: "default",
-				},
+				Name:      "wildcard-domain-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "wildcard-listener",
@@ -351,10 +323,8 @@ func TestBuildKongSNI(t *testing.T) {
 				Hostname: new(gatewayv1.Hostname("*.example.com")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-wildcard-domain-gateway-443",
-					Namespace: "default",
-				},
+				Name:      "cert-wildcard-domain-gateway-443",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectedSNI: "*.example.com",
@@ -362,10 +332,8 @@ func TestBuildKongSNI(t *testing.T) {
 		{
 			name: "builds SNI with tags from Secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tagged-gateway",
-					Namespace: "default",
-				},
+				Name:      "tagged-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "https",
@@ -373,10 +341,8 @@ func TestBuildKongSNI(t *testing.T) {
 				Hostname: new(gatewayv1.Hostname("example.com")),
 			},
 			kongCert: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-tagged-gateway-443",
-					Namespace: "default",
-				},
+				Name:      "cert-tagged-gateway-443",
+				Namespace: "default",
 			},
 			tags:        []string{"cert-tag"},
 			wantTags:    commonv1alpha1.Tags{"cert-tag"},
@@ -428,10 +394,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "successfully processes valid TLS certificate",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "https",
@@ -444,11 +408,9 @@ func TestProcessListenerCertificate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create a valid TLS secret with proper PEM-encoded data.
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": cert,
 						"tls.key": key,
@@ -482,10 +444,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "skips certificate with unsupported group",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -512,10 +472,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "skips certificate with unsupported kind",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -542,10 +500,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "skips non-existent secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -571,10 +527,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "returns error for invalid TLS secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -586,12 +540,10 @@ func TestProcessListenerCertificate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create an invalid TLS secret (missing required fields).
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "invalid-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
-					Data: map[string][]byte{
+					Name:      "invalid-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
+					Data:      map[string][]byte{
 						// Missing tls.crt and tls.key.
 					},
 				}
@@ -611,10 +563,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "skips certificate with empty group string (corev1)",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -626,11 +576,9 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": cert,
 						"tls.key": key,
@@ -652,10 +600,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "skips certificate when cross-namespace reference not granted",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -667,11 +613,9 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "cert-namespace",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "cert-namespace",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": cert,
 						"tls.key": key,
@@ -694,10 +638,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "returns error when secret Get fails with non-NotFound error",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -731,10 +673,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "returns error when ReferenceGrant check fails",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name: "https",
@@ -747,11 +687,9 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "other-namespace",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "other-namespace",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": cert,
 						"tls.key": key,
@@ -779,10 +717,8 @@ func TestProcessListenerCertificate(t *testing.T) {
 		{
 			name: "tags KongCertificate and KongSNI from the Secret's konghq.com/tags annotation",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			listener: &gwtypes.Listener{
 				Name:     "https",
@@ -794,12 +730,10 @@ func TestProcessListenerCertificate(t *testing.T) {
 			},
 			setupMocks: func(t *testing.T, cl client.Client) {
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"konghq.com/tags": "cert-tag",
-						},
+					Name:      "tls-secret",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"konghq.com/tags": "cert-tag",
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
@@ -833,12 +767,10 @@ func TestProcessListenerCertificate(t *testing.T) {
 			// leak into the KongCertificate/KongSNI produced from the listener's TLS Secret.
 			name: "does not tag KongCertificate/KongSNI from Gateway annotations (Secret-only)",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/tags": "gateway-tag",
-					},
+				Name:      "test-gateway",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/tags": "gateway-tag",
 				},
 			},
 			listener: &gwtypes.Listener{
@@ -852,11 +784,9 @@ func TestProcessListenerCertificate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Secret has no konghq.com/tags annotation.
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": cert,
 						"tls.key": key,
@@ -943,11 +873,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "translates gateway with single TLS listener",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-1",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-1",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -970,9 +898,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass
 				gwClass := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -981,28 +907,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension owned by Gateway.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-1",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-1",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1022,11 +944,9 @@ func TestTranslate(t *testing.T) {
 
 				// Create TLS Secret.
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": testCert,
 						"tls.key": testKey,
@@ -1060,11 +980,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "translates gateway with multiple TLS listeners",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "multi-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-2",
-				},
+				Name:      "multi-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-2",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1096,9 +1014,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass
 				gwClass := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1107,28 +1023,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "multi-gateway",
-								UID:        "gateway-uid-2",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "multi-gateway",
+							UID:        "gateway-uid-2",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1149,11 +1061,9 @@ func TestTranslate(t *testing.T) {
 				// Create TLS Secrets.
 				for _, name := range []string{"tls-secret-443", "tls-secret-8443"} {
 					secret := &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      name,
-							Namespace: "default",
-						},
-						Type: corev1.SecretTypeTLS,
+						Name:      name,
+						Namespace: "default",
+						Type:      corev1.SecretTypeTLS,
 						Data: map[string][]byte{
 							"tls.crt": testCert,
 							"tls.key": testKey,
@@ -1171,11 +1081,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "skips non-TLS listeners",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mixed-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-3",
-				},
+				Name:      "mixed-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-3",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1201,9 +1109,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1212,28 +1118,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "mixed-gateway",
-								UID:        "gateway-uid-3",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "mixed-gateway",
+							UID:        "gateway-uid-3",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1253,11 +1155,9 @@ func TestTranslate(t *testing.T) {
 
 				// Create TLS Secret.
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "tls-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": testCert,
 						"tls.key": testKey,
@@ -1274,11 +1174,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "fails when gateway does not reference control plane",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "no-cp-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-4",
-				},
+				Name:      "no-cp-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-4",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1299,9 +1197,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1316,11 +1212,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "skips missing secrets without error",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "error-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-5",
-				},
+				Name:      "error-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-5",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1352,9 +1246,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1363,28 +1255,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "error-gateway",
-								UID:        "gateway-uid-5",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "error-gateway",
+							UID:        "gateway-uid-5",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1412,11 +1300,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "partial success, silently skips missing secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "partial-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-6",
-				},
+				Name:      "partial-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-6",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1448,9 +1334,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1459,28 +1343,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "partial-gateway",
-								UID:        "gateway-uid-6",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "partial-gateway",
+							UID:        "gateway-uid-6",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1500,11 +1380,9 @@ func TestTranslate(t *testing.T) {
 
 				// Create only the valid secret.
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "valid-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "valid-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": testCert,
 						"tls.key": testKey,
@@ -1521,11 +1399,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "accumulates errors from multiple invalid secrets",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "invalid-secrets-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-7",
-				},
+				Name:      "invalid-secrets-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-7",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1557,9 +1433,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1568,28 +1442,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "invalid-secrets-gateway",
-								UID:        "gateway-uid-7",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "invalid-secrets-gateway",
+							UID:        "gateway-uid-7",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1610,12 +1480,10 @@ func TestTranslate(t *testing.T) {
 				// Create invalid secrets (missing required fields).
 				for _, name := range []string{"invalid-secret-1", "invalid-secret-2"} {
 					secret := &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      name,
-							Namespace: "default",
-						},
-						Type: corev1.SecretTypeTLS,
-						Data: map[string][]byte{
+						Name:      name,
+						Namespace: "default",
+						Type:      corev1.SecretTypeTLS,
+						Data:      map[string][]byte{
 							// Missing tls.crt and tls.key, will trigger validation error.
 						},
 					}
@@ -1632,11 +1500,9 @@ func TestTranslate(t *testing.T) {
 		{
 			name: "partial failure, one valid one invalid secret",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mixed-validity-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-8",
-				},
+				Name:      "mixed-validity-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-8",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayv1.Listener{
@@ -1668,9 +1534,7 @@ func TestTranslate(t *testing.T) {
 			setupMocks: func(t *testing.T, cl client.Client) {
 				// Create GatewayClass.
 				gwc := &gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong",
-					},
+					Name: "kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -1679,28 +1543,24 @@ func TestTranslate(t *testing.T) {
 
 				// Create KonnectGatewayControlPlane.
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				}
 				require.NoError(t, cl.Create(context.Background(), cp))
 
 				// Create KonnectExtension.
 				ext := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ext",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "mixed-validity-gateway",
-								UID:        "gateway-uid-8",
-							},
+					Name:      "test-ext",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "mixed-validity-gateway",
+							UID:        "gateway-uid-8",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1720,11 +1580,9 @@ func TestTranslate(t *testing.T) {
 
 				// Create valid secret.
 				validSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "valid-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
+					Name:      "valid-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
 					Data: map[string][]byte{
 						"tls.crt": testCert,
 						"tls.key": testKey,
@@ -1734,12 +1592,10 @@ func TestTranslate(t *testing.T) {
 
 				// Create invalid secret (missing required fields).
 				invalidSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "invalid-secret",
-						Namespace: "default",
-					},
-					Type: corev1.SecretTypeTLS,
-					Data: map[string][]byte{
+					Name:      "invalid-secret",
+					Namespace: "default",
+					Type:      corev1.SecretTypeTLS,
+					Data:      map[string][]byte{
 						// Missing tls.crt and tls.key.
 					},
 				}
@@ -1812,16 +1668,12 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 	logger := logr.Discard()
 
 	validObj := &configurationv1alpha1.KongCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cert1",
-			Namespace: "default",
-		},
+		Name:      "cert1",
+		Namespace: "default",
 	}
 	validObj2 := &configurationv1alpha1.KongSNI{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "sni1",
-			Namespace: "default",
-		},
+		Name:      "sni1",
+		Namespace: "default",
 	}
 
 	t.Run("all objects convert successfully", func(t *testing.T) {
@@ -1869,19 +1721,15 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 		{
 			name: "creates converter with empty gateway",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 		},
 		{
 			name: "creates converter with gateway with listeners",
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-with-listeners",
-					Namespace: "test-ns",
-				},
+				Name:      "gateway-with-listeners",
+				Namespace: "test-ns",
 				Spec: gatewayv1.GatewaySpec{
 					Listeners: []gatewayv1.Listener{
 						{
@@ -2063,11 +1911,9 @@ func TestHandleOrphanedResource(t *testing.T) {
 			logger := logr.Discard()
 
 			gateway := &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "gateway-uid-123",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "gateway-uid-123",
 			}
 
 			fakeClient := fake.NewClientBuilder().

@@ -34,10 +34,8 @@ func TestDataPlane(t *testing.T) {
 		cl, ns := setupDataPlaneTest(t, ctx, "cluster-ca-service-reduction")
 
 		dp := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dp-service-reduction",
-				Namespace: ns.Name,
-			},
+			Name:      "dp-service-reduction",
+			Namespace: ns.Name,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -76,23 +74,21 @@ func TestDataPlane(t *testing.T) {
 		require.NoError(t, cl.Get(ctx, client.ObjectKeyFromObject(dp), dpWithUID))
 
 		extraIngressService := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "extra-ingress-service",
-				Namespace: ns.Name,
-				Labels: map[string]string{
-					"app":                                dp.Name,
-					consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
-					consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
-					consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
-				},
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
-						Kind:       "DataPlane",
-						Name:       dpWithUID.Name,
-						UID:        dpWithUID.UID,
-						Controller: new(true),
-					},
+			Name:      "extra-ingress-service",
+			Namespace: ns.Name,
+			Labels: map[string]string{
+				"app":                                dp.Name,
+				consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneIngressServiceLabelValue),
+				consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+				consts.GatewayOperatorManagedByLabel: string(consts.DataPlaneManagedLabelValue),
+			},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					APIVersion: operatorv1beta1.SchemeGroupVersion.String(),
+					Kind:       "DataPlane",
+					Name:       dpWithUID.Name,
+					UID:        dpWithUID.UID,
+					Controller: new(true),
 				},
 			},
 			Spec: corev1.ServiceSpec{
@@ -143,10 +139,8 @@ func TestDataPlane(t *testing.T) {
 		cl, ns := setupDataPlaneTest(t, ctx, "cluster-ca-image-validation")
 
 		validDP := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dp-valid-image",
-				Namespace: ns.Name,
-			},
+			Name:      "dp-valid-image",
+			Namespace: ns.Name,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -176,10 +170,8 @@ func TestDataPlane(t *testing.T) {
 		}, waitTime, tickTime)
 
 		invalidDP := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dp-invalid-image",
-				Namespace: ns.Name,
-			},
+			Name:      "dp-invalid-image",
+			Namespace: ns.Name,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -216,10 +208,8 @@ func TestDataPlane(t *testing.T) {
 		cl, ns := setupDataPlaneTest(t, ctx, "cluster-ca-status")
 
 		dp := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dp-status",
-				Namespace: ns.Name,
-			},
+			Name:      "dp-status",
+			Namespace: ns.Name,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -232,11 +222,9 @@ func TestDataPlane(t *testing.T) {
 										LivenessProbe: &corev1.Probe{
 											InitialDelaySeconds: 1,
 											PeriodSeconds:       1,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path: "/healthz",
-													Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path: "/healthz",
+												Port: intstr.IntOrString{Type: intstr.Int, IntVal: 8080},
 											},
 										},
 									}},
@@ -376,12 +364,10 @@ func createClusterCASecret(t *testing.T, ctx context.Context, cl client.Client, 
 	)
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels: map[string]string{
-				"konghq.com/secret": "internal",
-			},
+		Namespace: namespace,
+		Name:      name,
+		Labels: map[string]string{
+			"konghq.com/secret": "internal",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{

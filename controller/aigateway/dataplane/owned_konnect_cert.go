@@ -47,14 +47,10 @@ func (r *Reconciler) ensureKonnectCertificate(
 	certSecret *corev1.Secret,
 ) (programmed bool, err error) {
 	desired := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-			Kind:       "AIGatewayDataPlaneCertificate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      aigwdp.Name,
-			Namespace: aigwdp.Namespace,
-		},
+		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+		Kind:       "AIGatewayDataPlaneCertificate",
+		Name:       aigwdp.Name,
+		Namespace:  aigwdp.Namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

@@ -187,9 +187,7 @@ func TestClassifyPod(t *testing.T) {
 		{
 			name: "terminating pod is classified as terminating",
 			pod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					DeletionTimestamp: &metav1.Time{},
-				},
+				DeletionTimestamp: &metav1.Time{},
 				Status: corev1.PodStatus{
 					Phase: corev1.PodRunning,
 					Conditions: []corev1.PodCondition{
@@ -202,9 +200,7 @@ func TestClassifyPod(t *testing.T) {
 		{
 			name: "terminating failed pod is classified as terminating",
 			pod: &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					DeletionTimestamp: &metav1.Time{},
-				},
+				DeletionTimestamp: &metav1.Time{},
 				Status: corev1.PodStatus{
 					Phase: corev1.PodFailed,
 				},
@@ -298,9 +294,7 @@ func TestClassifyPods(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						DeletionTimestamp: &metav1.Time{},
-					},
+					DeletionTimestamp: &metav1.Time{},
 					Status: corev1.PodStatus{
 						Phase: corev1.PodRunning,
 						Conditions: []corev1.PodCondition{

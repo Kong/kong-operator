@@ -64,10 +64,8 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
 	kup := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      KongUpstreamPolicyName,
-			Namespace: ns.Name,
-		},
+		Name:      KongUpstreamPolicyName,
+		Namespace: ns.Name,
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: new("round-robin"),
 			Slots:     new(32),
@@ -91,26 +89,22 @@ func TestKongUpstreamPolicyWithoutGatewayAPICRDs(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, service))
 
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      service.Name,
-			Namespace: ns.Name,
-		},
+		Name:      service.Name,
+		Namespace: ns.Name,
 		Spec: netv1.IngressSpec{
 			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Name: service.Spec.Ports[0].Name,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Name: service.Spec.Ports[0].Name,
 										},
 									},
 								},
@@ -187,10 +181,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
 	kup := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      KongUpstreamPolicyName,
-			Namespace: ns.Name,
-		},
+		Name:      KongUpstreamPolicyName,
+		Namespace: ns.Name,
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: new("round-robin"),
 			Slots:     new(32),
@@ -202,11 +194,9 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwc-",
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		GenerateName: "gwc-",
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, ctrlClient.Create(ctx, &gwc))
@@ -228,10 +218,8 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 				},
 			},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "gw-",
-		},
+		Namespace:    ns.Name,
+		GenerateName: "gw-",
 	}
 	require.NoError(t, ctrlClient.Create(ctx, &gw))
 
@@ -303,14 +291,10 @@ func TestKongUpstreamPolicyWithHTTPRoute(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, service))
 
 	route := gatewayapi.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "httproute-",
-		},
+		Kind:         "HTTPRoute",
+		APIVersion:   "v1beta1",
+		Namespace:    ns.Name,
+		GenerateName: "httproute-",
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -368,10 +352,8 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 	t.Log("creating a KongUpstreamPolicy")
 	const KongUpstreamPolicyName = "test-upstream-policy"
 	kup := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      KongUpstreamPolicyName,
-			Namespace: ns.Name,
-		},
+		Name:      KongUpstreamPolicyName,
+		Namespace: ns.Name,
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: new("round-robin"),
 			Slots:     new(32),
@@ -393,26 +375,22 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	// KongUpstreamPolicy should not be reconciled when no reconciled Ingresses/HTTPRoutes reference it.
 	alterIngress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      service.Name + "-alter",
-			Namespace: ns.Name,
-		},
+		Name:      service.Name + "-alter",
+		Namespace: ns.Name,
 		Spec: netv1.IngressSpec{
 			IngressClassName: new(alterIngressClassName),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Name: service.Spec.Ports[0].Name,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Name: service.Spec.Ports[0].Name,
 										},
 									},
 								},
@@ -441,26 +419,22 @@ func TestKongUpstreamPolicyNotReferencedInReconciledIngress(t *testing.T) {
 
 	// KongUpstreamPolicy should get reconciled when a reconciled Ingress reference it.
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      service.Name,
-			Namespace: ns.Name,
-		},
+		Name:      service.Name,
+		Namespace: ns.Name,
 		Spec: netv1.IngressSpec{
 			IngressClassName: new(ingressClassName),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Name: service.Spec.Ports[0].Name,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Name: service.Spec.Ports[0].Name,
 										},
 									},
 								},

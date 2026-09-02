@@ -53,11 +53,9 @@ const testFieldManager = "ssa-unit-tests"
 
 func svcWithPort(port int32) *corev1.Service {
 	return &corev1.Service{
-		TypeMeta: metav1.TypeMeta{APIVersion: "v1", Kind: "Service"},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "ns",
-			Name:      "svc",
-		},
+		APIVersion: "v1", Kind: "Service",
+		Namespace: "ns",
+		Name:      "svc",
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{"app": "svc"},
 			Ports: []corev1.ServicePort{{
@@ -205,12 +203,12 @@ func Test_ownedFieldSetForSubresource(t *testing.T) {
 		},
 		{
 			name: "malformed fieldsv1 returns error",
-			obj: &corev1.Service{ObjectMeta: metav1.ObjectMeta{ManagedFields: []metav1.ManagedFieldsEntry{{
+			obj: &corev1.Service{ManagedFields: []metav1.ManagedFieldsEntry{{
 				Manager:     testFieldManager,
 				Operation:   metav1.ManagedFieldsOperationApply,
 				Subresource: "status",
 				FieldsV1:    FieldsWithRawBytes([]byte("{not-json}")),
-			}}}},
+			}}},
 			manager:         testFieldManager,
 			subresource:     "status",
 			wantErrContains: "failed to decode managed fields",

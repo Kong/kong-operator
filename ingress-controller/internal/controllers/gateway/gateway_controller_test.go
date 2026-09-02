@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -22,9 +21,7 @@ import (
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 	t.Log("checking programmed condition for currently ready gateway")
 	currentlyProgrammedGateway := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Generation: 1,
-		},
+		Generation: 1,
 		Status: gatewayapi.GatewayStatus{
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayapi.GatewayConditionProgrammed),
@@ -39,9 +36,7 @@ func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 
 	t.Log("checking programmed condition for previously programmed gateway that has since been updated")
 	previouslyProgrammedGateway := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Generation: 2,
-		},
+		Generation: 2,
 		Status: gatewayapi.GatewayStatus{
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayapi.GatewayConditionProgrammed),
@@ -56,10 +51,8 @@ func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 
 	t.Log("checking programmed condition for a gateway which has never been ready")
 	neverBeenProgrammedGateway := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Generation: 10,
-		},
-		Status: gatewayapi.GatewayStatus{},
+		Generation: 10,
+		Status:     gatewayapi.GatewayStatus{},
 	}
 	assert.False(t, isGatewayProgrammed(neverBeenProgrammedGateway))
 }
@@ -170,7 +163,7 @@ func TestSetGatewayCondtion(t *testing.T) {
 func TestIsGatewayMarkedAsAccepted(t *testing.T) {
 	t.Log("verifying scheduled check for gateway object which has been accepted")
 	scheduledGateway := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Generation: 1},
+		Generation: 1,
 		Status: gatewayapi.GatewayStatus{
 			Conditions: []metav1.Condition{{
 				Type:               string(gatewayapi.GatewayConditionAccepted),
@@ -219,9 +212,7 @@ func TestPruneStatusConditions(t *testing.T) {
 func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a gatewayclass to test reconciliation filters")
 	gatewayClass := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "us",
-		},
+		Name: "us",
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: GetControllerName(),
 		},
@@ -230,28 +221,22 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a list of matching controllers")
 	matching := []gatewayapi.Gateway{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "sanfrancisco",
-				Namespace: "california",
-			},
+			Name:      "sanfrancisco",
+			Namespace: "california",
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "sandiego",
-				Namespace: "california",
-			},
+			Name:      "sandiego",
+			Namespace: "california",
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "losangelos",
-				Namespace: "california",
-			},
+			Name:      "losangelos",
+			Namespace: "california",
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: gatewayapi.ObjectName(gatewayClass.Name),
 			},
@@ -261,19 +246,15 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("generating a list of non-matching controllers")
 	nonmatching := []gatewayapi.Gateway{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "hamburg",
-				Namespace: "germany",
-			},
+			Name:      "hamburg",
+			Namespace: "germany",
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: gatewayapi.ObjectName("eu"),
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "paris",
-				Namespace: "france",
-			},
+			Name:      "paris",
+			Namespace: "france",
 			Spec: gatewayapi.GatewaySpec{
 				GatewayClassName: gatewayapi.ObjectName("eu"),
 			},
@@ -289,22 +270,16 @@ func TestReconcileGatewaysIfClassMatches(t *testing.T) {
 	t.Log("verifying reconciliation results")
 	expected := []reconcile.Request{
 		{
-			NamespacedName: k8stypes.NamespacedName{
-				Name:      "sanfrancisco",
-				Namespace: "california",
-			},
+			Name:      "sanfrancisco",
+			Namespace: "california",
 		},
 		{
-			NamespacedName: k8stypes.NamespacedName{
-				Name:      "sandiego",
-				Namespace: "california",
-			},
+			Name:      "sandiego",
+			Namespace: "california",
 		},
 		{
-			NamespacedName: k8stypes.NamespacedName{
-				Name:      "losangelos",
-				Namespace: "california",
-			},
+			Name:      "losangelos",
+			Namespace: "california",
 		},
 	}
 	assert.Equal(t, expected, reconcileGatewaysIfClassMatches(gatewayClass, append(matching, nonmatching...)))
@@ -322,9 +297,7 @@ func TestIsGatewayControlled(t *testing.T) {
 		{
 			name: "uncontrolled GatewayClass",
 			GatewayClass: &gatewayapi.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "uncontrolled",
-				},
+				Name: "uncontrolled",
 				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: testControllerName,
 				},
@@ -334,9 +307,7 @@ func TestIsGatewayControlled(t *testing.T) {
 		{
 			name: "controlled GatewayClass",
 			GatewayClass: &gatewayapi.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "controlled",
-				},
+				Name: "controlled",
 				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: GetControllerName(),
 				},
@@ -413,9 +384,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "otherNamespace",
-					},
+					Namespace: "otherNamespace",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
@@ -456,9 +425,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "otherNamespace",
-					},
+					Namespace: "otherNamespace",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							// useless entry, just to furtherly test the function
@@ -495,9 +462,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 			},
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "otherNamespace",
-					},
+					Namespace: "otherNamespace",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
@@ -535,11 +500,9 @@ func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *tes
 
 	ipType := gatewayapi.IPAddressType
 	gateway := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "gw",
-			Namespace:  "default",
-			Generation: 1,
-		},
+		Name:       "gw",
+		Namespace:  "default",
+		Generation: 1,
 		Status: gatewayapi.GatewayStatus{
 			Addresses: []gatewayapi.GatewayStatusAddress{
 				{Type: &ipType, Value: "10.0.0.1"},

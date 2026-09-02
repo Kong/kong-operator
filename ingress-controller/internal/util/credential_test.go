@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 )
@@ -21,12 +20,10 @@ func TestExtractKongCredentialType(t *testing.T) {
 		{
 			name: "labeled credential",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "key-auth",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
 				},
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
@@ -37,10 +34,8 @@ func TestExtractKongCredentialType(t *testing.T) {
 		{
 			name: "no credential type",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-				},
+				Name:      "secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
 				},

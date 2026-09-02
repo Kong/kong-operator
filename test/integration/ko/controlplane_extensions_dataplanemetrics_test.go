@@ -31,9 +31,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 		return commonv1alpha1.ExtensionRef{
 			Group: operatorv1alpha1.SchemeGroupVersion.Group,
 			Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-			NamespacedRef: commonv1alpha1.NamespacedRef{
-				Name: extRefName,
-			},
+			Name:  extRefName,
 		}
 	}
 
@@ -64,9 +62,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 	cleaner.Add(service)
 
 	dpMetricExt1 := &operatorv1alpha1.DataPlaneMetricsExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "dataplane-metrics-ext-",
-		},
+		GenerateName: "dataplane-metrics-ext-",
 		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
 			ServiceSelector: operatorv1alpha1.ServiceSelector{
 				MatchNames: []operatorv1alpha1.ServiceSelectorEntry{
@@ -87,10 +83,8 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 
 	t.Log("deploying a GatewayConfiguration resource")
 	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwconfig-",
-			Namespace:    namespace.Name,
-		},
+		GenerateName: "gwconfig-",
+		Namespace:    namespace.Name,
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -118,9 +112,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 				{
 					Kind:  "DataPlaneMetricsExtension",
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: dbMetricExt1.Name,
-					},
+					Name:  dbMetricExt1.Name,
 				},
 			},
 		},
@@ -132,9 +124,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwclass-",
-		},
+		GenerateName: "gwclass-",
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
 				Group:     gatewayv1.Group(operatorv1alpha1.SchemeGroupVersion.Group),
@@ -152,9 +142,7 @@ func TestControlPlaneExtensionsDataPlaneMetrics(t *testing.T) {
 
 	t.Log("deploying Gateway resource")
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gw-",
-		},
+		GenerateName: "gw-",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{

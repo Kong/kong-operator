@@ -81,9 +81,7 @@ func TestGRPCRouteEssentials(t *testing.T) {
 
 			t.Logf("creating an GRPCRoute to access deployment %s via Kong", deployment.Name)
 			grpcRoute := &gatewayapi.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cholpon-grpcroute",
-				},
+				Name: "cholpon-grpcroute",
 				Spec: gatewayapi.GRPCRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -113,12 +111,8 @@ func TestGRPCRouteEssentials(t *testing.T) {
 							},
 						},
 						BackendRefs: []gatewayapi.GRPCBackendRef{{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName(service.Name),
-									Port: new(test.GRPCBinPort),
-								},
-							},
+							Name: gatewayapi.ObjectName(service.Name),
+							Port: new(test.GRPCBinPort),
 						}},
 					}},
 				},

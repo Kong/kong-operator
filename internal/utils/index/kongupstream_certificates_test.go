@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -30,7 +29,7 @@ func TestKongUpstreamRefersToKongCertificate(t *testing.T) {
 		{
 			name: "same-NS ref (nil namespace) uses object namespace",
 			input: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{
@@ -44,7 +43,7 @@ func TestKongUpstreamRefersToKongCertificate(t *testing.T) {
 		{
 			name: "explicit cross-NS ref uses specified namespace",
 			input: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{

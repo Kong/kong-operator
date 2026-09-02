@@ -7,10 +7,8 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -33,31 +31,23 @@ func TestMapRouteForUDPRoutePlumbing(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		},
+		Namespace: "test-ns",
+		Name:      "test-gw",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-class",
 		},
 	}
 	gatewayClass := &gwtypes.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-class",
-		},
+		Name: "test-class",
 	}
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "test-ns",
+		Name:      "test-svc",
 	}
 	port := gwtypes.PortNumber(80)
 	udpRoute := &gwtypes.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.UDPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -66,21 +56,17 @@ func TestMapRouteForUDPRoutePlumbing(t *testing.T) {
 			},
 			Rules: []gwtypes.UDPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: gwtypes.ObjectName("test-svc"),
-						Port: &port,
-					},
+					Name: gwtypes.ObjectName("test-svc"),
+					Port: &port,
 				}},
 			}},
 		},
 	}
 	epSlice := &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "slice-1",
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: "test-svc",
-			},
+		Namespace: "test-ns",
+		Name:      "slice-1",
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: "test-svc",
 		},
 	}
 
@@ -122,7 +108,7 @@ func TestMapRouteForUDPRoutePlumbing(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			requests := tt.mapFunc(context.Background(), tt.obj)
-			require.Equal(t, []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: "test-ns", Name: "route-1"}}}, requests)
+			require.Equal(t, []reconcile.Request{{Namespace: "test-ns", Name: "route-1"}}, requests)
 		})
 	}
 }
@@ -133,17 +119,13 @@ func TestMapUDPRouteForReferenceGrant(t *testing.T) {
 
 	toNamespace := gwtypes.Namespace("to-ns")
 	udpRoute := &gwtypes.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "from-ns",
-			Name:      "route-1",
-		},
+		Namespace: "from-ns",
+		Name:      "route-1",
 		Spec: gwtypes.UDPRouteSpec{
 			Rules: []gwtypes.UDPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Namespace: &toNamespace,
-						Name:      gwtypes.ObjectName("svc"),
-					},
+					Namespace: &toNamespace,
+					Name:      gwtypes.ObjectName("svc"),
 				}},
 			}},
 		},
@@ -153,10 +135,8 @@ func TestMapUDPRouteForReferenceGrant(t *testing.T) {
 		WithObjects(udpRoute).
 		Build()
 	referenceGrant := &gwtypes.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "to-ns",
-			Name:      "grant",
-		},
+		Namespace: "to-ns",
+		Name:      "grant",
 		Spec: gwtypes.ReferenceGrantSpec{
 			From: []gwtypes.ReferenceGrantFrom{{
 				Group:     gwtypes.GroupName,
@@ -168,24 +148,22 @@ func TestMapUDPRouteForReferenceGrant(t *testing.T) {
 
 	requests := MapUDPRouteForReferenceGrant(cl)(context.Background(), referenceGrant)
 
-	require.Equal(t, []reconcile.Request{{NamespacedName: types.NamespacedName{Namespace: "from-ns", Name: "route-1"}}}, requests)
+	require.Equal(t, []reconcile.Request{{Namespace: "from-ns", Name: "route-1"}}, requests)
 }
 
 func TestMapRouteForKongResourceUDPRoute(t *testing.T) {
 	obj := &configurationv1alpha1.KongUpstream{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-obj",
-			Namespace: "test-ns",
-			Annotations: map[string]string{
-				consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "ns1/route-1,ns2/route-2",
-			},
+		Name:      "test-obj",
+		Namespace: "test-ns",
+		Annotations: map[string]string{
+			consts.GatewayOperatorHybridRoutesUDPRouteAnnotation: "ns1/route-1,ns2/route-2",
 		},
 	}
 
 	requests := MapRouteForKongResource[*configurationv1alpha1.KongUpstream](kindUDPRoute)(context.Background(), obj)
 
 	require.ElementsMatch(t, []reconcile.Request{
-		{NamespacedName: types.NamespacedName{Namespace: "ns1", Name: "route-1"}},
-		{NamespacedName: types.NamespacedName{Namespace: "ns2", Name: "route-2"}},
+		{Namespace: "ns1", Name: "route-1"},
+		{Namespace: "ns2", Name: "route-2"},
 	}, requests)
 }

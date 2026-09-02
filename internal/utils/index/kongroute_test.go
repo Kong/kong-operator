@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -34,14 +33,14 @@ func TestKongRouteRefersToKongService(t *testing.T) {
 		{
 			name: "route without serviceRef returns nil",
 			obj: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: routeNamespace},
+				Namespace: routeNamespace,
 			},
 			want: nil,
 		},
 		{
 			name: "route with non-namespacedRef type returns nil",
 			obj: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: routeNamespace},
+				Namespace: routeNamespace,
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: "konnectID",
@@ -53,7 +52,7 @@ func TestKongRouteRefersToKongService(t *testing.T) {
 		{
 			name: "route with nil NamespacedRef returns nil",
 			obj: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: routeNamespace},
+				Namespace: routeNamespace,
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -65,7 +64,7 @@ func TestKongRouteRefersToKongService(t *testing.T) {
 		{
 			name: "same-namespace serviceRef (no namespace field) keys with route's namespace",
 			obj: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: routeNamespace},
+				Namespace: routeNamespace,
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -80,7 +79,7 @@ func TestKongRouteRefersToKongService(t *testing.T) {
 		{
 			name: "cross-namespace serviceRef keys with serviceRef's namespace",
 			obj: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: routeNamespace},
+				Namespace: routeNamespace,
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,

@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -123,10 +122,8 @@ func kongCredentialHMACForKonnectAPIAuthConfiguration(
 
 			for _, cred := range credList.Items {
 				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: cred.Namespace,
-						Name:      cred.Name,
-					},
+					Namespace: cred.Namespace,
+					Name:      cred.Name,
 				},
 				)
 			}
@@ -168,10 +165,8 @@ func kongCredentialHMACForKonnectGatewayControlPlane(
 
 			for _, cred := range credList.Items {
 				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: cred.Namespace,
-						Name:      cred.Name,
-					},
+					Namespace: cred.Namespace,
+					Name:      cred.Name,
 				},
 				)
 			}

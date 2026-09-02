@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -35,11 +34,9 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "single GRPCRoute with multiple hostnames and multiple rules",
 			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-					},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-1",
 					Spec: gatewayapi.GRPCRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
 							"foo.com",
@@ -84,23 +81,17 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1.foo.com.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-1.foo.com.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -109,9 +100,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1.foo.com.1"),
-					},
+					Name: new("grpcroute.default.grpcroute-1.foo.com.1"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
@@ -120,9 +109,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1._.bar.com.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-1._.bar.com.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -131,9 +118,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1._.bar.com.1"),
-					},
+					Name: new("grpcroute.default.grpcroute-1._.bar.com.1"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
@@ -145,34 +130,26 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"grpcroute.default.grpcroute-1.foo.com.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1.foo.com.0.0"),
-							Expression: new(`(http.path == "/v1/foo") && (http.host == "foo.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1.foo.com.0.0"),
+						Expression: new(`(http.path == "/v1/foo") && (http.host == "foo.com")`),
 					},
 				},
 				"grpcroute.default.grpcroute-1.foo.com.1": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1.foo.com.1.0"),
-							Expression: new(`(http.path == "/v1/foobar") && (http.host == "foo.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1.foo.com.1.0"),
+						Expression: new(`(http.path == "/v1/foobar") && (http.host == "foo.com")`),
 					},
 				},
 				"grpcroute.default.grpcroute-1._.bar.com.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1._.bar.com.0.0"),
-							Expression: new(`(http.path == "/v1/foo") && (http.host =^ ".bar.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1._.bar.com.0.0"),
+						Expression: new(`(http.path == "/v1/foo") && (http.host =^ ".bar.com")`),
 					},
 				},
 				"grpcroute.default.grpcroute-1._.bar.com.1": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1._.bar.com.1.0"),
-							Expression: new(`(http.path == "/v1/foobar") && (http.host =^ ".bar.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1._.bar.com.1.0"),
+						Expression: new(`(http.path == "/v1/foobar") && (http.host =^ ".bar.com")`),
 					},
 				},
 			},
@@ -181,11 +158,9 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "multiple GRPCRoutes with multiple matches",
 			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-					},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-1",
 					Spec: gatewayapi.GRPCRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
 							"foo.com",
@@ -218,11 +193,9 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-2",
-					},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-2",
 					Spec: gatewayapi.GRPCRouteSpec{
 						Rules: []gatewayapi.GRPCRouteRule{
 							{
@@ -247,23 +220,17 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1.foo.com.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-1.foo.com.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -272,9 +239,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-2._.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-2._.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
@@ -286,24 +251,18 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"grpcroute.default.grpcroute-1.foo.com.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1.foo.com.0.0"),
-							Expression: new(`(http.path == "/v1/foo") && (http.host == "foo.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1.foo.com.0.0"),
+						Expression: new(`(http.path == "/v1/foo") && (http.host == "foo.com")`),
 					},
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1.foo.com.0.1"),
-							Expression: new(`(http.path == "/v1/foobar") && (http.host == "foo.com")`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1.foo.com.0.1"),
+						Expression: new(`(http.path == "/v1/foobar") && (http.host == "foo.com")`),
 					},
 				},
 				"grpcroute.default.grpcroute-2._.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-2._.0.0"),
-							Expression: new(`http.path == "/v2/foo"`),
-						},
+						Name:       new("grpcroute.default.grpcroute-2._.0.0"),
+						Expression: new(`http.path == "/v2/foo"`),
 					},
 				},
 			},
@@ -312,11 +271,9 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "multiple GRPCRoutes with translation error",
 			grpcRoutes: []*gatewayapi.GRPCRoute{
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-1",
-					},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-1",
 					Spec: gatewayapi.GRPCRouteSpec{
 						Rules: []gatewayapi.GRPCRouteRule{
 							{
@@ -339,19 +296,15 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-no-rules",
-					},
-					Spec: gatewayapi.GRPCRouteSpec{},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-no-rules",
+					Spec:      gatewayapi.GRPCRouteSpec{},
 				},
 				{
-					TypeMeta: grpcRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "grpcroute-no-hostnames-no-matches",
-					},
+					TypeMeta:  grpcRouteTypeMeta,
+					Namespace: "default",
+					Name:      "grpcroute-no-hostnames-no-matches",
 					Spec: gatewayapi.GRPCRouteSpec{
 						Rules: []gatewayapi.GRPCRouteRule{
 							{
@@ -367,23 +320,17 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service0",
-					},
+					Namespace: "default",
+					Name:      "service0",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-1._.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-1._.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").
 							WithNamespace("default").
@@ -392,9 +339,7 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("grpcroute.default.grpcroute-no-hostnames-no-matches._.0"),
-					},
+					Name: new("grpcroute.default.grpcroute-no-hostnames-no-matches._.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service0").WithPortNumber(80).MustBuild(),
 					},
@@ -403,18 +348,14 @@ func TestIngressRulesFromGRPCRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"grpcroute.default.grpcroute-1._.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-1._.0.0"),
-							Expression: new(`http.path == "/v1/foo"`),
-						},
+						Name:       new("grpcroute.default.grpcroute-1._.0.0"),
+						Expression: new(`http.path == "/v1/foo"`),
 					},
 				},
 				"grpcroute.default.grpcroute-no-hostnames-no-matches._.0": {
 					{
-						Route: kong.Route{
-							Name:       new("grpcroute.default.grpcroute-no-hostnames-no-matches._.0.0"),
-							Expression: kong.String(subtranslator.CatchAllHTTPExpression),
-						},
+						Name:       new("grpcroute.default.grpcroute-no-hostnames-no-matches._.0.0"),
+						Expression: kong.String(subtranslator.CatchAllHTTPExpression),
 					},
 				},
 			},
@@ -480,10 +421,8 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 			},
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gw-http",
-					},
+					Namespace: "default",
+					Name:      "gw-http",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -506,7 +445,7 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 			},
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-https"},
+					Namespace: "default", Name: "gw-https",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -529,7 +468,7 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 			},
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-both"},
+					Namespace: "default", Name: "gw-both",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -563,7 +502,7 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 			}},
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "gw-section"},
+					Namespace: "default", Name: "gw-section",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -591,7 +530,7 @@ func TestGetProtocolsForKongRoute(t *testing.T) {
 
 			translator := mustNewTranslator(t, fakestore)
 			grpcRoute := &gatewayapi.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "grpcroute"},
+				Namespace: "default", Name: "grpcroute",
 				Spec: gatewayapi.GRPCRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{ParentRefs: tc.parentRefs},
 				},

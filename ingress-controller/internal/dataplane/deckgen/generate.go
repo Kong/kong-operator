@@ -212,9 +212,7 @@ func ToDeckContent(
 
 	if params.AppendStubEntityWhenConfigEmpty && IsContentEmpty(&content) {
 		content.Upstreams = append(content.Upstreams, file.FUpstream{
-			Upstream: kong.Upstream{
-				Name: new(StubUpstreamName),
-			},
+			Name: new(StubUpstreamName),
 		})
 	}
 

@@ -37,10 +37,8 @@ type handleControlPlaneRefTestCase[T constraints.SupportedKonnectEntityType, TEn
 func TestHandleControlPlaneRef(t *testing.T) {
 	var (
 		cpOK = &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "cp-ok",
-			},
+			Namespace: "default",
+			Name:      "cp-ok",
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: "cp-12345",
@@ -55,10 +53,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		cpGroup = &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "cp-group",
-			},
+			Namespace: "default",
+			Name:      "cp-group",
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 					ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -78,10 +74,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		cpNotProgrammed = &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "cp-not-programmed",
-			},
+			Namespace: "default",
+			Name:      "cp-not-programmed",
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 					ID: "cp-12345",
@@ -96,17 +90,13 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		svcNoCPRef = &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "svc-no-cp-ref",
-			},
+			Namespace: "default",
+			Name:      "svc-no-cp-ref",
 		}
 
 		svcCPRefOK = &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "svc-cp-ok",
-			},
+			Namespace: "default",
+			Name:      "svc-cp-ok",
 			Spec: configurationv1alpha1.KongServiceSpec{
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -118,10 +108,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		svcCPRefNotFound = &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "svc-cp-not-found",
-			},
+			Namespace: "default",
+			Name:      "svc-cp-not-found",
 			Spec: configurationv1alpha1.KongServiceSpec{
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -133,10 +121,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		svcCPRefIncompatibleType = &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "svc-cp-incompatible",
-			},
+			Namespace: "default",
+			Name:      "svc-cp-incompatible",
 			Spec: configurationv1alpha1.KongServiceSpec{
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -148,10 +134,8 @@ func TestHandleControlPlaneRef(t *testing.T) {
 		}
 
 		svcCPRefNotProgrammed = &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "svc-cp-not-programmed",
-			},
+			Namespace: "default",
+			Name:      "svc-cp-not-programmed",
 			Spec: configurationv1alpha1.KongServiceSpec{
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -296,20 +280,16 @@ func TestGetControlPlaneRef(t *testing.T) {
 		testGetControlPlaneRef(
 			"no control plane ref for KongService",
 			&configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "svc-no-cp-ref",
-				},
+				Namespace: "default",
+				Name:      "svc-no-cp-ref",
 			},
 			mo.None[commonv1alpha1.ControlPlaneRef](),
 		),
 		testGetControlPlaneRef(
 			"control plane ref for KongService",
 			&configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "svc-cp-ok",
-				},
+				Namespace: "default",
+				Name:      "svc-cp-ok",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 						Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -329,21 +309,17 @@ func TestGetControlPlaneRef(t *testing.T) {
 		testGetControlPlaneRef(
 			"no control plane ref for KonnectCloudGatewayDataPlaneGroupConfiguration",
 			&konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "dp-group-config",
-				},
-				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{},
+				Namespace: "default",
+				Name:      "dp-group-config",
+				Spec:      konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{},
 			},
 			mo.Some(commonv1alpha1.ControlPlaneRef{}),
 		),
 		testGetControlPlaneRef(
 			"control plane ref for KonnectCloudGatewayDataPlaneGroupConfiguration",
 			&konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "dp-group-config",
-				},
+				Namespace: "default",
+				Name:      "dp-group-config",
 				Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 					ControlPlaneRef: commonv1alpha1.ControlPlaneRef{
 						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -400,10 +376,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant allows access - matching from and to",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -422,10 +396,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -437,10 +409,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant does not allow - from namespace mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -459,10 +429,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -474,10 +442,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant does not allow - from kind mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -496,10 +462,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -511,10 +475,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant does not allow - from group mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -533,10 +495,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -548,10 +508,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant does not allow - to kind mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -570,10 +528,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -585,10 +541,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant does not allow - to group mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -607,10 +561,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -622,10 +574,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KongReferenceGrant with specific name - matching",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -645,10 +595,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -660,10 +608,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "multiple KongReferenceGrants - one allows",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-1",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-1",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -681,10 +627,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-ns",
-						Name:      "krg-2",
-					},
+					Namespace: "target-ns",
+					Name:      "krg-2",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -703,10 +647,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "source-ns",
-					Name:      "svc-1",
-				},
+				Namespace: "source-ns",
+				Name:      "svc-1",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "target-ns",
@@ -718,10 +660,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - allowed",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "auth-ns",
-						Name:      "allow-cp-to-auth",
-					},
+					Namespace: "auth-ns",
+					Name:      "allow-cp-to-auth",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -740,10 +680,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "cp-ns",
-					Name:      "my-cp",
-				},
+				Namespace: "cp-ns",
+				Name:      "my-cp",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "auth-ns",
@@ -755,10 +693,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - from group mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "auth-ns",
-						Name:      "allow-cp-to-auth",
-					},
+					Namespace: "auth-ns",
+					Name:      "allow-cp-to-auth",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -777,10 +713,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "cp-ns",
-					Name:      "my-cp",
-				},
+				Namespace: "cp-ns",
+				Name:      "my-cp",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "auth-ns",
@@ -792,10 +726,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 			name: "KonnectGatewayControlPlane -> KonnectAPIAuthConfiguration - from kind mismatch",
 			krgs: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "auth-ns",
-						Name:      "allow-cp-to-auth",
-					},
+					Namespace: "auth-ns",
+					Name:      "allow-cp-to-auth",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -814,10 +746,8 @@ func TestKongReferenceGrantAllowsCPRef(t *testing.T) {
 				},
 			},
 			obj: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "cp-ns",
-					Name:      "my-cp",
-				},
+				Namespace: "cp-ns",
+				Name:      "my-cp",
 			},
 			cpRef: commonv1alpha1.KonnectNamespacedRef{
 				Namespace: "auth-ns",
@@ -864,16 +794,16 @@ func TestEntityHasCrossNamespaceRefs(t *testing.T) {
 	kongCert := func(spec configurationv1alpha1.KongCertificateSpec) func() bool {
 		return func() bool {
 			return entityHasCrossNamespaceRefs(&configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: entNamespace},
-				Spec:       spec,
+				Namespace: entNamespace,
+				Spec:      spec,
 			})
 		}
 	}
 	kongSvc := func(apiSpec configurationv1alpha1.KongServiceAPISpec) func() bool {
 		return func() bool {
 			return entityHasCrossNamespaceRefs(&configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: entNamespace},
-				Spec:       configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: apiSpec},
+				Namespace: entNamespace,
+				Spec:      configurationv1alpha1.KongServiceSpec{KongServiceAPISpec: apiSpec},
 			})
 		}
 	}

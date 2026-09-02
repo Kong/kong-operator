@@ -54,11 +54,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-1",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-1",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -111,11 +109,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-1",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-1",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -155,11 +151,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-1",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-1",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -195,11 +189,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-1",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-1",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -218,11 +210,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 					},
 				},
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-2",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-2",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -258,11 +248,9 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 			targetNamespace: "target-namespace",
 			objs: []runtime.Object{
 				&gwtypes.ReferenceGrant{
-					TypeMeta: referenceGrantTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "target-namespace",
-						Name:      "ref-grant-1",
-					},
+					TypeMeta:  referenceGrantTypeMeta,
+					Namespace: "target-namespace",
+					Name:      "ref-grant-1",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -20,13 +19,11 @@ import (
 
 func TestEnqueueKongCACertificateForSecret(t *testing.T) {
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "mysecret",
-			Namespace: "ns",
-		},
+		Name:      "mysecret",
+		Namespace: "ns",
 	}
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{Name: "cacert1", Namespace: "ns"},
+		Name: "cacert1", Namespace: "ns",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			SecretRef: &commonv1alpha1.NamespacedRef{Name: "mysecret", Namespace: new("ns")},
 		},
@@ -70,18 +67,14 @@ func TestEnqueueKongCACertificateForSecret(t *testing.T) {
 			client: fake.NewClientBuilder().
 				WithScheme(s).
 				WithObjects(&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "othersecret",
-						Namespace: "ns",
-					},
+					Name:      "othersecret",
+					Namespace: "ns",
 				}, cert).
 				WithIndex(&configurationv1alpha1.KongCACertificate{}, index.IndexFieldKongCACertificateReferencesSecrets, index.SecretOnKongCACertificate).
 				Build(),
 			input: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "othersecret",
-					Namespace: "ns",
-				},
+				Name:      "othersecret",
+				Namespace: "ns",
 			},
 			wantLen: 0,
 			wantNil: false,

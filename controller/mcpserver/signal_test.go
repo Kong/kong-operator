@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -79,7 +78,7 @@ func TestSignalManager_NotifyMCPServerDeleted(t *testing.T) {
 func TestSignalManager_DeregisterControlPlane(t *testing.T) {
 	makeCP := func(name, namespace string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+			Name: name, Namespace: namespace,
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "konnect-id"},
 			},
@@ -130,7 +129,7 @@ func TestSignalManager_DeregisterControlPlane(t *testing.T) {
 func TestSignalManager_RegisterControlPlane(t *testing.T) {
 	makeCP := func(name, namespace string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+			Name: name, Namespace: namespace,
 			Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "konnect-id"},
 			},

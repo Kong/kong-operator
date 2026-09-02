@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 )
@@ -217,10 +216,8 @@ func Test_AddressesFromService(t *testing.T) {
 		{
 			name: "service having AWS LB annotation indicating internal LB scheme gets detected as private LB",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeInternal,
-					},
+				Annotations: map[string]string{
+					serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeInternal,
 				},
 				Status: corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{
@@ -251,10 +248,8 @@ func Test_AddressesFromService(t *testing.T) {
 		{
 			name: "service having AWS LB annotation indicating internet facing LB scheme gets detected as public LB",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeInternetFacing,
-					},
+				Annotations: map[string]string{
+					serviceAnnotationAWSLoadBalancerSchemeKey: serviceAnnotationAWSLoadBalancerSchemeInternetFacing,
 				},
 				Status: corev1.ServiceStatus{
 					LoadBalancer: corev1.LoadBalancerStatus{

@@ -145,20 +145,16 @@ func TestHTTPSIngress(t *testing.T) {
 
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "secret1",
-				Namespace: ns.Name,
-			},
+			Name:      "secret1",
+			Namespace: ns.Name,
 			Data: map[string][]byte{
 				"tls.crt": fooExampleTLSCert,
 				"tls.key": fooExampleTLSKey,
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "secret2",
-				Namespace: ns.Name,
-			},
+			Name:      "secret2",
+			Namespace: ns.Name,
 			Data: map[string][]byte{
 				"tls.crt": barExampleTLSCert,
 				"tls.key": barExampleTLSKey,

@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	utilruntime "k8s.io/apimachinery/pkg/util/runtime"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,31 +45,23 @@ func TestCreateKonnectCert(t *testing.T) {
 		{
 			name: "no issuer completes successfully",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
-				Spec:   operatorv1beta1.DataPlaneSpec{},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
+				Spec:       operatorv1beta1.DataPlaneSpec{},
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 		},
 		{
 			name: "cluster issuer set, no existing cert resources",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -91,15 +82,11 @@ func TestCreateKonnectCert(t *testing.T) {
 		{
 			name: "issuer set, no existing cert resources",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -121,24 +108,18 @@ func TestCreateKonnectCert(t *testing.T) {
 		{
 			name: "reduce certificates when DataPlane does not set KonnectCertificateOptions",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
-				Spec:   operatorv1beta1.DataPlaneSpec{},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
+				Spec:       operatorv1beta1.DataPlaneSpec{},
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&certmanagerv1.Certificate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-certificate",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-certificate",
+					Namespace: "test-namespace",
 				},
 			},
 		},
@@ -146,31 +127,23 @@ func TestCreateKonnectCert(t *testing.T) {
 			name:             "dataplane with no KonnectCertificateOptions should be OK when certificate CRD not installed",
 			noCertificateCRD: true,
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
-				Spec:   operatorv1beta1.DataPlaneSpec{},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
+				Spec:       operatorv1beta1.DataPlaneSpec{},
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 		},
 		{
 			name: "add WithSecretLabel option",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -277,31 +250,23 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 		{
 			name: "no issuer completes successfully",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
-				Spec:   operatorv1beta1.DataPlaneSpec{},
-				Status: operatorv1beta1.DataPlaneStatus{},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
+				Spec:       operatorv1beta1.DataPlaneSpec{},
+				Status:     operatorv1beta1.DataPlaneStatus{},
 			},
 		},
 		{
 			name: "excess secrets",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       staticUID,
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        staticUID,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -318,25 +283,21 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 			wantErr: fmt.Errorf("too many %s Secrets for Deployment test-namespace/test-dataplane", KonnectDataPlaneCertPurpose),
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane-tls-secret-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
-							"gateway-operator.konghq.com/managed-by":   "dataplane",
-							certutils.ManagerUIDLabel:                  string(staticUID),
-						},
+					Name:      "test-dataplane-tls-secret-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
+						"gateway-operator.konghq.com/managed-by":   "dataplane",
+						certutils.ManagerUIDLabel:                  string(staticUID),
 					},
 				},
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane-tls-secret-2",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
-							"gateway-operator.konghq.com/managed-by":   "dataplane",
-							certutils.ManagerUIDLabel:                  string(staticUID),
-						},
+					Name:      "test-dataplane-tls-secret-2",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
+						"gateway-operator.konghq.com/managed-by":   "dataplane",
+						certutils.ManagerUIDLabel:                  string(staticUID),
 					},
 				},
 			},
@@ -344,15 +305,11 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 		{
 			name: "no secrets",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       staticUID,
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        staticUID,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -372,15 +329,11 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 		{
 			name: "normal secret",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       staticUID,
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        staticUID,
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
@@ -396,22 +349,18 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 			},
 			dataplaneSubResources: []controllerruntimeclient.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-dataplane-tls-secret-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
-							"gateway-operator.konghq.com/managed-by":   "dataplane",
-							certutils.ManagerUIDLabel:                  string(staticUID),
-						},
+					Name:      "test-dataplane-tls-secret-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/cert-purpose": KonnectDataPlaneCertPurpose,
+						"gateway-operator.konghq.com/managed-by":   "dataplane",
+						certutils.ManagerUIDLabel:                  string(staticUID),
 					},
 				},
 			},
 			deployment: &k8sresources.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane-deployment",
-					Namespace: "default",
-				},
+				Name:      "test-dataplane-deployment",
+				Namespace: "default",
 				Spec: appsv1.DeploymentSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{
@@ -439,10 +388,8 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 			},
 			wantVolume: &corev1.Volume{
 				Name: DataPlaneKonnectClientCertificateName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: "test-dataplane-tls-secret-1",
-					},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: "test-dataplane-tls-secret-1",
 				},
 			},
 			wantVolumeMount: &corev1.VolumeMount{
@@ -477,10 +424,8 @@ func TestMountAndUseKonnectCert(t *testing.T) {
 			ctx := t.Context()
 
 			deployment := &k8sresources.Deployment{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane-deployment",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-dataplane-deployment",
+				Namespace: "test-namespace",
 				Spec: appsv1.DeploymentSpec{
 					Template: corev1.PodTemplateSpec{
 						Spec: corev1.PodSpec{

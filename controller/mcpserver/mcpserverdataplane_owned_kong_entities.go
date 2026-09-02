@@ -7,7 +7,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -164,10 +163,8 @@ func generateKongService(
 	host := fmt.Sprintf("%s.%s.svc.%s", nn.Name, nn.Namespace, clusterDomain)
 
 	return &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		},
+		Name:      nn.Name,
+		Namespace: nn.Namespace,
 
 		Spec: configurationv1alpha1.KongServiceSpec{
 			KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
@@ -229,10 +226,8 @@ func generateKongRoute(
 	nn := generateWorkloadNN(mcpDataPlane)
 
 	kr := &configurationv1alpha1.KongRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		},
+		Name:      nn.Name,
+		Namespace: nn.Namespace,
 		Spec: configurationv1alpha1.KongRouteSpec{
 			KongRouteAPISpec: configurationv1alpha1.KongRouteAPISpec{
 				ID:      route.ID,

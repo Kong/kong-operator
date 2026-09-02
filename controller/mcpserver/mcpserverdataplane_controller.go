@@ -8,7 +8,6 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -82,10 +81,8 @@ func enqueueMCPServerForMCPServerDataPlane(cl client.Client) func(context.Contex
 		for _, mcpdp := range mcpServerDataPlanes {
 			reqs = append(reqs,
 				reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: mcpdp.Namespace,
-						Name:      mcpdp.Name,
-					},
+					Namespace: mcpdp.Namespace,
+					Name:      mcpdp.Name,
 				},
 			)
 		}

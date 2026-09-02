@@ -6,7 +6,6 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -40,10 +39,8 @@ func TestKongServiceBuilder_WithNamespace(t *testing.T) {
 
 func TestKongServiceBuilder_WithLabels(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -61,10 +58,8 @@ func TestKongServiceBuilder_WithLabels(t *testing.T) {
 
 func TestKongServiceBuilder_WithAnnotations(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -162,11 +157,9 @@ func TestKongServiceBuilder_WithControlPlaneRef(t *testing.T) {
 
 func TestKongServiceBuilder_WithOwner(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	t.Run("valid owner", func(t *testing.T) {
@@ -194,11 +187,9 @@ func TestKongServiceBuilder_WithOwner(t *testing.T) {
 
 	t.Run("owner reference error", func(t *testing.T) {
 		httpRouteWithoutTypeMeta := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-http-route",
-				Namespace: "test-namespace",
-				UID:       "test-uid",
-			},
+			Name:      "test-http-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
 		}
 
 		builder := NewKongService().WithOwner(httpRouteWithoutTypeMeta)
@@ -457,11 +448,9 @@ func TestKongServiceBuilder_MustBuild(t *testing.T) {
 
 func TestKongServiceBuilder_Chaining(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	parentRef := &gwtypes.ParentReference{

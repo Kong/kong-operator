@@ -191,7 +191,7 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "missing ingress backing service",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				nonExistingService := &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "non-existing-service"}}
+				nonExistingService := &corev1.Service{Name: "non-existing-service"}
 				ingress := ingressWithPathBackedByService(nonExistingService)
 				ingress, err := env.Cluster().Client().NetworkingV1().Ingresses(ns).Create(ctx, ingress, metav1.CreateOptions{})
 				require.NoError(t, err)
@@ -252,7 +252,7 @@ func TestTranslationFailures(t *testing.T) {
 		{
 			name: "ingress referring a secret with no valid TLS key-pair",
 			translationFailureTrigger: func(t *testing.T, cleaner *clusters.Cleaner, ns string) expectedTranslationFailure {
-				secret := &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: testutils.RandomName(testTranslationFailuresObjectsPrefix)}}
+				secret := &corev1.Secret{Name: testutils.RandomName(testTranslationFailuresObjectsPrefix)}
 				secret, err := env.Cluster().Client().CoreV1().Secrets(ns).Create(ctx, secret, metav1.CreateOptions{})
 				require.NoError(t, err)
 				cleaner.Add(secret)
@@ -376,15 +376,13 @@ const invalidCASecretID = "8214a145-a328-4c56-ab72-2973a56d4eae"
 
 func invalidCASecret(ns string) *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
-			Namespace: ns,
-			Labels: map[string]string{
-				"konghq.com/ca-cert": "true",
-			},
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		Namespace: ns,
+		Labels: map[string]string{
+			"konghq.com/ca-cert": "true",
+		},
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		Data: map[string][]byte{
 			"id": []byte(invalidCASecretID),
@@ -404,15 +402,13 @@ func multiPEMCASecret(ns, id string) *corev1.Secret {
 	)
 
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
-			Namespace: ns,
-			Labels: map[string]string{
-				"konghq.com/ca-cert": "true",
-			},
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		Namespace: ns,
+		Labels: map[string]string{
+			"konghq.com/ca-cert": "true",
+		},
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		StringData: map[string]string{
 			"id":   id,
@@ -423,12 +419,10 @@ func multiPEMCASecret(ns, id string) *corev1.Secret {
 
 func pluginUsingInvalidCACert(ns string) *configurationv1.KongPlugin {
 	return &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
-			Namespace: ns,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name:      testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		Namespace: ns,
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		Config:     apiextensionsv1.JSON{Raw: fmt.Appendf(nil, `{"ca_certificates": ["%s"]}`, invalidCASecretID)},
 		PluginName: "mtls-auth",
@@ -445,25 +439,19 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 		for _, service := range services {
 			backendRefs = append(backendRefs,
 				gatewayapi.HTTPBackendRef{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service.Name),
-							Port: &httpPort,
-							Kind: testutils.StringToGatewayAPIKindPtr("Service"),
-						},
-						Weight: &weight,
-					},
+					Name:   gatewayapi.ObjectName(service.Name),
+					Port:   &httpPort,
+					Kind:   testutils.StringToGatewayAPIKindPtr("Service"),
+					Weight: &weight,
 				})
 		}
 	}
 
 	pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 	return &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-			},
+		Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -491,25 +479,21 @@ func httpRouteWithBackends(gatewayName string, services ...*corev1.Service) *gat
 func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 	pathType := netv1.PathTypePrefix
 	return &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-		},
+		Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: &pathType,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: 80,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: &pathType,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: 80,
 										},
 									},
 								},
@@ -524,9 +508,7 @@ func ingressWithPathBackedByService(service *corev1.Service) *netv1.Ingress {
 
 func validService() *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
-		},
+		Name: testutils.RandomName(testTranslationFailuresObjectsPrefix),
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{

@@ -40,10 +40,8 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	ns := CreateNamespace(ctx, t, client)
 
 	svc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "backend-tls",
-		},
+		Namespace: ns.Name,
+		Name:      "backend-tls",
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
@@ -70,11 +68,9 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
@@ -82,10 +78,8 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 
 	mode := gatewayapi.TLSModePassthrough
 	gw := gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "gateway-tls",
-		},
+		Namespace: ns.Name,
+		Name:      "gateway-tls",
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
@@ -149,14 +143,10 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
 	route := gatewayapi.TLSRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gatewayv1.GroupVersion.String(),
-			Kind:       "TLSRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "tlsroute-1",
-		},
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "TLSRoute",
+		Namespace:  ns.Name,
+		Name:       "tlsroute-1",
 		Spec: gatewayapi.TLSRouteSpec{
 			Hostnames: []gatewayapi.Hostname{"app.example.com"},
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -171,11 +161,9 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 				{
 					BackendRefs: []gatewayapi.BackendRef{
 						{
-							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Kind: new(gatewayapi.Kind("Service")),
-								Name: gatewayapi.ObjectName(svc.Name),
-								Port: new(gatewayapi.PortNumber(443)),
-							},
+							Kind: new(gatewayapi.Kind("Service")),
+							Name: gatewayapi.ObjectName(svc.Name),
+							Port: new(gatewayapi.PortNumber(443)),
 						},
 					},
 				},

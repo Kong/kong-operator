@@ -22,7 +22,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -51,35 +50,27 @@ import (
 func TestUniqueObjects(t *testing.T) {
 	t.Log("generating some objects to test the de-duplication of objects")
 	ing1 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  corev1.NamespaceDefault,
-			Name:       "test-ingress-1",
-			Generation: 1,
-		},
+		Namespace:  corev1.NamespaceDefault,
+		Name:       "test-ingress-1",
+		Generation: 1,
 	}
 	ing1.SetGroupVersionKind(ingGVK)
 	ing2 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  corev1.NamespaceDefault,
-			Name:       "test-ingress-2",
-			Generation: 1,
-		},
+		Namespace:  corev1.NamespaceDefault,
+		Name:       "test-ingress-2",
+		Generation: 1,
 	}
 	ing2.SetGroupVersionKind(ingGVK)
 	ing3 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  "other-namespace",
-			Name:       "test-ingress-1",
-			Generation: 1,
-		},
+		Namespace:  "other-namespace",
+		Name:       "test-ingress-1",
+		Generation: 1,
 	}
 	ing3.SetGroupVersionKind(ingGVK)
 	ing4 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  "other-namespace",
-			Name:       "test-ingress-2",
-			Generation: 1,
-		},
+		Namespace:  "other-namespace",
+		Name:       "test-ingress-2",
+		Generation: 1,
 	}
 	ing4.SetGroupVersionKind(ingGVK)
 
@@ -385,14 +376,10 @@ func (p *mockKongConfigBuilder) returnTranslationFailures(enabled bool) {
 		// Return some mocked translation failures.
 		p.translationFailuresToReturn = []failures.ResourceFailure{
 			lo.Must(failures.NewResourceFailure("some reason", &corev1.Pod{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "namespace",
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Pod",
-					APIVersion: "v1",
-				},
+				Name:       "name",
+				Namespace:  "namespace",
+				Kind:       "Pod",
+				APIVersion: "v1",
 			},
 			)),
 		}
@@ -546,16 +533,12 @@ func TestKongClient_KubernetesEvents(t *testing.T) {
 	ctx := t.Context()
 	configChangeDetector := mocks.ConfigurationChangeDetector{ConfigurationChanged: true}
 	testIngress := helpers.WithTypeMeta(t, &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "obj-1",
-			Namespace: "namespace",
-		},
+		Name:      "obj-1",
+		Namespace: "namespace",
 	})
 	testService := helpers.WithTypeMeta(t, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "obj-2",
-			Namespace: "namespace",
-		},
+		Name:      "obj-2",
+		Namespace: "namespace",
 	})
 
 	testCases := []struct {
@@ -746,9 +729,7 @@ func TestKongClient_EmptyConfigUpdate(t *testing.T) {
 			FormatVersion: versions.DeckFileFormatVersion,
 			Upstreams: []file.FUpstream{
 				{
-					Upstream: kong.Upstream{
-						Name: new(deckgen.StubUpstreamName),
-					},
+					Name: new(deckgen.StubUpstreamName),
 				},
 			},
 		}, gwContent.Content, "gateway content should have appended stub upstream")
@@ -855,9 +836,7 @@ func TestKongClient_EmptyConfigUpdate_ReplacesPreviousValidConfigAfterSuccessful
 		assert.Equal(t, &file.Content{
 			FormatVersion: versions.DeckFileFormatVersion,
 			Upstreams: []file.FUpstream{{
-				Upstream: kong.Upstream{
-					Name: new(deckgen.StubUpstreamName),
-				},
+				Name: new(deckgen.StubUpstreamName),
 			}},
 		}, gwContent.Content, "gateway content should have appended stub upstream")
 
@@ -1006,15 +985,11 @@ func TestKongClientUpdate_FetchStoreAndPushLastValidConfig(t *testing.T) {
 		newKongState  = &kongstate.KongState{
 			Services: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("new_service"),
-					},
+					Name:      new("new_service"),
 					Namespace: "new_namespace",
 					Routes: []kongstate.Route{
 						{
-							Route: kong.Route{
-								Name: new("new_route"),
-							},
+							Name: new("new_route"),
 						},
 					},
 				},
@@ -1181,9 +1156,7 @@ func TestKongClient_FallbackConfiguration_SuccessfulRecovery(t *testing.T) {
 			configBuilder.kongState = &kongstate.KongState{
 				Consumers: []kongstate.Consumer{
 					{
-						Consumer: kong.Consumer{
-							Username: new(validConsumer.Username),
-						},
+						Username: new(validConsumer.Username),
 					},
 				},
 			}
@@ -1734,9 +1707,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 				lastValidConfigFetcher.lastKongState = &kongstate.KongState{
 					Consumers: []kongstate.Consumer{
 						{
-							Consumer: kong.Consumer{
-								Username: new("last-valid"),
-							},
+							Username: new("last-valid"),
 						},
 					},
 				}
@@ -1747,9 +1718,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 			configBuilder.kongState = &kongstate.KongState{
 				Consumers: []kongstate.Consumer{
 					{
-						Consumer: kong.Consumer{
-							Username: new("fallback"),
-						},
+						Username: new("fallback"),
 					},
 				},
 			}
@@ -1791,9 +1760,7 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 					FormatVersion: "3.0",
 					Consumers: []file.FConsumer{
 						{
-							Consumer: kong.Consumer{
-								Username: new(consumerUsername),
-							},
+							Username: new(consumerUsername),
 						},
 					},
 				}
@@ -1814,14 +1781,12 @@ func TestKongClient_RecoveringFromGatewaySyncError(t *testing.T) {
 
 func someConsumer(t *testing.T, name string) *configurationv1.KongConsumer {
 	return helpers.WithTypeMeta(t, &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "name",
-			Namespace: "namespace",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: annotations.DefaultIngressClass,
-			},
-			UID: k8stypes.UID(uuid.NewString()),
+		Name:      "name",
+		Namespace: "namespace",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: annotations.DefaultIngressClass,
 		},
+		UID:      k8stypes.UID(uuid.NewString()),
 		Username: name,
 	})
 }

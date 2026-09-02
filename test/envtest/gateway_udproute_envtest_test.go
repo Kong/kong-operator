@@ -7,7 +7,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -43,7 +42,7 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 	c := mgr.GetClient()
 
 	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "gc-udproute"},
+		Name: "gc-udproute",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -53,10 +52,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
 
 	backendService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "coredns",
-			Namespace: ns.Name,
-		},
+		Name:      "coredns",
+		Namespace: ns.Name,
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{{
 				Name:     "dns",
@@ -68,10 +65,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 	require.NoError(t, c.Create(ctx, backendService))
 
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "gw-udproute",
-		},
+		Namespace: ns.Name,
+		Name:      "gw-udproute",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gc.Name),
 			Listeners: []gatewayv1.Listener{{
@@ -120,10 +115,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 
 	servicePort := gatewayv1.PortNumber(53)
 	udpRoute := &gatewayv1.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "udp-route",
-		},
+		Namespace: ns.Name,
+		Name:      "udp-route",
 		Spec: gatewayv1.UDPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{
@@ -132,10 +125,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 			},
 			Rules: []gatewayv1.UDPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: gatewayv1.ObjectName(backendService.Name),
-						Port: &servicePort,
-					},
+					Name: gatewayv1.ObjectName(backendService.Name),
+					Port: &servicePort,
 				}},
 			}},
 		},
@@ -149,10 +140,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 	// listener.AttachedRoutes — Listener.Status reflects every route whose
 	// ParentRef targets the listener, regardless of conflict outcome.
 	udpRouteSecond := &gatewayv1.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "udp-route-second",
-		},
+		Namespace: ns.Name,
+		Name:      "udp-route-second",
 		Spec: gatewayv1.UDPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{
@@ -161,10 +150,8 @@ func TestGatewayUDPRouteAttachedRoutes(t *testing.T) {
 			},
 			Rules: []gatewayv1.UDPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: gatewayv1.ObjectName(backendService.Name),
-						Port: &servicePort,
-					},
+					Name: gatewayv1.ObjectName(backendService.Name),
+					Port: &servicePort,
 				}},
 			}},
 		},

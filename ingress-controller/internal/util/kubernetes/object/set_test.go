@@ -6,34 +6,27 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
 func TestObjectConfigurationStatusSet(t *testing.T) {
 	t.Log("generating some objects to test the object set")
 	ing1 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  corev1.NamespaceDefault,
-			Name:       "test-ingress-1",
-			Generation: 1,
-		},
+		Namespace:  corev1.NamespaceDefault,
+		Name:       "test-ingress-1",
+		Generation: 1,
 	}
 	ing1.SetGroupVersionKind(ingGVK)
 	ing2 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  corev1.NamespaceDefault,
-			Name:       "test-ingress-2",
-			Generation: 1,
-		},
+		Namespace:  corev1.NamespaceDefault,
+		Name:       "test-ingress-2",
+		Generation: 1,
 	}
 	ing2.SetGroupVersionKind(ingGVK)
 	ing3 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:  "other-namespace",
-			Name:       "test-ingress-1",
-			Generation: 1,
-		},
+		Namespace:  "other-namespace",
+		Name:       "test-ingress-1",
+		Generation: 1,
 	}
 	ing3.SetGroupVersionKind(ingGVK)
 

@@ -58,10 +58,8 @@ func TestAdoptMatchTransitGatewaySuccess(t *testing.T) {
 	networkID := "net-1"
 
 	tg := &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-tg",
-			Namespace: "default",
-		},
+		Name:      "test-tg",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 			NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeNamespacedRef, NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "net"}},
 			Adopt: &commonv1alpha1.AdoptOptions{
@@ -125,10 +123,8 @@ func TestAdoptMatchTransitGatewayMismatch(t *testing.T) {
 	networkID := "net-1"
 
 	tg := &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-tg-mismatch",
-			Namespace: "default",
-		},
+		Name:      "test-tg-mismatch",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 			NetworkRef: commonv1alpha1.ObjectRef{Type: commonv1alpha1.ObjectRefTypeNamespacedRef, NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "net"}},
 			Adopt: &commonv1alpha1.AdoptOptions{

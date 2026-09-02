@@ -18,11 +18,9 @@ import (
 
 func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
 	return gatewayapi.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "route",
-			Namespace:  "default",
-			Generation: 1,
-		},
+		Name:       "route",
+		Namespace:  "default",
+		Generation: 1,
 		Spec: gatewayapi.TLSRouteSpec{
 			Rules: []gatewayapi.TLSRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{backendRef},
@@ -33,12 +31,10 @@ func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
 
 func serviceBackendRef(namespace *gatewayapi.Namespace) gatewayapi.BackendRef {
 	return gatewayapi.BackendRef{
-		BackendObjectReference: gatewayapi.BackendObjectReference{
-			Name:      gatewayapi.ObjectName("svc"),
-			Namespace: namespace,
-			Kind:      util.StringToGatewayAPIKindPtr("Service"),
-			Group:     util.StringToTypedPtr[*gatewayapi.Group](""),
-		},
+		Name:      gatewayapi.ObjectName("svc"),
+		Namespace: namespace,
+		Kind:      util.StringToGatewayAPIKindPtr("Service"),
+		Group:     util.StringToTypedPtr[*gatewayapi.Group](""),
 	}
 }
 
@@ -48,7 +44,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 
 	otherNS := gatewayapi.Namespace("other")
 	grantFromTLSRouteToService := gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "other"},
+		Name: "grant", Namespace: "other",
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{{
 				Group:     gatewayapi.V1Group,
@@ -74,7 +70,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "resolves",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route:      newTLSRoute(serviceBackendRef(nil)),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
@@ -92,11 +88,9 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			enableRefGrant: true,
 			objects:        []client.Object{},
 			route: newTLSRoute(gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Name:  "svc",
-					Kind:  util.StringToGatewayAPIKindPtr("Foo"),
-					Group: util.StringToTypedPtr[*gatewayapi.Group]("example.com"),
-				},
+				Name:  "svc",
+				Kind:  util.StringToGatewayAPIKindPtr("Foo"),
+				Group: util.StringToTypedPtr[*gatewayapi.Group]("example.com"),
 			}),
 			wantReason:         gatewayapi.RouteReasonInvalidKind,
 			wantMessageContain: "unsupported type example.com/Foo",
@@ -105,7 +99,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "cross-namespace without ReferenceGrant CRD",
 			enableRefGrant: false,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 			},
 			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
@@ -115,7 +109,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "cross-namespace without matching grant",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 			},
 			route:              newTLSRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
@@ -125,7 +119,7 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "cross-namespace with matching grant",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 				grantFromTLSRouteToService.DeepCopy(),
 			},
 			route:      newTLSRoute(serviceBackendRef(&otherNS)),
@@ -135,9 +129,9 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "cross-namespace grant for wrong to-kind",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 				&gatewayapi.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "other"},
+					Name: "grant", Namespace: "other",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{{
 							Group:     gatewayapi.V1Group,
@@ -159,9 +153,9 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 			name:           "cross-namespace grant for wrong from-kind",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 				&gatewayapi.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "other"},
+					Name: "grant", Namespace: "other",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{{
 							Group:     gatewayapi.V1Group,
@@ -223,7 +217,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	t.Run("inserts new condition when missing", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
 		route := newTLSRoute(serviceBackendRef(nil))
@@ -266,7 +260,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	t.Run("no-op when condition already matches", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger}
 		route := newTLSRoute(serviceBackendRef(nil))
@@ -286,7 +280,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	t.Run("cross-namespace without grant flips condition to false", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "other"}).
 			Build()
 		r := &TLSRouteReconciler{Client: cl, Log: logger, enableReferenceGrant: true}
 		route := newTLSRoute(serviceBackendRef(&otherNS))
@@ -317,11 +311,9 @@ func TestIsTLSReferenceGranted(t *testing.T) {
 	}
 
 	backendRef := gatewayapi.BackendRef{
-		BackendObjectReference: gatewayapi.BackendObjectReference{
-			Name:  specificName,
-			Kind:  &svcKind,
-			Group: &emptyGroup,
-		},
+		Name:  specificName,
+		Kind:  &svcKind,
+		Group: &emptyGroup,
 	}
 
 	tests := []struct {

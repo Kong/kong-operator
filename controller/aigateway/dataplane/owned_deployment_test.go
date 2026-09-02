@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -282,7 +281,7 @@ func Test_addAnnotationsForAIGatewayDataPlaneDeployment(t *testing.T) {
 					Deployment: &aigatewayv1alpha1.DeploymentOptions{Annotations: tc.specAnnotations},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			deployment := &appsv1.Deployment{Annotations: tc.existingAnnotations}
 			var infoCount int
 			addAnnotationsForAIGatewayDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, aigwdp)
 			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
@@ -330,7 +329,7 @@ func Test_addLabelsForAIGatewayDataPlaneDeployment(t *testing.T) {
 					Deployment: &aigatewayv1alpha1.DeploymentOptions{Labels: tc.specLabels},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			deployment := &appsv1.Deployment{Labels: tc.existingLabels}
 			var infoCount int
 			addLabelsForAIGatewayDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, aigwdp)
 			require.Equal(t, tc.expectedLabels, deployment.Labels)
@@ -345,7 +344,7 @@ func Test_addLabelsForAIGatewayDataPlaneDeployment(t *testing.T) {
 
 func Test_generateBaseDeployment_hardening(t *testing.T) {
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+		Name: "my-aigw", Namespace: "test-ns",
 	}
 	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
@@ -387,7 +386,7 @@ func Test_generateBaseDeployment_hardening(t *testing.T) {
 // Pod template's labels (which share the base labels map) are unaffected.
 func Test_generateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+		Name: "my-aigw", Namespace: "test-ns",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			Deployment: &aigatewayv1alpha1.DeploymentOptions{
 				Annotations: map[string]string{
@@ -552,7 +551,7 @@ func Test_ensureDeployment(t *testing.T) {
 	validCP := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: dpName},
+		Namespace: ns, Name: dpName,
 	}
 
 	tests := []struct {

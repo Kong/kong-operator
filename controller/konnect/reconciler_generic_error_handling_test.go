@@ -94,11 +94,9 @@ func TestHandleOpsErr(t *testing.T) {
 			ctx := context.Background()
 
 			ent := &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-service",
-					Namespace:  "default",
-					Generation: 1,
-				},
+				Name:       "test-service",
+				Namespace:  "default",
+				Generation: 1,
 			}
 
 			clientBuilder := fake.NewClientBuilder().

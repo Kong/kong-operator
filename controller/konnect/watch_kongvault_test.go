@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -18,16 +16,14 @@ import (
 
 func TestEnqueueKongVaultForKonnectConfigStore(t *testing.T) {
 	configStore := &konnectv1alpha1.KonnectConfigStore{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tls-cert-keys",
-			Namespace: "kong",
-		},
+		Name:      "tls-cert-keys",
+		Namespace: "kong",
 	}
 
 	// KongVault is cluster-scoped, so the enqueued requests carry no namespace.
 	vaultReferencing := func(name, refNamespace string) *configurationv1alpha1.KongVault {
 		return &configurationv1alpha1.KongVault{
-			ObjectMeta: metav1.ObjectMeta{Name: name},
+			Name: name,
 			Spec: configurationv1alpha1.KongVaultSpec{
 				Backend: "konnect",
 				Prefix:  name,
@@ -48,7 +44,7 @@ func TestEnqueueKongVaultForKonnectConfigStore(t *testing.T) {
 			name: "no KongVault references the KonnectConfigStore",
 			vaults: []client.Object{
 				&configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{Name: "vault-without-ref"},
+					Name: "vault-without-ref",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-vault",
@@ -61,7 +57,7 @@ func TestEnqueueKongVaultForKonnectConfigStore(t *testing.T) {
 			vaults: []client.Object{
 				vaultReferencing("vault-with-ref", "kong"),
 				&configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{Name: "vault-without-ref"},
+					Name: "vault-without-ref",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
 						Prefix:  "env-vault",
@@ -69,7 +65,7 @@ func TestEnqueueKongVaultForKonnectConfigStore(t *testing.T) {
 				},
 			},
 			expected: []ctrl.Request{
-				{NamespacedName: types.NamespacedName{Name: "vault-with-ref"}},
+				{Name: "vault-with-ref"},
 			},
 		},
 		{

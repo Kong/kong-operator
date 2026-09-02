@@ -6,7 +6,6 @@ import (
 	"os"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -21,9 +20,7 @@ func SetupControllerOperatorResources(
 ) (func(), error) {
 	fmt.Printf("INFO: creating controller namespace %s\n", namespace)
 	controllerNs := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: namespace,
-		},
+		Name: namespace,
 	}
 	if err := client.IgnoreAlreadyExists(cl.Create(ctx, controllerNs)); err != nil {
 		return nil, err
@@ -36,12 +33,10 @@ func SetupControllerOperatorResources(
 		certificate.WithCATrue(),
 	)
 	caSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kong-operator-ca",
-			Namespace: namespace,
-			Labels: map[string]string{
-				"konghq.com/secret": "internal",
-			},
+		Name:      "kong-operator-ca",
+		Namespace: namespace,
+		Labels: map[string]string{
+			"konghq.com/secret": "internal",
 		},
 		Data: map[string][]byte{
 			"ca.crt":  cert,

@@ -30,11 +30,9 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: gatewayapi.Group("other-group"),
-								Kind:  gatewayapi.Kind("other-kind"),
-								Name:  "example-service",
-							},
+							Group: gatewayapi.Group("other-group"),
+							Kind:  gatewayapi.Kind("other-kind"),
+							Name:  "example-service",
 						},
 					},
 				},
@@ -49,32 +47,24 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 				},
 			},
 			objects: []client.Object{
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-					},
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: new(gatewayapi.Group("core")),
-												Kind:  new(gatewayapi.Kind("Service")),
-												Name:  "example-service",
-											},
-										},
+										Group: new(gatewayapi.Group("core")),
+										Kind:  new(gatewayapi.Kind("Service")),
+										Name:  "example-service",
 									},
 								},
 							},
@@ -112,10 +102,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "example-gateway",
-					},
+					Namespace: "default",
+					Name:      "example-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: "example-gateway-class",
 					},
@@ -137,32 +125,24 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 				},
 			},
 			objects: []client.Object{
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-					},
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: new(gatewayapi.Group("core")),
-												Kind:  new(gatewayapi.Kind("Service")),
-												Name:  "example-service",
-											},
-										},
+										Group: new(gatewayapi.Group("core")),
+										Kind:  new(gatewayapi.Kind("Service")),
+										Name:  "example-service",
 									},
 								},
 							},
@@ -200,10 +180,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "example-gateway",
-					},
+					Namespace: "default",
+					Name:      "example-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: "example-gateway-class",
 					},
@@ -219,32 +197,24 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 				},
 			},
 			objects: []client.Object{
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-					},
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Group: new(gatewayapi.Group("core")),
-												Kind:  new(gatewayapi.Kind("Service")),
-												Name:  "example-service",
-											},
-										},
+										Group: new(gatewayapi.Group("core")),
+										Kind:  new(gatewayapi.Kind("Service")),
+										Name:  "example-service",
 									},
 								},
 							},
@@ -302,10 +272,8 @@ func TestGetBackendTLSPolicyAncestors(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "example-gateway",
-					},
+					Namespace: "default",
+					Name:      "example-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: "example-gateway-class",
 					},
@@ -366,30 +334,22 @@ func TestSortGateways(t *testing.T) {
 			name: "different namespaces, no existing ancestors",
 			gateways: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 			},
 			expected: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 			},
 		},
@@ -397,30 +357,22 @@ func TestSortGateways(t *testing.T) {
 			name: "same namespace, no existing ancestors",
 			gateways: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 			},
 			expected: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 			},
 		},
@@ -428,42 +380,30 @@ func TestSortGateways(t *testing.T) {
 			name: "multiple combinations, no existing ancestors",
 			gateways: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 			},
 			expected: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 			},
 		},
@@ -471,54 +411,38 @@ func TestSortGateways(t *testing.T) {
 			name: "multiple combinations, with existing ancestors",
 			gateways: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-2",
 				},
 			},
 			expected: []gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-2",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-2",
+					Name:      "gateway-2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-1",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "namespace-1",
-						Name:      "gateway-2",
-					},
+					Namespace: "namespace-1",
+					Name:      "gateway-2",
 				},
 			},
 			existingAncestors: []gatewayapi.PolicyAncestorStatus{
@@ -557,18 +481,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "valid policy with no conflicts",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 				},
@@ -582,18 +502,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "valid policy with multiple CACertificateRefs",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -614,16 +530,12 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 			},
 			objects: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "example-secret",
-						Namespace: "default",
-					},
+					Name:      "example-secret",
+					Namespace: "default",
 				},
 				&corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "example-configmap",
-						Namespace: "default",
-					},
+					Name:      "example-configmap",
+					Namespace: "default",
 				},
 			},
 			expected: &metav1.Condition{
@@ -635,36 +547,28 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "policy with conflicting target refs",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 				},
 			},
 			objects: []client.Object{
 				&gatewayapi.BackendTLSPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "conflicting-policy",
-						Namespace: "default",
-					},
+					Name:      "conflicting-policy",
+					Namespace: "default",
 					Spec: gatewayapi.BackendTLSPolicySpec{
 						TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 							{
-								LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-									Group: "core",
-									Kind:  "Service",
-									Name:  "example-service",
-								},
+								Group: "core",
+								Kind:  "Service",
+								Name:  "example-service",
 							},
 						},
 					},
@@ -680,18 +584,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "policy with unsupported CACertificateRefs",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -715,18 +615,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "policy with unsupported SubjectAltNames",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -749,18 +645,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "policy with unsupported WellKnownCACertificates",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -778,18 +670,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "policy with both unsupported features",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -820,18 +708,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "valid policy referencing not existing CACert (ConfigMap)",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -855,18 +739,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "valid policy referencing not existing CACert (Secret)",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{
@@ -890,18 +770,14 @@ func TestValidateBackendTLSPolicy(t *testing.T) {
 		{
 			name: "valid policy referencing not existing CACert (ConfigMap, group core)",
 			policy: &gatewayapi.BackendTLSPolicy{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-policy",
-					Namespace: "default",
-				},
+				Name:      "test-policy",
+				Namespace: "default",
 				Spec: gatewayapi.BackendTLSPolicySpec{
 					TargetRefs: []gatewayapi.LocalPolicyTargetReferenceWithSectionName{
 						{
-							LocalPolicyTargetReference: gatewayapi.LocalPolicyTargetReference{
-								Group: "core",
-								Kind:  "Service",
-								Name:  "example-service",
-							},
+							Group: "core",
+							Kind:  "Service",
+							Name:  "example-service",
 						},
 					},
 					Validation: gatewayapi.BackendTLSPolicyValidation{

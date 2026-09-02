@@ -23,7 +23,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	testclient "k8s.io/client-go/kubernetes/fake"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
@@ -74,9 +73,7 @@ func TestGetNodeIP(t *testing.T) {
 
 		// node not exist
 		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "demo",
-			},
+			Name: "demo",
 			Status: corev1.NodeStatus{
 				Addresses: []corev1.NodeAddress{
 					{
@@ -89,9 +86,7 @@ func TestGetNodeIP(t *testing.T) {
 
 		// node  exist
 		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "demo",
-			},
+			Name: "demo",
 			Status: corev1.NodeStatus{
 				Addresses: []corev1.NodeAddress{
 					{
@@ -105,9 +100,7 @@ func TestGetNodeIP(t *testing.T) {
 		// search the correct node
 		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "demo1",
-				},
+				Name: "demo1",
 				Status: corev1.NodeStatus{
 					Addresses: []corev1.NodeAddress{
 						{
@@ -118,9 +111,7 @@ func TestGetNodeIP(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "demo2",
-				},
+				Name: "demo2",
 				Status: corev1.NodeStatus{
 					Addresses: []corev1.NodeAddress{
 						{
@@ -134,9 +125,7 @@ func TestGetNodeIP(t *testing.T) {
 
 		// get NodeExternalIP
 		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "demo",
-			},
+			Name: "demo",
 			Status: corev1.NodeStatus{
 				Addresses: []corev1.NodeAddress{
 					{
@@ -152,9 +141,7 @@ func TestGetNodeIP(t *testing.T) {
 
 		// get NodeInternalIP
 		{testclient.NewClientset(&corev1.NodeList{Items: []corev1.Node{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "demo",
-			},
+			Name: "demo",
 			Status: corev1.NodeStatus{
 				Addresses: []corev1.NodeAddress{
 					{
@@ -206,19 +193,15 @@ func TestGetPodDetails(t *testing.T) {
 	// success to get PodInfo
 	fkClient := testclient.NewClientset(
 		&corev1.PodList{Items: []corev1.Pod{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "testpod",
-				Namespace: corev1.NamespaceDefault,
-				Labels: map[string]string{
-					"first":  "first_label",
-					"second": "second_label",
-				},
+			Name:      "testpod",
+			Namespace: corev1.NamespaceDefault,
+			Labels: map[string]string{
+				"first":  "first_label",
+				"second": "second_label",
 			},
 		}}},
 		&corev1.NodeList{Items: []corev1.Node{{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "demo",
-			},
+			Name: "demo",
 			Status: corev1.NodeStatus{
 				Addresses: []corev1.NodeAddress{
 					{
@@ -249,17 +232,13 @@ func TestGenerateTagsForObject(t *testing.T) {
 	// In memory kubernetes objects do not have GVK filled in.
 	// Relevant kubernetes issue: https://github.com/kubernetes/kubernetes/issues/80609
 	testObj := &gatewayapi.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1",
-			Kind:       "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "yedigei",
-			Namespace: "aitmatov",
-			UID:       "buryani",
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.UserTagKey: "temir-jol,snaryad-soqqısı,temir-jol,temir-jol",
-			},
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Kind:       "HTTPRoute",
+		Name:       "yedigei",
+		Namespace:  "aitmatov",
+		UID:        "buryani",
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.UserTagKey: "temir-jol,snaryad-soqqısı,temir-jol,temir-jol",
 		},
 	}
 

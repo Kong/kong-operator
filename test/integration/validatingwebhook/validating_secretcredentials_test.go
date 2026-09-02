@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -40,12 +39,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		t.Log("verifying that a secret with unsupported but valid credential type passes the validation")
 		require.NoError(t, ctrlClient.Create(ctx,
 			&corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "konnect-credential",
-					Labels: map[string]string{
-						config.DefaultSecretLabelSelector: "true",
-						konnect.CredentialTypeLabel:       "konnect",
-					},
+				Name: "konnect-credential",
+				Labels: map[string]string{
+					config.DefaultSecretLabelSelector: "true",
+					konnect.CredentialTypeLabel:       "konnect",
 				},
 				StringData: map[string]string{
 					"key": "kong-credential",
@@ -56,12 +53,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		t.Log("verifying that a secret with invalid credential type fails the validation")
 		require.Error(t, ctrlClient.Create(ctx,
 			&corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "bad-credential",
-					Labels: map[string]string{
-						config.DefaultSecretLabelSelector: "true",
-						konnect.CredentialTypeLabel:       "bad-type",
-					},
+				Name: "bad-credential",
+				Labels: map[string]string{
+					config.DefaultSecretLabelSelector: "true",
+					konnect.CredentialTypeLabel:       "bad-type",
 				},
 				StringData: map[string]string{
 					"key": "kong-credential",
@@ -73,12 +68,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		require.Error(t,
 			ctrlClient.Create(ctx,
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "brokenfence",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "brokenfence",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						// missing "username" field.
@@ -91,12 +84,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 
 		t.Log("creating a valid credential secret to be referenced by a KongConsumer")
 		validCredential := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "brokenfence",
-				Labels: map[string]string{
-					config.DefaultSecretLabelSelector: "true",
-					konnect.CredentialTypeLabel:       "basic-auth",
-				},
+			Name: "brokenfence",
+			Labels: map[string]string{
+				config.DefaultSecretLabelSelector: "true",
+				konnect.CredentialTypeLabel:       "basic-auth",
 			},
 			StringData: map[string]string{
 				"username": "brokenfence",
@@ -108,11 +99,9 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 
 		t.Log("verifying that valid credentials assigned to a consumer pass validation")
 		validConsumerLinkedToValidCredentials := &configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "valid-consumer-",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: ingressClass,
-				},
+			GenerateName: "valid-consumer-",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: ingressClass,
 			},
 			Username: "brokenfence",
 			CustomID: uuid.NewString(),
@@ -143,12 +132,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		t.Log("verifying that a JWT credential which has keys with missing values fails validation")
 		require.ErrorContains(t,
 			ctrlClient.Create(ctx, &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "invalid-jwt-",
-					Labels: map[string]string{
-						config.DefaultSecretLabelSelector: "true",
-						konnect.CredentialTypeLabel:       "jwt",
-					},
+				GenerateName: "invalid-jwt-",
+				Labels: map[string]string{
+					config.DefaultSecretLabelSelector: "true",
+					konnect.CredentialTypeLabel:       "jwt",
 				},
 				StringData: map[string]string{
 					"algorithm": "RS256",
@@ -163,12 +150,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		for _, algo := range hmacAlgos {
 			t.Run(algo, func(t *testing.T) {
 				require.NoError(t, ctrlClient.Create(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "valid-jwt-" + strings.ToLower(algo) + "-",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "jwt",
-						},
+					GenerateName: "valid-jwt-" + strings.ToLower(algo) + "-",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "jwt",
 					},
 					StringData: map[string]string{
 						"algorithm": algo,
@@ -184,12 +169,10 @@ func TestAdmissionWebhook_SecretCredentials(t *testing.T) {
 		for _, algo := range nonHmacAlgos {
 			t.Run(algo, func(t *testing.T) {
 				require.Error(t, ctrlClient.Create(ctx, &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "invalid-jwt-" + strings.ToLower(algo) + "-",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "jwt",
-						},
+					GenerateName: "invalid-jwt-" + strings.ToLower(algo) + "-",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "jwt",
 					},
 					StringData: map[string]string{
 						"algorithm": algo,
@@ -221,12 +204,10 @@ func createKongConsumers(
 			for j := range 5 {
 				credentialName := fmt.Sprintf("%s-credential-%d", consumerName, j)
 				credential := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: credentialName,
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: credentialName,
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": credentialName,
@@ -240,9 +221,7 @@ func createKongConsumers(
 
 			// create the consumer referencing its credentials
 			consumer := &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: consumerName,
-				},
+				Name:     consumerName,
 				Username: consumerName,
 				CustomID: uuid.NewString(),
 			}

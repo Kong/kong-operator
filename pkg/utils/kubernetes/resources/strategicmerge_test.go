@@ -23,10 +23,8 @@ import (
 func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 	makeDataPlaneDeployment := func() (*appsv1.Deployment, error) {
 		dp := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "test-namespace",
-				Name:      "dp-1",
-			},
+			Namespace: "test-namespace",
+			Name:      "dp-1",
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -76,11 +74,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 		{
 			Name: "add pod labels",
 			Patch: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: map[string]string{
-						"label1": "value1",
-						"label2": "value2",
-					},
+				Labels: map[string]string{
+					"label1": "value1",
+					"label2": "value2",
 				},
 			},
 			Expected: func() corev1.PodTemplateSpec {
@@ -303,10 +299,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "volume1",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{
-									SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
-								},
+							EmptyDir: &corev1.EmptyDirVolumeSource{
+								SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
 							},
 						},
 					},
@@ -337,10 +331,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d.Spec.Template.Spec.Volumes = append(
 					[]corev1.Volume{{
 						Name: "volume1",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{
-								SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
-							},
+						EmptyDir: &corev1.EmptyDirVolumeSource{
+							SizeLimit: resource.NewQuantity(1000, resource.DecimalSI),
 						},
 					}},
 					d.Spec.Template.Spec.Volumes...,
@@ -436,10 +428,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "new_volume",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/host/path",
-								},
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/host/path",
 							},
 						},
 					},
@@ -473,11 +463,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					[]corev1.Volume{
 						{
 							Name: "new_volume",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/host/path",
-									Type: new(corev1.HostPathUnset),
-								},
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/host/path",
+								Type: new(corev1.HostPathUnset),
 							},
 						},
 					},
@@ -573,10 +561,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "new_volume",
-							VolumeSource: corev1.VolumeSource{
-								Secret: &corev1.SecretVolumeSource{
-									SecretName: "secret-1",
-								},
+							Secret: &corev1.SecretVolumeSource{
+								SecretName: "secret-1",
 							},
 						},
 					},
@@ -587,10 +573,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				require.NoError(t, err)
 				volume := corev1.Volume{
 					Name: "new_volume",
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: "secret-1",
-						},
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: "secret-1",
 					},
 				}
 				SetDefaultsVolume(&volume)
@@ -624,10 +608,8 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 					Volumes: []corev1.Volume{
 						{
 							Name: "hostpath-volume",
-							VolumeSource: corev1.VolumeSource{
-								HostPath: &corev1.HostPathVolumeSource{
-									Path: "/var/log",
-								},
+							HostPath: &corev1.HostPathVolumeSource{
+								Path: "/var/log",
 							},
 						},
 					},
@@ -639,11 +621,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				d.Spec.Template.Spec.Volumes = append([]corev1.Volume{
 					{
 						Name: "hostpath-volume",
-						VolumeSource: corev1.VolumeSource{
-							HostPath: &corev1.HostPathVolumeSource{
-								Path: "/var/log",
-								Type: new(corev1.HostPathUnset),
-							},
+						HostPath: &corev1.HostPathVolumeSource{
+							Path: "/var/log",
+							Type: new(corev1.HostPathUnset),
 						},
 					},
 				}, d.Spec.Template.Spec.Volumes...)
@@ -815,11 +795,9 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 							Name:           consts.DataPlaneProxyContainerName,
 							ReadinessProbe: &corev1.Probe{},
 							LivenessProbe: &corev1.Probe{
-								ProbeHandler: corev1.ProbeHandler{
-									HTTPGet: &corev1.HTTPGetAction{
-										Path: "/healthz",
-										Port: intstr.FromInt(8080),
-									},
+								HTTPGet: &corev1.HTTPGetAction{
+									Path: "/healthz",
+									Port: intstr.FromInt(8080),
 								},
 							},
 						},
@@ -831,12 +809,10 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 				require.NoError(t, err)
 				d.Spec.Template.Spec.Containers[0].ReadinessProbe = nil
 				d.Spec.Template.Spec.Containers[0].LivenessProbe = &corev1.Probe{
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/healthz",
-							Port:   intstr.FromInt(8080),
-							Scheme: corev1.URISchemeHTTP,
-						},
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/healthz",
+						Port:   intstr.FromInt(8080),
+						Scheme: corev1.URISchemeHTTP,
 					},
 					TimeoutSeconds:   1,
 					PeriodSeconds:    10,
@@ -881,9 +857,7 @@ func TestStrategicMergePatchPodTemplateSpec(t *testing.T) {
 func TestStrategicMergePatchPodTemplateSpec_MultipleProbeDeletes(t *testing.T) {
 	probe := func() *corev1.Probe {
 		return &corev1.Probe{
-			ProbeHandler: corev1.ProbeHandler{
-				HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromInt(8080)},
-			},
+			HTTPGet: &corev1.HTTPGetAction{Path: "/healthz", Port: intstr.FromInt(8080)},
 		}
 	}
 	base := &corev1.PodTemplateSpec{

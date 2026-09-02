@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
@@ -320,10 +319,8 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForHTTPRoutes(ctx con
 	}
 	return lo.Map(policiesNN, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
 		return reconcile.Request{
-			NamespacedName: k8stypes.NamespacedName{
-				Namespace: policy.Namespace,
-				Name:      policy.Name,
-			},
+			Namespace: policy.Namespace,
+			Name:      policy.Name,
 		}
 	})
 }
@@ -357,10 +354,8 @@ func (r *BackendTLSPolicyReconciler) listBackendTLSPoliciesForGateways(ctx conte
 		}
 		policies = append(policies, lo.Map(policiesUsedByHTTPRoute, func(policy gatewayapi.BackendTLSPolicy, _ int) reconcile.Request {
 			return reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: policy.Namespace,
-					Name:      policy.Name,
-				},
+				Namespace: policy.Namespace,
+				Name:      policy.Name,
 			}
 		})...)
 	}

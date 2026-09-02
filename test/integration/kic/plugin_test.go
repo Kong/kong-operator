@@ -93,10 +93,8 @@ func TestPluginEssentials(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "teapot",
-		},
+		Namespace:    ns.Name,
+		Name:         "teapot",
 		InstanceName: "example",
 		PluginName:   "request-termination",
 		Config: apiextensionsv1.JSON{
@@ -105,11 +103,9 @@ func TestPluginEssentials(t *testing.T) {
 		Tags: commonv1alpha1.Tags{"teapot"},
 	}
 	kongclusterplugin := &configurationv1.KongClusterPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "legal",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name: "legal",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		InstanceName: "example-cluster",
 		PluginName:   "request-termination",
@@ -272,10 +268,8 @@ func TestPluginConfigPatch(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "kongplugin-config",
-		},
+		Namespace: ns.Name,
+		Name:      "kongplugin-config",
 		StringData: map[string]string{
 			"teapot-message":    `"I am a little teapot"`,
 			"forbidden-message": `"This service is forbidden"`,
@@ -286,10 +280,8 @@ func TestPluginConfigPatch(t *testing.T) {
 	cleaner.Add(secret)
 
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "teapot",
-		},
+		Namespace:    ns.Name,
+		Name:         "teapot",
 		InstanceName: "example",
 		PluginName:   "request-termination",
 		Config: apiextensionsv1.JSON{
@@ -314,11 +306,9 @@ func TestPluginConfigPatch(t *testing.T) {
 	cleaner.Add(kongplugin)
 
 	kongclusterplugin := &configurationv1.KongClusterPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "forbidden",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name: "forbidden",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		InstanceName: "example-cluster",
 		PluginName:   "request-termination",
@@ -446,20 +436,16 @@ func TestPluginOrdering(t *testing.T) {
 	}, ingressWait, waitTick)
 
 	termplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "teapot",
-		},
+		Namespace:  ns.Name,
+		Name:       "teapot",
 		PluginName: "request-termination",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"status_code": 418}`),
 		},
 	}
 	authplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "auth",
-		},
+		Namespace:  ns.Name,
+		Name:       "auth",
 		PluginName: "key-auth",
 	}
 	c, err := clientset.NewForConfig(env.Cluster().Config())
@@ -597,10 +583,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Log("creating plugins")
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "teapot",
-		},
+		Namespace:    ns.Name,
+		Name:         "teapot",
 		InstanceName: "example",
 		PluginName:   "request-termination",
 		Config: apiextensionsv1.JSON{
@@ -617,10 +601,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	// that a request was indeed recognized as being from the consumer. unlike the other consumer plugin, it's associated
 	// with the consumer alone and works regardless of the grant state or any cross-namespace shenanigans
 	kongslugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "snurch",
-		},
+		Namespace:    ns.Name,
+		Name:         "snurch",
 		InstanceName: "snurch",
 		PluginName:   "correlation-id",
 		Config: apiextensionsv1.JSON{
@@ -633,11 +615,9 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Log("creating consumer and credential")
 	credential := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Labels: map[string]string{
-				labels.LabelPrefix + labels.CredentialKey: "key-auth",
-			},
+		Name: uuid.NewString(),
+		Labels: map[string]string{
+			labels.LabelPrefix + labels.CredentialKey: "key-auth",
 		},
 		StringData: map[string]string{
 			"key": "thirtytangas",
@@ -648,12 +628,10 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 	cleaner.Add(credential)
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.IngressClassKey:                           consts.IngressClass,
-				annotations.AnnotationPrefix + annotations.PluginsKey: strings.Join([]string{kongslugin.Name, fmt.Sprintf("%s:%s", kongplugin.Namespace, kongplugin.Name)}, ","),
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			annotations.IngressClassKey:                           consts.IngressClass,
+			annotations.AnnotationPrefix + annotations.PluginsKey: strings.Join([]string{kongslugin.Name, fmt.Sprintf("%s:%s", kongplugin.Namespace, kongplugin.Name)}, ","),
 		},
 		Username:    uuid.NewString(),
 		Credentials: []string{credential.Name},
@@ -664,10 +642,8 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Log("creating auth plugin to identify consumer accessing route")
 	authplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "keykey",
-		},
+		Namespace:  ns.Name,
+		Name:       "keykey",
 		PluginName: "key-auth",
 	}
 	authplugin, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, authplugin, metav1.CreateOptions{})
@@ -706,9 +682,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("creating a ReferenceGrant that does not permit kongconsumer access to kongplugins")
 	grant := &gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
@@ -743,9 +717,7 @@ func TestPluginCrossNamespaceReference(t *testing.T) {
 
 	t.Logf("creating a ReferenceGrant that permits kongconsumer access from %s to kongplugins in %s", remote.Name, ns.Name)
 	grant2 := &gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
@@ -830,10 +802,8 @@ func TestPluginNullInConfig(t *testing.T) {
 	t.Log("Creating a plugin with `null` in its configuration")
 
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "plugin-datadog",
-		},
+		Namespace:    ns.Name,
+		Name:         "plugin-datadog",
 		InstanceName: "plugin-with-null",
 		PluginName:   "datadog",
 		Config: apiextensionsv1.JSON{

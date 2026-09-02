@@ -67,7 +67,7 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 
 	newProgrammedGateway := func() *konnectv1alpha1.KonnectEventGateway {
 		return &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{Name: parentName, Namespace: parentNS},
+			Name: parentName, Namespace: parentNS,
 			Status: konnectv1alpha1.KonnectEventGatewayStatus{
 				Conditions: []metav1.Condition{{
 					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -147,8 +147,8 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 		{
 			name: "EventGatewayListener",
 			obj: &configurationv1alpha1.EventGatewayListener{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       configurationv1alpha1.EventGatewayListenerSpec{GatewayRef: gatewayRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayListenerSpec{GatewayRef: gatewayRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*configurationv1alpha1.EventGatewayListener).GetGatewayID()
@@ -157,8 +157,8 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 		{
 			name: "EventGatewayDataPlaneCertificate",
 			obj: &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{GatewayRef: gatewayRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{GatewayRef: gatewayRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*configurationv1alpha1.EventGatewayDataPlaneCertificate).GetGatewayID()
@@ -167,8 +167,8 @@ func TestHandleParentRef_EventGatewayChildren(t *testing.T) {
 		{
 			name: "EventGatewayBackendCluster",
 			obj: &configurationv1alpha1.EventGatewayBackendCluster{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       configurationv1alpha1.EventGatewayBackendClusterSpec{GatewayRef: gatewayRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{GatewayRef: gatewayRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*configurationv1alpha1.EventGatewayBackendCluster).GetGatewayID()
@@ -236,7 +236,7 @@ func TestHandleParentRef_EventGatewayVirtualCluster(t *testing.T) {
 
 	newProgrammedBackendCluster := func() *configurationv1alpha1.EventGatewayBackendCluster {
 		return &configurationv1alpha1.EventGatewayBackendCluster{
-			ObjectMeta: metav1.ObjectMeta{Name: parentName, Namespace: parentNS},
+			Name: parentName, Namespace: parentNS,
 			Status: configurationv1alpha1.EventGatewayBackendClusterStatus{
 				Conditions: []metav1.Condition{{
 					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -313,7 +313,7 @@ func TestHandleParentRef_EventGatewayVirtualCluster(t *testing.T) {
 	}
 
 	child := &configurationv1alpha1.EventGatewayVirtualCluster{
-		ObjectMeta: metav1.ObjectMeta{Name: "vc", Namespace: childNS},
+		Name: "vc", Namespace: childNS,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: gatewayRef(parentName),
 		},
@@ -375,7 +375,7 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 
 	newProgrammedPortal := func() *konnectv1alpha1.Portal {
 		return &konnectv1alpha1.Portal{
-			ObjectMeta: metav1.ObjectMeta{Name: parentName, Namespace: parentNS},
+			Name: parentName, Namespace: parentNS,
 			Status: konnectv1alpha1.PortalStatus{
 				Conditions: []metav1.Condition{{
 					Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -455,8 +455,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "PortalTeam",
 			obj: &konnectv1alpha1.PortalTeam{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalTeamSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalTeamSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalTeam).GetPortalID()
@@ -465,8 +465,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "PortalPage",
 			obj: &konnectv1alpha1.PortalPage{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalPageSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalPageSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalPage).GetPortalID()
@@ -475,8 +475,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "PortalEmailConfig",
 			obj: &konnectv1alpha1.PortalEmailConfig{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalEmailConfigSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalEmailConfigSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalEmailConfig).GetPortalID()
@@ -485,8 +485,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "PortalCustomDomain",
 			obj: &konnectv1alpha1.PortalCustomDomain{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalCustomDomainSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalCustomDomainSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalCustomDomain).GetPortalID()
@@ -495,8 +495,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "PortalIPAllowList",
 			obj: &konnectv1alpha1.PortalIPAllowList{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalIPAllowListSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalIPAllowListSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalIPAllowList).GetPortalID()
@@ -505,8 +505,8 @@ func TestHandleParentRef_PortalChildren(t *testing.T) {
 		{
 			name: "IdentityProviderRequest",
 			obj: &konnectv1alpha1.PortalIdentityProviderRequest{
-				ObjectMeta: metav1.ObjectMeta{Name: "child", Namespace: childNS},
-				Spec:       konnectv1alpha1.PortalIdentityProviderRequestSpec{PortalRef: portalRef(parentName)},
+				Name: "child", Namespace: childNS,
+				Spec: konnectv1alpha1.PortalIdentityProviderRequestSpec{PortalRef: portalRef(parentName)},
 			},
 			getParentID: func(o client.Object) string {
 				return o.(*konnectv1alpha1.PortalIdentityProviderRequest).GetPortalID()

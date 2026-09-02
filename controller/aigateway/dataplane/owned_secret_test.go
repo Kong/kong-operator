@@ -29,11 +29,9 @@ const (
 // can match OwnerReferences by UID.
 func makeAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testCASecretNamespace,
-			Name:      testDPName,
-			UID:       types.UID("aigwdp-uid"),
-		},
+		Namespace: testCASecretNamespace,
+		Name:      testDPName,
+		UID:       types.UID("aigwdp-uid"),
 	}
 }
 
@@ -44,7 +42,7 @@ func caSecret() *corev1.Secret {
 		certificate.WithCATrue(),
 	)
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testCASecretName},
+		Namespace: testCASecretNamespace, Name: testCASecretName,
 		Data: map[string][]byte{
 			"tls.crt": cert,
 			"tls.key": key,

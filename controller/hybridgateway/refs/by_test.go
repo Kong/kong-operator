@@ -38,10 +38,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 			setup: func() (client.Client, runtime.Object) {
 				cl := fake.NewClientBuilder().Build()
 				httpRoute := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, httpRoute
 			},
@@ -54,10 +52,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 			setup: func() (client.Client, runtime.Object) {
 				cl := fake.NewClientBuilder().Build()
 				grpcRoute := &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, grpcRoute
 			},
@@ -72,39 +68,33 @@ func TestGetNamespacedRefs(t *testing.T) {
 				gatewayKind := gwtypes.Kind("Gateway")
 
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-						UID:       "gateway-uid-grpc",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       "gateway-uid-grpc",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 
 				konnectExtension := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-grpc",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-grpc",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -122,10 +112,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 				}
 
 				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-cp",
+					Namespace: "test-namespace",
 				}
 
 				cl := fake.NewClientBuilder().
@@ -134,10 +122,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 					Build()
 
 				grpcRoute := &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gatewayv1.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -160,13 +146,11 @@ func TestGetNamespacedRefs(t *testing.T) {
 					},
 					Gateways: []gwtypes.Gateway{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-gateway",
-								Namespace: "test-namespace",
-								UID:       "gateway-uid-grpc",
-								// ResourceVersion is set by the fake client when the Gateway is fetched.
-								ResourceVersion: "999",
-							},
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       "gateway-uid-grpc",
+							// ResourceVersion is set by the fake client when the Gateway is fetched.
+							ResourceVersion: "999",
 							Spec: gwtypes.GatewaySpec{
 								GatewayClassName: "test-gateway-class",
 							},
@@ -182,10 +166,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 			setup: func() (client.Client, runtime.Object) {
 				cl := fake.NewClientBuilder().Build()
 				tlsRoute := &gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, tlsRoute
 			},
@@ -200,39 +182,33 @@ func TestGetNamespacedRefs(t *testing.T) {
 				gatewayKind := gwtypes.Kind("Gateway")
 
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-						UID:       "gateway-uid-tls",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       "gateway-uid-tls",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 
 				konnectExtension := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-tls",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-tls",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -250,10 +226,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 				}
 
 				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-cp",
+					Namespace: "test-namespace",
 				}
 
 				cl := fake.NewClientBuilder().
@@ -262,10 +236,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 					Build()
 
 				tlsRoute := &gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gatewayv1.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -288,13 +260,11 @@ func TestGetNamespacedRefs(t *testing.T) {
 					},
 					Gateways: []gwtypes.Gateway{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "test-gateway",
-								Namespace: "test-namespace",
-								UID:       "gateway-uid-tls",
-								// ResourceVersion is set by the fake client when the Gateway is fetched.
-								ResourceVersion: "999",
-							},
+							Name:      "test-gateway",
+							Namespace: "test-namespace",
+							UID:       "gateway-uid-tls",
+							// ResourceVersion is set by the fake client when the Gateway is fetched.
+							ResourceVersion: "999",
 							Spec: gwtypes.GatewaySpec{
 								GatewayClassName: "test-gateway-class",
 							},
@@ -310,10 +280,8 @@ func TestGetNamespacedRefs(t *testing.T) {
 			setup: func() (client.Client, runtime.Object) {
 				cl := fake.NewClientBuilder().Build()
 				obj := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, obj
 			},
@@ -354,10 +322,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				invalidGroup := gwtypes.Group("invalid.group")
 				return cl, route, gwtypes.ParentReference{
@@ -373,10 +339,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				invalidKind := gwtypes.Kind("invalid.kind")
 				return cl, route, gwtypes.ParentReference{
@@ -393,10 +357,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,
@@ -413,19 +375,15 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				// Create a Gateway without any KonnectExtension.
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -437,10 +395,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 					Build()
 
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,
@@ -457,39 +413,33 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				// Create a Gateway with a KonnectExtension that references a non-existent ControlPlane.
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-						UID:       "gateway-uid-456",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       "gateway-uid-456",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 
 				konnectExtension := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-456",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-456",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -512,10 +462,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 					Build()
 
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,
@@ -532,39 +480,33 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				// Create a complete setup with Gateway, KonnectExtension, and ControlPlane.
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-						UID:       "gateway-uid-123",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       "gateway-uid-123",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 
 				konnectExtension := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-123",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-123",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -582,10 +524,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 				}
 
 				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-cp",
+					Namespace: "test-namespace",
 				}
 
 				cl := fake.NewClientBuilder().
@@ -594,10 +534,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 					Build()
 
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,
@@ -620,20 +558,16 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				// Create a Gateway with multiple KonnectExtensions (should cause an error).
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-namespace",
-						UID:       "gateway-uid-789",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-namespace",
+					UID:       "gateway-uid-789",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
@@ -641,19 +575,17 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 
 				// Create two KonnectExtensions - this should cause an error.
 				konnectExtension1 := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension-1",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-789",
-							},
+					Name:      "test-konnect-extension-1",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-789",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -671,19 +603,17 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 				}
 
 				konnectExtension2 := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension-2",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "gateway-uid-789",
-							},
+					Name:      "test-konnect-extension-2",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "gateway-uid-789",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -706,10 +636,8 @@ func TestGetControlPlaneRefByParentRef(t *testing.T) {
 					Build()
 
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,
@@ -750,10 +678,8 @@ func TestGetControlPlaneRefByGateway(t *testing.T) {
 			name: "no control plane",
 			setup: func() (client.Client, *gwtypes.Gateway) {
 				gw := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-ns",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-ns",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
@@ -768,43 +694,35 @@ func TestGetControlPlaneRefByGateway(t *testing.T) {
 			name: "valid konnect control plane",
 			setup: func() (client.Client, *gwtypes.Gateway) {
 				gw := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-ns",
-						UID:       "gw-uid-1",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-ns",
+					UID:       "gw-uid-1",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 				controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp",
-						Namespace: "test-ns",
-					},
+					Name:      "cp",
+					Namespace: "test-ns",
 				}
 				konnectExtension := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "test-ns",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "Gateway",
-							Name:       "test-gateway",
-							UID:        "gw-uid-1",
-						}},
+					Name:      "test-konnect-extension",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
 					},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "test-gateway",
+						UID:        "gw-uid-1",
+					}},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -835,37 +753,31 @@ func TestGetControlPlaneRefByGateway(t *testing.T) {
 			name: "multiple konnect extensions",
 			setup: func() (client.Client, *gwtypes.Gateway) {
 				gw := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "test-ns",
-						UID:       "gw-uid-2",
-					},
+					Name:      "test-gateway",
+					Namespace: "test-ns",
+					UID:       "gw-uid-2",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-gateway-class",
 					},
 				}
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-gateway-class",
-					},
+					Name: "test-gateway-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "konghq.com/gateway-operator",
 					},
 				}
 				konnectExtension1 := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ext1",
-						Namespace: "test-ns",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "Gateway",
-							Name:       "test-gateway",
-							UID:        "gw-uid-2",
-						}},
+					Name:      "ext1",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
 					},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "test-gateway",
+						UID:        "gw-uid-2",
+					}},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -881,19 +793,17 @@ func TestGetControlPlaneRefByGateway(t *testing.T) {
 					},
 				}
 				konnectExtension2 := &konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ext2",
-						Namespace: "test-ns",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{{
-							APIVersion: "gateway.networking.k8s.io/v1",
-							Kind:       "Gateway",
-							Name:       "test-gateway",
-							UID:        "gw-uid-2",
-						}},
+					Name:      "ext2",
+					Namespace: "test-ns",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
 					},
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "gateway.networking.k8s.io/v1",
+						Kind:       "Gateway",
+						Name:       "test-gateway",
+						UID:        "gw-uid-2",
+					}},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -954,10 +864,8 @@ func TestGetListenersByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				invalidGroup := gwtypes.Group("invalid.group")
 				return cl, route, gwtypes.ParentReference{
@@ -973,10 +881,8 @@ func TestGetListenersByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				invalidKind := gwtypes.Kind("InvalidKind")
 				return cl, route, gwtypes.ParentReference{
@@ -993,10 +899,8 @@ func TestGetListenersByParentRef(t *testing.T) {
 			setup: func() (client.Client, *gwtypes.HTTPRoute, gwtypes.ParentReference) {
 				cl := fake.NewClientBuilder().Build()
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-route",
+					Namespace: "test-namespace",
 				}
 				return cl, route, gwtypes.ParentReference{
 					Group: &gatewayGroup,

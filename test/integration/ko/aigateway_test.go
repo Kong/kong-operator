@@ -30,10 +30,8 @@ func TestAIGatewayCreation(t *testing.T) {
 
 	t.Log("deploying a GatewayConfiguration resource")
 	gatewayConfiguration := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.New().String(),
-			Namespace: namespace.Name,
-		},
+		Name:      uuid.New().String(),
+		Namespace: namespace.Name,
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -85,12 +83,10 @@ func TestAIGatewayCreation(t *testing.T) {
 	credSecretName := uuid.New().String()
 	t.Logf("creating null secret containing the required credentials, [%s]", credSecretName)
 	credSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      credSecretName,
-			Namespace: namespace.Name,
-			Labels: map[string]string{
-				"konghq.com/secret": "true",
-			},
+		Name:      credSecretName,
+		Namespace: namespace.Name,
+		Labels: map[string]string{
+			"konghq.com/secret": "true",
 		},
 		Type: corev1.SecretTypeOpaque,
 		Data: map[string][]byte{
@@ -116,10 +112,8 @@ func TestAIGatewayCreation(t *testing.T) {
 	aigatewayName := "aigateway-test"
 	t.Log("deploying an AIGateway, [", aigatewayName, "]")
 	aigateway := &operatorv1alpha1.AIGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      aigatewayName,
-		},
+		Namespace: namespace.Name,
+		Name:      aigatewayName,
 		Spec: operatorv1alpha1.AIGatewaySpec{
 			GatewayClassName: gatewayClass.Name,
 			LargeLanguageModels: &operatorv1alpha1.LargeLanguageModels{

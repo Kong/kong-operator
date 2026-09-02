@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -21,12 +20,10 @@ func TestGRPCRequestTerminationForBackendNotFound(t *testing.T) {
 	logger := logr.Discard()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",

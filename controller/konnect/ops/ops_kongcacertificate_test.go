@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,18 +28,14 @@ func TestKongCACertificateToCACertificateInput_Tags(t *testing.T) {
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongCACertificate",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "cert-1",
-			Namespace:  "default",
-			Generation: 2,
-			UID:        k8stypes.UID(uuid.NewString()),
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
-			},
+		Kind:       "KongCACertificate",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "cert-1",
+		Namespace:  "default",
+		Generation: 2,
+		UID:        k8stypes.UID(uuid.NewString()),
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2,duplicate",
 		},
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -88,11 +83,9 @@ func TestAdoptKongCACertificateOverride(t *testing.T) {
 	})).Return(&sdkkonnectops.UpsertCaCertificateResponse{}, nil)
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "ca",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
@@ -130,11 +123,9 @@ func TestAdoptKongCACertificateMatchSuccess(t *testing.T) {
 	)
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "ca",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeMatch,
@@ -172,11 +163,9 @@ func TestAdoptKongCACertificateMatchMismatch(t *testing.T) {
 	)
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "ca",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeMatch,
@@ -217,11 +206,9 @@ func TestAdoptKongCACertificateUIDConflict(t *testing.T) {
 	)
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "ca",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
@@ -257,11 +244,9 @@ func TestAdoptKongCACertificateFetchFailure(t *testing.T) {
 	)
 
 	cert := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "ca",
-			Namespace: "default",
-			UID:       "uid-1",
-		},
+		Name:      "ca",
+		Namespace: "default",
+		UID:       "uid-1",
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			Adopt: &commonv1alpha1.AdoptOptions{
 				Mode: commonv1alpha1.AdoptModeOverride,
@@ -314,10 +299,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-secret",
-						Namespace: "parent-ns",
-					},
+					Name:      "ca-secret",
+					Namespace: "parent-ns",
 					Data: map[string][]byte{
 						"ca.crt": []byte("parent-ns-cert"),
 					},
@@ -334,10 +317,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-secret",
-						Namespace: "parent-ns",
-					},
+					Name:      "ca-secret",
+					Namespace: "parent-ns",
 					Data: map[string][]byte{
 						"ca.crt": []byte("parent-ns-cert"),
 					},
@@ -354,10 +335,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-secret",
-						Namespace: "default",
-					},
+					Name:      "ca-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"ca.crt": []byte("ca-cert-content"),
 					},
@@ -384,10 +363,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "incomplete-secret",
-						Namespace: "default",
-					},
+					Name:      "incomplete-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"other-key": []byte("some-data"),
 					},
@@ -404,11 +381,9 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "empty-secret",
-						Namespace: "default",
-					},
-					Data: map[string][]byte{},
+					Name:      "empty-secret",
+					Namespace: "default",
+					Data:      map[string][]byte{},
 				},
 			},
 			wantErr: "secret default/empty-secret is missing key 'ca.crt'",
@@ -422,10 +397,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "empty-cert",
-						Namespace: "test-ns",
-					},
+					Name:      "empty-cert",
+					Namespace: "test-ns",
 					Data: map[string][]byte{
 						"ca.crt": []byte(""),
 					},
@@ -442,10 +415,8 @@ func TestFetchCACertDataFromSecret(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cross-ns-secret",
-						Namespace: "other-namespace",
-					},
+					Name:      "cross-ns-secret",
+					Namespace: "other-namespace",
 					Data: map[string][]byte{
 						"ca.crt": []byte("cross-ns-cert"),
 					},
@@ -478,10 +449,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 	t.Run("inline type uses cert from spec", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		cert := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-ca",
-				Namespace: "default",
-			},
+			Name:      "test-ca",
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 				KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -497,10 +466,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 
 	t.Run("secretRef type fetches cert from secret", func(t *testing.T) {
 		secret := &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ca-tls-secret",
-				Namespace: "default",
-			},
+			Name:      "ca-tls-secret",
+			Namespace: "default",
 			Data: map[string][]byte{
 				"ca.crt": []byte("secret-ca-cert"),
 			},
@@ -508,10 +475,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(secret).Build()
 
 		cert := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-ca",
-				Namespace: "default",
-			},
+			Name:      "test-ca",
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				Type: new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 				SecretRef: &commonv1alpha1.NamespacedRef{
@@ -528,10 +493,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 	t.Run("secretRef type with nil secretRef returns error", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		cert := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-ca",
-				Namespace: "default",
-			},
+			Name:      "test-ca",
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				Type:      new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 				SecretRef: nil,
@@ -546,10 +509,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 	t.Run("secretRef type with missing secret returns error", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		cert := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-ca",
-				Namespace: "default",
-			},
+			Name:      "test-ca",
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				Type: new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 				SecretRef: &commonv1alpha1.NamespacedRef{
@@ -566,10 +527,8 @@ func TestKongCACertificateToCACertificateInput(t *testing.T) {
 	t.Run("default type (nil) uses inline cert", func(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 		cert := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-ca",
-				Namespace: "default",
-			},
+			Name:      "test-ca",
+			Namespace: "default",
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				Type: nil,
 				KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -598,16 +557,12 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "successful create with inline certificate",
 			cert: &configurationv1alpha1.KongCACertificate{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongCACertificate",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ca",
-					Namespace:  "default",
-					Generation: 1,
-					UID:        "test-uid",
-				},
+				Kind:       "KongCACertificate",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "test-ca",
+				Namespace:  "default",
+				Generation: 1,
+				UID:        "test-uid",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -635,16 +590,12 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "successful create with secretRef",
 			cert: &configurationv1alpha1.KongCACertificate{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongCACertificate",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ca",
-					Namespace:  "default",
-					Generation: 1,
-					UID:        "test-uid",
-				},
+				Kind:       "KongCACertificate",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "test-ca",
+				Namespace:  "default",
+				Generation: 1,
+				UID:        "test-uid",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type:      new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 					SecretRef: &commonv1alpha1.NamespacedRef{Name: "ca-secret", Namespace: new("default")},
@@ -657,7 +608,7 @@ func TestCreateCACertificate(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "ca-secret", Namespace: "default"},
+					Name: "ca-secret", Namespace: "default",
 					Data: map[string][]byte{
 						"ca.crt": []byte("secret-ca-cert-data"),
 					},
@@ -677,10 +628,8 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "missing control plane ID returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -698,10 +647,8 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "failed to fetch secret returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type:      new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret"},
@@ -719,10 +666,8 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "SDK error returns wrapped error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -747,10 +692,8 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "nil response returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -772,10 +715,8 @@ func TestCreateCACertificate(t *testing.T) {
 		{
 			name: "empty ID in response returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -840,16 +781,12 @@ func TestUpdateCACertificate(t *testing.T) {
 		{
 			name: "successful update with inline certificate",
 			cert: &configurationv1alpha1.KongCACertificate{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongCACertificate",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ca",
-					Namespace:  "default",
-					Generation: 1,
-					UID:        "test-uid",
-				},
+				Kind:       "KongCACertificate",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "test-ca",
+				Namespace:  "default",
+				Generation: 1,
+				UID:        "test-uid",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -858,9 +795,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 				Status: configurationv1alpha1.KongCACertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: "konnect-ca-id",
-						},
+						ID:             "konnect-ca-id",
 						ControlPlaneID: "cp-1",
 					},
 				},
@@ -877,32 +812,26 @@ func TestUpdateCACertificate(t *testing.T) {
 		{
 			name: "successful update with secretRef",
 			cert: &configurationv1alpha1.KongCACertificate{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "KongCACertificate",
-					APIVersion: "configuration.konghq.com/v1alpha1",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-ca",
-					Namespace:  "default",
-					Generation: 1,
-					UID:        "test-uid",
-				},
+				Kind:       "KongCACertificate",
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Name:       "test-ca",
+				Namespace:  "default",
+				Generation: 1,
+				UID:        "test-uid",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type:      new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 					SecretRef: &commonv1alpha1.NamespacedRef{Name: "ca-secret", Namespace: new("default")},
 				},
 				Status: configurationv1alpha1.KongCACertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: "konnect-ca-id",
-						},
+						ID:             "konnect-ca-id",
 						ControlPlaneID: "cp-1",
 					},
 				},
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{Name: "ca-secret", Namespace: "default"},
+					Name: "ca-secret", Namespace: "default",
 					Data: map[string][]byte{
 						"ca.crt": []byte("secret-ca-cert-data"),
 					},
@@ -919,10 +848,8 @@ func TestUpdateCACertificate(t *testing.T) {
 		{
 			name: "missing control plane ID returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -940,19 +867,15 @@ func TestUpdateCACertificate(t *testing.T) {
 		{
 			name: "failed to fetch secret returns error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type:      new(configurationv1alpha1.KongCACertificateSourceTypeSecretRef),
 					SecretRef: &commonv1alpha1.NamespacedRef{Name: "missing-secret"},
 				},
 				Status: configurationv1alpha1.KongCACertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: "konnect-ca-id",
-						},
+						ID:             "konnect-ca-id",
 						ControlPlaneID: "cp-1",
 					},
 				},
@@ -964,10 +887,8 @@ func TestUpdateCACertificate(t *testing.T) {
 		{
 			name: "SDK error returns wrapped error",
 			cert: &configurationv1alpha1.KongCACertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ca",
-					Namespace: "default",
-				},
+				Name:      "test-ca",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCACertificateSpec{
 					Type: new(configurationv1alpha1.KongCACertificateSourceTypeInline),
 					KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
@@ -976,9 +897,7 @@ func TestUpdateCACertificate(t *testing.T) {
 				},
 				Status: configurationv1alpha1.KongCACertificateStatus{
 					Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-						KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-							ID: "konnect-ca-id",
-						},
+						ID:             "konnect-ca-id",
 						ControlPlaneID: "cp-1",
 					},
 				},

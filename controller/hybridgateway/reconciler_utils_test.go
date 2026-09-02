@@ -547,8 +547,8 @@ func TestEnforceState_HybridGatewaysAnnotationConverges(t *testing.T) {
 	tc := newTestTypeConverter()
 	gvk := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1", Kind: "KongPlugin"}
 	route := gwtypes.HTTPRoute{
-		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
-		ObjectMeta: metav1.ObjectMeta{Name: "route", Namespace: "ns"},
+		APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute",
+		Name: "route", Namespace: "ns",
 	}
 	routeRef := client.ObjectKeyFromObject(&route).String()
 
@@ -631,8 +631,8 @@ func TestCleanOrphanedResources(t *testing.T) {
 	serviceGVK := schema.GroupVersionKind{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"}
 
 	root := &gwtypes.HTTPRoute{
-		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
-		ObjectMeta: metav1.ObjectMeta{Name: "owner", Namespace: "ns"},
+		APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute",
+		Name: "owner", Namespace: "ns",
 	}
 	ownerLabels := metadata.BuildLabels(root, nil)
 	ownerAnnotation := fmt.Sprintf("%s/%s", root.Namespace, root.Name)
@@ -848,12 +848,10 @@ func TestCleanOrphanedResources(t *testing.T) {
 			for {
 				if tt.handleOrphanedResErr {
 					conv := &fakeHTTPRouteConverterWithHandleErr{
-						fakeHTTPRouteConverter: fakeHTTPRouteConverter{
-							gvks:           tt.gvks,
-							root:           *root,
-							desired:        tt.desired,
-							outputStoreErr: tt.outputStoreErr,
-						},
+						gvks:           tt.gvks,
+						root:           *root,
+						desired:        tt.desired,
+						outputStoreErr: tt.outputStoreErr,
 					}
 					requeue, err = cleanOrphanedResources(ctx, cl, logger, conv, orphanCleanupOptions{waitForDeletes: true})
 				} else {
@@ -894,14 +892,10 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 		{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},
 	}
 	root := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gatewayv1.GroupVersion.String(),
-			Kind:       "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "httproute-owner",
-			Namespace: "ns",
-		},
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Kind:       "HTTPRoute",
+		Name:       "httproute-owner",
+		Namespace:  "ns",
 	}
 	ownerLabels := metadata.BuildLabels(root, nil)
 
@@ -1059,11 +1053,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 
 	// Create a test Gateway with KonnectExtension (managed by us).
 	ourGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			UID:       "our-gateway-uid",
-		},
+		Name:      "our-gateway",
+		Namespace: "default",
+		UID:       "our-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 		},
@@ -1071,19 +1063,17 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 
 	// KonnectExtension for our Gateway
 	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "our-gateway",
-					UID:        "our-gateway-uid",
-				},
+		Name:      "our-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "our-gateway",
+				UID:        "our-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1102,19 +1092,15 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 
 	// KonnectGatewayControlPlane for our Gateway
 	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-cp",
-			Namespace: "default",
-		},
+		Name:      "our-cp",
+		Namespace: "default",
 	}
 
 	// Create a test Gateway without KonnectExtension (not managed by us).
 	otherGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "other-gateway",
-			Namespace: "default",
-			UID:       "other-gateway-uid",
-		},
+		Name:      "other-gateway",
+		Namespace: "default",
+		UID:       "other-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "other-class",
 		},
@@ -1132,11 +1118,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			name: "object with finalizer should be processed",
 			setupRoute: func() *gwtypes.HTTPRoute {
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				}
 				return route
 			},
@@ -1150,11 +1134,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.HTTPRoute {
 				gatewayName := gwtypes.ObjectName("our-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1177,11 +1159,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.HTTPRoute {
 				gatewayName := gwtypes.ObjectName("other-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1203,11 +1183,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			name: "object without finalizer and no Gateway reference should be skipped",
 			setupRoute: func() *gwtypes.HTTPRoute {
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{},
@@ -1226,11 +1204,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.HTTPRoute {
 				gatewayName := gwtypes.ObjectName("other-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1254,11 +1230,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 				ourGatewayName := gwtypes.ObjectName("our-gateway")
 				otherGatewayName := gwtypes.ObjectName("other-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1280,11 +1254,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.HTTPRoute {
 				gatewayName := gwtypes.ObjectName("non-existent-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1305,11 +1277,9 @@ func TestShouldProcessObject_HTTPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.HTTPRoute {
 				gatewayName := gwtypes.ObjectName("test-gateway")
 				route := &gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1380,30 +1350,26 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	ourGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			UID:       "our-gateway-uid",
-		},
+		Name:      "our-gateway",
+		Namespace: "default",
+		UID:       "our-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
 	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "our-gateway",
-					UID:        "our-gateway-uid",
-				},
+		Name:      "our-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "our-gateway",
+				UID:        "our-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1421,18 +1387,14 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 	}
 
 	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-cp",
-			Namespace: "default",
-		},
+		Name:      "our-cp",
+		Namespace: "default",
 	}
 
 	otherGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "other-gateway",
-			Namespace: "default",
-			UID:       "other-gateway-uid",
-		},
+		Name:      "other-gateway",
+		Namespace: "default",
+		UID:       "other-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "other-class",
 		},
@@ -1449,11 +1411,9 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 			name: "object with finalizer should be processed",
 			setupRoute: func() *gwtypes.TCPRoute {
 				return &gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HybridTCPRouteFinalizer},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HybridTCPRouteFinalizer},
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1465,10 +1425,8 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.TCPRoute {
 				gatewayName := gwtypes.ObjectName("our-gateway")
 				return &gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1487,10 +1445,8 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.TCPRoute {
 				gatewayName := gwtypes.ObjectName("other-gateway")
 				return &gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1508,10 +1464,8 @@ func TestShouldProcessObject_TCPRoute(t *testing.T) {
 			name: "object without finalizer and no Gateway reference should be skipped",
 			setupRoute: func() *gwtypes.TCPRoute {
 				return &gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1563,30 +1517,26 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	ourGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			UID:       "our-gateway-uid",
-		},
+		Name:      "our-gateway",
+		Namespace: "default",
+		UID:       "our-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
 	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "our-gateway",
-					UID:        "our-gateway-uid",
-				},
+		Name:      "our-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "our-gateway",
+				UID:        "our-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1604,18 +1554,14 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 	}
 
 	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-cp",
-			Namespace: "default",
-		},
+		Name:      "our-cp",
+		Namespace: "default",
 	}
 
 	otherGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "other-gateway",
-			Namespace: "default",
-			UID:       "other-gateway-uid",
-		},
+		Name:      "other-gateway",
+		Namespace: "default",
+		UID:       "other-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "other-class",
 		},
@@ -1632,11 +1578,9 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 			name: "object with finalizer should be processed",
 			setupRoute: func() *gwtypes.UDPRoute {
 				return &gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HybridUDPRouteFinalizer},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HybridUDPRouteFinalizer},
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1648,10 +1592,8 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.UDPRoute {
 				gatewayName := gwtypes.ObjectName("our-gateway")
 				return &gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1670,10 +1612,8 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.UDPRoute {
 				gatewayName := gwtypes.ObjectName("other-gateway")
 				return &gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1691,10 +1631,8 @@ func TestShouldProcessObject_UDPRoute(t *testing.T) {
 			name: "object without finalizer and no Gateway reference should be skipped",
 			setupRoute: func() *gwtypes.UDPRoute {
 				return &gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1744,30 +1682,26 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 	logger := logr.Discard()
 
 	ourGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			UID:       "our-gateway-uid",
-		},
+		Name:      "our-gateway",
+		Namespace: "default",
+		UID:       "our-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
 	ourKonnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "our-gateway",
-					UID:        "our-gateway-uid",
-				},
+		Name:      "our-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "our-gateway",
+				UID:        "our-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1785,18 +1719,14 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 	}
 
 	ourControlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "our-cp",
-			Namespace: "default",
-		},
+		Name:      "our-cp",
+		Namespace: "default",
 	}
 
 	otherGateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "other-gateway",
-			Namespace: "default",
-			UID:       "other-gateway-uid",
-		},
+		Name:      "other-gateway",
+		Namespace: "default",
+		UID:       "other-gateway-uid",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "other-class",
 		},
@@ -1813,11 +1743,9 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 			name: "object with finalizer should be processed",
 			setupRoute: func() *gwtypes.GRPCRoute {
 				return &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-route",
-						Namespace:  "default",
-						Finalizers: []string{finalizerconst.HybridGRPCRouteFinalizer},
-					},
+					Name:       "test-route",
+					Namespace:  "default",
+					Finalizers: []string{finalizerconst.HybridGRPCRouteFinalizer},
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1829,10 +1757,8 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.GRPCRoute {
 				gatewayName := gwtypes.ObjectName("our-gateway")
 				return &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1851,10 +1777,8 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 			setupRoute: func() *gwtypes.GRPCRoute {
 				gatewayName := gwtypes.ObjectName("other-gateway")
 				return &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -1872,10 +1796,8 @@ func TestShouldProcessObject_GRPCRoute(t *testing.T) {
 			name: "object without finalizer and no Gateway reference should be skipped",
 			setupRoute: func() *gwtypes.GRPCRoute {
 				return &gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "default",
-					},
+					Name:      "test-route",
+					Namespace: "default",
 				}
 			},
 			clientObjects:  []client.Object{},
@@ -1924,19 +1846,17 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 
 	// KonnectExtension for managed Gateway
 	konnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "test-gateway",
-					UID:        "test-gateway-uid",
-				},
+		Name:      "test-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "test-gateway",
+				UID:        "test-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1955,10 +1875,8 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 
 	// KonnectGatewayControlPlane for managed Gateway
 	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cp",
-			Namespace: "default",
-		},
+		Name:      "test-cp",
+		Namespace: "default",
 	}
 
 	testCases := []struct {
@@ -1973,12 +1891,10 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 			name: "gateway with finalizer should be processed",
 			setupGateway: func() *gwtypes.Gateway {
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-gateway",
-						Namespace:  "default",
-						UID:        "test-gateway-uid",
-						Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
-					},
+					Name:       "test-gateway",
+					Namespace:  "default",
+					UID:        "test-gateway-uid",
+					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -1994,12 +1910,10 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 			name: "gateway without finalizer but with our GatewayClass should be processed",
 			setupGateway: func() *gwtypes.Gateway {
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-gateway",
-						Namespace:  "default",
-						UID:        "test-gateway-uid",
-						Finalizers: []string{},
-					},
+					Name:       "test-gateway",
+					Namespace:  "default",
+					UID:        "test-gateway-uid",
+					Finalizers: []string{},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -2015,12 +1929,10 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 			name: "gateway without finalizer and other GatewayClass should be skipped",
 			setupGateway: func() *gwtypes.Gateway {
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-gateway",
-						Namespace:  "default",
-						UID:        "test-gateway-uid",
-						Finalizers: []string{},
-					},
+					Name:       "test-gateway",
+					Namespace:  "default",
+					UID:        "test-gateway-uid",
+					Finalizers: []string{},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "other-class",
 					},
@@ -2036,12 +1948,10 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 			name: "gateway without finalizer and non-existent GatewayClass should be skipped",
 			setupGateway: func() *gwtypes.Gateway {
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-gateway",
-						Namespace:  "default",
-						UID:        "test-gateway-uid",
-						Finalizers: []string{},
-					},
+					Name:       "test-gateway",
+					Namespace:  "default",
+					UID:        "test-gateway-uid",
+					Finalizers: []string{},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "non-existent",
 					},
@@ -2057,12 +1967,10 @@ func TestShouldProcessObject_Gateway(t *testing.T) {
 			name: "gateway without finalizer with API error when fetching GatewayClass should be skipped",
 			setupGateway: func() *gwtypes.Gateway {
 				gateway := &gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-gateway",
-						Namespace:  "default",
-						UID:        "test-gateway-uid",
-						Finalizers: []string{},
-					},
+					Name:       "test-gateway",
+					Namespace:  "default",
+					UID:        "test-gateway-uid",
+					Finalizers: []string{},
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "test-class",
 					},
@@ -2123,11 +2031,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 
 	// Create a supported Gateway (managed by KonnectExtension)
 	supportedGateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "supported-gateway",
-			Namespace: "default",
-			UID:       "supported-gateway-uid",
-		},
+		Name:      "supported-gateway",
+		Namespace: "default",
+		UID:       "supported-gateway-uid",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "kong",
 		},
@@ -2135,19 +2041,17 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 
 	// KonnectExtension for the supported Gateway
 	konnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "supported-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "supported-gateway",
-					UID:        "supported-gateway-uid",
-				},
+		Name:      "supported-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "supported-gateway",
+				UID:        "supported-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -2166,18 +2070,14 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 
 	// KonnectGatewayControlPlane for the supported Gateway
 	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "supported-cp",
-			Namespace: "default",
-		},
+		Name:      "supported-cp",
+		Namespace: "default",
 	}
 
 	// Create an unsupported Gateway (no KonnectExtension)
 	unsupportedGateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "unsupported-gateway",
-			Namespace: "default",
-		},
+		Name:      "unsupported-gateway",
+		Namespace: "default",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "other",
 		},
@@ -2196,10 +2096,8 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "no finalizer present - returns false",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -2222,11 +2120,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "finalizer present and object is managed - keeps finalizer",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-route",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-				},
+				Name:       "test-route",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -2251,11 +2147,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "finalizer present and object not managed - removes finalizer",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-route",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-				},
+				Name:       "test-route",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -2280,11 +2174,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "finalizer present, not managed, object already deleted - returns false",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-route",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-				},
+				Name:       "test-route",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -2312,11 +2204,9 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "finalizer present, not managed, patch fails - returns error",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-route",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
-				},
+				Name:       "test-route",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridHTTPRouteFinalizer},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -2344,14 +2234,12 @@ func TestRemoveFinalizerIfNotManaged_HTTPRoute(t *testing.T) {
 		{
 			name: "finalizer present with multiple finalizers, not managed - removes only our finalizer",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-					Finalizers: []string{
-						"some-other-finalizer",
-						finalizerconst.HybridHTTPRouteFinalizer,
-						"yet-another-finalizer",
-					},
+				Name:      "test-route",
+				Namespace: "default",
+				Finalizers: []string{
+					"some-other-finalizer",
+					finalizerconst.HybridHTTPRouteFinalizer,
+					"yet-another-finalizer",
 				},
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -2781,8 +2669,8 @@ func TestEnforceState_KongRouteRequiresLiveServiceRouteAnnotation(t *testing.T) 
 	s := scheme.Get()
 	ns := "ns"
 	root := gwtypes.HTTPRoute{
-		TypeMeta:   metav1.TypeMeta{APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute"},
-		ObjectMeta: metav1.ObjectMeta{Name: "httproute-owner", Namespace: ns},
+		APIVersion: gatewayv1.GroupVersion.String(), Kind: "HTTPRoute",
+		Name: "httproute-owner", Namespace: ns,
 	}
 	routeRef := ns + "/httproute-owner"
 
@@ -2910,19 +2798,17 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 
 	// KonnectExtension for the managed Gateway (with UID test-gateway-uid)
 	konnectExtension := &konnectv1alpha2.KonnectExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "default",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/managed-by": "gateway",
-			},
-			OwnerReferences: []metav1.OwnerReference{
-				{
-					APIVersion: "gateway.networking.k8s.io/v1",
-					Kind:       "Gateway",
-					Name:       "test-gateway",
-					UID:        "test-gateway-uid",
-				},
+		Name:      "test-gateway",
+		Namespace: "default",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/managed-by": "gateway",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "gateway.networking.k8s.io/v1",
+				Kind:       "Gateway",
+				Name:       "test-gateway",
+				UID:        "test-gateway-uid",
 			},
 		},
 		Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -2941,10 +2827,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 
 	// KonnectGatewayControlPlane for the supported Gateway
 	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cp",
-			Namespace: "default",
-		},
+		Name:      "test-cp",
+		Namespace: "default",
 	}
 
 	tests := []struct {
@@ -2960,10 +2844,8 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "no finalizer present - returns false",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
 				},
@@ -2978,12 +2860,10 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "finalizer present and gateway is managed - keeps finalizer",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gateway",
-					Namespace:  "default",
-					UID:        "test-gateway-uid",
-					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
-				},
+				Name:       "test-gateway",
+				Namespace:  "default",
+				UID:        "test-gateway-uid",
+				Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "kong",
 				},
@@ -3000,11 +2880,9 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "finalizer present and gateway not managed - removes finalizer",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gateway",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
-				},
+				Name:       "test-gateway",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
 				},
@@ -3021,11 +2899,9 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "finalizer present, not managed, object already deleted - returns false",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gateway",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
-				},
+				Name:       "test-gateway",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
 				},
@@ -3045,11 +2921,9 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "finalizer present, not managed, patch fails - returns error",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gateway",
-					Namespace:  "default",
-					Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
-				},
+				Name:       "test-gateway",
+				Namespace:  "default",
+				Finalizers: []string{finalizerconst.HybridGatewayFinalizer},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
 				},
@@ -3069,14 +2943,12 @@ func TestRemoveFinalizerIfNotManaged_Gateway(t *testing.T) {
 		{
 			name: "finalizer present with multiple finalizers, not managed - removes only our finalizer",
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					Finalizers: []string{
-						"some-other-finalizer",
-						finalizerconst.HybridGatewayFinalizer,
-						"yet-another-finalizer",
-					},
+				Name:      "test-gateway",
+				Namespace: "default",
+				Finalizers: []string{
+					"some-other-finalizer",
+					finalizerconst.HybridGatewayFinalizer,
+					"yet-another-finalizer",
 				},
 				Spec: gatewayv1.GatewaySpec{
 					GatewayClassName: "other",
@@ -3147,7 +3019,7 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			wantRef: "ns/route-a",
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: "route-a", Namespace: "ns"},
+					Name: "route-a", Namespace: "ns",
 				})
 			},
 		},
@@ -3157,7 +3029,7 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			wantRef: "ns/tls-route",
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "ns"},
+					Name: "tls-route", Namespace: "ns",
 				})
 			},
 		},
@@ -3167,7 +3039,7 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			wantRef: "ns/tcp-route",
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: "tcp-route", Namespace: "ns"},
+					Name: "tcp-route", Namespace: "ns",
 				})
 			},
 		},
@@ -3177,7 +3049,7 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			wantRef: "ns/udp-route",
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: "udp-route", Namespace: "ns"},
+					Name: "udp-route", Namespace: "ns",
 				})
 			},
 		},
@@ -3187,7 +3059,7 @@ func TestHybridRouteAnnotationInfo(t *testing.T) {
 			wantRef: "",
 			runFn: func() (string, string) {
 				return hybridRouteAnnotationInfo(gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+					Name: "gw", Namespace: "ns",
 				})
 			},
 		},

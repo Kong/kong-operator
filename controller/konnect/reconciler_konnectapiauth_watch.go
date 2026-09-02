@@ -7,7 +7,6 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
@@ -67,10 +66,8 @@ func listKonnectAPIAuthConfigurationsReferencingSecret(cl client.Client) func(ct
 			}
 
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: apiAuth.Namespace,
-					Name:      apiAuth.Name,
-				},
+				Namespace: apiAuth.Namespace,
+				Name:      apiAuth.Name,
 			})
 		}
 		return recs
@@ -151,10 +148,8 @@ func listKonnectAPIAuthConfigurationsRefByEntity[T constraints.EntityWithKonnect
 
 		ref := tEnt.GetKonnectAPIAuthConfigurationRef()
 		return []reconcile.Request{{
-			NamespacedName: types.NamespacedName{
-				Namespace: namespace,
-				Name:      ref.Name,
-			},
+			Namespace: namespace,
+			Name:      ref.Name,
 		}}
 	}
 }

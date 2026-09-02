@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
@@ -26,48 +25,36 @@ func TestMergeExtensionsForType(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 			extensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group3",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name3",
-					},
+					Name:  "name3",
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 				{
 					Group: "group3",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name3",
-					},
+					Name:  "name3",
 				},
 			},
 		},
@@ -77,55 +64,41 @@ func TestMergeExtensionsForType(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 			extensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group3",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name3",
-					},
+					Name:  "name3",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "nameB",
-					},
+					Name:  "nameB",
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group3",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name3",
-					},
+					Name:  "name3",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "nameB",
-					},
+					Name:  "nameB",
 				},
 			},
 		},
@@ -135,16 +108,12 @@ func TestMergeExtensionsForType(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 			extensions: []commonv1alpha1.ExtensionRef{},
@@ -152,16 +121,12 @@ func TestMergeExtensionsForType(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 		},
@@ -172,32 +137,24 @@ func TestMergeExtensionsForType(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name2",
-					},
+					Name:  "name2",
 				},
 			},
 		},
@@ -241,9 +198,7 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 			},
 			extendable: &mockExtendable{extensions: nil},
@@ -251,9 +206,7 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "name1",
-					},
+					Name:  "name1",
 				},
 			},
 		},
@@ -261,37 +214,29 @@ func TestMergeExtensions(t *testing.T) {
 			name: "partial overlap with different names",
 			defaultExtensions: []commonv1alpha1.ExtensionRef{
 				{
-					Group: "group1",
-					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "default-name",
-						Namespace: new("default-ns"),
-					},
+					Group:     "group1",
+					Kind:      "kind1",
+					Name:      "default-name",
+					Namespace: new("default-ns"),
 				},
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "unique-default",
-					},
+					Name:  "unique-default",
 				},
 			},
 			extendable: &mockExtendable{
 				extensions: []commonv1alpha1.ExtensionRef{
 					{
-						Group: "group1",
-						Kind:  "kind1",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name:      "user-name",
-							Namespace: new("user-ns"),
-						},
+						Group:     "group1",
+						Kind:      "kind1",
+						Name:      "user-name",
+						Namespace: new("user-ns"),
 					},
 					{
 						Group: "group3",
 						Kind:  "kind3",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "unique-user",
-						},
+						Name:  "unique-user",
 					},
 				},
 			},
@@ -299,24 +244,18 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: "group2",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "unique-default",
-					},
+					Name:  "unique-default",
 				},
 				{
-					Group: "group1",
-					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "user-name",
-						Namespace: new("user-ns"),
-					},
+					Group:     "group1",
+					Kind:      "kind1",
+					Name:      "user-name",
+					Namespace: new("user-ns"),
 				},
 				{
 					Group: "group3",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "unique-user",
-					},
+					Name:  "unique-user",
 				},
 			},
 		},
@@ -326,16 +265,12 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: "common-group",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default1",
-					},
+					Name:  "default1",
 				},
 				{
 					Group: "common-group",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default2",
-					},
+					Name:  "default2",
 				},
 			},
 			extendable: &mockExtendable{
@@ -343,16 +278,12 @@ func TestMergeExtensions(t *testing.T) {
 					{
 						Group: "common-group",
 						Kind:  "kind1",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "user1",
-						},
+						Name:  "user1",
 					},
 					{
 						Group: "common-group",
 						Kind:  "kind3",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "user3",
-						},
+						Name:  "user3",
 					},
 				},
 			},
@@ -360,23 +291,17 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: "common-group",
 					Kind:  "kind2",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default2",
-					},
+					Name:  "default2",
 				},
 				{
 					Group: "common-group",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "user1",
-					},
+					Name:  "user1",
 				},
 				{
 					Group: "common-group",
 					Kind:  "kind3",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "user3",
-					},
+					Name:  "user3",
 				},
 			},
 		},
@@ -386,9 +311,7 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default1",
-					},
+					Name:  "default1",
 				},
 			},
 			extendable: &operatorv1beta1.DataPlane{},
@@ -400,9 +323,7 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default1",
-					},
+					Name:  "default1",
 				},
 			},
 			extendable: &gwtypes.ControlPlane{},
@@ -410,9 +331,7 @@ func TestMergeExtensions(t *testing.T) {
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "default1",
-					},
+					Name:  "default1",
 				},
 			},
 		},
@@ -437,9 +356,7 @@ func TestMergeExtensionsForDataPlane(t *testing.T) {
 		{
 			name: "nil konnect extension and no config extensions returns nil",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: nil,
 			konnectExtension: nil,
@@ -448,17 +365,13 @@ func TestMergeExtensionsForDataPlane(t *testing.T) {
 		{
 			name: "nil konnect extension with config extensions returns config extensions",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "ext1",
-					},
+					Name:  "ext1",
 				},
 			},
 			konnectExtension: nil,
@@ -466,165 +379,125 @@ func TestMergeExtensionsForDataPlane(t *testing.T) {
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "ext1",
-					},
+					Name:  "ext1",
 				},
 			},
 		},
 		{
 			name: "konnect extension in same namespace as managing object has nil namespace in ref",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: nil,
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-konnect-ext",
-					Namespace: "default",
-				},
+				Name:      "my-konnect-ext",
+				Namespace: "default",
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "my-konnect-ext",
-						Namespace: nil,
-					},
+					Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:      konnectv1alpha2.KonnectExtensionKind,
+					Name:      "my-konnect-ext",
+					Namespace: nil,
 				},
 			},
 		},
 		{
 			name: "konnect extension in different namespace gets managing object namespace in ref",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "dataplane-ns",
-				},
+				Namespace: "dataplane-ns",
 			},
 			configExtensions: nil,
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-konnect-ext",
-					Namespace: "konnect-ns",
-				},
+				Name:      "my-konnect-ext",
+				Namespace: "konnect-ns",
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "my-konnect-ext",
-						Namespace: new("dataplane-ns"),
-					},
+					Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:      konnectv1alpha2.KonnectExtensionKind,
+					Name:      "my-konnect-ext",
+					Namespace: new("dataplane-ns"),
 				},
 			},
 		},
 		{
 			name: "konnect extension takes precedence over config extension with same group and kind",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: konnectv1alpha2.SchemeGroupVersion.Group,
 					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "config-konnect-ext",
-					},
+					Name:  "config-konnect-ext",
 				},
 			},
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-konnect-ext",
-					Namespace: "default",
-				},
+				Name:      "my-konnect-ext",
+				Namespace: "default",
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "my-konnect-ext",
-						Namespace: nil,
-					},
+					Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:      konnectv1alpha2.KonnectExtensionKind,
+					Name:      "my-konnect-ext",
+					Namespace: nil,
 				},
 			},
 		},
 		{
 			name: "konnect extension merged with non-overlapping config extensions",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "config-ext",
-					},
+					Name:  "config-ext",
 				},
 			},
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-konnect-ext",
-					Namespace: "default",
-				},
+				Name:      "my-konnect-ext",
+				Namespace: "default",
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
 					Group: "group1",
 					Kind:  "kind1",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "config-ext",
-					},
+					Name:  "config-ext",
 				},
 				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "my-konnect-ext",
-						Namespace: nil,
-					},
+					Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:      konnectv1alpha2.KonnectExtensionKind,
+					Name:      "my-konnect-ext",
+					Namespace: nil,
 				},
 			},
 		},
 		{
 			name: "DataPlaneMetricsExtension in config is filtered out for DataPlane",
 			managingObject: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 			},
 			configExtensions: []commonv1alpha1.ExtensionRef{
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "metrics-ext",
-					},
+					Name:  "metrics-ext",
 				},
 			},
 			konnectExtension: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-konnect-ext",
-					Namespace: "default",
-				},
+				Name:      "my-konnect-ext",
+				Namespace: "default",
 			},
 			expected: []commonv1alpha1.ExtensionRef{
 				{
-					Group: konnectv1alpha2.SchemeGroupVersion.Group,
-					Kind:  konnectv1alpha2.KonnectExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name:      "my-konnect-ext",
-						Namespace: nil,
-					},
+					Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+					Kind:      konnectv1alpha2.KonnectExtensionKind,
+					Name:      "my-konnect-ext",
+					Namespace: nil,
 				},
 			},
 		},

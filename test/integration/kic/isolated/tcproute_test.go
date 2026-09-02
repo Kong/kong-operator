@@ -134,9 +134,7 @@ func TestTCPRouteEssentials(t *testing.T) {
 
 			t.Logf("creating a TCPRoute to access deployment %s via kong", deployment1.Name)
 			tcpRoute := &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayapi.TCPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -146,10 +144,8 @@ func TestTCPRouteEssentials(t *testing.T) {
 					},
 					Rules: []gatewayapi.TCPRouteRule{{
 						BackendRefs: []gatewayapi.BackendRef{{
-							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Name: gatewayapi.ObjectName(service1.Name),
-								Port: new(gatewayapi.PortNumber(service1Port)),
-							},
+							Name: gatewayapi.ObjectName(service1.Name),
+							Port: new(gatewayapi.PortNumber(service1Port)),
 						}},
 					}},
 				},
@@ -330,16 +326,12 @@ func TestTCPRouteEssentials(t *testing.T) {
 				assert.NoError(t, err)
 				tcpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service1Name),
-							Port: new(gatewayapi.PortNumber(service1Port)),
-						},
+						Name: gatewayapi.ObjectName(service1Name),
+						Port: new(gatewayapi.PortNumber(service1Port)),
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service2Name),
-							Port: new(gatewayapi.PortNumber(service2Port)),
-						},
+						Name: gatewayapi.ObjectName(service2Name),
+						Port: new(gatewayapi.PortNumber(service2Port)),
 					},
 				}
 

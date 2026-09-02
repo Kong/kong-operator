@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -160,10 +159,8 @@ func enqueueKongServiceForKongRoute() func(ctx context.Context, obj client.Objec
 
 		return []reconcile.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Namespace: kongRoute.Namespace,
-					Name:      serviceRef.NamespacedRef.Name,
-				},
+				Namespace: kongRoute.Namespace,
+				Name:      serviceRef.NamespacedRef.Name,
 			},
 		}
 	}

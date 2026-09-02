@@ -356,9 +356,7 @@ func testGatewayWithGatewayClassReconciliation(
 			clNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
 			svc := corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "publish-svc",
-				},
+				Name: "publish-svc",
 				Spec: corev1.ServiceSpec{
 					Ports: builder.NewServicePort().
 						WithName("http").

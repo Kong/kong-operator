@@ -25,9 +25,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 
 	t.Log("deploying an unsupported GatewayClass resource")
 	unsupportedGatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController("konghq.com/fake-operator"),
 		},
@@ -39,9 +37,7 @@ func TestGatewayClassUpdates(t *testing.T) {
 	t.Log("deploying a supported GatewayClass resource")
 	gatewayClassName := uuid.NewString()
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: gatewayClassName,
-		},
+		Name: gatewayClassName,
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -55,10 +51,8 @@ func TestGatewayClassUpdates(t *testing.T) {
 
 	t.Log("deploying a Gateway using an unsupported class")
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(unsupportedGatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{
@@ -103,10 +97,8 @@ func TestGatewayClassCreation(t *testing.T) {
 	t.Log("deploying a Gateway with a non-existent GatewayClass")
 	gatewayClassName := uuid.NewString()
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClassName),
 			Listeners: []gatewayv1.Listener{{
@@ -130,9 +122,7 @@ func TestGatewayClassCreation(t *testing.T) {
 
 	t.Log("creating a supported GatewayClass using the non-existent GatewayClass name")
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: gatewayClassName,
-		},
+		Name: gatewayClassName,
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
