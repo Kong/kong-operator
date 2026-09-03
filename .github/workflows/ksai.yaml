@@ -1,11 +1,11 @@
-name: Muthur
+name: KSAI
 
 # Federated code review driven by the shared kreview skills in Kong/ksai. Triggered by a
-# `/muthur <ask>` comment on a pull request.
+# `/ksai <ask>` comment on a pull request.
 #
 # Only protected-branch contexts can authenticate (the federation rule requires
 # ref_protected). An issue_comment workflow always executes from the default branch, so
-# this file has to be on master before `/muthur` does anything.
+# this file has to be on master before `/ksai` does anything.
 #
 # kong-operator is public and Kong/ksai is internal, so ksai actions are checked out locally
 # via sparse-checkout and referenced by path rather than by a remote `uses:`, which GitHub
@@ -18,8 +18,7 @@ on:
     types: [created]
 
 env:
-  CODEOWNERS_AUTHZ_REF: codeowners-authz/v1.4.0
-  AI_REVIEWER_FEDERATED_REF: ai-reviewer-federated/v1.17.5
+  KSAI_REF: ksai/v3.28.0
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
@@ -29,7 +28,7 @@ jobs:
   gate:
     if: >-
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/muthur')
+      contains(github.event.comment.body, '/ksai')
     runs-on: ubuntu-latest
     outputs:
       authorized: ${{ steps.authz.outputs.authorized }}
@@ -53,7 +52,7 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           path: _ksai-authz
           repository: Kong/ksai
-          ref: ${{ env.CODEOWNERS_AUTHZ_REF }}
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/codeowners-authz
           persist-credentials: false
@@ -77,7 +76,7 @@ jobs:
       id-token: write # mint the GitHub OIDC token for federation
     # Only authorized runs reach this job, so only they contend for the group.
     concurrency:
-      group: muthur-${{ github.event.issue.number }}
+      group: ksai-${{ github.event.issue.number }}
       cancel-in-progress: true
     steps:
       # One KONG_READONLY token covers both cross-repo reads the action needs: the kreview
@@ -103,7 +102,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false
@@ -115,8 +114,8 @@ jobs:
       # any change there breaks this workflow with no change here.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
-          ksai_ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
-          trigger_phrase: "/muthur"
+          ksai_ref: ${{ env.KSAI_REF }}
+          trigger_phrase: "/ksai"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
           source_org_github_token: ${{ github.token }}
           # KONG_READONLY (has org Members:read) for the CODEOWNERS/team check and the ksai
@@ -142,7 +141,7 @@ jobs:
           token: ${{ steps.kong-token.outputs.token }}
           path: _ksai-review
           repository: Kong/ksai
-          ref: ${{ env.AI_REVIEWER_FEDERATED_REF }}
+          ref: ${{ env.KSAI_REF }}
           sparse-checkout: |
             .github/actions/ai-reviewer-federated
           persist-credentials: false
