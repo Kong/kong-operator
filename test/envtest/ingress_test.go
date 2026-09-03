@@ -28,11 +28,6 @@ import (
 func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	t.Parallel()
 
-	const (
-		waitTime = 10 * time.Second
-		tickTime = 10 * time.Millisecond
-	)
-
 	ctx, cancel := context.WithCancel(t.Context())
 	defer cancel()
 
@@ -55,7 +50,6 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 		WithProxySyncInterval(10*time.Millisecond),
 		WithDiagnosticsWithoutServer(),
 	)
-	require.NoError(t, multimgr.ScheduleInstance(mgr))
 
 	t.Log("deploying a minimal HTTP container deployment to test Ingress routes")
 	container := generators.NewContainer("httpbin", test.HTTPBinImage, test.HTTPBinPort)
@@ -148,6 +142,13 @@ func TestIngressWorksWithServiceBackendsSpecifyingOnlyPortNames(t *testing.T) {
 	}
 	t.Logf("creating ingress %s for service %s", ingress.Name, service.Name)
 	require.NoError(t, ctrlClient.Create(ctx, ingress))
+
+	// Schedule (start) the KIC instance only now that every object it needs
+	// (Deployment, Service, Pod, EndpointSlice, Ingress) already exists. KIC seeds
+	// its dataplane store from each of its controllers' initial LIST, independently
+	// of the others; starting earlier races that per-controller seeding and can
+	// produce a config with the Upstream present but no Targets yet.
+	require.NoError(t, multimgr.ScheduleInstance(mgr))
 
 	require.Eventually(t, func() bool {
 		resp, err := http.Get(fmt.Sprintf("http://localhost:%d/%s/debug/config/successful", diagPort, mgr.ID()))
