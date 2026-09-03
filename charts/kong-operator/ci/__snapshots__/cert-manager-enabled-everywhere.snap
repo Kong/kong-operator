@@ -732,8 +732,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -1459,8 +1457,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -1807,8 +1803,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayConsumerRef is immutable when an entity is already Programmed
@@ -2105,8 +2099,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -2430,8 +2422,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -2717,8 +2707,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -7124,8 +7112,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -11899,8 +11885,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -20782,8 +20766,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -21136,8 +21118,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
@@ -30769,8 +30749,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -31054,8 +31032,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -31698,8 +31674,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayListenerRef is immutable when an entity is already Programmed
@@ -31977,8 +31951,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -32350,8 +32322,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.gatewayRef is immutable when an entity is already Programmed
@@ -33191,8 +33161,6 @@ spec:
                     type: string
                 type: object
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
@@ -33572,8 +33540,6 @@ spec:
                     type: string
                 type: object
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
@@ -34415,8 +34381,6 @@ spec:
                     type: string
                 type: object
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity is already Programmed
@@ -35290,8 +35254,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayBackendClusterRef is immutable when an entity is already Programmed
@@ -63657,8 +63619,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
     served: true
     storage: true
@@ -65307,8 +65267,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.controlPlaneRef is immutable when an entity is already Programmed
@@ -65531,8 +65489,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
     served: true
     storage: true
@@ -66088,8 +66044,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -66527,8 +66481,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -66770,8 +66722,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -67091,8 +67041,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -67324,8 +67272,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -67654,8 +67600,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed
@@ -68015,8 +67959,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
     served: true
     storage: true
@@ -68256,8 +68198,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed

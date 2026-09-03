@@ -384,8 +384,6 @@ spec:
                     type: string
                 type: object
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayVirtualClusterRef is immutable when an entity
