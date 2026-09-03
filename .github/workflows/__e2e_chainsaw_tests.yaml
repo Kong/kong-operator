@@ -184,12 +184,18 @@ jobs:
         TEST_ID: ${{ env.TEST_ID }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
+        # ipv6 only: stop at the first failure. Every test that can't get its
+        # Gateway Ready burns the full 300s assert timeout, and 15 of those at
+        # parallel 4 overran the 30m job timeout - which reports as a
+        # *cancelled* job, giving no usable signal. Failing fast keeps the leg
+        # inside its budget and makes the first debug snapshot the one to read.
+        CHAINSAW_FLAGS: ${{ matrix.ip_family == 'ipv6' && '--fail-fast' || '' }}
       run: |
         # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
 
     - name: Upload debug snapshots as artifacts
-      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      if: always() && steps.chainsaw-tests.outcome != 'success' && steps.chainsaw-tests.outcome != 'skipped'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ matrix.ip_family }}-${{ github.run_id }}
@@ -198,7 +204,7 @@ jobs:
         retention-days: 3
 
     - name: Clean up debug snapshots
-      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      if: always() && steps.chainsaw-tests.outcome != 'success' && steps.chainsaw-tests.outcome != 'skipped'
       env:
         SUITE: ${{ matrix.suite }}
       run: rm -rf "/tmp/chainsaw/$SUITE"
