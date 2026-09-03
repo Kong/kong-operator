@@ -107200,33 +107200,6 @@ webhooks:
       ###DYNAMIC_FIELD###
   failurePolicy: Fail
   matchPolicy: Equivalent
-  name: secrets.validations.kong.konghq.com
-  objectSelector:
-    matchLabels:
-      konghq.com/secret: "true"
-  rules:
-  - apiGroups:
-    - ""
-    apiVersions:
-    - v1
-    operations:
-    - CREATE
-    - UPDATE
-    resources:
-    - secrets
-  sideEffects: None
-  timeoutSeconds: 10
-- admissionReviewVersions:
-  - v1
-  clientConfig:
-    service:
-      name: chartsnap-kong-operator-webhook
-      namespace: default
-      port: 5443
-    caBundle: |-
-      ###DYNAMIC_FIELD###
-  failurePolicy: Fail
-  matchPolicy: Equivalent
   name: gwapi.validations.kong.konghq.com
   rules:
   - apiGroups:
@@ -107294,6 +107267,33 @@ webhooks:
     - UPDATE
     resources:
     - ingresses
+  sideEffects: None
+  timeoutSeconds: 10
+- admissionReviewVersions:
+  - v1
+  clientConfig:
+    service:
+      name: chartsnap-kong-operator-webhook
+      namespace: default
+      port: 5443
+    caBundle: |-
+      ###DYNAMIC_FIELD###
+  failurePolicy: Fail
+  matchPolicy: Equivalent
+  name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
+  rules:
+  - apiGroups:
+    - ""
+    apiVersions:
+    - v1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - secrets
   sideEffects: None
   timeoutSeconds: 10
 ---
