@@ -1,0 +1,316 @@
+name: "[scratch] NAT64/DNS64 prototype"
+
+# Throwaway workflow to validate whether NAT64 (Jool) + DNS64 (unbound) can
+# give an IPv6-only kind cluster real reachability to IPv4-only/legacy
+# external services (e.g. Konnect's API) when run on a bare GitHub-hosted
+# Linux runner. See issue-5349 discussion - isn't wired into any real suite,
+# delete (or drop the push trigger, keeping workflow_dispatch) once answered.
+#
+# NOTE: workflow_dispatch alone isn't API/CLI-dispatchable for a brand-new
+# workflow file until it exists on the default branch, so `push` on this
+# branch is used to trigger the first runs manually via a normal commit.
+on:
+  workflow_dispatch: {}
+  push:
+    branches:
+      - issue-5349
+    paths:
+      - .github/workflows/scratch-nat64-prototype.yaml
+
+permissions:
+  contents: read
+
+jobs:
+  nat64-prototype:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+    - name: Harden Runner
+      uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+      with:
+        egress-policy: audit
+
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+    # -------------------------------------------------------------------
+    # Phase 1: raw NAT64 on the bare runner, no kind cluster involved yet.
+    # Proves (or disproves) the core translation mechanism works at all
+    # on a GH-hosted runner, before paying for cluster/DNS64 complexity.
+    # -------------------------------------------------------------------
+
+    - name: Install Jool (NAT64)
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y jool-dkms jool-tools tcpdump
+        sudo modprobe jool
+        lsmod | grep jool
+
+    - name: Configure NAT64 (pool6=Well-Known Prefix, pool4=runner's own IP)
+      run: |
+        sudo sysctl -w net.ipv4.ip_forward=1
+        sudo sysctl -w net.ipv6.conf.all.forwarding=1
+        # conf.all.forwarding doesn't retroactively cover interfaces created
+        # AFTER this call - those inherit from conf.default.forwarding
+        # instead. Set it too so the veth pair created below actually gets
+        # forwarding enabled (veth-host's own forwarding sysctl is also set
+        # explicitly below, before its address is added, since this is cheap
+        # insurance either way).
+        sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+        RUNNER_IP4=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+        echo "runner IPv4: ${RUNNER_IP4}"
+
+        sudo jool instance add nat64 --netfilter --pool6 64:ff9b::/96
+        sudo jool -i nat64 pool4 add --tcp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --udp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --icmp "${RUNNER_IP4}" 61001-65535
+
+        # Jool's NAT64 hooks only fire for FORWARDED/transit traffic
+        # (PREROUTING/FORWARD/POSTROUTING) - never for traffic the host
+        # itself originates via connect() (LOCAL_OUT). Every earlier attempt
+        # here curled directly from the host and silently never reached
+        # Jool, no matter the route setup, because of this. Fix: run the
+        # test client in its own network namespace connected via veth, so
+        # its traffic genuinely transits this host - exactly how Jool is
+        # meant to be deployed, and exactly what Phase 2's real pod traffic
+        # will do too.
+        sudo ip netns add client
+        sudo ip link add veth-host type veth peer name veth-client
+        sudo ip link set veth-client netns client
+        sudo ip link set veth-host up
+        sudo ip netns exec client ip link set veth-client up
+        sudo ip netns exec client ip link set lo up
+        # Forwarding is flipped BEFORE the addresses exist, and the addresses
+        # are added with `nodad`. Both matter:
+        #  * toggling a device's forwarding sysctl makes the kernel restart
+        #    Duplicate Address Detection on that device's addresses, and
+        #  * a tentative (DAD-in-progress) address is not eligible as a source
+        #    address, so connect() silently falls back to lo's ::1, the kernel
+        #    refuses to forward a packet with a loopback source, and the SYN
+        #    dies before it ever reaches Jool - looking exactly like a NAT64
+        #    failure (curl exit 28, timeout).
+        # This veth is a point-to-point pair in a private netns, so there is
+        # no duplicate to detect; nodad removes the race entirely.
+        # veth-client deliberately does NOT get forwarding=1 - the client is
+        # an endpoint, not a router.
+        sudo sysctl -w net.ipv6.conf.veth-host.forwarding=1
+        sudo ip -6 addr add fd00:1::1/64 dev veth-host nodad
+        sudo ip netns exec client ip -6 addr add fd00:1::2/64 dev veth-client nodad
+        sudo ip netns exec client ip -6 route add default via fd00:1::1 dev veth-client
+        echo "--- per-interface forwarding sysctls ---"
+        sysctl net.ipv6.conf.all.forwarding net.ipv6.conf.default.forwarding net.ipv6.conf.veth-host.forwarding
+
+        echo "--- addresses (must NOT say tentative/dadfailed) ---"
+        ip -6 addr show dev veth-host
+        sudo ip netns exec client ip -6 addr show dev veth-client
+        for _ in $(seq 1 20); do
+          if [ -z "$(sudo ip netns exec client ip -6 addr show dev veth-client tentative)" ] &&
+             [ -z "$(sudo ip netns exec client ip -6 addr show dev veth-client dadfailed)" ]; then
+            echo "fd00:1::2 is usable as a source address"
+            break
+          fi
+          echo "waiting for fd00:1::2 to leave tentative state..."
+          sleep 0.5
+        done
+
+        # This host now needs a route for the NAT64 prefix to accept
+        # forwarding it at all (any usable oif works - the actual delivery
+        # never happens for real, Jool intercepts and re-injects as IPv4
+        # long before that).
+        PRIMARY_IF=$(ip -6 route show default | awk '{print $5; exit}')
+        PRIMARY_IF="${PRIMARY_IF:-eth0}"
+        echo "primary interface: ${PRIMARY_IF}"
+        sudo ip -6 neigh add fe80::64 lladdr 00:00:00:00:00:64 dev "${PRIMARY_IF}" nud permanent
+        sudo ip -6 route add 64:ff9b::/96 via fe80::64 dev "${PRIMARY_IF}"
+
+        sudo jool -i nat64 global update logging-debug true
+        sudo jool -i nat64 pool4 display
+        echo "--- route (host) ---"
+        ip -6 route show | grep ff9b
+        echo "--- route (client netns) ---"
+        sudo ip netns exec client ip -6 route show
+        echo "--- ip6tables OUTPUT (filter) / POSTROUTING (nat) ---"
+        sudo ip6tables -L OUTPUT -v -n
+        sudo ip6tables -t nat -L POSTROUTING -v -n
+        echo "--- ip6tables FORWARD (filter, policy + counters) ---"
+        sudo ip6tables -L FORWARD -v -n
+
+    - name: "Phase 1 check: reach a real external IPv4 host via NAT64"
+      run: |
+        IP4=$(getent ahostsv4 example.com | awk '{print $1; exit}')
+        IFS='.' read -r o1 o2 o3 o4 <<< "${IP4}"
+        HEX=$(printf '%02x%02x:%02x%02x' "${o1}" "${o2}" "${o3}" "${o4}")
+        NAT64_ADDR="64:ff9b::${HEX}"
+        echo "example.com = ${IP4} -> ${NAT64_ADDR}"
+
+        # Ground truth via tcpdump instead of guessing from Jool's counters
+        # again: capture on both the veth-host side (client -> host) and
+        # the primary interface (would-be egress after Jool translation),
+        # for the duration of the curl attempt.
+        sudo timeout 9 tcpdump -ni veth-host -w /tmp/veth-host.pcap &
+        TCPDUMP_VETH_PID=$!
+        sudo timeout 9 tcpdump -ni any "host ${IP4} or ip6" -w /tmp/any.pcap &
+        TCPDUMP_ANY_PID=$!
+        sleep 1
+
+        # --resolve, NOT an IP-literal URL: curl cannot put an IP address in
+        # SNI, so "https://[64:ff9b::...]" sends a ClientHello with no SNI and
+        # any shared-IP edge (Cloudflare/Akamai/...) answers with a 7-byte TLS
+        # alert + FIN -> curl exit 35. That looks like a NAT64 failure but the
+        # TCP handshake has already completed through Jool by then. --resolve
+        # keeps the hostname (so SNI is correct) while pinning the connection
+        # to the NAT64 address.
+        set +e
+        sudo ip netns exec client curl -6 -m 8 -sv \
+          --interface fd00:1::2 \
+          --resolve "example.com:443:[${NAT64_ADDR}]" \
+          "https://example.com" -o /tmp/phase1.html
+        CURL_RC=$?
+        set -e
+
+        wait "${TCPDUMP_VETH_PID}" "${TCPDUMP_ANY_PID}" 2>/dev/null || true
+        echo "--- tcpdump: veth-host (client<->host) ---"
+        sudo tcpdump -nnr /tmp/veth-host.pcap 2>&1 | head -60
+        echo "--- tcpdump: any interface, our target IPv4 or any IPv6 ---"
+        sudo tcpdump -nnr /tmp/any.pcap 2>&1 | head -80
+
+        echo "--- ip6tables FORWARD counters after attempt ---"
+        sudo ip6tables -L FORWARD -v -n
+
+        echo "--- jool stats after attempt ---"
+        sudo jool -i nat64 stats display
+        echo "--- dmesg (jool/ff9b-related) after attempt ---"
+        sudo dmesg | grep -i "jool\|ff9b" | tail -40
+
+        if [ "${CURL_RC}" -ne 0 ]; then
+          echo "curl failed with exit code ${CURL_RC}"
+          exit "${CURL_RC}"
+        fi
+
+        echo "--- response head ---"
+        head -c 300 /tmp/phase1.html
+        echo
+        echo "PHASE 1: NAT64 reached a real external IPv4 host successfully."
+
+    # -------------------------------------------------------------------
+    # Phase 2: IPv6-only kind cluster + DNS64, proving a pod can resolve
+    # and reach an IPv4-only external hostname with no AAAA record.
+    # -------------------------------------------------------------------
+
+    - uses: ./.github/actions/setup-mise
+      with:
+        install_args: kind
+
+    - name: Create IPv6-only kind cluster
+      run: |
+        cat <<EOF | kind create cluster --name nat64-proto --config -
+        kind: Cluster
+        apiVersion: kind.x-k8s.io/v1alpha4
+        networking:
+          ipFamily: ipv6
+          apiServerAddress: "127.0.0.1"
+        EOF
+        kubectl cluster-info
+
+    - name: Install and configure unbound as a host-level DNS64 resolver
+      run: |
+        sudo apt-get install -y unbound
+
+        GW=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Gateway')
+        if [ -z "${GW}" ] || [ "${GW}" = "null" ]; then
+          SUBNET=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
+          GW=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('${SUBNET}').network.network_address + 1)")
+        fi
+        echo "kind bridge IPv6 gateway (this host): ${GW}"
+        echo "DNS64_RESOLVER=${GW}" >> "$GITHUB_ENV"
+
+        sudo tee /etc/unbound/unbound.conf.d/dns64.conf >/dev/null <<EOF
+        server:
+          interface: ${GW}
+          interface: 127.0.0.1
+          access-control: ::0/0 allow
+          access-control: 0.0.0.0/0 allow
+          do-ip4: yes
+          do-ip6: yes
+          module-config: "dns64 validator iterator"
+          dns64-prefix: 64:ff9b::/96
+        EOF
+        sudo systemctl restart unbound
+        sudo systemctl status unbound --no-pager | head -10
+
+    - name: Point CoreDNS at the host DNS64 resolver
+      run: |
+        kubectl -n kube-system get configmap coredns -o yaml > /tmp/coredns-orig.yaml
+        NEW_COREFILE=$(kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
+          | sed "s#forward \. /etc/resolv.conf#forward . ${DNS64_RESOLVER}#")
+        kubectl -n kube-system get configmap coredns -o json \
+          | jq --arg cf "$NEW_COREFILE" '.data.Corefile = $cf' \
+          | kubectl apply -f -
+        kubectl -n kube-system rollout restart deployment coredns
+        kubectl -n kube-system rollout status deployment coredns --timeout=60s
+
+    - name: "Phase 2 check: resolve + reach an IPv4-only hostname from inside a pod"
+      run: |
+        # GitHub runs steps as `bash -e`, WITHOUT pipefail: in a pipeline only
+        # the last command's status counts. `kubectl exec ... | head -c 300`
+        # therefore reported head's success and the step went green while the
+        # connectivity check inside the pod had failed. Turn pipefail on and
+        # never pipe the check itself.
+        set -o pipefail
+
+        # curl, not busybox wget: the client must be forced to IPv6-only
+        # resolution. DNS64 synthesizes AAAA correctly, but CoreDNS still
+        # serves the real A records alongside them, and musl's getaddrinfo
+        # (busybox/alpine) happily hands back the IPv4 answer first. The pod
+        # has no IPv4 address at all, so that becomes
+        # "wget: can't connect to remote host (142.251.179.100): Network is
+        # unreachable" - a client-side address-selection failure, not a
+        # DNS64/NAT64 one. `curl -6` asks for AAAA only.
+        # This image is alpine-based, so it also still provides nslookup.
+        kubectl run nat64-test --image=curlimages/curl:8.11.1 --restart=Never --command -- sleep 300
+        kubectl wait --for=condition=Ready pod/nat64-test --timeout=60s
+
+        # Must be a hostname with NO AAAA record: unbound's dns64 module only
+        # synthesizes 64:ff9b::/96 answers when the name has no real AAAA. A
+        # dual-stack name (example.com included) hands the pod a genuine AAAA,
+        # which then needs native IPv6 internet egress the runner doesn't have
+        # - so it fails while testing nothing about DNS64/NAT64.
+        HOST_A_ONLY=ipv4.google.com
+        echo "--- sanity: ${HOST_A_ONLY} must be A-only on the host ---"
+        getent ahostsv4 "${HOST_A_ONLY}" || true
+        if getent ahostsv6 "${HOST_A_ONLY}" | grep -qv '^::ffff:'; then
+          echo "WARNING: ${HOST_A_ONLY} has a real AAAA - DNS64 will not synthesize"
+        fi
+
+        echo "--- nslookup ${HOST_A_ONLY} from inside the ipv6-only cluster ---"
+        kubectl exec nat64-test -- nslookup "${HOST_A_ONLY}"
+
+        echo "--- curl -6 ${HOST_A_ONLY} from inside the ipv6-only cluster ---"
+        # No pipe here on purpose - the exit status of this exec is the whole
+        # point of the phase. -v prints the address actually connected to, so
+        # the log proves it went to 64:ff9b::/96 and not to a real AAAA.
+        set +e
+        kubectl exec nat64-test -- \
+          curl -6 -sS -v --fail -m 15 "http://${HOST_A_ONLY}" -o /tmp/phase2.out
+        PHASE2_RC=$?
+        set -e
+        if [ "${PHASE2_RC}" -ne 0 ]; then
+          echo "PHASE 2 FAILED: curl exit ${PHASE2_RC}"
+          exit "${PHASE2_RC}"
+        fi
+
+        echo "--- response head ---"
+        kubectl exec nat64-test -- head -c 300 /tmp/phase2.out
+        echo
+        echo "PHASE 2: pod in IPv6-only cluster resolved and reached a real external host via DNS64+NAT64."
+
+    - name: Dump diagnostics on failure
+      if: failure()
+      run: |
+        echo "--- jool stats ---"
+        sudo jool -i nat64 stats display || true
+        echo "--- coredns logs ---"
+        kubectl -n kube-system logs -l k8s-app=kube-dns --tail=100 || true
+        echo "--- unbound status ---"
+        sudo systemctl status unbound --no-pager || true
+        journalctl -u unbound --no-pager --lines=100 || true
