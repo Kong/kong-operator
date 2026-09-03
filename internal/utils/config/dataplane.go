@@ -39,6 +39,7 @@ var KongDefaults = map[string]string{
 	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
 	"KONG_CLUSTER_LISTEN":         "off",
 	"KONG_DATABASE":               "off",
+	"KONG_DNS_ORDER":              "LAST,SRV,AAAA,A,CNAME",
 	"KONG_NGINX_WORKER_PROCESSES": "2",
 	kongPluginsEnvVarName:         kongPluginsDefaultValue,
 	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",

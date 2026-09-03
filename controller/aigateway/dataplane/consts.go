@@ -62,6 +62,7 @@ func RequiredHardcodedEnvVars() []corev1.EnvVar {
 	return []corev1.EnvVar{
 		{Name: "KONG_ROLE", Value: "data_plane"},
 		{Name: "KONG_DATABASE", Value: "off"},
+		{Name: "KONG_DNS_ORDER", Value: "LAST,SRV,AAAA,A,CNAME"},
 		{Name: "KONG_CLUSTER_MTLS", Value: "pki"},
 		{Name: "KONG_VITALS", Value: "off"},
 		{Name: "KONG_KONNECT_MODE", Value: "on"},
