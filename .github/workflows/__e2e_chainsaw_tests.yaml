@@ -37,6 +37,9 @@ jobs:
           ip_family: ipv6
           continue-on-error: true
         - suite: hybridgateway
+        - suite: hybridgateway
+          ip_family: ipv6
+          continue-on-error: true
         - suite: konnect
         - suite: aigateway
         - suite: eventgateway
