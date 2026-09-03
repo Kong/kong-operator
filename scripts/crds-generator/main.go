@@ -241,12 +241,12 @@ func addVersion(version string) func(obj map[string]any) error {
 			metadata = map[string]any{}
 			obj["metadata"] = metadata
 		}
-		annotations, ok := metadata.(map[any]any)["annotations"]
+		annotations, ok := metadata.(map[string]any)["annotations"]
 		if !ok {
 			annotations = map[string]any{}
-			obj["metadata"].(map[string]any)["annotations"] = metadata
+			obj["metadata"].(map[string]any)["annotations"] = annotations
 		}
-		annotations.(map[any]any)[VersionAnnotation] = version
+		annotations.(map[string]any)[VersionAnnotation] = version
 		return nil
 	}
 }

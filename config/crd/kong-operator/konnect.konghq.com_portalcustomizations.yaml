@@ -436,8 +436,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.portalRef is immutable when an entity is already Programmed

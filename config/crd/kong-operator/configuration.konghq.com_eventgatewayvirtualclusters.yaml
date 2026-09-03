@@ -885,8 +885,6 @@ spec:
                 maxLength: 512
                 type: string
             type: object
-        required:
-        - metadata
         type: object
         x-kubernetes-validations:
         - message: spec.eventGatewayBackendClusterRef is immutable when an entity
