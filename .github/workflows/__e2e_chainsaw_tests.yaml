@@ -19,21 +19,27 @@ jobs:
   e2e-tests-chainsaw:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} - {1}', matrix.suite, inputs.node_image_version) }}
+    name: ${{ format('{0} {1} - {2}', matrix.suite, matrix.ip_family, inputs.node_image_version) }}
     env:
       IMG: kong-operator
       TAG: e2e-${{ github.sha }}
       CLUSTER_NAME: e2e-chainsaw
       TEST_ID: ${{ github.run_id }}
+    # Only the ipv6 leg opts into this (see matrix below): IPv6 cluster support
+    # is new (tracked in #5348) and shouldn't block merges yet while it proves out.
+    continue-on-error: ${{ matrix.continue-on-error || false }}
     strategy:
       fail-fast: false
       matrix:
-        suite:
-        - gateway
-        - hybridgateway
-        - konnect
-        - aigateway
-        - eventgateway
+        include:
+        - suite: gateway
+        - suite: gateway
+          ip_family: ipv6
+          continue-on-error: true
+        - suite: hybridgateway
+        - suite: konnect
+        - suite: aigateway
+        - suite: eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -68,12 +74,18 @@ jobs:
         # https://github.com/Kong/kubernetes-testing-framework/blob/f233236e89ebcaf79575c5084053e4196c037165/pkg/utils/github/release.go#L46
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NODE_IMAGE_VERSION: ${{ inputs.node_image_version }}
+        IP_FAMILY: ${{ matrix.ip_family }}
       run: |
+        IPV6_FLAG=()
+        if [ "$IP_FAMILY" = "ipv6" ]; then
+          IPV6_FLAG=(--ipv6-only)
+        fi
         ktf environments create \
           --name "$CLUSTER_NAME" \
           --addon metallb \
           --addon cert-manager \
-          --kubernetes-version "$NODE_IMAGE_VERSION"
+          --kubernetes-version "$NODE_IMAGE_VERSION" \
+          "${IPV6_FLAG[@]}"
 
     - name: Load image to kind cluster
       run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
@@ -115,7 +127,7 @@ jobs:
       if: always() && steps.chainsaw-tests.outcome == 'failure'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ github.run_id }}
+        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ matrix.ip_family }}-${{ github.run_id }}
         path: /tmp/chainsaw/
         if-no-files-found: ignore
         retention-days: 3
