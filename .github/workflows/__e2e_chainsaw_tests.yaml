@@ -90,8 +90,9 @@ jobs:
     # internet on its own. NAT64 (Jool) translates that egress traffic onto
     # this host's real IPv4 uplink, and DNS64 (unbound) synthesizes AAAA
     # answers for hostnames that only have an A record, so pods route
-    # through the NAT64 prefix automatically. Validated in a standalone
-    # prototype: see issue-5349 / scratch-nat64-prototype.yaml history.
+    # through the NAT64 prefix automatically. Validated first in a standalone
+    # throwaway workflow (see the history of issue-5349 / PR #5512) before
+    # being wired in here.
     - name: Set up NAT64 + DNS64 for IPv6-only cluster external reachability
       if: ${{ matrix.ip_family == 'ipv6' }}
       run: |
@@ -167,9 +168,6 @@ jobs:
           --set env.enable_controller_aigatewaydataplane=true \
           --wait
 
-    - name: DNS lookup for us.control-plane.konghq.tech
-      run: dig us.control-plane.konghq.tech
-
     - name: Apply chainsaw suite prerequisites
       env:
         SUITE: ${{ matrix.suite }}
@@ -184,12 +182,6 @@ jobs:
         TEST_ID: ${{ env.TEST_ID }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
-        # ipv6 only: stop at the first failure. Every test that can't get its
-        # Gateway Ready burns the full 300s assert timeout, and 15 of those at
-        # parallel 4 overran the 30m job timeout - which reports as a
-        # *cancelled* job, giving no usable signal. Failing fast keeps the leg
-        # inside its budget and makes the first debug snapshot the one to read.
-        CHAINSAW_FLAGS: ${{ matrix.ip_family == 'ipv6' && '--fail-fast' || '' }}
       run: |
         # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
