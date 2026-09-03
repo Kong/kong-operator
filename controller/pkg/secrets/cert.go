@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"maps"
 	"net/url"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
@@ -171,6 +172,44 @@ func IsTLSSecretValid(secret *corev1.Secret) bool {
 	}
 	if p, _ := pem.Decode(key); p == nil {
 		return false
+	}
+	return true
+}
+
+// vaultRefPattern matches a Kong vault reference, e.g. "{vault://my-vault/my-secret}".
+// It mirrors the CEL validation on KongCertificate's cert/key fields, see
+// api/configuration/v1alpha1/kongcertificate_types.go.
+var vaultRefPattern = regexp.MustCompile(`^\{vault://[a-zA-Z0-9._-]+/[^{}]+\}[[:space:]]*$`)
+
+// IsVaultRef reports whether data holds a Kong vault reference rather than literal
+// certificate material. Kong Gateway resolves vault references to the real material
+// at runtime, so the reference itself is never PEM-encoded.
+func IsVaultRef(data []byte) bool {
+	return vaultRefPattern.Match(data)
+}
+
+// IsTLSSecretValidOrVaultRef checks if a Secret contains a valid TLS certificate and
+// key, allowing either field to instead hold a Kong vault reference (see [IsVaultRef]).
+// This lets a Gateway API listener's certificateRef point at a Secret whose private key
+// is never stored in Kubernetes, only a reference Kong Gateway resolves at runtime.
+func IsTLSSecretValidOrVaultRef(secret *corev1.Secret) bool {
+	var ok bool
+	var crt, key []byte
+	if crt, ok = secret.Data["tls.crt"]; !ok {
+		return false
+	}
+	if key, ok = secret.Data["tls.key"]; !ok {
+		return false
+	}
+	if !IsVaultRef(crt) {
+		if p, _ := pem.Decode(crt); p == nil {
+			return false
+		}
+	}
+	if !IsVaultRef(key) {
+		if p, _ := pem.Decode(key); p == nil {
+			return false
+		}
 	}
 	return true
 }
