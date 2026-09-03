@@ -2051,6 +2051,106 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxR
 	require.Equal(t, kong.StringSlice("~/very-long$", "~/bar$", "/bar/"), route.Paths)
 }
 
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPathsSeparateWhenURLRewriteReplacePrefixMatchIsPresent(t *testing.T) {
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+	urlRewriteFilters := []gatewayapi.HTTPRouteFilter{
+		{
+			Type: gatewayapi.HTTPRouteFilterURLRewrite,
+			URLRewrite: &gatewayapi.HTTPURLRewriteFilter{
+				Path: &gatewayapi.HTTPPathModifier{
+					Type:               gatewayapi.PrefixMatchHTTPPathModifier,
+					ReplacePrefixMatch: new("/anything"),
+				},
+			},
+		},
+	}
+	// Two rules sharing the same backendRefs and the exact same URLRewrite/ReplacePrefixMatch
+	// filter, but with different match path prefixes. Before the fix, both rules' matches were
+	// consolidated into a single Kong route/plugin, so only the first rule's path prefix worked
+	// and the second 404'd.
+	rulesMeta := []httpRouteRuleMeta{
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Filters:     urlRewriteFilters,
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+				},
+			},
+			RuleNumber:  0,
+			parentRoute: httpRoute,
+		},
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Filters:     urlRewriteFilters,
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
+				},
+			},
+			RuleNumber:  1,
+			parentRoute: httpRoute,
+		},
+	}
+	matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 0,
+			},
+			Priority: 1,
+		},
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  1,
+				MatchIndex: 0,
+			},
+			Priority: 1,
+		},
+	}
+
+	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		rulesMeta,
+		matchesWithPriorities,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	// The two rules' matches must never be consolidated into a single Kong route: each carries a
+	// different path prefix that the shared URLRewrite/ReplacePrefixMatch filter must rewrite
+	// independently, which Kong cannot express as a single route + single plugin instance.
+	require.Len(t, routes, 2)
+
+	routesByName := make(map[string]kongstate.Route, len(routes))
+	for _, route := range routes {
+		routesByName[*route.Name] = route
+	}
+
+	expectedReplacePlugin := kong.Plugin{
+		Name: new("request-transformer"),
+		Config: kong.Configuration{
+			"replace": TransformerPluginReplaceConfig{
+				URI: "/anything$(uri_captures[1])",
+			},
+		},
+		Tags: util.GenerateTagsForObject(httpRoute),
+	}
+
+	route1 := routesByName["httproute.default.httproute-1.0.0"]
+	require.Equal(t, kong.StringSlice("~/path-1$", "~/path-1(/.*)"), route1.Paths)
+	require.Equal(t, []kong.Plugin{expectedReplacePlugin}, route1.Plugins)
+
+	route2 := routesByName["httproute.default.httproute-1.1.0"]
+	require.Equal(t, kong.StringSlice("~/path-2$", "~/path-2(/.*)"), route2.Paths)
+	require.Equal(t, []kong.Plugin{expectedReplacePlugin}, route2.Plugins)
+}
+
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFromPathMatches(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
