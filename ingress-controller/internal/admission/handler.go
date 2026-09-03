@@ -182,13 +182,18 @@ func (h *RequestHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	review := admissionv1.AdmissionReview{}
 	if err := json.NewDecoder(r.Body).Decode(&review); err != nil {
 		h.Logger.Error(err, "Failed to decode admission review")
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		// Do not relay the raw error to the client: it can leak JSON
+		// parser internals. The full error is captured in the log above.
+		http.Error(w, "invalid admission request", http.StatusBadRequest)
 		return
 	}
 	response, err := h.handleValidation(r.Context(), *review.Request)
 	if err != nil {
 		h.Logger.Error(err, "Failed to run validation")
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		// Do not relay the raw error to the client: validation errors can
+		// embed Kong Admin API URLs, upstream status text, and internal
+		// messages. The full error is captured in the log above.
+		http.Error(w, "internal validation error", http.StatusInternalServerError)
 		return
 	}
 
