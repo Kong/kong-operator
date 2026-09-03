@@ -1,7 +1,7 @@
 # renovate: datasource=github-tags depName=kubernetes/code-generator
 code-generator: "0.37.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-tools
-controller-tools: "0.21.0"
+controller-tools: "0.22.0"
 # renovate: datasource=github-releases depName=golangci/golangci-lint
 golangci-lint: "2.13.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
