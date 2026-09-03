@@ -132,10 +132,8 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "",
-					Name:      "conf-secret",
-				},
+				Namespace: "",
+				Name:      "conf-secret",
 				Data: map[string][]byte{
 					"valid-conf":   []byte(`{"foo":"bar"}`),
 					"invalid-conf": []byte(`{"foo":"baz}`),
@@ -285,10 +283,8 @@ func TestKongHTTPValidator_ValidatePlugin(t *testing.T) {
 				},
 				overrideSecrets: []*corev1.Secret{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "",
-							Name:      "another-conf-secret",
-						},
+						Namespace: "",
+						Name:      "another-conf-secret",
 						Data: map[string][]byte{
 							"valid-conf":   []byte(`{"foo":"bar"}`),
 							"invalid-conf": []byte(`{"foo":"baz}`),
@@ -331,10 +327,8 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 	store, _ := store.NewFakeStore(store.FakeObjects{
 		Secrets: []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "conf-secret",
-				},
+				Namespace: "default",
+				Name:      "conf-secret",
 				Data: map[string][]byte{
 					"valid-conf":   []byte(`{"foo":"bar"}`),
 					"invalid-conf": []byte(`{"foo":"baz}`),
@@ -488,10 +482,8 @@ func TestKongHTTPValidator_ValidateClusterPlugin(t *testing.T) {
 				},
 				overrideSecrets: []*corev1.Secret{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "another-conf-secret",
-						},
+						Namespace: "default",
+						Name:      "another-conf-secret",
 						Data: map[string][]byte{
 							"valid-conf":   []byte(`{"foo":"bar"}`),
 							"invalid-conf": []byte(`{"foo":"baz}`),
@@ -596,24 +588,18 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.NoError(t, configurationv1.AddToScheme(scheme))
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plugin1",
-					Namespace: cfgNamespace,
-				},
+				Name:       "plugin1",
+				Namespace:  cfgNamespace,
 				PluginName: "foo",
 			},
 			&configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plugin2",
-					Namespace: cfgNamespace,
-				},
+				Name:       "plugin2",
+				Namespace:  cfgNamespace,
 				PluginName: "bar",
 			},
 			&configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plugin3",
-					Namespace: cfgNamespace,
-				},
+				Name:       "plugin3",
+				Namespace:  cfgNamespace,
 				PluginName: "foo",
 			},
 		).Build()
@@ -627,13 +613,11 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		}
 
 		valid, _, err := validator.ValidateConsumer(t.Context(), configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
-				},
-				Namespace: cfgNamespace,
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
 			},
-			Username: "username",
+			Namespace: cfgNamespace,
+			Username:  "username",
 		})
 		require.NoError(t, err)
 		require.True(t, valid)
@@ -647,17 +631,13 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		require.NoError(t, configurationv1.AddToScheme(scheme))
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 			&configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plugin1",
-					Namespace: cfgNamespace,
-				},
+				Name:       "plugin1",
+				Namespace:  cfgNamespace,
 				PluginName: "foo",
 			},
 			&configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "plugin2",
-					Namespace: cfgNamespace,
-				},
+				Name:       "plugin2",
+				Namespace:  cfgNamespace,
 				PluginName: "bar",
 			},
 		).Build()
@@ -671,13 +651,11 @@ func TestKongHTTPValidator_ValidateConsumer(t *testing.T) {
 		}
 
 		valid, errText, err := validator.ValidateConsumer(t.Context(), configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				Annotations: map[string]string{
-					annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
-				},
-				Namespace: cfgNamespace,
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2,plugin3",
 			},
-			Username: "username",
+			Namespace: cfgNamespace,
+			Username:  "username",
 		})
 		require.NoError(t, err)
 		require.True(t, valid)
@@ -744,24 +722,18 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			ManagerClientObjects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "bar",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin3",
-						Namespace: "default",
-					},
+					Name:       "plugin3",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 			},
@@ -782,17 +754,13 @@ func TestKongHTTPValidator_ValidateConsumerGroup(t *testing.T) {
 			InfoSvc:          &fakeInfoSvc{version: "3.4.1.0"},
 			ManagerClientObjects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "bar",
 				},
 			},
@@ -1084,24 +1052,18 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				Build(),
 			clientObjects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "default",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin3",
-						Namespace: "default",
-					},
+					Name:       "plugin3",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 			},
@@ -1125,17 +1087,13 @@ func TestValidator_ValidateIngress(t *testing.T) {
 				Build(),
 			clientObjects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "bar",
 				},
 			},
@@ -1180,10 +1138,8 @@ func TestValidator_ValidateIngress(t *testing.T) {
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      testSvcFacadeName,
-							Namespace: "default",
-						},
+						Name:      testSvcFacadeName,
+						Namespace: "default",
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 								Name: "svc",
@@ -1248,14 +1204,12 @@ func TestValidator_ValidateIngress(t *testing.T) {
 
 func newHTTPIngressRule(backend netv1.IngressBackend) netv1.IngressRule {
 	return netv1.IngressRule{
-		IngressRuleValue: netv1.IngressRuleValue{
-			HTTP: &netv1.HTTPIngressRuleValue{
-				Paths: []netv1.HTTPIngressPath{
-					{
-						Path:     "/",
-						PathType: new(netv1.PathTypeImplementationSpecific),
-						Backend:  backend,
-					},
+		HTTP: &netv1.HTTPIngressRuleValue{
+			Paths: []netv1.HTTPIngressPath{
+				{
+					Path:     "/",
+					PathType: new(netv1.PathTypeImplementationSpecific),
+					Backend:  backend,
 				},
 			},
 		},
@@ -1329,11 +1283,9 @@ func TestValidator_ValidateVault(t *testing.T) {
 			storerObjects: store.FakeObjects{
 				KongVaults: []*configurationv1alpha1.KongVault{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "vault-0",
-							Annotations: map[string]string{
-								annotations.IngressClassKey: annotations.DefaultIngressClass,
-							},
+						Name: "vault-0",
+						Annotations: map[string]string{
+							annotations.IngressClassKey: annotations.DefaultIngressClass,
 						},
 						Spec: configurationv1alpha1.KongVaultSpec{
 							Backend: "env",

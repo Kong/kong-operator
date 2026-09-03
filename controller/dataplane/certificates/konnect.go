@@ -244,10 +244,8 @@ func MountAndUseKonnectCert(ctx context.Context, logger logr.Logger, dataplane *
 
 	konnectCertVolume := corev1.Volume{
 		Name: DataPlaneKonnectClientCertificateName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: secrets[0].Name,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: secrets[0].Name,
 		},
 	}
 	mount := corev1.VolumeMount{

@@ -37,9 +37,7 @@ func TestDataPlaneKonnectCert(t *testing.T) {
 		Name:      uuid.NewString(),
 	}
 	issuer := &certmanagerv1.ClusterIssuer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "fake-cluster-issuer",
-		},
+		Name: "fake-cluster-issuer",
 		Spec: certmanagerv1.IssuerSpec{
 			IssuerConfig: certmanagerv1.IssuerConfig{
 				SelfSigned: &certmanagerv1.SelfSignedIssuer{},
@@ -51,10 +49,8 @@ func TestDataPlaneKonnectCert(t *testing.T) {
 	_, err = certClient.ClusterIssuers().Create(ctx, issuer, metav1.CreateOptions{})
 	require.NoError(t, err)
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
-		},
+		Namespace: dataplaneName.Namespace,
+		Name:      dataplaneName.Name,
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

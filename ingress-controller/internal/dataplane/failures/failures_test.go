@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
 	"go.uber.org/zap/zaptest/observer"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -116,13 +115,9 @@ func someResourceFailureCausingObjects() []client.Object {
 
 func validCausingObject() *configurationv1.KongPlugin {
 	return &configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: configurationv1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "plugin-name",
-			Namespace: "default",
-		},
+		Kind:       "KongPlugin",
+		APIVersion: configurationv1.SchemeGroupVersion.String(),
+		Name:       "plugin-name",
+		Namespace:  "default",
 	}
 }

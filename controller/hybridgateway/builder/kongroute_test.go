@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -424,11 +423,9 @@ func TestKongRouteBuilder_WithNamespace(t *testing.T) {
 
 func TestKongRouteBuilder_WithOwner(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	t.Run("valid owner", func(t *testing.T) {
@@ -456,11 +453,9 @@ func TestKongRouteBuilder_WithOwner(t *testing.T) {
 
 	t.Run("owner reference error", func(t *testing.T) {
 		httpRouteWithoutTypeMeta := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-http-route",
-				Namespace: "test-namespace",
-				UID:       "test-uid",
-			},
+			Name:      "test-http-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
 		}
 
 		builder := NewKongRoute().WithOwner(httpRouteWithoutTypeMeta)
@@ -473,10 +468,8 @@ func TestKongRouteBuilder_WithOwner(t *testing.T) {
 
 func TestKongRouteBuilder_WithLabels(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -494,10 +487,8 @@ func TestKongRouteBuilder_WithLabels(t *testing.T) {
 
 func TestKongRouteBuilder_WithAnnotations(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -554,11 +545,9 @@ func TestKongRouteBuilder_MustBuild(t *testing.T) {
 
 func TestKongRouteBuilder_Chaining(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	pathType := gatewayv1.PathMatchPathPrefix

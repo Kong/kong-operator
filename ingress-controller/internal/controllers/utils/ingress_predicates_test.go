@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 )
@@ -25,10 +24,8 @@ func ingressWithClassAnnotation(class string) *netv1.Ingress {
 		return &netv1.Ingress{}
 	}
 	return &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Annotations: map[string]string{
-				annotations.IngressClassKey: class,
-			},
+		Annotations: map[string]string{
+			annotations.IngressClassKey: class,
 		},
 	}
 }

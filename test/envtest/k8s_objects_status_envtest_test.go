@@ -45,10 +45,8 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 		})
 
 	backendService := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gw.Namespace,
-			Name:      "backend-svc",
-		},
+		Namespace: gw.Namespace,
+		Name:      "backend-svc",
 		Spec: corev1.ServiceSpec{
 			Ports: builder.NewServicePort().
 				WithName("http").
@@ -61,10 +59,8 @@ func TestHTTPRouteReconciliation_DoesNotBlockSyncLoopWhenStatusQueueBufferIsExce
 	t.Cleanup(func() { _ = ctrlClient.Delete(ctx, &backendService) })
 
 	httpRoute := gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    gw.Namespace,
-			GenerateName: "httproute-",
-		},
+		Namespace:    gw.Namespace,
+		GenerateName: "httproute-",
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -146,10 +142,8 @@ func Test_WatchNamespaces(t *testing.T) {
 		})
 
 	backendService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gw.Namespace,
-			Name:      "backend-svc",
-		},
+		Namespace: gw.Namespace,
+		Name:      "backend-svc",
 		Spec: corev1.ServiceSpec{
 			Ports: builder.NewServicePort().
 				WithName("http").
@@ -166,10 +160,8 @@ func Test_WatchNamespaces(t *testing.T) {
 	require.NoError(t, ctrlClient.Create(ctx, hiddenService))
 
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gw.Namespace,
-			Name:      uuid.NewString(),
-		},
+		Namespace: gw.Namespace,
+		Name:      uuid.NewString(),
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{

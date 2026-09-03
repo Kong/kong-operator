@@ -193,10 +193,8 @@ func TestLog(t *testing.T) {
 func TestMaybeCreateCertificateSecret(t *testing.T) {
 	createDataPlane := func(nn types.NamespacedName, opt ...func(dp *operatorv1beta1.DataPlane)) *operatorv1beta1.DataPlane {
 		dp := &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      nn.Name,
-				Namespace: nn.Namespace,
-			},
+			Name:      nn.Name,
+			Namespace: nn.Namespace,
 		}
 		for _, o := range opt {
 			o(dp)
@@ -252,16 +250,14 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 								labels := k8sresources.GetManagedLabelForOwner(dp)
 								return corev1.Secret{
-									ObjectMeta: metav1.ObjectMeta{
-										Name:      "secret-1",
-										Namespace: "ns",
-										Labels:    labels,
-										OwnerReferences: []metav1.OwnerReference{
-											{
-												Kind:       "DataPlane",
-												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-												UID:        types.UID("1234"),
-											},
+									Name:      "secret-1",
+									Namespace: "ns",
+									Labels:    labels,
+									OwnerReferences: []metav1.OwnerReference{
+										{
+											Kind:       "DataPlane",
+											APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+											UID:        types.UID("1234"),
 										},
 									},
 								}
@@ -287,16 +283,14 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 								labels := k8sresources.GetManagedLabelForOwner(dp)
 								return corev1.Secret{
-									ObjectMeta: metav1.ObjectMeta{
-										Name:      "secret-1",
-										Namespace: "ns",
-										Labels:    labels,
-										OwnerReferences: []metav1.OwnerReference{
-											{
-												Kind:       "DataPlane",
-												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-												UID:        types.UID("1234"),
-											},
+									Name:      "secret-1",
+									Namespace: "ns",
+									Labels:    labels,
+									OwnerReferences: []metav1.OwnerReference{
+										{
+											Kind:       "DataPlane",
+											APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+											UID:        types.UID("1234"),
 										},
 									},
 								}
@@ -306,16 +300,14 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 
 								labels := k8sresources.GetManagedLabelForOwner(dp)
 								return corev1.Secret{
-									ObjectMeta: metav1.ObjectMeta{
-										Name:      "secret-2",
-										Namespace: "ns",
-										Labels:    labels,
-										OwnerReferences: []metav1.OwnerReference{
-											{
-												Kind:       "DataPlane",
-												APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-												UID:        types.UID("1234"),
-											},
+									Name:      "secret-2",
+									Namespace: "ns",
+									Labels:    labels,
+									OwnerReferences: []metav1.OwnerReference{
+										{
+											Kind:       "DataPlane",
+											APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+											UID:        types.UID("1234"),
 										},
 									},
 								}
@@ -351,10 +343,8 @@ func TestMaybeCreateCertificateSecret(t *testing.T) {
 						certificate.WithKeyType(keyType),
 					)
 					caSecret := &corev1.Secret{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      tc.mtlsCASecretNN.Name,
-							Namespace: tc.mtlsCASecretNN.Namespace,
-						},
+						Name:      tc.mtlsCASecretNN.Name,
+						Namespace: tc.mtlsCASecretNN.Namespace,
 						Data: map[string][]byte{
 							"tls.crt": cert,
 							"tls.key": key,

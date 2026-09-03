@@ -221,15 +221,13 @@ func translateHTTPRouteRulesMetaToKongstateService(
 
 	// Fill in the common fields of the kongstate.Service.
 	service := kongstate.Service{
-		Service: kong.Service{
-			Name:           new(serviceName),
-			Host:           new(serviceName),
-			Protocol:       new(DefaultKongServiceProtocol),
-			ConnectTimeout: new(DefaultServiceTimeout),
-			ReadTimeout:    new(DefaultServiceTimeout),
-			WriteTimeout:   new(DefaultServiceTimeout),
-			Retries:        new(DefaultRetries),
-		},
+		Name:           new(serviceName),
+		Host:           new(serviceName),
+		Protocol:       new(DefaultKongServiceProtocol),
+		ConnectTimeout: new(DefaultServiceTimeout),
+		ReadTimeout:    new(DefaultServiceTimeout),
+		WriteTimeout:   new(DefaultServiceTimeout),
+		Retries:        new(DefaultRetries),
 	}
 
 	// Extract reference grants for checking if reference of backends in another namespace is allowed.
@@ -988,13 +986,11 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 		// options default.
 		// for rules with no hostnames, we generate a "catch-all" route for it.
 		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:         new(routeName),
-				Protocols:    options.Protocols,
-				PreserveHost: new(true),
-				Tags:         tags,
-			},
+			Ingress:      ingressObjectInfo,
+			Name:         new(routeName),
+			Protocols:    options.Protocols,
+			PreserveHost: new(true),
+			Tags:         tags,
 		}
 		r.Hosts = append(r.Hosts, hostnames...)
 

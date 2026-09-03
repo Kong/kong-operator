@@ -33,10 +33,8 @@ func TestDataPlanePortsValidatingAdmissionPolicy(t *testing.T) {
 		{
 			name: "DataPlane creation - KONG_PORT_MAPS missing port from ingress",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:    namespace.Name,
-					GenerateName: "dataplane-invalid-creation-test-",
-				},
+				Namespace:    namespace.Name,
+				GenerateName: "dataplane-invalid-creation-test-",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -85,10 +83,8 @@ func TestDataPlanePortsValidatingAdmissionPolicy(t *testing.T) {
 		{
 			name: "DataPlane update - adding mismatched port should fail",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:    namespace.Name,
-					GenerateName: "dataplane-invalid-update-test-",
-				},
+				Namespace:    namespace.Name,
+				GenerateName: "dataplane-invalid-update-test-",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

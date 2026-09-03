@@ -87,18 +87,16 @@ func FetchPlugin(ctx context.Context, imageURL string, credentialsStore credenti
 	)
 	inMemoryStore := memory.New()
 	if _, err := oras.Copy(ctx, repository, imageTag, inMemoryStore, imageTag, oras.CopyOptions{
-		CopyGraphOptions: oras.CopyGraphOptions{
-			PostCopy: func(ctx context.Context, desc ociv1.Descriptor) error {
-				// Look for OCI or Docker layer media type (they are fully compatible, see:
-				// https://github.com/opencontainers/image-spec/blob/39ab2d54cfa8fe1bee1ff20001264986d92ab85a/media-types.md?plain=1#L60-L64)
-				// Such object in the graph represents an actual layer that contains a plugin.
-				if mediaType := types.MediaType(desc.MediaType); mediaType == types.OCILayer || mediaType == types.DockerLayer {
-					mut.Lock()
-					layersThatMayContainPlugin = append(layersThatMayContainPlugin, desc)
-					mut.Unlock()
-				}
-				return nil
-			},
+		PostCopy: func(ctx context.Context, desc ociv1.Descriptor) error {
+			// Look for OCI or Docker layer media type (they are fully compatible, see:
+			// https://github.com/opencontainers/image-spec/blob/39ab2d54cfa8fe1bee1ff20001264986d92ab85a/media-types.md?plain=1#L60-L64)
+			// Such object in the graph represents an actual layer that contains a plugin.
+			if mediaType := types.MediaType(desc.MediaType); mediaType == types.OCILayer || mediaType == types.DockerLayer {
+				mut.Lock()
+				layersThatMayContainPlugin = append(layersThatMayContainPlugin, desc)
+				mut.Unlock()
+			}
+			return nil
 		},
 	}); err != nil {
 		return nil, fmt.Errorf("can't fetch image: %s, because: %w", imageURL, err)

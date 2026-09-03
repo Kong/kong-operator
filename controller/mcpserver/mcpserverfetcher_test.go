@@ -13,7 +13,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
@@ -104,10 +103,8 @@ func TestSyncMCPServers(t *testing.T) {
 
 	// controlPlane is the owner KonnectGatewayControlPlane used in all tests.
 	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      cpName,
-			Namespace: namespace,
-		},
+		Name:      cpName,
+		Namespace: namespace,
 		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 				ID: cpID,
@@ -131,11 +128,9 @@ func TestSyncMCPServers(t *testing.T) {
 	existingMCPServer := func(serverID string) *konnectv1alpha1.MCPServer {
 		nn := generateMCPServerNN(namespace, cpName, serverID)
 		return &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       nn.Name,
-				Namespace:  nn.Namespace,
-				Finalizers: []string{mcpServerFinalizer},
-			},
+			Name:       nn.Name,
+			Namespace:  nn.Namespace,
+			Finalizers: []string{mcpServerFinalizer},
 			Spec: konnectv1alpha1.MCPServerSpec{
 				Mirror: konnectv1alpha1.MirrorSpec{
 					Konnect: konnectv1alpha1.MirrorKonnect{

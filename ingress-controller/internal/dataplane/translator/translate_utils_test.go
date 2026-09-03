@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -20,10 +19,8 @@ import (
 func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 	grants := []*gatewayapi.ReferenceGrant{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: "fitrat",
-			},
+			Name:      uuid.NewString(),
+			Namespace: "fitrat",
 			Spec: gatewayapi.ReferenceGrantSpec{
 				From: []gatewayapi.ReferenceGrantFrom{
 					{
@@ -51,10 +48,8 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: "cholpon",
-			},
+			Name:      uuid.NewString(),
+			Namespace: "cholpon",
 			Spec: gatewayapi.ReferenceGrantSpec{
 				From: []gatewayapi.ReferenceGrantFrom{
 					{
@@ -96,22 +91,16 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		// so we need to add them here.
 		Services: []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      string(redObjName),
-					Namespace: string(cholponNamespace),
-				},
+				Name:      string(redObjName),
+				Namespace: string(cholponNamespace),
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      string(blueObjName),
-					Namespace: string(cholponNamespace),
-				},
+				Name:      string(blueObjName),
+				Namespace: string(cholponNamespace),
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      string(redObjName),
-					Namespace: "behbudiy",
-				},
+				Name:      string(redObjName),
+				Namespace: "behbudiy",
 			},
 		},
 	})
@@ -129,31 +118,23 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 			msg: "all backends in route namespace",
 			route: &gatewayapi.HTTPRoute{
 				// normally the k8s api call populates TypeMeta properly, but we have no such luxuries here
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "HTTPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tong-sirlari",
-					Namespace: "cholpon",
-				},
+				Kind:       "HTTPRoute",
+				APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				Name:       "tong-sirlari",
+				Namespace:  "cholpon",
 			},
 			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:  blueObjName,
-						Kind:  &serviceKind,
-						Port:  &port,
-						Group: &serviceGroup,
-					},
+					Name:  blueObjName,
+					Kind:  &serviceKind,
+					Port:  &port,
+					Group: &serviceGroup,
 				},
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:  redObjName,
-						Kind:  &serviceKind,
-						Port:  &port,
-						Group: &serviceGroup,
-					},
+					Name:  redObjName,
+					Kind:  &serviceKind,
+					Port:  &port,
+					Group: &serviceGroup,
 				},
 			},
 			result: kongstate.Service{
@@ -178,14 +159,10 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						MustBuild(),
 				},
 				Parent: &gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tong-sirlari",
-						Namespace: "cholpon",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "HTTPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
-					},
+					Name:       "tong-sirlari",
+					Namespace:  "cholpon",
+					Kind:       "HTTPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			},
 			wantErr: false,
@@ -193,32 +170,24 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		{
 			msg: "same and different ns backend",
 			route: &gatewayapi.UDPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "UDPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "padarkush",
-					Namespace: "behbudiy",
-				},
+				Kind:       "UDPRoute",
+				APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				Name:       "padarkush",
+				Namespace:  "behbudiy",
 			},
 			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:      blueObjName,
-						Port:      &port,
-						Kind:      &serviceKind,
-						Namespace: &cholponNamespace,
-						Group:     &serviceGroup,
-					},
+					Name:      blueObjName,
+					Port:      &port,
+					Kind:      &serviceKind,
+					Namespace: &cholponNamespace,
+					Group:     &serviceGroup,
 				},
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:  redObjName,
-						Port:  &port,
-						Kind:  &serviceKind,
-						Group: &serviceGroup,
-					},
+					Name:  redObjName,
+					Port:  &port,
+					Kind:  &serviceKind,
+					Group: &serviceGroup,
 				},
 			},
 			result: kongstate.Service{
@@ -243,14 +212,10 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						MustBuild(),
 				},
 				Parent: &gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "padarkush",
-						Namespace: "behbudiy",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "UDPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
-					},
+					Name:       "padarkush",
+					Namespace:  "behbudiy",
+					Kind:       "UDPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			},
 			wantErr: false,
@@ -258,24 +223,18 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		{
 			msg: "only not permitted remote ns",
 			route: &gatewayapi.TCPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TCPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kitab-ul-atfol",
-					Namespace: "behbudiy",
-				},
+				Kind:       "TCPRoute",
+				APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				Name:       "kitab-ul-atfol",
+				Namespace:  "behbudiy",
 			},
 			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:      blueObjName,
-						Port:      &port,
-						Kind:      &serviceKind,
-						Namespace: &cholponNamespace,
-						Group:     &serviceGroup,
-					},
+					Name:      blueObjName,
+					Port:      &port,
+					Kind:      &serviceKind,
+					Namespace: &cholponNamespace,
+					Group:     &serviceGroup,
 				},
 			},
 			result: kongstate.Service{
@@ -300,14 +259,10 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 					},
 				},
 				Parent: &gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "kitab-ul-atfol",
-						Namespace: "behbudiy",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "TCPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
-					},
+					Name:       "kitab-ul-atfol",
+					Namespace:  "behbudiy",
+					Kind:       "TCPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			},
 			wantErr: false,
@@ -315,32 +270,24 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 		{
 			msg: "same and different ns backend",
 			route: &gatewayapi.TCPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "TCPRoute",
-					APIVersion: "gateway.networking.k8s.io/v1alpha2",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "muntaxabi-jugrofiyai-umumiy",
-					Namespace: "behbudiy",
-				},
+				Kind:       "TCPRoute",
+				APIVersion: "gateway.networking.k8s.io/v1alpha2",
+				Name:       "muntaxabi-jugrofiyai-umumiy",
+				Namespace:  "behbudiy",
 			},
 			refs: []gatewayapi.BackendRef{
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:      blueObjName,
-						Port:      &port,
-						Kind:      &serviceKind,
-						Namespace: &cholponNamespace,
-						Group:     &serviceGroup,
-					},
+					Name:      blueObjName,
+					Port:      &port,
+					Kind:      &serviceKind,
+					Namespace: &cholponNamespace,
+					Group:     &serviceGroup,
 				},
 				{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name:  redObjName,
-						Port:  &port,
-						Kind:  &serviceKind,
-						Group: &serviceGroup,
-					},
+					Name:  redObjName,
+					Port:  &port,
+					Kind:  &serviceKind,
+					Group: &serviceGroup,
 				},
 			},
 			result: kongstate.Service{
@@ -361,14 +308,10 @@ func TestGenerateKongServiceFromBackendRef(t *testing.T) {
 						MustBuild(),
 				},
 				Parent: &gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "muntaxabi-jugrofiyai-umumiy",
-						Namespace: "behbudiy",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       "TCPRoute",
-						APIVersion: "gateway.networking.k8s.io/v1alpha2",
-					},
+					Name:       "muntaxabi-jugrofiyai-umumiy",
+					Namespace:  "behbudiy",
+					Kind:       "TCPRoute",
+					APIVersion: "gateway.networking.k8s.io/v1alpha2",
 				},
 			},
 			wantErr: false,

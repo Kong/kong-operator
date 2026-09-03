@@ -8,7 +8,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
@@ -33,29 +32,25 @@ func TestFakeStoreIngressV1(t *testing.T) {
 	defaultClass := annotations.DefaultIngressClass
 	ingresses := []*netv1.Ingress{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo",
+			Namespace: "default",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 			Spec: netv1.IngressSpec{
 				Rules: []netv1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path: "/",
-										Backend: netv1.IngressBackend{
-											Service: &netv1.IngressServiceBackend{
-												Name: "foo-svc",
-												Port: netv1.ServiceBackendPort{
-													Name:   "http",
-													Number: 80,
-												},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path: "/",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: "foo-svc",
+											Port: netv1.ServiceBackendPort{
+												Name:   "http",
+												Number: 80,
 											},
 										},
 									},
@@ -67,29 +62,25 @@ func TestFakeStoreIngressV1(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: "not-kong",
-				},
+			Name:      "bar",
+			Namespace: "default",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: "not-kong",
 			},
 			Spec: netv1.IngressSpec{
 				Rules: []netv1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path: "/bar",
-										Backend: netv1.IngressBackend{
-											Service: &netv1.IngressServiceBackend{
-												Name: "bar-svc",
-												Port: netv1.ServiceBackendPort{
-													Name:   "http",
-													Number: 80,
-												},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path: "/bar",
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: "bar-svc",
+											Port: netv1.ServiceBackendPort{
+												Name:   "http",
+												Number: 80,
 											},
 										},
 									},
@@ -101,12 +92,10 @@ func TestFakeStoreIngressV1(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: "skip-me-im-not-default",
-				},
+			Name:      "bar",
+			Namespace: "default",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: "skip-me-im-not-default",
 			},
 			Spec: netv1.IngressSpec{
 				Rules:            []netv1.IngressRule{},
@@ -114,10 +103,8 @@ func TestFakeStoreIngressV1(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-			},
+			Name:      "bar",
+			Namespace: "default",
 			Spec: netv1.IngressSpec{
 				Rules:            []netv1.IngressRule{},
 				IngressClassName: &defaultClass,
@@ -136,25 +123,19 @@ func TestFakeStoreIngressClassV1(t *testing.T) {
 
 	classes := []*netv1.IngressClass{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: netv1.IngressClassSpec{
 				Controller: IngressClassKongController,
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: netv1.IngressClassSpec{
 				Controller: IngressClassKongController,
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "baz",
-			},
+			Name: "baz",
 			Spec: netv1.IngressClassSpec{
 				Controller: "some-other-controller.example.com/controller",
 			},
@@ -172,10 +153,8 @@ func TestFakeStoreService(t *testing.T) {
 
 	services := []*corev1.Service{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
+			Name:      "foo",
+			Namespace: "default",
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Services: services})
@@ -195,30 +174,24 @@ func TestFakeStoreEndpointSlice(t *testing.T) {
 	t.Parallel()
 	endpoints := []*discoveryv1.EndpointSlice{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-1",
-				Namespace: "default",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "foo",
-				},
+			Name:      "foo-1",
+			Namespace: "default",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "foo",
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-1",
-				Namespace: "bar",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "foo",
-				},
+			Name:      "foo-1",
+			Namespace: "bar",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "foo",
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-2",
-				Namespace: "bar",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "foo",
-				},
+			Name:      "foo-2",
+			Namespace: "bar",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "foo",
 			},
 		},
 	}
@@ -252,12 +225,10 @@ func TestFakeStoreConsumer(t *testing.T) {
 
 	consumers := []*configurationv1.KongConsumer{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo",
+			Namespace: "default",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 	}
@@ -281,12 +252,10 @@ func TestFakeStoreConsumerGroup(t *testing.T) {
 
 	consumerGroups := []*configurationv1beta1.KongConsumerGroup{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo",
+			Namespace: "default",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 	}
@@ -310,10 +279,8 @@ func TestFakeStorePlugins(t *testing.T) {
 
 	plugins := []*configurationv1.KongPlugin{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
+			Name:      "foo",
+			Namespace: "default",
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KongPlugins: plugins})
@@ -322,10 +289,8 @@ func TestFakeStorePlugins(t *testing.T) {
 
 	plugins = []*configurationv1.KongPlugin{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "baz",
-				Namespace: "default",
-			},
+			Name:      "baz",
+			Namespace: "default",
 		},
 	}
 	store, err = NewFakeStore(FakeObjects{KongPlugins: plugins})
@@ -345,9 +310,7 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugins := []*configurationv1.KongClusterPlugin{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
@@ -359,29 +322,23 @@ func TestFakeStoreClusterPlugins(t *testing.T) {
 
 	plugins = []*configurationv1.KongClusterPlugin{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-				Labels: map[string]string{
-					"global": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name: "foo",
+			Labels: map[string]string{
+				"global": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 		{
 			// invalid due to lack of class, not loaded
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-				Labels: map[string]string{
-					"global": "true",
-				},
+			Name: "bar",
+			Labels: map[string]string{
+				"global": "true",
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "baz",
-			},
+			Name: "baz",
 		},
 	}
 	store, err = NewFakeStore(FakeObjects{KongClusterPlugins: plugins})
@@ -407,10 +364,8 @@ func TestFakeStoreSecret(t *testing.T) {
 
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-			},
+			Name:      "foo",
+			Namespace: "default",
 		},
 	}
 	store, err := NewFakeStore(FakeObjects{Secrets: secrets})
@@ -432,18 +387,14 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-secret",
-				Namespace: "default",
-			},
+			Name:      "foo-secret",
+			Namespace: "default",
 		},
 	}
 	configMaps := []*corev1.ConfigMap{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-configmap",
-				Namespace: "default",
-			},
+			Name:      "foo-configmap",
+			Namespace: "default",
 		},
 	}
 	store, err := NewFakeStore(
@@ -461,27 +412,23 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 
 	secrets = []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Labels: map[string]string{
-					"konghq.com/ca-cert": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo",
+			Namespace: "default",
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo1",
-				Namespace: "default",
-				Labels: map[string]string{
-					"konghq.com/ca-cert": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo1",
+			Namespace: "default",
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 	}
@@ -495,29 +442,25 @@ func TestFakeStore_ListCACerts(t *testing.T) {
 
 	secrets = []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-secret",
-				Namespace: "default",
-				Labels: map[string]string{
-					"konghq.com/ca-cert": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo-secret",
+			Namespace: "default",
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 	}
 	configMaps = []*corev1.ConfigMap{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo-configmap",
-				Namespace: "default",
-				Labels: map[string]string{
-					"konghq.com/ca-cert": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Name:      "foo-configmap",
+			Namespace: "default",
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 		},
 	}
@@ -541,15 +484,11 @@ func TestFakeStoreHTTPRoute(t *testing.T) {
 
 	classes := []*gatewayapi.HTTPRoute{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.HTTPRouteSpec{},
 		},
 	}
@@ -567,15 +506,11 @@ func TestFakeStoreUDPRoute(t *testing.T) {
 
 	classes := []*gatewayapi.UDPRoute{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.UDPRouteSpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.UDPRouteSpec{},
 		},
 	}
@@ -593,15 +528,11 @@ func TestFakeStoreTCPRoute(t *testing.T) {
 
 	classes := []*gatewayapi.TCPRoute{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.TCPRouteSpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.TCPRouteSpec{},
 		},
 	}
@@ -619,15 +550,11 @@ func TestFakeStoreTLSRoute(t *testing.T) {
 
 	classes := []*gatewayapi.TLSRoute{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.TLSRouteSpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.TLSRouteSpec{},
 		},
 	}
@@ -645,15 +572,11 @@ func TestFakeStoreReferenceGrant(t *testing.T) {
 
 	grants := []*gatewayapi.ReferenceGrant{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.ReferenceGrantSpec{},
 		},
 	}
@@ -671,15 +594,11 @@ func TestFakeStoreGateway(t *testing.T) {
 
 	grants := []*gatewayapi.Gateway{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "foo",
-			},
+			Name: "foo",
 			Spec: gatewayapi.GatewaySpec{},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "bar",
-			},
+			Name: "bar",
 			Spec: gatewayapi.GatewaySpec{},
 		},
 	}
@@ -695,10 +614,8 @@ func TestFakeStore_KongUpstreamPolicy(t *testing.T) {
 	fakeObjects := FakeObjects{
 		KongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-				},
+				Name:      "foo",
+				Namespace: "default",
 				Spec: configurationv1beta1.KongUpstreamPolicySpec{
 					Algorithm: new("least-connections"),
 				},
@@ -717,10 +634,8 @@ func TestFakeStore_KongServiceFacade(t *testing.T) {
 	fakeObjects := FakeObjects{
 		KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-				},
+				Name:      "foo",
+				Namespace: "default",
 				Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 					Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 						Name: "service-name",

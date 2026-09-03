@@ -9,7 +9,6 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -109,10 +108,8 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	for _, gateway := range gateways.Items {
 		if gateway.Spec.GatewayClassName == gatewayv1.ObjectName(gatewayClass.Name) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}
@@ -148,10 +145,8 @@ func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *k
 	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv2beta1.GatewayConfigurationList{})(ctx, ext)
 	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv2beta1.GatewayConfiguration {
 		return operatorv2beta1.GatewayConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: req.Namespace,
-				Name:      req.Name,
-			},
+			Namespace: req.Namespace,
+			Name:      req.Name,
 		}
 	})
 	affectedGateways := make([]reconcile.Request, 0)
@@ -211,10 +206,8 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	for _, gateway := range gatewayList.Items {
 		if _, ok := matchingGatewayClasses[string(gateway.Spec.GatewayClassName)]; ok {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}
@@ -384,10 +377,8 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 			continue
 		}
 		recs = append(recs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: gateway.Namespace,
-				Name:      gateway.Name,
-			},
+			Namespace: gateway.Namespace,
+			Name:      gateway.Name,
 		})
 	}
 	return recs

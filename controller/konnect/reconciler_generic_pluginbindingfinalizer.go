@@ -5,7 +5,6 @@ import (
 	"fmt"
 
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -129,10 +128,8 @@ func (r *KonnectEntityPluginBindingFinalizerReconciler[T, TEnt]) enqueueObjectRe
 
 		return []ctrl.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Namespace: kpb.Namespace,
-					Name:      name,
-				},
+				Namespace: kpb.Namespace,
+				Name:      name,
 			},
 		}
 	}

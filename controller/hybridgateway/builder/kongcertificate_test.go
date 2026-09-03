@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -36,7 +35,7 @@ func TestKongCertificateBuilder_WithControlPlaneRef(t *testing.T) {
 
 func TestKongCertificateBuilder_WithLabels(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw1", Namespace: "ns1"},
+		Name: "gw1", Namespace: "ns1",
 	}
 	listener := &gwtypes.Listener{Port: 443}
 	b := NewKongCertificate().WithLabels(gw, listener)
@@ -49,7 +48,7 @@ func TestKongCertificateBuilder_WithLabels(t *testing.T) {
 
 func TestKongCertificateBuilder_WithLabels_NilListener(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw2", Namespace: "ns2"},
+		Name: "gw2", Namespace: "ns2",
 	}
 	b := NewKongCertificate().WithLabels(gw, nil)
 	cert, err := b.Build()
@@ -60,7 +59,7 @@ func TestKongCertificateBuilder_WithLabels_NilListener(t *testing.T) {
 
 func TestKongCertificateBuilder_WithAnnotations(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw3", Namespace: "ns3"},
+		Name: "gw3", Namespace: "ns3",
 	}
 	b := NewKongCertificate().WithAnnotations(gw)
 	cert, err := b.Build()
@@ -71,7 +70,7 @@ func TestKongCertificateBuilder_WithAnnotations(t *testing.T) {
 
 func TestKongCertificateBuilder_WithOwner(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw4", Namespace: "ns4"},
+		Name: "gw4", Namespace: "ns4",
 	}
 	b := NewKongCertificate().WithOwner(gw)
 	_, err := b.Build()
@@ -112,14 +111,10 @@ func TestKongCertificateBuilder_MustBuild_Success(t *testing.T) {
 
 func TestKongCertificateBuilder_WithLabelsForRoute(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-route",
-			Namespace: "my-ns",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
+		Name:       "my-route",
+		Namespace:  "my-ns",
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	pRef := &gwtypes.ParentReference{Name: "my-gateway"}
 
@@ -132,14 +127,10 @@ func TestKongCertificateBuilder_WithLabelsForRoute(t *testing.T) {
 
 func TestKongCertificateBuilder_WithAnnotationsForRoute(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-route",
-			Namespace: "my-ns",
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
+		Name:       "my-route",
+		Namespace:  "my-ns",
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
 	}
 	pRef := &gwtypes.ParentReference{Name: "my-gateway"}
 

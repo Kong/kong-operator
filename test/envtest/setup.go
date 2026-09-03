@@ -16,7 +16,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/rest"
@@ -333,11 +332,9 @@ func Setup(t *testing.T, ctx context.Context, scheme *runtime.Scheme, optModifie
 	require.NoError(t, err)
 
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-			Labels: map[string]string{
-				"gateway-operator.konghq.com/test-name": NameFromT(t),
-			},
+		GenerateName: "test-",
+		Labels: map[string]string{
+			"gateway-operator.konghq.com/test-name": NameFromT(t),
 		},
 	}
 	require.EventuallyWithT(t, func(c *assert.CollectT) {
@@ -361,9 +358,7 @@ func deployIngressClass(ctx context.Context, t *testing.T, name string, client c
 	t.Helper()
 
 	ingress := &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 		Spec: netv1.IngressClassSpec{
 			Controller: store.IngressClassKongController,
 		},

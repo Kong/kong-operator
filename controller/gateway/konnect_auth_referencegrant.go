@@ -172,11 +172,9 @@ func newKonnectAPIAuthReferenceGrant(
 	authName string,
 ) *configurationv1alpha1.KongReferenceGrant {
 	return &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      konnectAPIAuthReferenceGrantName(gateway, authNamespace, authName),
-			Namespace: authNamespace,
-			Labels:    konnectAPIAuthGrantLabels(gateway),
-		},
+		Name:      konnectAPIAuthReferenceGrantName(gateway, authNamespace, authName),
+		Namespace: authNamespace,
+		Labels:    konnectAPIAuthGrantLabels(gateway),
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{

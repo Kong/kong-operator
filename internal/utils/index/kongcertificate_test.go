@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -31,7 +30,7 @@ func TestSecretOnKongCertificate(t *testing.T) {
 		{
 			name: "returns correct index if SecretRef is set with namespace",
 			input: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Namespace: new("ns"),
@@ -44,7 +43,7 @@ func TestSecretOnKongCertificate(t *testing.T) {
 		{
 			name: "returns correct index if SecretRef is set without namespace",
 			input: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name: "mysecret",
@@ -56,7 +55,7 @@ func TestSecretOnKongCertificate(t *testing.T) {
 		{
 			name: "returns correct index for both SecretRef and SecretRefAlt",
 			input: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name: "mysecret",
@@ -72,7 +71,7 @@ func TestSecretOnKongCertificate(t *testing.T) {
 		{
 			name: "returns correct index if only SecretRefAlt is set with namespace",
 			input: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRefAlt: &commonv1alpha1.NamespacedRef{
 						Namespace: new("ns"),
@@ -85,7 +84,7 @@ func TestSecretOnKongCertificate(t *testing.T) {
 		{
 			name: "returns correct index if only SecretRefAlt is set without namespace",
 			input: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRefAlt: &commonv1alpha1.NamespacedRef{
 						Name: "mysecret",

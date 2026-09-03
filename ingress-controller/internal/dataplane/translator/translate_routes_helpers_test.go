@@ -5,7 +5,6 @@ import (
 
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -23,18 +22,14 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 		{
 			name: "TCPRoute gets translated correctly to kong.Route",
 			route: &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mytcproute-name",
-					Namespace: "mynamespace",
-				},
+				Name:      "mytcproute-name",
+				Namespace: "mynamespace",
 			},
 			gwPorts: []gatewayapi.PortNumber{8080},
 			routeRule: gatewayapi.TCPRouteRule{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(1234)),
-						},
+						Port: new(gatewayapi.PortNumber(1234)),
 					},
 				},
 			},
@@ -44,20 +39,18 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Name:      "mytcproute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
-						Destinations: []*kong.CIDRPort{
-							{
-								Port: new(8080),
-							},
+					Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: new(8080),
 						},
-						Protocols: []*string{
-							new("tcp"),
-						},
-						Tags: []*string{
-							new("k8s-name:mytcproute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					},
+					Protocols: []*string{
+						new("tcp"),
+					},
+					Tags: []*string{
+						new("k8s-name:mytcproute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},
@@ -65,22 +58,16 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 		{
 			name: "TCPRoute with multiple backends and different Gateway port get translated correctly to kong.Route",
 			route: &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mytcproute-name",
-					Namespace: "mynamespace",
-				},
+				Name:      "mytcproute-name",
+				Namespace: "mynamespace",
 			},
 			routeRule: gatewayapi.TCPRouteRule{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(1234)),
-						},
+						Port: new(gatewayapi.PortNumber(1234)),
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(5678)),
-						},
+						Port: new(gatewayapi.PortNumber(5678)),
 					},
 				},
 			},
@@ -91,23 +78,21 @@ func TestGenerateKongRoutesFromRouteRule_TCP(t *testing.T) {
 						Name:      "mytcproute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
-						Destinations: []*kong.CIDRPort{
-							{
-								Port: new(8080),
-							},
-							{
-								Port: new(8888),
-							},
+					Name: new("tcproute.mynamespace.mytcproute-name.0.0"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: new(8080),
 						},
-						Protocols: []*string{
-							new("tcp"),
+						{
+							Port: new(8888),
 						},
-						Tags: []*string{
-							new("k8s-name:mytcproute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					},
+					Protocols: []*string{
+						new("tcp"),
+					},
+					Tags: []*string{
+						new("k8s-name:mytcproute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},
@@ -135,17 +120,13 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 		{
 			name: "UDPRoute gets translated correctly to kong.Route",
 			route: &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "myudproute-name",
-					Namespace: "mynamespace",
-				},
+				Name:      "myudproute-name",
+				Namespace: "mynamespace",
 			},
 			routeRule: gatewayapi.UDPRouteRule{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(1234)),
-						},
+						Port: new(gatewayapi.PortNumber(1234)),
 					},
 				},
 			},
@@ -156,20 +137,18 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Name:      "myudproute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("udproute.mynamespace.myudproute-name.0.0"),
-						Destinations: []*kong.CIDRPort{
-							{
-								Port: new(8080),
-							},
+					Name: new("udproute.mynamespace.myudproute-name.0.0"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: new(8080),
 						},
-						Protocols: []*string{
-							new("udp"),
-						},
-						Tags: []*string{
-							new("k8s-name:myudproute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					},
+					Protocols: []*string{
+						new("udp"),
+					},
+					Tags: []*string{
+						new("k8s-name:myudproute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},
@@ -177,22 +156,16 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 		{
 			name: "UDPRoute with multiple backends and multiple Gateway ports gets translated correctly to kong.Route",
 			route: &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "myudproute-name",
-					Namespace: "mynamespace",
-				},
+				Name:      "myudproute-name",
+				Namespace: "mynamespace",
 			},
 			routeRule: gatewayapi.UDPRouteRule{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(1234)),
-						},
+						Port: new(gatewayapi.PortNumber(1234)),
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Port: new(gatewayapi.PortNumber(5678)),
-						},
+						Port: new(gatewayapi.PortNumber(5678)),
 					},
 				},
 			},
@@ -203,23 +176,21 @@ func TestGenerateKongRoutesFromRouteRule_UDP(t *testing.T) {
 						Name:      "myudproute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("udproute.mynamespace.myudproute-name.0.0"),
-						Destinations: []*kong.CIDRPort{
-							{
-								Port: new(8080),
-							},
-							{
-								Port: new(8888),
-							},
+					Name: new("udproute.mynamespace.myudproute-name.0.0"),
+					Destinations: []*kong.CIDRPort{
+						{
+							Port: new(8080),
 						},
-						Protocols: []*string{
-							new("udp"),
+						{
+							Port: new(8888),
 						},
-						Tags: []*string{
-							new("k8s-name:myudproute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					},
+					Protocols: []*string{
+						new("udp"),
+					},
+					Tags: []*string{
+						new("k8s-name:myudproute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},
@@ -246,10 +217,8 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 		{
 			name: "TLSRoute gets translated correctly to kong.Route",
 			route: &gatewayapi.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mytlsroute-name",
-					Namespace: "mynamespace",
-				},
+				Name:      "mytlsroute-name",
+				Namespace: "mynamespace",
 				Spec: gatewayapi.TLSRouteSpec{
 					Hostnames: []gatewayapi.Hostname{
 						"hostname.com",
@@ -264,19 +233,17 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Name:      "mytlsroute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
-						SNIs: []*string{
-							new("hostname.com"),
-							new("hostname2.com"),
-						},
-						Protocols: []*string{
-							new("tls"),
-						},
-						Tags: []*string{
-							new("k8s-name:mytlsroute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
+					SNIs: []*string{
+						new("hostname.com"),
+						new("hostname2.com"),
+					},
+					Protocols: []*string{
+						new("tls"),
+					},
+					Tags: []*string{
+						new("k8s-name:mytlsroute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},
@@ -284,11 +251,9 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 		{
 			name: "TLSRoute without hostnames gets translated correctly to kong.Route without SNIs",
 			route: &gatewayapi.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mytlsroute-name",
-					Namespace: "mynamespace",
-				},
-				Spec: gatewayapi.TLSRouteSpec{},
+				Name:      "mytlsroute-name",
+				Namespace: "mynamespace",
+				Spec:      gatewayapi.TLSRouteSpec{},
 			},
 			routeRule: gatewayapi.TLSRouteRule{},
 			expected: []kongstate.Route{
@@ -297,16 +262,14 @@ func TestGenerateKongRoutesFromRouteRule_TLS(t *testing.T) {
 						Name:      "mytlsroute-name",
 						Namespace: "mynamespace",
 					},
-					Route: kong.Route{
-						Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
-						SNIs: []*string{},
-						Protocols: []*string{
-							new("tls"),
-						},
-						Tags: []*string{
-							new("k8s-name:mytlsroute-name"),
-							new("k8s-namespace:mynamespace"),
-						},
+					Name: new("tlsroute.mynamespace.mytlsroute-name.0.0"),
+					SNIs: []*string{},
+					Protocols: []*string{
+						new("tls"),
+					},
+					Tags: []*string{
+						new("k8s-name:mytlsroute-name"),
+						new("k8s-namespace:mynamespace"),
 					},
 				},
 			},

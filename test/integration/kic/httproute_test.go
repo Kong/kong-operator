@@ -69,10 +69,8 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	require.NoError(t, err)
 
 	kongplugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "correlation",
-		},
+		Namespace:  ns.Name,
+		Name:       "correlation",
 		PluginName: "correlation-id",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"header_name":"reqid", "echo_downstream": true}`),
@@ -91,12 +89,10 @@ func TestHTTPRouteEssentials(t *testing.T) {
 	pathMatchExact := gatewayapi.PathMatchExact
 	headerMatchRegex := gatewayapi.HeaderMatchRegularExpression
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+			annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -126,13 +122,9 @@ func TestHTTPRouteEssentials(t *testing.T) {
 					},
 				},
 				BackendRefs: []gatewayapi.HTTPBackendRef{{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service.Name),
-							Port: &httpPort,
-							Kind: util.StringToGatewayAPIKindPtr("Service"),
-						},
-					},
+					Name: gatewayapi.ObjectName(service.Name),
+					Port: &httpPort,
+					Kind: util.StringToGatewayAPIKindPtr("Service"),
 				}},
 			}},
 		},
@@ -392,12 +384,10 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 	httpPort := gatewayapi.PortNumber(80)
 	pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-				annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.StripPathKey: "true",
+			annotations.AnnotationPrefix + annotations.PluginsKey:   "correlation",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -417,24 +407,16 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 					},
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName(service1.Name),
-									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-								Weight: &httpbinWeight,
-							},
+							Name:   gatewayapi.ObjectName(service1.Name),
+							Port:   &httpPort,
+							Kind:   util.StringToGatewayAPIKindPtr("Service"),
+							Weight: &httpbinWeight,
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName(service2.Name),
-									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-								Weight: &nginxWeight,
-							},
+							Name:   gatewayapi.ObjectName(service2.Name),
+							Port:   &httpPort,
+							Kind:   util.StringToGatewayAPIKindPtr("Service"),
+							Weight: &nginxWeight,
 						},
 					},
 				},
@@ -449,24 +431,16 @@ func TestHTTPRouteMultipleServices(t *testing.T) {
 					},
 					BackendRefs: []gatewayapi.HTTPBackendRef{
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName(service1.Name),
-									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-								Weight: &httpbinWeight,
-							},
+							Name:   gatewayapi.ObjectName(service1.Name),
+							Port:   &httpPort,
+							Kind:   util.StringToGatewayAPIKindPtr("Service"),
+							Weight: &httpbinWeight,
 						},
 						{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName(service3.Name),
-									Port: &httpPort,
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-								Weight: &nginxWeight,
-							},
+							Name:   gatewayapi.ObjectName(service3.Name),
+							Port:   &httpPort,
+							Kind:   util.StringToGatewayAPIKindPtr("Service"),
+							Weight: &nginxWeight,
 						},
 					},
 				},
@@ -559,11 +533,9 @@ func TestHTTPRouteFilterHosts(t *testing.T) {
 
 	t.Logf("creating an httproute with a same hostname and another unmatched hostname")
 	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-			Annotations: map[string]string{
-				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-			},
+		Name: uuid.NewString(),
+		Annotations: map[string]string{
+			annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 		},
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{

@@ -56,15 +56,15 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 	}
 
 	t.Run("deterministic: same key produces same redacted value across calls", func(t *testing.T) {
-		ka := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("mykey")}}
+		ka := KeyAuth{Key: new("mykey")}
 		got1 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		got2 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "y"})
 		assert.Equal(t, got1.Key, got2.Key, "same real key must produce same redacted key regardless of uuidGenerator")
 	})
 
 	t.Run("different keys produce different redacted values", func(t *testing.T) {
-		ka1 := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("keyA")}}
-		ka2 := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("keyB")}}
+		ka1 := KeyAuth{Key: new("keyA")}
+		ka2 := KeyAuth{Key: new("keyB")}
 		got1 := ka1.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		got2 := ka2.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		assert.NotEqual(t, got1.Key, got2.Key, "different real keys must produce different redacted keys")

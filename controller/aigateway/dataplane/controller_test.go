@@ -57,15 +57,11 @@ const (
 // newReconcileAIGWDP builds the standard AIGatewayDataPlane used across Reconcile tests.
 func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reconcileTestNS,
-			Name:      reconcileTestDPName,
-			UID:       types.UID("aigwdp-uid"),
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "aigateway.konghq.com/v1alpha1",
-			Kind:       "AIGatewayDataPlane",
-		},
+		Namespace:  reconcileTestNS,
+		Name:       reconcileTestDPName,
+		UID:        types.UID("aigwdp-uid"),
+		APIVersion: "aigateway.konghq.com/v1alpha1",
+		Kind:       "AIGatewayDataPlane",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -89,10 +85,8 @@ func newReconcileAIGWDPNoControlPlaneRef() *aigatewayv1alpha1.AIGatewayDataPlane
 // with Programmed=True and endpoints set.
 func newProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	return &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: reconcileTestNS,
-			Name:      reconcileTestAIGWCPName,
-		},
+		Namespace: reconcileTestNS,
+		Name:      reconcileTestAIGWCPName,
 		Status: konnectv1alpha1.KonnectAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -182,7 +176,7 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 // modelling the state after the Konnect controller has registered it.
 func newProgrammedKonnectCert() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
+		Namespace: reconcileTestNS, Name: reconcileTestDPName,
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

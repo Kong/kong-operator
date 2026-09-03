@@ -70,11 +70,9 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 ) (*corev1.Secret, error) {
 	var (
 		secret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			Type: corev1.SecretTypeOpaque,
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Type:       corev1.SecretTypeOpaque,
 		}
 	)
 
@@ -253,16 +251,12 @@ func generateDeployment(
 	)
 
 	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-			Annotations: map[string]string{
-				mcpServerVersionAnnotationKey: mcpMetadata.Version,
-			},
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Name:       nn.Name,
+		Namespace:  nn.Namespace,
+		Annotations: map[string]string{
+			mcpServerVersionAnnotationKey: mcpMetadata.Version,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,
@@ -355,10 +349,8 @@ func generateDeployment(
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: mcpServerVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
+							Name:     mcpServerVolumeName,
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					},
 				},
@@ -465,10 +457,8 @@ func patEnvVarFromAuth(tokenSecret *corev1.Secret) corev1.EnvVar {
 		Name: "PAT",
 		ValueFrom: &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: tokenSecret.Name,
-				},
-				Key: konnectcontroller.SecretTokenKey,
+				Name: tokenSecret.Name,
+				Key:  konnectcontroller.SecretTokenKey,
 			},
 		},
 	}
@@ -516,14 +506,10 @@ func generateService(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) *corev1.Servi
 	}
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		},
+		APIVersion: "v1",
+		Kind:       "Service",
+		Name:       nn.Name,
+		Namespace:  nn.Namespace,
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{

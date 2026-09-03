@@ -123,9 +123,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 	t.Logf("creating a tcproute to access deployment %s via kong", deployment1.Name)
 	remoteNamespace := gatewayapi.Namespace(otherNs.Name)
 	tcproute := &gatewayapi.TCPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.TCPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -136,17 +134,13 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 			Rules: []gatewayapi.TCPRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service1.Name),
-							Port: new(gatewayapi.PortNumber(service1Port)),
-						},
+						Name: gatewayapi.ObjectName(service1.Name),
+						Port: new(gatewayapi.PortNumber(service1Port)),
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name:      gatewayapi.ObjectName(service2.Name),
-							Namespace: &remoteNamespace,
-							Port:      new(gatewayapi.PortNumber(service2Port)),
-						},
+						Name:      gatewayapi.ObjectName(service2.Name),
+						Namespace: &remoteNamespace,
+						Port:      new(gatewayapi.PortNumber(service2Port)),
 					},
 				},
 			}},
@@ -166,9 +160,7 @@ func TestTCPRouteReferenceGrant(t *testing.T) {
 
 	t.Logf("creating a ReferenceGrant that permits tcproute access from %s to services in %s", ns.Name, otherNs.Name)
 	grant := &gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{

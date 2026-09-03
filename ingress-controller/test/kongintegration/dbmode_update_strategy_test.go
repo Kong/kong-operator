@@ -8,7 +8,6 @@ import (
 	"github.com/go-logr/zapr"
 	"github.com/kong/go-database-reconciler/pkg/dump"
 	"github.com/kong/go-database-reconciler/pkg/file"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -62,22 +61,20 @@ func TestUpdateStrategyDBMode(t *testing.T) {
 			FormatVersion: "3.0",
 			Services: []file.FService{
 				{
-					Service: kong.Service{
-						Name:     new("test-service"),
-						Host:     new("konghq.com"),
-						Port:     new(80),
-						Protocol: new("grpc"),
-						// Paths are not supported for gRPC services. This will trigger an error.
-						Path: new("/test"),
-						Tags: []*string{
-							// Tags are used to identify the resource in the flattened errors response.
-							new("k8s-name:test-service"),
-							new("k8s-namespace:default"),
-							new("k8s-kind:Service"),
-							new("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
-							new("k8s-group:"),
-							new("k8s-version:v1"),
-						},
+					Name:     new("test-service"),
+					Host:     new("konghq.com"),
+					Port:     new(80),
+					Protocol: new("grpc"),
+					// Paths are not supported for gRPC services. This will trigger an error.
+					Path: new("/test"),
+					Tags: []*string{
+						// Tags are used to identify the resource in the flattened errors response.
+						new("k8s-name:test-service"),
+						new("k8s-namespace:default"),
+						new("k8s-kind:Service"),
+						new("k8s-uid:a3b8afcc-9f19-42e4-aa8f-5866168c2ad3"),
+						new("k8s-group:"),
+						new("k8s-version:v1"),
 					},
 				},
 			},

@@ -413,12 +413,10 @@ func KongExpressionRouteFromSplitGRPCRouteMatchWithPriority(
 	)
 
 	r := kongstate.Route{
-		Route: kong.Route{
-			Name:         new(routeName),
-			Protocols:    kong.StringSlice("http", "https"),
-			PreserveHost: new(true),
-			Tags:         tags,
-		},
+		Name:             new(routeName),
+		Protocols:        kong.StringSlice("http", "https"),
+		PreserveHost:     new(true),
+		Tags:             tags,
 		Ingress:          util.FromK8sObject(grpcRoute),
 		ExpressionRoutes: true,
 	}

@@ -32,25 +32,19 @@ const (
 
 func newTestAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "aigateway.konghq.com/v1alpha1",
-			Kind:       "AIGatewayDataPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "test-dp",
-			Namespace:  "default",
-			UID:        types.UID("aigwdp-uid-123"),
-			Generation: 1,
-		},
+		APIVersion: "aigateway.konghq.com/v1alpha1",
+		Kind:       "AIGatewayDataPlane",
+		Name:       "test-dp",
+		Namespace:  "default",
+		UID:        types.UID("aigwdp-uid-123"),
+		Generation: 1,
 	}
 }
 
 func newTestAIGWCP() *konnectv1alpha1.KonnectAIGateway {
 	return &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-aigwcp",
-			Namespace: "default",
-		},
+		Name:      "test-aigwcp",
+		Namespace: "default",
 		Status: konnectv1alpha1.KonnectAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
@@ -70,10 +64,8 @@ func newTestAIGWCP() *konnectv1alpha1.KonnectAIGateway {
 
 func newTestCertSecret() *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      testCertSecretName,
-			Namespace: "default",
-		},
+		Name:      testCertSecretName,
+		Namespace: "default",
 		Data: map[string][]byte{
 			"tls.crt": []byte("---- BEGIN CERTIFICATE ----"),
 			"tls.key": []byte("---- BEGIN KEY ----"),
@@ -126,11 +118,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True",
 			extraObjs: []client.Object{
 				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-						Kind:       "AIGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+					Kind:       "AIGatewayDataPlaneCertificate",
+					Name:       "test-dp", Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -176,11 +166,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "cert exists with Programmed=False: returns not-programmed condition",
 			extraObjs: []client.Object{
 				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-						Kind:       "AIGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+					Kind:       "AIGatewayDataPlaneCertificate",
+					Name:       "test-dp", Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

@@ -24,11 +24,9 @@ const (
 // and finally deploys it on the Kubernetes cluster by means of the gateway client given as arg.
 func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, gatewayClassName string, opts ...func(*gatewayapi.GatewayClass)) (*gatewayapi.GatewayClass, error) {
 	gwc := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: gatewayClassName,
-			Annotations: map[string]string{
-				annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
-			},
+		Name: gatewayClassName,
+		Annotations: map[string]string{
+			annotations.GatewayClassUnmanagedAnnotation: annotations.GatewayClassUnmanagedAnnotationValuePlaceholder,
 		},
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: mgrconsts.GetControllerName(),
@@ -55,9 +53,7 @@ func DeployGatewayClass(ctx context.Context, client *gatewayclient.Clientset, ga
 func DeployGateway(ctx context.Context, client *gatewayclient.Clientset, namespace, gatewayClassName string, opts ...func(*gatewayapi.Gateway)) (*gatewayapi.Gateway, error) {
 	// Create a default gateway with a listener set to port 80 for HTTP traffic.
 	gw := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: DefaultGatewayName,
-		},
+		Name: DefaultGatewayName,
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gatewayClassName),
 			Listeners: []gatewayapi.Listener{

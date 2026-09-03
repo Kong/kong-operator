@@ -84,11 +84,9 @@ func (p *DataPlaneKonnectExtensionProcessor) Process(ctx context.Context, cl cli
 func kongInKonnectClusterCertVolume(secretName string) corev1.Volume {
 	return corev1.Volume{
 		Name: consts.KongClusterCertVolume,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName:  secretName,
-				DefaultMode: new(int32(420)),
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName:  secretName,
+			DefaultMode: new(int32(420)),
 		},
 	}
 }

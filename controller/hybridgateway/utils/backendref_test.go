@@ -107,64 +107,61 @@ func TestHTTPBackendRefsToBackendRefs(t *testing.T) {
 		{
 			name: "single ref extracted",
 			input: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
 			},
 		},
 		{
 			name: "multiple refs extracted in order",
 			input: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port443}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port443},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port443}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port443},
 			},
 		},
 		{
 			name: "HTTP filters are stripped, only BackendRef preserved",
 			input: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-filtered", Port: &port80}},
+					Name: "svc-filtered", Port: &port80,
 					Filters: []gatewayv1.HTTPRouteFilter{
 						{Type: gatewayv1.HTTPRouteFilterRequestHeaderModifier},
 					},
 				},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-filtered", Port: &port80}},
+				{Name: "svc-filtered", Port: &port80},
 			},
 		},
 		{
 			name: "cross-namespace ref preserved",
 			input: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other",
 					Port:      &port80,
-					Namespace: &otherNS,
-				}}},
+					Namespace: &otherNS},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other",
 					Port:      &port80,
-					Namespace: &otherNS,
-				}},
+					Namespace: &otherNS},
 			},
 		},
 		{
 			name: "weight preserved",
 			input: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-weighted", Port: &port80},
-					Weight:                 &weight,
-				}},
+				{
+					Name: "svc-weighted", Port: &port80,
+					Weight: &weight},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-weighted", Port: &port80}, Weight: &weight},
+				{Name: "svc-weighted", Port: &port80, Weight: &weight},
 			},
 		},
 	}
@@ -207,64 +204,61 @@ func TestGRPCBackendRefsToBackendRefs(t *testing.T) {
 		{
 			name: "single ref extracted",
 			input: []gatewayv1.GRPCBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
 			},
 		},
 		{
 			name: "multiple refs extracted in order",
 			input: []gatewayv1.GRPCBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port443}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port443},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port443}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port443},
 			},
 		},
 		{
 			name: "GRPC filters are stripped, only BackendRef preserved",
 			input: []gatewayv1.GRPCBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-filtered", Port: &port80}},
+					Name: "svc-filtered", Port: &port80,
 					Filters: []gatewayv1.GRPCRouteFilter{
 						{Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier},
 					},
 				},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-filtered", Port: &port80}},
+				{Name: "svc-filtered", Port: &port80},
 			},
 		},
 		{
 			name: "cross-namespace ref preserved",
 			input: []gatewayv1.GRPCBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other",
 					Port:      &port80,
-					Namespace: &otherNS,
-				}}},
+					Namespace: &otherNS},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other",
 					Port:      &port80,
-					Namespace: &otherNS,
-				}},
+					Namespace: &otherNS},
 			},
 		},
 		{
 			name: "weight preserved",
 			input: []gatewayv1.GRPCBackendRef{
-				{BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-weighted", Port: &port80},
-					Weight:                 &weight,
-				}},
+				{
+					Name: "svc-weighted", Port: &port80,
+					Weight: &weight},
 			},
 			expected: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-weighted", Port: &port80}, Weight: &weight},
+				{Name: "svc-weighted", Port: &port80, Weight: &weight},
 			},
 		},
 	}

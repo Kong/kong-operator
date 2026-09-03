@@ -41,12 +41,10 @@ func TestFromIngressV1(t *testing.T) {
 		s, err := store.NewFakeStore(store.FakeObjects{
 			IngressesV1: []*netv1.Ingress{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "baz",
-						Namespace: "foo-namespace",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "baz",
+					Namespace: "foo-namespace",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: netv1.IngressSpec{
 						Rules: []netv1.IngressRule{
@@ -71,12 +69,10 @@ func TestFromIngressV1(t *testing.T) {
 		s, err := store.NewFakeStore(store.FakeObjects{
 			Services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc",
-						Namespace: "my-ns",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "svc",
+					Namespace: "my-ns",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
@@ -90,12 +86,10 @@ func TestFromIngressV1(t *testing.T) {
 			},
 			IngressesV1: []*netv1.Ingress{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "baz",
-						Namespace: "my-ns",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "baz",
+					Namespace: "my-ns",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: netv1.IngressSpec{
 						DefaultBackend: &netv1.IngressBackend{
@@ -108,18 +102,16 @@ func TestFromIngressV1(t *testing.T) {
 						},
 						Rules: []netv1.IngressRule{
 							{
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Path:     "/foo",
-												PathType: new(netv1.PathTypePrefix),
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: "svc",
-														Port: netv1.ServiceBackendPort{
-															Number: 80,
-														},
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path:     "/foo",
+											PathType: new(netv1.PathTypePrefix),
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
 													},
 												},
 											},
@@ -158,12 +150,10 @@ func TestFromIngressV1(t *testing.T) {
 func TestGetDefaultBackendService(t *testing.T) {
 	ingressWithDefaultBackendService := func(creationTimestamp time.Time, serviceName string) netv1.Ingress {
 		return netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "foo",
-				Namespace:         "foo-namespace",
-				CreationTimestamp: metav1.NewTime(creationTimestamp),
-			},
-			TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
+			Name:              "foo",
+			Namespace:         "foo-namespace",
+			CreationTimestamp: metav1.NewTime(creationTimestamp),
+			Kind:              "Ingress", APIVersion: "networking.k8s.io/v1",
 			Spec: netv1.IngressSpec{
 				DefaultBackend: &netv1.IngressBackend{
 					Service: &netv1.IngressServiceBackend{
@@ -176,12 +166,10 @@ func TestGetDefaultBackendService(t *testing.T) {
 	}
 	ingressWithDefaultBackendKongServiceFacade := func(creationTimestamp time.Time, serviceFacadeName string) netv1.Ingress {
 		return netv1.Ingress{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "foo",
-				Namespace:         "foo-namespace",
-				CreationTimestamp: metav1.NewTime(creationTimestamp),
-			},
-			TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
+			Name:              "foo",
+			Namespace:         "foo-namespace",
+			CreationTimestamp: metav1.NewTime(creationTimestamp),
+			Kind:              "Ingress", APIVersion: "networking.k8s.io/v1",
 			Spec: netv1.IngressSpec{
 				DefaultBackend: &netv1.IngressBackend{
 					Resource: &corev1.TypedLocalObjectReference{
@@ -261,10 +249,8 @@ func TestGetDefaultBackendService(t *testing.T) {
 			featureFlags: FeatureFlags{KongServiceFacade: true},
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-svc-facade",
-						Namespace: "foo-namespace",
-					},
+					Name:      "foo-svc-facade",
+					Namespace: "foo-namespace",
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 							Name: "foo-svc",
@@ -288,10 +274,8 @@ func TestGetDefaultBackendService(t *testing.T) {
 			},
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-svc-facade",
-						Namespace: "foo-namespace",
-					},
+					Name:      "foo-svc-facade",
+					Namespace: "foo-namespace",
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 							Name: "foo-svc",
@@ -324,11 +308,9 @@ func TestGetDefaultBackendService(t *testing.T) {
 		{
 			name: "ingress with default backend resource unknown",
 			ingresses: []netv1.Ingress{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "foo-namespace",
-				},
-				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: "networking.k8s.io/v1"},
+				Name:      "foo",
+				Namespace: "foo-namespace",
+				Kind:      "Ingress", APIVersion: "networking.k8s.io/v1",
 				Spec: netv1.IngressSpec{
 					DefaultBackend: &netv1.IngressBackend{
 						Resource: &corev1.TypedLocalObjectReference{
@@ -374,30 +356,26 @@ func TestGetDefaultBackendService(t *testing.T) {
 func TestRewriteURIAnnotation(t *testing.T) {
 	someIngress := func(name, rewriteURI string) netv1.Ingress {
 		return netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{Kind: "Ingress"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "foo-namespace",
-				Annotations: map[string]string{
-					annotations.IngressClassKey:                              annotations.DefaultIngressClass,
-					annotations.AnnotationPrefix + annotations.RewriteURIKey: rewriteURI,
-				},
+			Kind:      "Ingress",
+			Name:      name,
+			Namespace: "foo-namespace",
+			Annotations: map[string]string{
+				annotations.IngressClassKey:                              annotations.DefaultIngressClass,
+				annotations.AnnotationPrefix + annotations.RewriteURIKey: rewriteURI,
 			},
 			Spec: netv1.IngressSpec{
 				Rules: []netv1.IngressRule{
 					{
 						Host: "example.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path:     "/~/api/(.*)",
-										PathType: new(netv1.PathTypePrefix),
-										Backend: netv1.IngressBackend{
-											Service: &netv1.IngressServiceBackend{
-												Name: name,
-												Port: netv1.ServiceBackendPort{Number: 80},
-											},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/~/api/(.*)",
+									PathType: new(netv1.PathTypePrefix),
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: name,
+											Port: netv1.ServiceBackendPort{Number: 80},
 										},
 									},
 								},

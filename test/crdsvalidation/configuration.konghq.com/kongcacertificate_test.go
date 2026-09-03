@@ -3,8 +3,6 @@ package configuration_test
 import (
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -221,10 +219,8 @@ func TestKongCACertificate(t *testing.T) {
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1alpha1.KongCACertificate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongCACertificate",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-			},
+			Kind:       "KongCACertificate",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongCACertificateSpec{
 				KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{

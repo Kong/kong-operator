@@ -177,10 +177,8 @@ func TestUDPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		"konghq.com/protocol":    "tls",
 	}
 	clientCertSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-client-cert",
-			Namespace: "default",
-		},
+		Name:      "backend-client-cert",
+		Namespace: "default",
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       []byte("cert-data"),
 			corev1.TLSPrivateKeyKey: []byte("key-data"),
@@ -352,14 +350,10 @@ func newUDPUnstructuredResource(routesAnnotation string) *unstructured.Unstructu
 func newUDPRouteForTranslation() *gwtypes.UDPRoute {
 	port := gwtypes.PortNumber(80)
 	return &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "default",
 		Spec: gwtypes.UDPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -370,12 +364,10 @@ func newUDPRouteForTranslation() *gwtypes.UDPRoute {
 			},
 			Rules: []gwtypes.UDPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  "backend-service",
-						Port:  &port,
-						Kind:  new(gwtypes.Kind("Service")),
-						Group: new(gwtypes.Group("")),
-					},
+					Name:  "backend-service",
+					Port:  &port,
+					Kind:  new(gwtypes.Kind("Service")),
+					Group: new(gwtypes.Group("")),
 				}},
 			}},
 		},

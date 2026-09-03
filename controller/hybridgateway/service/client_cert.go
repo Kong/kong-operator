@@ -6,7 +6,6 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -66,12 +65,10 @@ func buildClientCertReferenceGrant[
 
 	secretObjectName := configurationv1alpha1.ObjectName(secretName)
 	grant := &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        grantName,
-			Namespace:   secretNamespace,
-			Labels:      metadata.BuildLabels(parentRoute, pRef),
-			Annotations: metadata.BuildAnnotations(parentRoute, pRef),
-		},
+		Name:        grantName,
+		Namespace:   secretNamespace,
+		Labels:      metadata.BuildLabels(parentRoute, pRef),
+		Annotations: metadata.BuildAnnotations(parentRoute, pRef),
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{

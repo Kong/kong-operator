@@ -79,10 +79,8 @@ func TestCreateControlPlane(t *testing.T) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -120,10 +118,8 @@ func TestCreateControlPlane(t *testing.T) {
 			name: "cp membership creation success",
 			objects: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -147,10 +143,8 @@ func TestCreateControlPlane(t *testing.T) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cpg-1",
-						Namespace: "default",
-					},
+					Name:      "cpg-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -196,10 +190,8 @@ func TestCreateControlPlane(t *testing.T) {
 			name: "cp membership creation failure",
 			objects: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						Source: new(commonv1alpha1.EntitySourceOrigin),
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -223,10 +215,8 @@ func TestCreateControlPlane(t *testing.T) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cpg-1",
-						Namespace: "default",
-					},
+					Name:      "cpg-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -335,10 +325,8 @@ func TestDeleteControlPlane(t *testing.T) {
 			mockCPPair: func(t *testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -371,10 +359,8 @@ func TestDeleteControlPlane(t *testing.T) {
 			mockCPPair: func(t *testing.T) (*mocks.MockControlPlanesSDK, *konnectv1alpha2.KonnectGatewayControlPlane) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -479,10 +465,8 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -525,10 +509,8 @@ func TestUpdateControlPlane(t *testing.T) {
 				sdk := mocks.NewMockControlPlanesSDK(t)
 				sdkGroups := mocks.NewMockControlPlaneGroupsSDK(t)
 				cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -605,16 +587,12 @@ func TestCreateAndUpdateControlPlane_KubernetesMetadataConsistency(t *testing.T)
 	var (
 		ctx = t.Context()
 		cp  = &konnectv1alpha2.KonnectGatewayControlPlane{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KonnectGatewayControlPlane",
-				APIVersion: "konnect.konghq.com/v1alpha1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "cp-1",
-				Namespace:  "default",
-				UID:        k8stypes.UID(uuid.NewString()),
-				Generation: 2,
-			},
+			Kind:       "KonnectGatewayControlPlane",
+			APIVersion: "konnect.konghq.com/v1alpha1",
+			Name:       "cp-1",
+			Namespace:  "default",
+			UID:        k8stypes.UID(uuid.NewString()),
+			Generation: 2,
 			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 					Name: "cp-1",
@@ -679,10 +657,8 @@ func TestSetGroupMembers(t *testing.T) {
 		{
 			name: "no members",
 			group: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cp-group",
-					Namespace: "default",
-				},
+				Name:      "cp-group",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -710,10 +686,8 @@ func TestSetGroupMembers(t *testing.T) {
 		{
 			name: "1 member with Konnect Status ID",
 			group: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cp-group",
-					Namespace: "default",
-				},
+				Name:      "cp-group",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -729,10 +703,8 @@ func TestSetGroupMembers(t *testing.T) {
 			},
 			cps: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -772,10 +744,8 @@ func TestSetGroupMembers(t *testing.T) {
 		{
 			name: "1 member without Konnect Status ID",
 			group: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cp-group",
-					Namespace: "default",
-				},
+				Name:      "cp-group",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -791,10 +761,8 @@ func TestSetGroupMembers(t *testing.T) {
 			},
 			cps: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -815,10 +783,8 @@ func TestSetGroupMembers(t *testing.T) {
 		{
 			name: "2 member with Konnect Status IDs",
 			group: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cp-group",
-					Namespace: "default",
-				},
+				Name:      "cp-group",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -837,10 +803,8 @@ func TestSetGroupMembers(t *testing.T) {
 			},
 			cps: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -854,10 +818,8 @@ func TestSetGroupMembers(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-2",
-						Namespace: "default",
-					},
+					Name:      "cp-2",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-2",
@@ -900,10 +862,8 @@ func TestSetGroupMembers(t *testing.T) {
 		{
 			name: "2 member, 1 with Konnect Status IDs, 1 without it",
 			group: &konnectv1alpha2.KonnectGatewayControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cp-group",
-					Namespace: "default",
-				},
+				Name:      "cp-group",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 					CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 						ClusterType: new(sdkkonnectcomp.CreateControlPlaneRequestClusterTypeClusterTypeControlPlaneGroup),
@@ -922,10 +882,8 @@ func TestSetGroupMembers(t *testing.T) {
 			},
 			cps: []client.Object{
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-1",
@@ -939,10 +897,8 @@ func TestSetGroupMembers(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-2",
-						Namespace: "default",
-					},
+					Name:      "cp-2",
+					Namespace: "default",
 					Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
 						CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
 							Name: "cp-2",

@@ -120,14 +120,10 @@ func buildDeployment(
 	} else {
 		// Wrap the user PodTemplateSpec overlay into a Deployment skeleton.
 		userDeployment := &appsv1.Deployment{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "apps/v1",
-				Kind:       "Deployment",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      aigwdp.Name,
-				Namespace: aigwdp.Namespace,
-			},
+			APIVersion: "apps/v1",
+			Kind:       "Deployment",
+			Name:       aigwdp.Name,
+			Namespace:  aigwdp.Namespace,
 			Spec: appsv1.DeploymentSpec{
 				Selector: &metav1.LabelSelector{
 					MatchLabels: selectorLabelsForAIGatewayDataPlane(aigwdp),
@@ -194,10 +190,8 @@ func generateBaseDeployment(
 		volumes,
 		corev1.Volume{
 			Name: KonnectCertVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: certSecretName,
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName: certSecretName,
 			},
 		})
 
@@ -219,15 +213,11 @@ func generateBaseDeployment(
 	}
 
 	d := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      aigwdp.Name,
-			Namespace: aigwdp.Namespace,
-			Labels:    labels,
-		},
+		APIVersion: "apps/v1",
+		Kind:       "Deployment",
+		Name:       aigwdp.Name,
+		Namespace:  aigwdp.Namespace,
+		Labels:     labels,
 		Spec: appsv1.DeploymentSpec{
 			Replicas: replicas,
 			Selector: &metav1.LabelSelector{

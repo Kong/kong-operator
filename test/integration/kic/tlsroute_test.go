@@ -76,19 +76,15 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      tlsSecretName,
-				Namespace: ns.Name,
-			},
+			Name:      tlsSecretName,
+			Namespace: ns.Name,
 			Data: map[string][]byte{
 				"tls.crt": tlsRouteExampleTLSCert,
 				"tls.key": tlsRouteExampleTLSKey,
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "secret2",
-			},
+			Name: "secret2",
 			Data: map[string][]byte{
 				"tls.crt": extraTLSRouteTLSCert,
 				"tls.key": extraTLSRouteTLSKey,
@@ -148,9 +144,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	secret2Name := gatewayapi.ObjectName(secrets[1].Name)
 	t.Logf("creating a ReferenceGrant that permits gateway access from %s to secrets in %s", ns.Name, otherNs.Name)
 	grant := &gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
@@ -178,10 +172,8 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(createTLSEchoContainer(tlsEchoPort, testUUID))
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: tlsSecretName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: tlsSecretName,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: tlsSecretName,
 		},
 	})
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
@@ -193,10 +185,8 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	deployment2 := generators.NewDeploymentForContainer(createTLSEchoContainer(tlsEchoPort, testUUID2))
 	deployment2.Spec.Template.Spec.Volumes = append(deployment2.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: tlsSecretName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: string(secret2Name),
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: string(secret2Name),
 		},
 	})
 	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
@@ -227,9 +217,7 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 	backendTLSPort := gatewayapi.PortNumber(tlsEchoPort)
 	t.Logf("creating a tlsroute to access deployment %s via kong", deployment.Name)
 	tlsroute := &gatewayapi.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.TLSRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -240,16 +228,12 @@ func TestTLSRoutePassthroughReferenceGrant(t *testing.T) {
 			Rules: []gatewayapi.TLSRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service.Name),
-							Port: &backendTLSPort,
-						},
+						Name: gatewayapi.ObjectName(service.Name),
+						Port: &backendTLSPort,
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service2.Name),
-							Port: new(gatewayapi.PortNumber(service2Port)),
-						},
+						Name: gatewayapi.ObjectName(service2.Name),
+						Port: new(gatewayapi.PortNumber(service2Port)),
 					},
 				},
 			}},
@@ -363,10 +347,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	require.True(t, certPool.AppendCertsFromPEM(tlsRouteExampleTLSCert))
 	secrets := []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      tlsSecretName,
-				Namespace: ns.Name,
-			},
+			Name:      tlsSecretName,
+			Namespace: ns.Name,
 			Data: map[string][]byte{
 				"tls.crt": tlsRouteExampleTLSCert,
 				"tls.key": tlsRouteExampleTLSKey,
@@ -416,10 +398,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	deployment := generators.NewDeploymentForContainer(createTLSEchoContainer(tlsEchoPort, testUUID))
 	deployment.Spec.Template.Spec.Volumes = append(deployment.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: tlsSecretName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: tlsSecretName,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: tlsSecretName,
 		},
 	})
 	deployment, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment, metav1.CreateOptions{})
@@ -431,10 +411,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	deployment2 := generators.NewDeploymentForContainer(createTLSEchoContainer(tlsEchoPort, testUUID2))
 	deployment2.Spec.Template.Spec.Volumes = append(deployment2.Spec.Template.Spec.Volumes, corev1.Volume{
 		Name: tlsSecretName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: tlsSecretName,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: tlsSecretName,
 		},
 	})
 	deployment2, err = env.Cluster().Client().AppsV1().Deployments(ns.Name).Create(ctx, deployment2, metav1.CreateOptions{})
@@ -457,9 +435,7 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	t.Logf("create a TLSRoute using passthrough listener")
 	sectionName := gatewayapi.SectionName("tls-passthrough")
 	tlsRoute := &gatewayapi.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayapi.TLSRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -470,10 +446,8 @@ func TestTLSRoutePassthrough(t *testing.T) {
 			Hostnames: []gatewayapi.Hostname{tlsRouteHostname},
 			Rules: []gatewayapi.TLSRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name: gatewayapi.ObjectName(service.Name),
-						Port: &backendTLSPort,
-					},
+					Name: gatewayapi.ObjectName(service.Name),
+					Port: &backendTLSPort,
 				}},
 			}},
 		},
@@ -643,16 +617,12 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	tlsRoute, err = helpers.UpdateWithRetry(ctx, gatewayClient.GatewayV1().TLSRoutes(ns.Name), tlsRoute.Name, func(r *gatewayapi.TLSRoute) {
 		r.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 			{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Name: gatewayapi.ObjectName(service.Name),
-					Port: &backendTLSPort,
-				},
+				Name: gatewayapi.ObjectName(service.Name),
+				Port: &backendTLSPort,
 			},
 			{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Name: gatewayapi.ObjectName(service2.Name),
-					Port: &backendTLSPort,
-				},
+				Name: gatewayapi.ObjectName(service2.Name),
+				Port: &backendTLSPort,
 			},
 		}
 	})

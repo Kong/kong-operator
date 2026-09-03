@@ -9,7 +9,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	v1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -68,14 +67,10 @@ func aiGatewayToGateway(
 	aigateway *operatorv1alpha1.AIGateway,
 ) *gatewayv1.Gateway {
 	gateway := &gatewayv1.Gateway{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Gateway",
-			APIVersion: gatewayv1.GroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      aigateway.Name,
-			Namespace: aigateway.Namespace,
-		},
+		Kind:       "Gateway",
+		APIVersion: gatewayv1.GroupVersion.String(),
+		Name:       aigateway.Name,
+		Namespace:  aigateway.Namespace,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(aigateway.Spec.GatewayClassName),
 			Listeners: []gatewayv1.Listener{
@@ -118,14 +113,10 @@ func aiCloudGatewayToKongPromptDecoratorPlugin(
 		}
 
 		thisDecoratorPlugin = &configurationv1.KongPlugin{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongPlugin",
-				APIVersion: configurationv1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      fmt.Sprintf("%s-ai-prompt-decorator", aiCloudGateway.Identifier),
-				Namespace: aigateway.Namespace,
-			},
+			Kind:       "KongPlugin",
+			APIVersion: configurationv1.SchemeGroupVersion.String(),
+			Name:       fmt.Sprintf("%s-ai-prompt-decorator", aiCloudGateway.Identifier),
+			Namespace:  aigateway.Namespace,
 
 			PluginName:   "ai-prompt-decorator",
 			Protocols:    configurationv1.StringsToKongProtocols([]string{"http", "https"}),
@@ -149,13 +140,11 @@ func aiCloudGatewayToKongPromptDecoratorPlugin(
 // A later revision of the whole stack, will probably remove this necessity.
 func aiCloudGatewayToKubeSvc(aiGateway *operatorv1alpha1.AIGateway) *corev1.Service {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-ai-sink", aiGateway.Name),
-			Namespace: aiGateway.Namespace,
-			Annotations: map[string]string{
-				"konghq.com/protocol": "https",
-				"konghq.com/retries":  "1",
-			},
+		Name:      fmt.Sprintf("%s-ai-sink", aiGateway.Name),
+		Namespace: aiGateway.Namespace,
+		Annotations: map[string]string{
+			"konghq.com/protocol": "https",
+			"konghq.com/retries":  "1",
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
@@ -189,12 +178,10 @@ func aiCloudGatewayToHTTPRoute(
 	exactPath := fmt.Sprintf("/%s", aiCloudLLM.Identifier)
 
 	httpRoute := &gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-egress", aiCloudLLM.Identifier),
-			Namespace: aigateway.Namespace,
-			Annotations: map[string]string{
-				metadata.AnnotationKeyPlugins: strings.Join(plugins, ","),
-			},
+		Name:      fmt.Sprintf("%s-egress", aiCloudLLM.Identifier),
+		Namespace: aigateway.Namespace,
+		Annotations: map[string]string{
+			metadata.AnnotationKeyPlugins: strings.Join(plugins, ","),
 		},
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -217,14 +204,10 @@ func aiCloudGatewayToHTTPRoute(
 					},
 					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1.BackendRef{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name:      gatewayv1.ObjectName(kubeSvc.Name),
-									Namespace: (*gatewayv1.Namespace)(&kubeSvc.Namespace),
-									Port:      (&kubeSvc.Spec.Ports[0].Port), // only one port for AI ExternalNameSvc, is predictable
-									Kind:      (*gatewayv1.Kind)(&backendKind),
-								},
-							},
+							Name:      gatewayv1.ObjectName(kubeSvc.Name),
+							Namespace: (*gatewayv1.Namespace)(&kubeSvc.Namespace),
+							Port:      (&kubeSvc.Spec.Ports[0].Port), // only one port for AI ExternalNameSvc, is predictable
+							Kind:      (*gatewayv1.Kind)(&backendKind),
 						},
 					},
 				},
@@ -303,14 +286,10 @@ func aiCloudGatewayToKongPlugin(
 	}
 
 	thisAIProxyPlugin := configurationv1.KongPlugin{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongPlugin",
-			APIVersion: configurationv1.SchemeGroupVersion.String(),
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-ai-proxy", aiCloudLLM.Identifier),
-			Namespace: aigateway.Namespace,
-		},
+		Kind:       "KongPlugin",
+		APIVersion: configurationv1.SchemeGroupVersion.String(),
+		Name:       fmt.Sprintf("%s-ai-proxy", aiCloudLLM.Identifier),
+		Namespace:  aigateway.Namespace,
 
 		PluginName:   "ai-proxy",
 		Protocols:    configurationv1.StringsToKongProtocols([]string{"http", "https"}),

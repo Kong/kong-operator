@@ -307,10 +307,8 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPolicyForObject(ctx context.Co
 
 	return []reconcile.Request{
 		{
-			NamespacedName: k8stypes.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      policyName,
-			},
+			Namespace: obj.GetNamespace(),
+			Name:      policyName,
 		},
 	}
 }
@@ -356,10 +354,8 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForIngressServices(ctx
 				continue
 			}
 			requests = append(requests, reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: ingress.Namespace,
-					Name:      upstreamPolicy,
-				},
+				Namespace: ingress.Namespace,
+				Name:      upstreamPolicy,
 			})
 		}
 	}
@@ -405,10 +401,8 @@ func (r *KongUpstreamPolicyReconciler) getUpstreamPoliciesForHTTPRouteServices(c
 				continue
 			}
 			requests = append(requests, reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: httpRoute.Namespace,
-					Name:      upstreamPolicy,
-				},
+				Namespace: httpRoute.Namespace,
+				Name:      upstreamPolicy,
 			})
 		}
 	}

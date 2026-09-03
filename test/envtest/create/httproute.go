@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/gatewayapi"
@@ -22,10 +21,8 @@ func HTTPRoutes(
 	numOfRoutes int,
 ) []*gatewayapi.HTTPRoute {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-svc",
-			Namespace: gw.Namespace,
-		},
+		Name:      "backend-svc",
+		Namespace: gw.Namespace,
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
@@ -44,10 +41,8 @@ func HTTPRoutes(
 		httpPort := gatewayapi.PortNumber(80)
 		pathMatchPrefix := gatewayapi.PathMatchPathPrefix
 		httpRoute := &gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "httproute-",
-				Namespace:    gw.Namespace,
-			},
+			GenerateName: "httproute-",
+			Namespace:    gw.Namespace,
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: []gatewayapi.ParentReference{{
@@ -64,13 +59,9 @@ func HTTPRoutes(
 						},
 					},
 					BackendRefs: []gatewayapi.HTTPBackendRef{{
-						BackendRef: gatewayapi.BackendRef{
-							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Name: gatewayapi.ObjectName("backend-svc"),
-								Port: &httpPort,
-								Kind: util.StringToGatewayAPIKindPtr("Service"),
-							},
-						},
+						Name: gatewayapi.ObjectName("backend-svc"),
+						Port: &httpPort,
+						Kind: util.StringToGatewayAPIKindPtr("Service"),
 					}},
 				}},
 			},

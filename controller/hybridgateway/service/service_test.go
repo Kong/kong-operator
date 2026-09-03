@@ -41,11 +41,9 @@ func TestServiceForRule(t *testing.T) {
 
 	// Create test HTTPRoute
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -93,10 +91,8 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name: "existing service with no annotation",
 			existingService: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: "test-namespace",
-				},
+				Name:      serviceName,
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectUpdate:       true,
@@ -105,12 +101,10 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name: "existing service with different route annotation",
 			existingService: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
-					},
+				Name:      serviceName,
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 				},
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
@@ -120,12 +114,10 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name: "existing service with same route annotation",
 			existingService: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
-					},
+				Name:      serviceName,
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 				},
 			},
 			expectedAnnotation: "test-namespace/test-route",
@@ -135,12 +127,10 @@ func TestServiceForRule(t *testing.T) {
 		{
 			name: "existing service with multiple routes",
 			existingService: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
-					},
+				Name:      serviceName,
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 				},
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,test-namespace/test-route",
@@ -188,22 +178,16 @@ func TestServiceForTCPRouteRule(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 	tcpRoute := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -237,24 +221,16 @@ func TestServiceForGRPCRouteRule(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "GRPCRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "GRPCRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(50051)
 	rule := gwtypes.GRPCRouteRule{
 		BackendRefs: []gwtypes.GRPCBackendRef{{
-			BackendRef: gwtypes.BackendRef{
-				BackendObjectReference: gwtypes.BackendObjectReference{
-					Name: "test-service",
-					Port: &port,
-				},
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -285,22 +261,16 @@ func TestServiceForUDPRouteRule(t *testing.T) {
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 	udpRoute := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -350,22 +320,16 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service with https protocol annotation",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "my-svc",
-							Port: &port443,
-						},
-					},
+					Name: "my-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/protocol": "https",
-						},
+					Name:      "my-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/protocol": "https",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 443}},
@@ -378,22 +342,16 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service with grpcs protocol annotation",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "grpc-svc",
-							Port: &port443,
-						},
-					},
+					Name: "grpc-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/protocol": "grpcs",
-						},
+					Name:      "grpc-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/protocol": "grpcs",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 443}},
@@ -406,20 +364,14 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service without protocol annotation defaults to http",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "plain-svc",
-							Port: &port80,
-						},
-					},
+					Name: "plain-svc",
+					Port: &port80,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plain-svc",
-						Namespace: "test-namespace",
-					},
+					Name:      "plain-svc",
+					Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 80}},
 					},
@@ -431,22 +383,16 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service with invalid protocol annotation defaults to http",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "bad-svc",
-							Port: &port80,
-						},
-					},
+					Name: "bad-svc",
+					Port: &port80,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "bad-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/protocol": "invalid-protocol",
-						},
+					Name:      "bad-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/protocol": "invalid-protocol",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 80}},
@@ -459,40 +405,28 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "multiple backend refs, first with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc-with-annotation",
-							Port: &port443,
-						},
-					},
+					Name: "svc-with-annotation",
+					Port: &port443,
 				},
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc-without-annotation",
-							Port: &port80,
-						},
-					},
+					Name: "svc-without-annotation",
+					Port: &port80,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-with-annotation",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/protocol": "https",
-						},
+					Name:      "svc-with-annotation",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/protocol": "https",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 443}},
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-without-annotation",
-						Namespace: "test-namespace",
-					},
+					Name:      "svc-without-annotation",
+					Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 80}},
 					},
@@ -504,22 +438,16 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service with upper case protocol annotation is normalized",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "upper-svc",
-							Port: &port443,
-						},
-					},
+					Name: "upper-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "upper-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/protocol": "HTTPS",
-						},
+					Name:      "upper-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/protocol": "HTTPS",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 443}},
@@ -538,12 +466,8 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 			name: "backend service does not exist defaults to http",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "nonexistent-svc",
-							Port: &port80,
-						},
-					},
+					Name: "nonexistent-svc",
+					Port: &port80,
 				},
 			},
 			backendServices:  []corev1.Service{},
@@ -554,10 +478,8 @@ func TestServiceForRule_ProtocolAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -618,32 +540,32 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 		{
 			name: "service with path annotation",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}},
+				{Name: "my-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}},
 			},
 			expected: new("/api/v1"),
 		},
 		{
 			name: "service without annotation leaves field unset",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}},
 			},
 			expected: new("/first"),
 		},
@@ -652,7 +574,7 @@ func TestServiceForRule_PathAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -702,10 +624,10 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "service with path annotation returns path",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-path", Port: &port80}},
+				{Name: "svc-with-path", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}}},
+				{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/api/v1"}},
 			},
 			expectedPath: "/api/v1",
 		},
@@ -713,10 +635,10 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "service without path annotation returns empty",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-path", Port: &port80}},
+				{Name: "svc-no-path", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-path", Namespace: "test-namespace"}},
+				{Name: "svc-no-path", Namespace: "test-namespace"},
 			},
 			expectedPath: "",
 		},
@@ -724,12 +646,12 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-first", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-second", Port: &port80}},
+				{Name: "svc-first", Port: &port80},
+				{Name: "svc-second", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}}},
+				{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/first"}},
+				{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/second"}},
 			},
 			expectedPath: "/first",
 		},
@@ -744,7 +666,7 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns empty",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expectedPath:    "",
@@ -753,12 +675,11 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns empty",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
-				}},
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0]},
 			},
 			backendServices: []corev1.Service{},
 			expectedPath:    "",
@@ -767,14 +688,13 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-				}},
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0]},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other"}},
 			},
 			expectedPath: "/other",
 		},
@@ -783,10 +703,10 @@ func TestResolvePathFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref with path annotation returns path",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+				{Name: "tls-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/tls-path"}}},
+				{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/tls-path"}},
 			},
 			expectedPath: "/tls-path",
 		},
@@ -830,7 +750,7 @@ func TestExtractPathFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-path", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/extracted"}}},
+				{Name: "svc-with-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": "/extracted"}},
 			},
 			expectedPath: "/extracted",
 			expectedOk:   true,
@@ -841,7 +761,7 @@ func TestExtractPathFromBackendRef(t *testing.T) {
 			backendRef: gwtypes.BackendRef{
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-path", Port: &port80},
 			},
-			services:   []corev1.Service{{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-path", Namespace: "test-namespace"}}},
+			services:   []corev1.Service{{Name: "svc-no-path", Namespace: "test-namespace"}},
 			expectedOk: false,
 		},
 		{
@@ -887,7 +807,7 @@ func TestExtractPathFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other-ns"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/path": "/other-ns"}},
 			},
 			expectedPath: "/other-ns",
 			expectedOk:   true,
@@ -899,7 +819,7 @@ func TestExtractPathFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-empty-path", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": ""}}},
+				{Name: "svc-empty-path", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/path": ""}},
 			},
 			expectedOk: false,
 		},
@@ -949,33 +869,33 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 	}{
 		{
 			name:        "service with tls-verify=true annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port443}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port443}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
 		{
 			name:        "service with tls-verify=false annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port443}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port443}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}},
 			},
 			expected: &[]bool{false}[0],
 		},
 		{
 			name:        "service without annotation leaves field unset",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port443}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "plain-svc", Port: &port443}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name:        "invalid value returns wrapped sentinel error",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port443}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "bad-svc", Port: &port443}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}}},
+				{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -983,12 +903,12 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port443}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port443}}},
+				{Name: "svc-a", Port: &port443},
+				{Name: "svc-b", Port: &port443},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}},
 			},
 			expected: new(true),
 		},
@@ -996,7 +916,7 @@ func TestServiceForRule_TLSVerifyAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -1053,10 +973,10 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "service with tls-verify=true annotation returns true",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-true", Port: &port80}},
+				{Name: "svc-verify-true", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
@@ -1064,10 +984,10 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "service with tls-verify=false annotation returns false",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-false", Port: &port80}},
+				{Name: "svc-verify-false", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+				{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}},
 			},
 			expected: new(false),
 		},
@@ -1075,10 +995,10 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1086,12 +1006,12 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}},
 			},
 			expected: new(true),
 		},
@@ -1106,7 +1026,7 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -1115,12 +1035,11 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: &[]gatewayv1.Group{gatewayv1.Group("example.com")}[0],
-					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0],
-				}},
+					Kind:  &[]gatewayv1.Kind{gatewayv1.Kind("NotService")}[0]},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -1129,14 +1048,13 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0],
-				}},
+					Namespace: &[]gatewayv1.Namespace{"other-namespace"}[0]},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
@@ -1145,10 +1063,10 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref with tls-verify=true returns true",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+				{Name: "tls-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
@@ -1156,13 +1074,12 @@ func TestResolveTLSVerifyFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/tls-verify": "not-a-bool"},
-				}},
+					Annotations: map[string]string{"konghq.com/tls-verify": "not-a-bool"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1219,7 +1136,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-true", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "svc-verify-true", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
@@ -1230,7 +1147,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-verify-false", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}}},
+				{Name: "svc-verify-false", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "false"}},
 			},
 			expected: new(false),
 		},
@@ -1241,7 +1158,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-verify", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-verify", Namespace: "test-namespace"}},
+				{Name: "svc-no-verify", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1252,7 +1169,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-verify", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-verify", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}}},
+				{Name: "svc-bad-verify", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "maybe"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1300,7 +1217,7 @@ func TestExtractTLSVerifyFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify": "true"}},
 			},
 			expected: new(true),
 		},
@@ -1361,22 +1278,16 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 			name: "backend service with tls-verify-depth annotation",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "my-svc",
-							Port: &port443,
-						},
-					},
+					Name: "my-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "my-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/tls-verify-depth": "3",
-						},
+					Name:      "my-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/tls-verify-depth": "3",
 					},
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Port: 443}},
@@ -1389,20 +1300,14 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 			name: "backend service without annotation leaves field unset",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "plain-svc",
-							Port: &port443,
-						},
-					},
+					Name: "plain-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plain-svc",
-						Namespace: "test-namespace",
-					},
+					Name:      "plain-svc",
+					Namespace: "test-namespace",
 				},
 			},
 			expected: nil,
@@ -1411,22 +1316,16 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 			name: "invalid annotation value returns wrapped sentinel error",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "bad-svc",
-							Port: &port443,
-						},
-					},
+					Name: "bad-svc",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "bad-svc",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/tls-verify-depth": "abc",
-						},
+					Name:      "bad-svc",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/tls-verify-depth": "abc",
 					},
 				},
 			},
@@ -1437,37 +1336,25 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc-with-annotation",
-							Port: &port443,
-						},
-					},
+					Name: "svc-with-annotation",
+					Port: &port443,
 				},
 				{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc-without-annotation",
-							Port: &port443,
-						},
-					},
+					Name: "svc-without-annotation",
+					Port: &port443,
 				},
 			},
 			backendServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-with-annotation",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/tls-verify-depth": "5",
-						},
+					Name:      "svc-with-annotation",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/tls-verify-depth": "5",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-without-annotation",
-						Namespace: "test-namespace",
-					},
+					Name:      "svc-without-annotation",
+					Namespace: "test-namespace",
 				},
 			},
 			expected: new(int64(5)),
@@ -1477,10 +1364,8 @@ func TestServiceForRule_TLSVerifyDepthAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{
@@ -1548,10 +1433,10 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "service with tls-verify-depth annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-depth", Port: &port80}},
+				{Name: "svc-with-depth", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
+				{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}},
 			},
 			expected: new(int64(3)),
 		},
@@ -1559,10 +1444,10 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1570,12 +1455,12 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "5"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "2"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "5"}},
 			},
 			expected: new(int64(2)),
 		},
@@ -1590,7 +1475,7 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -1599,12 +1484,11 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: new(gatewayv1.Group("example.com")),
-					Kind:  new(gatewayv1.Kind("NotService")),
-				}},
+					Kind:  new(gatewayv1.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -1613,14 +1497,13 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: new(gatewayv1.Namespace("other-namespace")),
-				}},
+					Namespace: new(gatewayv1.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}},
 			},
 			expected: new(int64(4)),
 		},
@@ -1629,10 +1512,10 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref with annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+				{Name: "tls-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
+				{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}},
 			},
 			expected: new(int64(3)),
 		},
@@ -1640,13 +1523,12 @@ func TestResolveTLSVerifyDepthFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"},
-				}},
+					Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1703,7 +1585,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-depth", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}}},
+				{Name: "svc-with-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "3"}},
 			},
 			expected: new(int64(3)),
 		},
@@ -1714,7 +1596,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-depth", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-depth", Namespace: "test-namespace"}},
+				{Name: "svc-no-depth", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1725,7 +1607,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-depth", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}}},
+				{Name: "svc-zero-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "0"}},
 			},
 			expected: new(int64(0)),
 		},
@@ -1736,7 +1618,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-depth", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}}},
+				{Name: "svc-neg-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1748,7 +1630,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-depth", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}}},
+				{Name: "svc-bad-depth", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1796,7 +1678,7 @@ func TestExtractTLSVerifyDepthFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/tls-verify-depth": "4"}},
 			},
 			expected: new(int64(4)),
 		},
@@ -1853,25 +1735,25 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 	}{
 		{
 			name:        "service with connect-timeout annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}},
 			},
 			expected: new(int64(5000)),
 		},
 		{
 			name:        "service without annotation leaves field unset",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "plain-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name:        "invalid value returns wrapped sentinel error",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "bad-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}}},
+				{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -1879,12 +1761,12 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -1892,7 +1774,7 @@ func TestServiceForRule_ConnectTimeoutAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -1949,10 +1831,10 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service with connect-timeout annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80}},
+				{Name: "svc-with-timeout", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}},
 			},
 			expected: new(int64(5000)),
 		},
@@ -1960,10 +1842,10 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1971,12 +1853,12 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -1991,7 +1873,7 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2000,12 +1882,11 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: new(gatewayv1.Group("example.com")),
-					Kind:  new(gatewayv1.Kind("NotService")),
-				}},
+					Kind:  new(gatewayv1.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2014,14 +1895,13 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: new(gatewayv1.Namespace("other-namespace")),
-				}},
+					Namespace: new(gatewayv1.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -2030,10 +1910,10 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref with annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+				{Name: "tls-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}}},
+				{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}},
 			},
 			expected: new(int64(5000)),
 		},
@@ -2041,13 +1921,12 @@ func TestResolveConnectTimeoutFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/connect-timeout": "-1"},
-				}},
+					Annotations: map[string]string{"konghq.com/connect-timeout": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2104,7 +1983,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "5000"}},
 			},
 			expected: new(int64(5000)),
 		},
@@ -2115,7 +1994,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-timeout", Namespace: "test-namespace"}},
+				{Name: "svc-no-timeout", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -2126,7 +2005,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "0"}}},
+				{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "0"}},
 			},
 			expected: new(int64(0)),
 		},
@@ -2137,7 +2016,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "-1"}}},
+				{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2149,7 +2028,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}}},
+				{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2197,7 +2076,7 @@ func TestExtractConnectTimeoutFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/connect-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -2254,25 +2133,25 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 	}{
 		{
 			name:        "service with read-timeout annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
 		{
 			name:        "service without annotation leaves field unset",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "plain-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name:        "invalid value returns wrapped sentinel error",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "bad-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}}},
+				{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2280,12 +2159,12 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -2293,7 +2172,7 @@ func TestServiceForRule_ReadTimeoutAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -2350,10 +2229,10 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service with read-timeout annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80}},
+				{Name: "svc-with-timeout", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
@@ -2361,10 +2240,10 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -2372,12 +2251,12 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -2392,7 +2271,7 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2401,12 +2280,11 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: new(gatewayv1.Group("example.com")),
-					Kind:  new(gatewayv1.Kind("NotService")),
-				}},
+					Kind:  new(gatewayv1.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2415,14 +2293,13 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: new(gatewayv1.Namespace("other-namespace")),
-				}},
+					Namespace: new(gatewayv1.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -2431,10 +2308,10 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref with annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "tls-svc"}},
+				{Name: "tls-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
+				{Name: "tls-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
@@ -2442,13 +2319,12 @@ func TestResolveReadTimeoutFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/read-timeout": "-1"},
-				}},
+					Annotations: map[string]string{"konghq.com/read-timeout": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2505,7 +2381,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
@@ -2516,7 +2392,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-timeout", Namespace: "test-namespace"}},
+				{Name: "svc-no-timeout", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -2527,7 +2403,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "0"}}},
+				{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "0"}},
 			},
 			expected: new(int64(0)),
 		},
@@ -2538,7 +2414,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "-5"}}},
+				{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "-5"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2550,7 +2426,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}}},
+				{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2598,7 +2474,7 @@ func TestExtractReadTimeoutFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/read-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -2655,25 +2531,25 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 	}{
 		{
 			name:        "service with write-timeout annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "60000"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "60000"}},
 			},
 			expected: new(int64(60000)),
 		},
 		{
 			name:        "service without annotation leaves field unset",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "plain-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name:        "invalid value returns wrapped sentinel error",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "bad-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}}},
+				{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2681,12 +2557,12 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -2694,7 +2570,7 @@ func TestServiceForRule_WriteTimeoutAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -2751,10 +2627,10 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service with write-timeout annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80}},
+				{Name: "svc-with-timeout", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
@@ -2762,10 +2638,10 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -2773,12 +2649,12 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "1000"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "2000"}},
 			},
 			expected: new(int64(1000)),
 		},
@@ -2793,7 +2669,7 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2802,12 +2678,11 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: new(gatewayv1.Group("example.com")),
-					Kind:  new(gatewayv1.Kind("NotService")),
-				}},
+					Kind:  new(gatewayv1.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -2816,14 +2691,13 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: new(gatewayv1.Namespace("other-namespace")),
-				}},
+					Namespace: new(gatewayv1.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -2831,10 +2705,10 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref without port",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-tls"}},
+				{Name: "svc-tls"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "5000"}}},
+				{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "5000"}},
 			},
 			expected: new(int64(5000)),
 		},
@@ -2842,13 +2716,12 @@ func TestResolveWriteTimeoutFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/write-timeout": "-1"},
-				}},
+					Annotations: map[string]string{"konghq.com/write-timeout": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2905,7 +2778,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}}},
+				{Name: "svc-with-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "30000"}},
 			},
 			expected: new(int64(30000)),
 		},
@@ -2916,7 +2789,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-timeout", Namespace: "test-namespace"}},
+				{Name: "svc-no-timeout", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -2927,7 +2800,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "0"}}},
+				{Name: "svc-zero-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "0"}},
 			},
 			expected: new(int64(0)),
 		},
@@ -2938,7 +2811,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "-1"}}},
+				{Name: "svc-neg-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2950,7 +2823,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-timeout", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}}},
+				{Name: "svc-bad-timeout", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -2998,7 +2871,7 @@ func TestExtractWriteTimeoutFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/write-timeout": "3000"}},
 			},
 			expected: new(int64(3000)),
 		},
@@ -3055,25 +2928,25 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 	}{
 		{
 			name:        "service with retries annotation",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "my-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}},
 			},
 			expected: new(int64(5)),
 		},
 		{
 			name:        "service without annotation leaves field unset",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "plain-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name:        "invalid value returns wrapped sentinel error",
-			backendRefs: []gatewayv1.HTTPBackendRef{{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}}}},
+			backendRefs: []gatewayv1.HTTPBackendRef{{Name: "bad-svc", Port: &port80}},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
+				{Name: "bad-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -3081,12 +2954,12 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}},
 			},
 			expected: new(int64(3)),
 		},
@@ -3094,7 +2967,7 @@ func TestServiceForRule_RetriesAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -3151,10 +3024,10 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "service with retries annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80}},
+				{Name: "svc-with-retries", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+				{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}},
 			},
 			expected: new(int64(5)),
 		},
@@ -3162,10 +3035,10 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -3173,12 +3046,12 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "3"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "9"}},
 			},
 			expected: new(int64(3)),
 		},
@@ -3193,7 +3066,7 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "nonexistent-svc", Port: &port80}},
+				{Name: "nonexistent-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -3202,12 +3075,11 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Port:  &port80,
 					Group: new(gatewayv1.Group("example.com")),
-					Kind:  new(gatewayv1.Kind("NotService")),
-				}},
+					Kind:  new(gatewayv1.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -3216,14 +3088,13 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
 					Port:      &port80,
-					Namespace: new(gatewayv1.Namespace("other-namespace")),
-				}},
+					Namespace: new(gatewayv1.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}},
 			},
 			expected: new(int64(7)),
 		},
@@ -3231,10 +3102,10 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "tls-style backend ref without port",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-tls"}},
+				{Name: "svc-tls"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "2"}}},
+				{Name: "svc-tls", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "2"}},
 			},
 			expected: new(int64(2)),
 		},
@@ -3242,13 +3113,12 @@ func TestResolveRetriesFromBackendRefs(t *testing.T) {
 			name:      "malformed annotation on first backend ref bubbles wrapped error",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "bad-svc", Port: &port80}},
+				{Name: "bad-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{
+				{
 					Name: "bad-svc", Namespace: "test-namespace",
-					Annotations: map[string]string{"konghq.com/retries": "-1"},
-				}},
+					Annotations: map[string]string{"konghq.com/retries": "-1"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -3305,7 +3175,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}}},
+				{Name: "svc-with-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "5"}},
 			},
 			expected: new(int64(5)),
 		},
@@ -3316,7 +3186,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-retries", Namespace: "test-namespace"}},
+				{Name: "svc-no-retries", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -3327,7 +3197,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-zero-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-zero-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "0"}}},
+				{Name: "svc-zero-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "0"}},
 			},
 			expected: new(int64(0)),
 		},
@@ -3338,7 +3208,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-neg-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-neg-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "-2"}}},
+				{Name: "svc-neg-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "-2"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -3350,7 +3220,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-bad-retries", Port: &port80},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-bad-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}}},
+				{Name: "svc-bad-retries", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/retries": "abc"}},
 			},
 			expected: nil,
 			wantErr:  true,
@@ -3398,7 +3268,7 @@ func TestExtractRetriesFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/retries": "7"}},
 			},
 			expected: new(int64(7)),
 		},
@@ -3446,7 +3316,7 @@ func TestServiceForRule_BackendRequestTimeout(t *testing.T) {
 	upstreamName := "test-upstream"
 	port80 := gatewayv1.PortNumber(80)
 
-	backendRef := gatewayv1.HTTPBackendRef{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}}
+	backendRef := gatewayv1.HTTPBackendRef{Name: "my-svc", Port: &port80}
 	timeout500ms := gatewayv1.Duration("500ms")
 	timeout0s := gatewayv1.Duration("0s")
 
@@ -3493,7 +3363,7 @@ func TestServiceForRule_BackendRequestTimeout(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},
@@ -3507,7 +3377,7 @@ func TestServiceForRule_BackendRequestTimeout(t *testing.T) {
 			if tt.backendRequest != nil {
 				rule.Timeouts = &gatewayv1.HTTPRouteTimeouts{BackendRequest: tt.backendRequest}
 			}
-			svc := corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: tt.annotations}}
+			svc := corev1.Service{Name: "my-svc", Namespace: "test-namespace", Annotations: tt.annotations}
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(&svc).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)
@@ -3555,32 +3425,32 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 		{
 			name: "service with tags annotation",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "my-svc", Port: &port80}}},
+				{Name: "my-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a,prod"}}},
+				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a,prod"}},
 			},
 			expected: commonv1alpha1.Tags{"team-a", "prod"},
 		},
 		{
 			name: "service without tags annotation leaves field unset",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "plain-svc", Port: &port80}}},
+				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
 		{
 			name: "first backend ref with annotation wins",
 			backendRefs: []gatewayv1.HTTPBackendRef{
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a", Port: &port80}}},
-				{BackendRef: gatewayv1.BackendRef{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b", Port: &port80}}},
+				{Name: "svc-a", Port: &port80},
+				{Name: "svc-b", Port: &port80},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-b"}}},
+				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a"}},
+				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-b"}},
 			},
 			expected: commonv1alpha1.Tags{"team-a"},
 		},
@@ -3589,7 +3459,7 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			httpRoute := &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-namespace"},
+				Name: "test-route", Namespace: "test-namespace",
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}}},
 				},

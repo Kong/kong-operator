@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -38,9 +37,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		{
 			name: "should fail the validation if secret used in ConfigFrom of KongPlugin generates invalid plugin configuration",
 			kongPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rate-limiting-invalid-config-from",
-				},
+				Name:       "rate-limiting-invalid-config-from",
 				PluginName: "rate-limiting",
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{
@@ -50,19 +47,15 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-invalid-config",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-invalid-config",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-invalid-config",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-invalid-config",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
 				},
@@ -73,9 +66,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		{
 			name: "should fail the validation if the secret is used in ConfigPatches of KongPlugin and generates invalid config",
 			kongPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rate-limiting-invalid-config-patches",
-				},
+				Name:       "rate-limiting-invalid-config-patches",
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
@@ -93,19 +84,15 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-invalid-field",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-invalid-field",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte("10"),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-invalid-field",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-invalid-field",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`"10"`),
 				},
@@ -116,9 +103,7 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 		{
 			name: "should pass the validation if the secret used in ConfigPatches of KongPlugin and generates valid config",
 			kongPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "rate-limiting-valid-config",
-				},
+				Name:       "rate-limiting-valid-config",
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"limit_by":"consumer","policy":"local"}`),
@@ -136,19 +121,15 @@ func TestAdmissionWebhook_KongPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-valid-field",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-valid-field",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`10`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "conf-secret-valid-field",
-					Labels: secretLabels,
-				},
+				Name:   "conf-secret-valid-field",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config-minutes": []byte(`15`),
 				},
@@ -244,11 +225,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		{
 			name: "should pass the validation if the secret used in ConfigFrom of KongClusterPlugin generates valid configuration",
 			kongClusterPlugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-valid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "cluster-rate-limiting-valid",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				PluginName: "rate-limiting",
 				ConfigFrom: &configurationv1.NamespacedConfigSource{
@@ -260,19 +239,15 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-valid",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-valid",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-valid",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-valid",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":10}`),
 				},
@@ -282,11 +257,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		{
 			name: "should fail the validation if the secret in ConfigFrom of KongClusterPlugin generates invalid configuration",
 			kongClusterPlugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-invalid",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "cluster-rate-limiting-invalid",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				PluginName: "rate-limiting",
 				ConfigFrom: &configurationv1.NamespacedConfigSource{
@@ -298,19 +271,15 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-invalid",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-invalid",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":5}`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-invalid",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-invalid",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-config": []byte(`{"limit_by":"consumer","policy":"local","minute":"5"}`),
 				},
@@ -321,11 +290,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		{
 			name: "should pass the validation if the secret in ConfigPatches of KongClusterPlugin generates valid configuration",
 			kongClusterPlugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-valid-config-patches",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "cluster-rate-limiting-valid-config-patches",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
@@ -345,19 +312,15 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-valid-patch",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-valid-patch",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-valid-patch",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-valid-patch",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`10`),
 				},
@@ -367,11 +330,9 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 		{
 			name: "should fail the validation if the secret in ConfigPatches of KongClusterPlugin generates invalid configuration",
 			kongClusterPlugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "cluster-rate-limiting-invalid-config-patches",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "cluster-rate-limiting-invalid-config-patches",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				PluginName: "rate-limiting",
 				Config: apiextensionsv1.JSON{
@@ -391,19 +352,15 @@ func TestAdmissionWebhook_KongClusterPlugins(t *testing.T) {
 				},
 			},
 			secretBefore: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-invalid-patch",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-invalid-patch",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`5`),
 				},
 			},
 			secretAfter: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:   "cluster-conf-secret-invalid-patch",
-					Labels: secretLabels,
-				},
+				Name:   "cluster-conf-secret-invalid-patch",
+				Labels: secretLabels,
 				Data: map[string][]byte{
 					"rate-limiting-minute": []byte(`"10"`),
 				},

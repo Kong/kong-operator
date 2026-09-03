@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -24,10 +23,8 @@ func TestKongConsumer(t *testing.T) {
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1.KongConsumer{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongConsumer",
-				APIVersion: configurationv1.GroupVersion.String(),
-			},
+			Kind:       "KongConsumer",
+			APIVersion: configurationv1.GroupVersion.String(),
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Username:   "username-1",
 		}

@@ -34,10 +34,8 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Helper function to create a valid KonnectExtension with status filled.
 	createValidKonnectExtension := func() *konnectv1alpha2.KonnectExtension {
 		return &konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extensionName,
-				Namespace: testNamespace,
-			},
+			Name:      extensionName,
+			Namespace: testNamespace,
 			Status: konnectv1alpha2.KonnectExtensionStatus{
 				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 					ControlPlaneID: controlPlaneID,
@@ -65,19 +63,15 @@ func TestDataPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Helper function to create a valid DataPlane.
 	createValidDataPlane := func() *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-dataplane",
-				Namespace: testNamespace,
-			},
+			Name:      "test-dataplane",
+			Namespace: testNamespace,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Extensions: []commonv1alpha1.ExtensionRef{
 						{
 							Group: konnectv1alpha1.SchemeGroupVersion.Group,
 							Kind:  konnectv1alpha2.KonnectExtensionKind,
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: extensionName,
-							},
+							Name:  extensionName,
 						},
 					},
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

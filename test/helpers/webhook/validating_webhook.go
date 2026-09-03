@@ -116,10 +116,8 @@ func EnsureValidatingWebhookRegistration(
 		admissionCheckBody := lo.Must(
 			json.Marshal(
 				admissionv1.AdmissionReview{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "admission.k8s.io/v1",
-						Kind:       "AdmissionReview",
-					},
+					APIVersion: "admission.k8s.io/v1",
+					Kind:       "AdmissionReview",
 					Request: &admissionv1.AdmissionRequest{
 						Resource: metav1.GroupVersionResource{
 							Version:  "v1",
@@ -130,14 +128,10 @@ func EnsureValidatingWebhookRegistration(
 							Raw: lo.Must(
 								json.Marshal(
 									&corev1.Service{
-										TypeMeta: metav1.TypeMeta{
-											APIVersion: "v1",
-											Kind:       "Service",
-										},
-										ObjectMeta: metav1.ObjectMeta{
-											Name:      "health-check",
-											Namespace: "default",
-										},
+										APIVersion: "v1",
+										Kind:       "Service",
+										Name:       "health-check",
+										Namespace:  "default",
 									},
 								),
 							),
@@ -186,9 +180,7 @@ func ensureWebhookService(
 	validationsService, err := client.CoreV1().Services(nn.Namespace).Create(
 		ctx,
 		&corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: nn.Name,
-			},
+			Name: nn.Name,
 			Spec: corev1.ServiceSpec{
 				Type: corev1.ServiceTypeClusterIP,
 				Ports: []corev1.ServicePort{
@@ -208,11 +200,9 @@ func ensureWebhookService(
 	endpoints, err := client.DiscoveryV1().EndpointSlices(nn.Namespace).Create(
 		ctx,
 		&discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: fmt.Sprintf("%s-1", nn.Name),
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: nn.Name,
-				},
+			Name: fmt.Sprintf("%s-1", nn.Name),
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: nn.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{

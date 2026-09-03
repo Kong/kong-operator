@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -60,10 +59,8 @@ func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-config",
-						Namespace: "default",
-					},
+					Name:      "policy-config",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"other-key": []byte(`{"foo":"bar"}`),
 					},
@@ -80,10 +77,8 @@ func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-config",
-						Namespace: "default",
-					},
+					Name:      "policy-config",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"config": []byte(`{"anonymize":["phone","creditcard"],"stop_on_error":true}`),
 					},
@@ -103,10 +98,8 @@ func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-config",
-						Namespace: "default",
-					},
+					Name:      "policy-config",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"config": []byte("anonymize:\n  - phone\n  - creditcard\nstop_on_error: true\n"),
 					},
@@ -126,10 +119,8 @@ func TestAIGatewayPolicyConfigDataSource_valueFromSecretRef(t *testing.T) {
 			},
 			clientObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-config",
-						Namespace: "default",
-					},
+					Name:      "policy-config",
+					Namespace: "default",
 					Data: map[string][]byte{
 						// A tab used for indentation is invalid YAML (and isn't
 						// valid JSON either), so both parse attempts must fail.

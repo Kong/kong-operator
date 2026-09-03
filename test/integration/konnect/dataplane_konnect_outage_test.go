@@ -184,10 +184,8 @@ func blockExternalEgressForNamespace(
 	t.Helper()
 
 	policy := &networkingv1.NetworkPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      "block-external-egress",
-		},
+		Namespace: namespace,
+		Name:      "block-external-egress",
 		Spec: networkingv1.NetworkPolicySpec{
 			PodSelector: metav1.LabelSelector{}, // Empty selector matches all Pods in namespace.
 			PolicyTypes: []networkingv1.PolicyType{networkingv1.PolicyTypeEgress},
@@ -232,10 +230,8 @@ func waitForExternalEgressBlocked(
 	for attempt := range maxEgressProbeAttempts {
 		podName := "egress-probe-" + uuid.NewString()[:8]
 		pod := &corev1.Pod{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      podName,
-				Namespace: namespace,
-			},
+			Name:      podName,
+			Namespace: namespace,
 			Spec: corev1.PodSpec{
 				RestartPolicy: corev1.RestartPolicyNever,
 				Containers: []corev1.Container{{

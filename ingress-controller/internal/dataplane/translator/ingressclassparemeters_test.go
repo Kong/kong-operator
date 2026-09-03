@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
@@ -26,10 +25,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 
 	defaultIcpSpec := &configurationv1alpha1.IngressClassParametersSpec{}
 	icp := &configurationv1alpha1.IngressClassParameters{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testNamespaceName,
-			Name:      testIcpName,
-		},
+		Namespace: testNamespaceName,
+		Name:      testIcpName,
 		Spec: configurationv1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
 		},
@@ -129,10 +126,8 @@ func TestGetIngressClassParameters(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			ingressClass := &netv1.IngressClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: testNamespaceName,
-					Name:      tc.name,
-				},
+				Namespace: testNamespaceName,
+				Name:      tc.name,
 				Spec: netv1.IngressClassSpec{
 					Parameters: tc.paramRef,
 				},

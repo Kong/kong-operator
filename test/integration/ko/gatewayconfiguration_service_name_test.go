@@ -28,18 +28,14 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 
 	t.Logf("deploying a GatewayConfiguration resource with a custom service name: %s", customServiceName)
 	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-							ServiceOptions: operatorv2beta1.ServiceOptions{
-								Name: &customServiceName,
-							},
+							Name: &customServiceName,
 						},
 					},
 				},
@@ -52,9 +48,7 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
 				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
@@ -71,10 +65,8 @@ func TestGatewayConfigurationServiceName(t *testing.T) {
 
 	t.Log("deploying Gateway resource")
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{

@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -23,10 +22,8 @@ func TestKongCertificate(t *testing.T) {
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1alpha1.KongCertificate{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongCertificate",
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-			},
+			Kind:       "KongCertificate",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1alpha1.KongCertificateSpec{
 				KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{

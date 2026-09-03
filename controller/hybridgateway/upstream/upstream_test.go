@@ -46,11 +46,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -61,11 +59,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -76,11 +72,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
@@ -91,11 +85,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: false,
@@ -106,11 +98,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route3",
-					Namespace: "ns3",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "route3",
+				Namespace: "ns3",
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
@@ -120,11 +110,9 @@ func TestAppendHTTPRouteToAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			upstream := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-upstream",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-upstream",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			am := metadata.NewAnnotationManager(logger)
@@ -150,11 +138,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 			name:                "no annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "",
 			expectModification: false,
@@ -165,11 +151,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route",
 			expectModification: false,
@@ -180,11 +164,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation:      "",
 			expectModification:      true,
@@ -196,11 +178,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "ns2/route2",
 			expectModification: true,
@@ -211,11 +191,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "ns1/route1,ns3/route3",
 			expectModification: true,
@@ -227,11 +205,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route",
 			expectModification: false,
@@ -241,11 +217,9 @@ func TestRemoveHTTPRouteFromAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			upstream := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-upstream",
-					Namespace:   "test-namespace",
-					Annotations: make(map[string]string),
-				},
+				Name:        "test-upstream",
+				Namespace:   "test-namespace",
+				Annotations: make(map[string]string),
 			}
 
 			// Copy existing annotations
@@ -285,22 +259,16 @@ func TestUpstreamForRule_NewUpstream(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gwtypes.HTTPBackendRef{
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "test-service",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "test-service",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 		},
 	}
@@ -339,25 +307,17 @@ func TestUpstreamForGRPCRouteRule(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "GRPCRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "GRPCRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 
 	rule := gwtypes.GRPCRouteRule{
 		BackendRefs: []gwtypes.GRPCBackendRef{
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "test-service",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "test-service",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 		},
 	}
@@ -392,22 +352,16 @@ func TestUpstreamForTCPRouteRule(t *testing.T) {
 	ctx := context.Background()
 
 	tcpRoute := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -435,22 +389,16 @@ func TestUpstreamForUDPRouteRule(t *testing.T) {
 	ctx := context.Background()
 
 	udpRoute := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	port := gwtypes.PortNumber(80)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &port,
-			},
+			Name: "test-service",
+			Port: &port,
 		}},
 	}
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
@@ -479,19 +427,15 @@ func TestUpstreamForRule_WithUpstreamPolicy(t *testing.T) {
 	logger := logr.Discard()
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-			},
+		Name:      "test-service",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 		},
 	}
 	policy := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-policy",
-			Namespace: "test-namespace",
-		},
+		Name:      "my-policy",
+		Namespace: "test-namespace",
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: func() *string { s := "least-connections"; return &s }(),
 			Slots:     func() *int { v := 100; return &v }(),
@@ -504,21 +448,15 @@ func TestUpstreamForRule_WithUpstreamPolicy(t *testing.T) {
 		Build()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gwtypes.HTTPBackendRef{
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "test-service",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "test-service",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 		},
 	}
@@ -553,21 +491,17 @@ func TestUpstreamForRule_InconsistentUpstreamPolicies(t *testing.T) {
 
 	// Two services with different policies.
 	svc1 := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-a",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-a",
-			},
+		Name:      "svc-a",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-a",
 		},
 	}
 	svc2 := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-b",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-b",
-			},
+		Name:      "svc-b",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			configurationv1beta1.KongUpstreamPolicyAnnotationKey: "policy-b",
 		},
 	}
 
@@ -577,29 +511,19 @@ func TestUpstreamForRule_InconsistentUpstreamPolicies(t *testing.T) {
 		Build()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gwtypes.HTTPBackendRef{
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc-a",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "svc-a",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc-b",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "svc-b",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 		},
 	}
@@ -633,23 +557,17 @@ func TestUpstreamForRule_HostHeaderAnnotation(t *testing.T) {
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
 		return gwtypes.HTTPRouteRule{
 			BackendRefs: []gwtypes.HTTPBackendRef{
 				{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gwtypes.ObjectName(svcName),
-							Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-						},
-					},
+					Name: gwtypes.ObjectName(svcName),
+					Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 				},
 			},
 		}
@@ -657,11 +575,9 @@ func TestUpstreamForRule_HostHeaderAnnotation(t *testing.T) {
 
 	makeSvc := func(name, namespace string, anns map[string]string) *corev1.Service {
 		return &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Namespace:   namespace,
-				Annotations: anns,
-			},
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: anns,
 		}
 	}
 
@@ -721,47 +637,33 @@ func TestUpstreamForRule_HostHeaderFirstWins(t *testing.T) {
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gwtypes.HTTPBackendRef{
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc-first",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "svc-first",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 			{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: "svc-second",
-						Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-					},
-				},
+				Name: "svc-second",
+				Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 			},
 		},
 	}
 
 	svcFirst := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "svc-first",
-			Namespace:   "test-namespace",
-			Annotations: map[string]string{"konghq.com/host-header": "first.example.com"},
-		},
+		Name:        "svc-first",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{"konghq.com/host-header": "first.example.com"},
 	}
 	svcSecond := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "svc-second",
-			Namespace:   "test-namespace",
-			Annotations: map[string]string{"konghq.com/host-header": "second.example.com"},
-		},
+		Name:        "svc-second",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{"konghq.com/host-header": "second.example.com"},
 	}
 
 	s := newTestScheme(t)
@@ -785,23 +687,17 @@ func TestUpstreamForRule_TagsAnnotation(t *testing.T) {
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
 		return gwtypes.HTTPRouteRule{
 			BackendRefs: []gwtypes.HTTPBackendRef{
 				{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gwtypes.ObjectName(svcName),
-							Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
-						},
-					},
+					Name: gwtypes.ObjectName(svcName),
+					Port: func() *gwtypes.PortNumber { p := gwtypes.PortNumber(80); return &p }(),
 				},
 			},
 		}
@@ -809,11 +705,9 @@ func TestUpstreamForRule_TagsAnnotation(t *testing.T) {
 
 	makeSvc := func(name, namespace string, anns map[string]string) *corev1.Service {
 		return &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        name,
-				Namespace:   namespace,
-				Annotations: anns,
-			},
+			Name:        name,
+			Namespace:   namespace,
+			Annotations: anns,
 		}
 	}
 
@@ -872,10 +766,10 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "service with host-header annotation returns value",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"}},
+				{Name: "svc-with-header"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+				{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}},
 			},
 			expected: new("api.example.com"),
 		},
@@ -883,10 +777,10 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "service without annotation returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "plain-svc"}},
+				{Name: "plain-svc"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "plain-svc", Namespace: "test-namespace"}},
+				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -894,12 +788,12 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "first backend ref with annotation wins",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-first"}},
-				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-second"}},
+				{Name: "svc-first"},
+				{Name: "svc-second"},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}}},
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}}},
+				{Name: "svc-first", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "first.example.com"}},
+				{Name: "svc-second", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "second.example.com"}},
 			},
 			expected: new("first.example.com"),
 		},
@@ -914,7 +808,7 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "service does not exist returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{Name: "nonexistent-svc"}},
+				{Name: "nonexistent-svc"},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -923,11 +817,10 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "unsupported backend ref returns nil",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{
+				{
 					Name:  "some-ref",
 					Group: new(gwtypes.Group("example.com")),
-					Kind:  new(gwtypes.Kind("NotService")),
-				}},
+					Kind:  new(gwtypes.Kind("NotService"))},
 			},
 			backendServices: []corev1.Service{},
 			expected:        nil,
@@ -936,13 +829,12 @@ func TestResolveHostHeaderFromBackendRefs(t *testing.T) {
 			name:      "cross-namespace backend ref",
 			namespace: "test-namespace",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gwtypes.BackendObjectReference{
+				{
 					Name:      "svc-other-ns",
-					Namespace: new(gwtypes.Namespace("other-namespace")),
-				}},
+					Namespace: new(gwtypes.Namespace("other-namespace"))},
 			},
 			backendServices: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}},
 			},
 			expected: new("other.example.com"),
 		},
@@ -988,7 +880,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-with-header"},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}}},
+				{Name: "svc-with-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": "api.example.com"}},
 			},
 			expected: new("api.example.com"),
 		},
@@ -999,7 +891,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-no-header"},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-no-header", Namespace: "test-namespace"}},
+				{Name: "svc-no-header", Namespace: "test-namespace"},
 			},
 			expected: nil,
 		},
@@ -1010,7 +902,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 				BackendObjectReference: gwtypes.BackendObjectReference{Name: "svc-empty-header"},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-empty-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": ""}}},
+				{Name: "svc-empty-header", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/host-header": ""}},
 			},
 			expected: nil,
 		},
@@ -1054,7 +946,7 @@ func TestExtractHostHeaderFromBackendRef(t *testing.T) {
 				},
 			},
 			services: []corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}}},
+				{Name: "svc-other-ns", Namespace: "other-namespace", Annotations: map[string]string{"konghq.com/host-header": "other.example.com"}},
 			},
 			expected: new("other.example.com"),
 		},

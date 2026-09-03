@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -57,49 +56,37 @@ func getStoresForTests(t *testing.T) store.CacheStores {
 	t.Helper()
 	originalStores, err := store.NewCacheStoresFromObjs([]runtime.Object{
 		&netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			Name:       "foo",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				"foo": "bar",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"foo": "bar",
-				},
-				ResourceVersion: "123",
-				UID:             "19c1f570-b301-4b09-adcb-a1d29eb0b27e",
-			},
+			ResourceVersion: "123",
+			UID:             "19c1f570-b301-4b09-adcb-a1d29eb0b27e",
 		},
 		&netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			Name:       "bar",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				"foo": "bar",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"foo": "bar",
-				},
-				ResourceVersion: "456",
-				UID:             "3a463a14-59ba-422d-9d7b-02f57ddb2800",
-			},
+			ResourceVersion: "456",
+			UID:             "3a463a14-59ba-422d-9d7b-02f57ddb2800",
 		},
 		&netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			Name:       "bar",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				"foo": "bar",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "bar",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"foo": "bar",
-				},
-				ResourceVersion: "789",
-				UID:             "2f37d2d3-0e95-40e7-810a-31953df5ee69",
-			},
+			ResourceVersion: "789",
+			UID:             "2f37d2d3-0e95-40e7-810a-31953df5ee69",
 		},
 	}...)
 	require.NoError(t, err)
@@ -111,14 +98,10 @@ func testIfSnapshotIsIndependentFromSource(t *testing.T, originalStores, snapsho
 
 	// We'll use ingressMeta in .Get() calls.
 	ingressMeta := &netv1.Ingress{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "networking.k8s.io/v1",
-			Kind:       "Ingress",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: "default",
-		},
+		APIVersion: "networking.k8s.io/v1",
+		Kind:       "Ingress",
+		Name:       "foo",
+		Namespace:  "default",
 	}
 
 	t.Log("Modifying the original object")
@@ -151,19 +134,15 @@ func testIfSnapshotIsIndependentFromSource(t *testing.T, originalStores, snapsho
 func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	smallStores, err := store.NewCacheStoresFromObjs([]runtime.Object{
 		&netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
+			APIVersion: "networking.k8s.io/v1",
+			Kind:       "Ingress",
+			Name:       "foo",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				"foo": "bar",
 			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "foo",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"foo": "bar",
-				},
-				ResourceVersion: "123",
-				UID:             k8stypes.UID(uuid.New().String()),
-			},
+			ResourceVersion: "123",
+			UID:             k8stypes.UID(uuid.New().String()),
 		},
 	}...)
 	require.NoError(b, err)
@@ -171,16 +150,12 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 	var k8sObjects []runtime.Object
 	for i := range 1_000 {
 		route := &gatewayapi.HTTPRoute{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "gateway.networking.k8s.io/v1",
-				Kind:       "HTTPRoute",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            fmt.Sprintf("route-%d", i),
-				Namespace:       "default",
-				ResourceVersion: fmt.Sprintf("12%d", i),
-				UID:             k8stypes.UID(uuid.New().String()),
-			},
+			APIVersion:      "gateway.networking.k8s.io/v1",
+			Kind:            "HTTPRoute",
+			Name:            fmt.Sprintf("route-%d", i),
+			Namespace:       "default",
+			ResourceVersion: fmt.Sprintf("12%d", i),
+			UID:             k8stypes.UID(uuid.New().String()),
 			Spec: gatewayapi.HTTPRouteSpec{
 				Rules: []gatewayapi.HTTPRouteRule{
 					{
@@ -208,16 +183,12 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		k8sObjects = append(k8sObjects, route)
 
 		service := &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Service",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            fmt.Sprintf("service-%d", i),
-				Namespace:       "default",
-				ResourceVersion: fmt.Sprintf("12%d", i),
-				UID:             k8stypes.UID(uuid.New().String()),
-			},
+			APIVersion:      "v1",
+			Kind:            "Service",
+			Name:            fmt.Sprintf("service-%d", i),
+			Namespace:       "default",
+			ResourceVersion: fmt.Sprintf("12%d", i),
+			UID:             k8stypes.UID(uuid.New().String()),
 			Spec: corev1.ServiceSpec{
 				Ports: []corev1.ServicePort{
 					{
@@ -230,27 +201,21 @@ func BenchmarkCacheStores_TakeSnapshot(b *testing.B) {
 		k8sObjects = append(k8sObjects, service)
 
 		ingress := &netv1.Ingress{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "networking.k8s.io/v1",
-				Kind:       "Ingress",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:            fmt.Sprintf("ingress-%d", i),
-				Namespace:       "default",
-				ResourceVersion: fmt.Sprintf("12%d", i),
-				UID:             k8stypes.UID(uuid.New().String()),
-			},
+			APIVersion:      "networking.k8s.io/v1",
+			Kind:            "Ingress",
+			Name:            fmt.Sprintf("ingress-%d", i),
+			Namespace:       "default",
+			ResourceVersion: fmt.Sprintf("12%d", i),
+			UID:             k8stypes.UID(uuid.New().String()),
 			Spec: netv1.IngressSpec{
 				Rules: []netv1.IngressRule{
 					{
 						Host: fmt.Sprintf("host-%d", i),
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path:     fmt.Sprintf("/path-%d", i),
-										PathType: new(netv1.PathTypeExact),
-									},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     fmt.Sprintf("/path-%d", i),
+									PathType: new(netv1.PathTypeExact),
 								},
 							},
 						},

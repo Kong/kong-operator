@@ -44,10 +44,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	nsRoute := envtest.CreateNamespace(ctx, t, client)
 
 	svc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "backend-1",
-		},
+		Namespace: ns.Name,
+		Name:      "backend-1",
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
 				{
@@ -66,11 +64,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwc-",
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		GenerateName: "gwc-",
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
@@ -92,10 +88,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 				},
 			},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "gw-",
-		},
+		Namespace:    ns.Name,
+		GenerateName: "gw-",
 	}
 	require.NoError(t, client.Create(ctx, &gw))
 
@@ -152,14 +146,10 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	require.NoError(t, client.Status().Patch(ctx, &gw, ctrlclient.MergeFrom(gwOld)))
 
 	route := gatewayapi.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    nsRoute.Name,
-			GenerateName: "httproute-",
-		},
+		Kind:         "HTTPRoute",
+		APIVersion:   "v1beta1",
+		Namespace:    nsRoute.Name,
+		GenerateName: "httproute-",
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -195,10 +185,8 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	}
 
 	rg := gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "referencegrant-",
-		},
+		Namespace:    ns.Name,
+		GenerateName: "referencegrant-",
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{
 				{
@@ -284,11 +272,9 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "kong-gwclass-",
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		GenerateName: "kong-gwclass-",
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
@@ -297,18 +283,14 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: "acme.com/dummy-controller",
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "non-kong-gwclass-",
-		},
+		GenerateName: "non-kong-gwclass-",
 	}
 	require.NoError(t, client.Create(ctx, &gwcNonKong))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gwcNonKong) })
 
 	gw := gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "gw-kong-",
-		},
+		Namespace:    ns.Name,
+		GenerateName: "gw-kong-",
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwc.Name),
 			Listeners: []gatewayapi.Listener{
@@ -324,10 +306,8 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gw))
 
 	gwNonKong := gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gw-nonkong-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "gw-nonkong-",
+		Namespace:    ns.Name,
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: gatewayapi.ObjectName(gwcNonKong.Name),
 			Listeners: []gatewayapi.Listener{
@@ -343,14 +323,10 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &gwNonKong))
 
 	route := gatewayapi.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    nsRoute.Name,
-			GenerateName: "httproute-kong-",
-		},
+		Kind:         "HTTPRoute",
+		APIVersion:   "v1beta1",
+		Namespace:    nsRoute.Name,
+		GenerateName: "httproute-kong-",
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -366,21 +342,19 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &route))
 	// Status has to be updated separately.
 	route.Status = gatewayapi.HTTPRouteStatus{
-		RouteStatus: gatewayapi.RouteStatus{
-			Parents: []gatewayapi.RouteParentStatus{
-				{
-					ParentRef: gatewayapi.ParentReference{
-						Name: gatewayapi.ObjectName(gwNonKong.Name),
-					},
-					ControllerName: gateway.GetControllerName(),
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Accepted",
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: route.GetGeneration(),
-							LastTransitionTime: metav1.Now(),
-							Reason:             "Accepted",
-						},
+		Parents: []gatewayapi.RouteParentStatus{
+			{
+				ParentRef: gatewayapi.ParentReference{
+					Name: gatewayapi.ObjectName(gwNonKong.Name),
+				},
+				ControllerName: gateway.GetControllerName(),
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Accepted",
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: route.GetGeneration(),
+						LastTransitionTime: metav1.Now(),
+						Reason:             "Accepted",
 					},
 				},
 			},
@@ -389,14 +363,10 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Status().Update(ctx, &route))
 
 	routeNonKong := gatewayapi.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    nsRoute.Name,
-			GenerateName: "httproute-nonkong-",
-		},
+		Kind:         "HTTPRoute",
+		APIVersion:   "v1beta1",
+		Namespace:    nsRoute.Name,
+		GenerateName: "httproute-nonkong-",
 		Spec: gatewayapi.HTTPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayapi.ParentReference{{
@@ -412,21 +382,19 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	require.NoError(t, client.Create(ctx, &routeNonKong))
 	// Status has to be updated separately.
 	routeNonKong.Status = gatewayapi.HTTPRouteStatus{
-		RouteStatus: gatewayapi.RouteStatus{
-			Parents: []gatewayapi.RouteParentStatus{
-				{
-					ParentRef: gatewayapi.ParentReference{
-						Name: gatewayapi.ObjectName(gwNonKong.Name),
-					},
-					ControllerName: gwcNonKong.Spec.ControllerName,
-					Conditions: []metav1.Condition{
-						{
-							Type:               "Accepted",
-							Status:             metav1.ConditionTrue,
-							ObservedGeneration: routeNonKong.GetGeneration(),
-							LastTransitionTime: metav1.Now(),
-							Reason:             "Accepted",
-						},
+		Parents: []gatewayapi.RouteParentStatus{
+			{
+				ParentRef: gatewayapi.ParentReference{
+					Name: gatewayapi.ObjectName(gwNonKong.Name),
+				},
+				ControllerName: gwcNonKong.Spec.ControllerName,
+				Conditions: []metav1.Condition{
+					{
+						Type:               "Accepted",
+						Status:             metav1.ConditionTrue,
+						ObservedGeneration: routeNonKong.GetGeneration(),
+						LastTransitionTime: metav1.Now(),
+						Reason:             "Accepted",
 					},
 				},
 			},

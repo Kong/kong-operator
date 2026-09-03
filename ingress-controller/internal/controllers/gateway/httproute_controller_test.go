@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -263,30 +262,22 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 	logger := logr.Discard()
 
 	baseRoute := gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route",
-			Namespace: "default",
-		},
+		Name:      "route",
+		Namespace: "default",
 		Spec: gatewayapi.HTTPRouteSpec{
 			Rules: []gatewayapi.HTTPRouteRule{{
 				BackendRefs: []gatewayapi.HTTPBackendRef{{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name:  "svc",
-							Kind:  util.StringToGatewayAPIKindPtr("Service"),
-							Group: util.StringToTypedPtr[*gatewayapi.Group](""),
-						},
-					},
+					Name:  "svc",
+					Kind:  util.StringToGatewayAPIKindPtr("Service"),
+					Group: util.StringToTypedPtr[*gatewayapi.Group](""),
 				}},
 			}},
 		},
 	}
 
 	kongPlugin := configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "rate-limit",
-			Namespace: "default",
-		},
+		Name:       "rate-limit",
+		Namespace:  "default",
 		PluginName: "rate-limiting",
 	}
 
@@ -302,7 +293,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "extensionRef resolves",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 				&kongPlugin,
 			},
 			route: func() gatewayapi.HTTPRoute {
@@ -323,7 +314,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "extensionRef missing",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route: func() gatewayapi.HTTPRoute {
 				r := baseRoute.DeepCopy()
@@ -344,7 +335,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "extensionRef invalid kind",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route: func() gatewayapi.HTTPRoute {
 				r := baseRoute.DeepCopy()
@@ -365,7 +356,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "annotation plugin missing",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route: func() gatewayapi.HTTPRoute {
 				r := baseRoute.DeepCopy()
@@ -381,9 +372,9 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "annotation plugin cross-namespace without grant",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "rate-limit", Namespace: "plugins"},
+					Name: "rate-limit", Namespace: "plugins",
 					PluginName: "rate-limiting",
 				},
 			},
@@ -401,13 +392,13 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "annotation plugin cross-namespace with grant",
 			enableRefGrant: true,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "rate-limit", Namespace: "plugins"},
+					Name: "rate-limit", Namespace: "plugins",
 					PluginName: "rate-limiting",
 				},
 				&gatewayapi.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "plugins"},
+					Name: "grant", Namespace: "plugins",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{{
 							Group:     gatewayapi.V1Group,
@@ -434,9 +425,9 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			name:           "annotation plugin cross-namespace without ReferenceGrant CRD",
 			enableRefGrant: false,
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "rate-limit", Namespace: "plugins"},
+					Name: "rate-limit", Namespace: "plugins",
 					PluginName: "rate-limiting",
 				},
 			},

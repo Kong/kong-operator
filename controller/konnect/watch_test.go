@@ -4,8 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -71,16 +69,12 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 				name: "KongConsumer",
 				list: []configurationv1.KongConsumer{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer1",
-							Namespace: "default",
-						},
+						Name:      "consumer1",
+						Namespace: "default",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer2",
-							Namespace: "default",
-						},
+						Name:      "consumer2",
+						Namespace: "default",
 					},
 				},
 			},
@@ -101,21 +95,15 @@ func TestObjectListToReconcileRequests(t *testing.T) {
 
 func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testing.T) {
 	backendCluster := &configurationv1alpha1.EventGatewayBackendCluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayBackendCluster",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-cluster",
-			Namespace: "default",
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayBackendCluster",
+		Name:       "backend-cluster",
+		Namespace:  "default",
 	}
 
 	matching := &configurationv1alpha1.EventGatewayVirtualCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "matching-virtual-cluster",
-			Namespace: "default",
-		},
+		Name:      "matching-virtual-cluster",
+		Namespace: "default",
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -126,10 +114,8 @@ func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testi
 		},
 	}
 	nonMatching := &configurationv1alpha1.EventGatewayVirtualCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "other-virtual-cluster",
-			Namespace: "default",
-		},
+		Name:      "other-virtual-cluster",
+		Namespace: "default",
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -161,24 +147,18 @@ func TestEnqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(t *testi
 	requests := enqueueEventGatewayVirtualClusterForEventGatewayBackendCluster(cl)(t.Context(), backendCluster)
 	require.Equal(t, []ctrl.Request{
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      matching.Name,
-				Namespace: matching.Namespace,
-			},
+			Name:      matching.Name,
+			Namespace: matching.Namespace,
 		},
 	}, requests)
 }
 
 func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectGatewayControlPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test1",
-			Namespace: "default",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "KonnectGatewayControlPlane",
+		Name:       "test1",
+		Namespace:  "default",
 	}
 	t.Run("KongConsumer", func(t *testing.T) {
 		tests := []struct {
@@ -193,16 +173,12 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer1",
-							Namespace: "default",
-						},
+						Name:      "consumer1",
+						Namespace: "default",
 					},
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer2",
-							Namespace: "default",
-						},
+						Name:      "consumer2",
+						Namespace: "default",
 					},
 				},
 			},
@@ -211,10 +187,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer1",
-							Namespace: "default",
-						},
+						Name:      "consumer1",
+						Namespace: "default",
 						Spec: configurationv1.KongConsumerSpec{
 							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -225,18 +199,14 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 						},
 					},
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer2",
-							Namespace: "default",
-						},
+						Name:      "consumer2",
+						Namespace: "default",
 					},
 				},
 				expected: []ctrl.Request{
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "consumer1",
-							Namespace: "default",
-						},
+						Name:      "consumer1",
+						Namespace: "default",
 					},
 				},
 			},
@@ -245,10 +215,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 				index: index.IndexFieldKongConsumerOnKonnectGatewayControlPlane,
 				list: []client.Object{
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer1",
-							Namespace: "default",
-						},
+						Name:      "consumer1",
+						Namespace: "default",
 						Spec: configurationv1.KongConsumerSpec{
 							ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 								Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -259,10 +227,8 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 						},
 					},
 					&configurationv1.KongConsumer{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer2",
-							Namespace: "default",
-						},
+						Name:      "consumer2",
+						Namespace: "default",
 					},
 				},
 			},
@@ -303,14 +269,10 @@ func TestEnqueueObjectForKonnectGatewayControlPlane(t *testing.T) {
 
 func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 	parent := &konnectv1alpha1.KonnectEventGateway{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectEventGateway",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "event-gateway",
-			Namespace: "default",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "KonnectEventGateway",
+		Name:       "event-gateway",
+		Namespace:  "default",
 	}
 
 	tests := []struct {
@@ -322,16 +284,12 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			name: "no matching backend clusters",
 			objects: []client.Object{
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-1",
-						Namespace: "default",
-					},
+					Name:      "backend-cluster-1",
+					Namespace: "default",
 				},
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-2",
-						Namespace: "default",
-					},
+					Name:      "backend-cluster-2",
+					Namespace: "default",
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -347,10 +305,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			name: "matching backend cluster",
 			objects: []client.Object{
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-1",
-						Namespace: "default",
-					},
+					Name:      "backend-cluster-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -361,10 +317,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-2",
-						Namespace: "default",
-					},
+					Name:      "backend-cluster-2",
+					Namespace: "default",
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -377,10 +331,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "backend-cluster-1",
-						Namespace: "default",
-					},
+					Name:      "backend-cluster-1",
+					Namespace: "default",
 				},
 			},
 		},
@@ -388,10 +340,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			name: "cross-namespace matching backend cluster",
 			objects: []client.Object{
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-1",
-						Namespace: "other-ns",
-					},
+					Name:      "backend-cluster-1",
+					Namespace: "other-ns",
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -403,10 +353,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-cluster-2",
-						Namespace: "other-ns",
-					},
+					Name:      "backend-cluster-2",
+					Namespace: "other-ns",
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -420,10 +368,8 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "backend-cluster-1",
-						Namespace: "other-ns",
-					},
+					Name:      "backend-cluster-1",
+					Namespace: "other-ns",
 				},
 			},
 		},
@@ -448,14 +394,10 @@ func TestEnqueueEventGatewayBackendClusterForKonnectEventGateway(t *testing.T) {
 
 func TestEnqueuePortalPageForPortal(t *testing.T) {
 	portal := &konnectv1alpha1.Portal{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "Portal",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal",
-			Namespace: "target-ns",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "Portal",
+		Name:       "portal",
+		Namespace:  "target-ns",
 	}
 
 	builder := fakectrlruntimeclient.NewClientBuilder().
@@ -463,10 +405,8 @@ func TestEnqueuePortalPageForPortal(t *testing.T) {
 		WithObjects(
 			portal,
 			&konnectv1alpha1.PortalPage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "matching-page",
-					Namespace: "source-ns",
-				},
+				Name:      "matching-page",
+				Namespace: "source-ns",
 				Spec: konnectv1alpha1.PortalPageSpec{
 					PortalRef: commonv1alpha1.ObjectRef{
 						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -478,10 +418,8 @@ func TestEnqueuePortalPageForPortal(t *testing.T) {
 				},
 			},
 			&konnectv1alpha1.PortalPage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "non-matching-page",
-					Namespace: "source-ns",
-				},
+				Name:      "non-matching-page",
+				Namespace: "source-ns",
 				Spec: konnectv1alpha1.PortalPageSpec{
 					PortalRef: commonv1alpha1.ObjectRef{
 						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -502,10 +440,8 @@ func TestEnqueuePortalPageForPortal(t *testing.T) {
 	requests := enqueuePortalPageForPortal(cl)(t.Context(), portal)
 	require.Equal(t, []ctrl.Request{
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      "matching-page",
-				Namespace: "source-ns",
-			},
+			Name:      "matching-page",
+			Namespace: "source-ns",
 		},
 	}, requests)
 }
@@ -521,10 +457,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			{
 				name: "no matching services",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -543,10 +477,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "other-ns",
-						},
+						Name:      "service1",
+						Namespace: "other-ns",
 					},
 				},
 				expected: []ctrl.Request{},
@@ -554,10 +486,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			{
 				name: "single matching service",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -576,28 +506,22 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 				},
 				expected: []ctrl.Request{
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 				},
 			},
 			{
 				name: "multiple matching services from same namespace",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -616,46 +540,34 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service2",
-							Namespace: "source-ns",
-						},
+						Name:      "service2",
+						Namespace: "source-ns",
 					},
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service3",
-							Namespace: "other-ns",
-						},
+						Name:      "service3",
+						Namespace: "other-ns",
 					},
 				},
 				expected: []ctrl.Request{
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "service2",
-							Namespace: "source-ns",
-						},
+						Name:      "service2",
+						Namespace: "source-ns",
 					},
 				},
 			},
 			{
 				name: "multiple from namespaces",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -679,46 +591,34 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "source-ns-1",
-						},
+						Name:      "service1",
+						Namespace: "source-ns-1",
 					},
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service2",
-							Namespace: "source-ns-2",
-						},
+						Name:      "service2",
+						Namespace: "source-ns-2",
 					},
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service3",
-							Namespace: "other-ns",
-						},
+						Name:      "service3",
+						Namespace: "other-ns",
 					},
 				},
 				expected: []ctrl.Request{
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "service1",
-							Namespace: "source-ns-1",
-						},
+						Name:      "service1",
+						Namespace: "source-ns-1",
 					},
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      "service2",
-							Namespace: "source-ns-2",
-						},
+						Name:      "service2",
+						Namespace: "source-ns-2",
 					},
 				},
 			},
 			{
 				name: "from references different kind",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -737,10 +637,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 				},
 				expected: []ctrl.Request{},
@@ -748,10 +646,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			{
 				name: "from references different group",
 				grant: &configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant1",
+					Namespace: "target-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -770,10 +666,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 				},
 				services: []client.Object{
 					&configurationv1alpha1.KongService{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "source-ns",
-						},
+						Name:      "service1",
+						Namespace: "source-ns",
 					},
 				},
 				expected: []ctrl.Request{},
@@ -799,10 +693,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 
 	t.Run("PortalPage", func(t *testing.T) {
 		grant := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "grant1",
-				Namespace: "target-ns",
-			},
+			Name:      "grant1",
+			Namespace: "target-ns",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{
 					{
@@ -825,16 +717,12 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			WithObjects(
 				grant,
 				&konnectv1alpha1.PortalPage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "page-1",
-						Namespace: "source-ns",
-					},
+					Name:      "page-1",
+					Namespace: "source-ns",
 				},
 				&konnectv1alpha1.PortalPage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "page-2",
-						Namespace: "other-ns",
-					},
+					Name:      "page-2",
+					Namespace: "other-ns",
 				},
 			)
 		cl := builder.Build()
@@ -843,20 +731,16 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 		requests := enqueueObjectsForKongReferenceGrant[konnectv1alpha1.PortalPageList](cl)(t.Context(), grant)
 		require.Equal(t, []ctrl.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Name:      "page-1",
-					Namespace: "source-ns",
-				},
+				Name:      "page-1",
+				Namespace: "source-ns",
 			},
 		}, requests)
 	})
 
 	t.Run("EventGatewayListenerPolicy", func(t *testing.T) {
 		grant := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "grant1",
-				Namespace: "target-ns",
-			},
+			Name:      "grant1",
+			Namespace: "target-ns",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{
 					{
@@ -879,16 +763,12 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 			WithObjects(
 				grant,
 				&configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-1",
-						Namespace: "source-ns",
-					},
+					Name:      "policy-1",
+					Namespace: "source-ns",
 				},
 				&configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "policy-2",
-						Namespace: "other-ns",
-					},
+					Name:      "policy-2",
+					Namespace: "other-ns",
 				},
 			)
 		cl := builder.Build()
@@ -897,10 +777,8 @@ func TestEnqueueObjectForKongReferenceGrant(t *testing.T) {
 		requests := enqueueObjectsForKongReferenceGrant[configurationv1alpha1.EventGatewayListenerPolicyList](cl)(t.Context(), grant)
 		require.Equal(t, []ctrl.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Name:      "policy-1",
-					Namespace: "source-ns",
-				},
+				Name:      "policy-1",
+				Namespace: "source-ns",
 			},
 		}, requests)
 	})

@@ -206,10 +206,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForGatewayClass(ctx context.Context, o
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: udproute.Namespace,
-							Name:      udproute.Name,
-						},
+						Namespace: udproute.Namespace,
+						Name:      udproute.Name,
 					})
 				}
 			}
@@ -268,10 +266,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForGateway(ctx context.Context, obj cl
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: udproute.Namespace,
-						Name:      udproute.Name,
-					},
+					Namespace: udproute.Namespace,
+					Name:      udproute.Name,
 				})
 			}
 		}
@@ -304,10 +300,8 @@ func (r *UDPRouteReconciler) listUDPRoutesForReferenceGrant(ctx context.Context,
 				from.Kind == "UDPRoute" &&
 				from.Group == "gateway.networking.k8s.io" {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: udproute.Namespace,
-						Name:      udproute.Name,
-					},
+					Namespace: udproute.Namespace,
+					Name:      udproute.Name,
 				})
 			}
 		}

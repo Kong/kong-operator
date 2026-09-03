@@ -104,10 +104,8 @@ func reconcileGatewaysIfClassMatches(gatewayClass client.Object, gateways []gate
 	for _, gateway := range gateways {
 		if string(gateway.Spec.GatewayClassName) == gatewayClass.GetName() {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}

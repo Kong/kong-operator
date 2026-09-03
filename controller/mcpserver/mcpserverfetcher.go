@@ -12,7 +12,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/jpillora/backoff"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -288,12 +287,10 @@ func generateMCPServer(
 	cpName string,
 ) *konnectv1alpha1.MCPServer {
 	return &konnectv1alpha1.MCPServer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-			Finalizers: []string{
-				mcpServerFinalizer,
-			},
+		Name:      nn.Name,
+		Namespace: nn.Namespace,
+		Finalizers: []string{
+			mcpServerFinalizer,
 		},
 		Spec: konnectv1alpha1.MCPServerSpec{
 			Source: new(commonv1alpha1.EntitySourceMirror),
@@ -317,10 +314,8 @@ func generateMCPServerDataPlane(
 	mcp *konnectv1alpha1.MCPServer,
 ) *mcpv1alpha1.MCPServerDataPlane {
 	return &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		},
+		Name:      nn.Name,
+		Namespace: nn.Namespace,
 		Spec: mcpv1alpha1.MCPServerDataPlaneSpec{
 			MCPServerRef: mcpv1alpha1.MCPServerRef{
 				Type: mcpv1alpha1.MCPServerRefTypeKonnectNamespacedRef,

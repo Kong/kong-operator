@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -52,10 +51,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.PortalPage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "portal-page",
-						Namespace: namespace,
-					},
+					Name:      "portal-page",
+					Namespace: namespace,
 					Spec: konnectv1alpha1.PortalPageSpec{
 						PortalRef: testNamespacedObjectRef(portalName),
 					},
@@ -72,10 +69,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      backendClusterName,
-						Namespace: namespace,
-					},
+					Name:      backendClusterName,
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: testNamespacedObjectRef(eventGatewayName),
 					},
@@ -94,10 +89,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      backendClusterName,
-						Namespace: namespace,
-					},
+					Name:      backendClusterName,
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: testNamespacedObjectRef(eventGatewayName),
 					},
@@ -114,10 +107,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      virtualClusterName,
-						Namespace: namespace,
-					},
+					Name:      virtualClusterName,
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendClusterName),
 					},
@@ -135,10 +126,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consume-policy",
-						Namespace: namespace,
-					},
+					Name:      "consume-policy",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 						EventGatewayVirtualClusterRef: testNamespacedObjectRef(virtualClusterName),
 					},
@@ -155,10 +144,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "listener-policy",
-						Namespace: namespace,
-					},
+					Name:      "listener-policy",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
 					},
@@ -175,10 +162,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			},
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &aiconfigurationv1alpha1.AIGatewayConsumerCredential{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ai-gateway-consumer-credential",
-						Namespace: namespace,
-					},
+					Name:      "ai-gateway-consumer-credential",
+					Namespace: namespace,
 					Spec: aiconfigurationv1alpha1.AIGatewayConsumerCredentialSpec{
 						AIGatewayConsumerRef: testNamespacedObjectRef(consumerName),
 					},
@@ -190,10 +175,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			name: "listener child rejects unsupported ref type",
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "listener-policy",
-						Namespace: namespace,
-					},
+					Name:      "listener-policy",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
@@ -208,10 +191,8 @@ func TestGetAPIAuthRef(t *testing.T) {
 			name: "root entity is unsupported",
 			resolve: func(ctx context.Context, cl client.Client) (types.NamespacedName, error) {
 				return getAPIAuthRef(ctx, cl, &konnectv1alpha1.KonnectEventGateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      eventGatewayName,
-						Namespace: namespace,
-					},
+					Name:      eventGatewayName,
+					Namespace: namespace,
 				})
 			},
 			wantErrorContain: "unsupported entity type",
@@ -273,10 +254,8 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 					configurationv1alpha1.EventGatewayListener,
 					konnectv1alpha1.KonnectEventGateway,
 				](ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "listener-policy",
-						Namespace: namespace,
-					},
+					Name:      "listener-policy",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: testNamespacedObjectRef(listenerName),
 					},
@@ -296,10 +275,8 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 					configurationv1alpha1.EventGatewayBackendCluster,
 					konnectv1alpha1.KonnectEventGateway,
 				](ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "virtual-cluster",
-						Namespace: namespace,
-					},
+					Name:      "virtual-cluster",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendName),
 					},
@@ -314,10 +291,8 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 					configurationv1alpha1.EventGatewayListener,
 					konnectv1alpha1.KonnectEventGateway,
 				](ctx, cl, &configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "listener-policy",
-						Namespace: namespace,
-					},
+					Name:      "listener-policy",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type:      commonv1alpha1.ObjectRefTypeKonnectID,
@@ -339,10 +314,8 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 					configurationv1alpha1.EventGatewayBackendCluster,
 					konnectv1alpha1.KonnectEventGateway,
 				](ctx, cl, &configurationv1alpha1.EventGatewayVirtualCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "virtual-cluster",
-						Namespace: namespace,
-					},
+					Name:      "virtual-cluster",
+					Namespace: namespace,
 					Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 						EventGatewayBackendClusterRef: testNamespacedObjectRef(backendName),
 					},
@@ -374,19 +347,15 @@ func TestGetAPIAuthRefViaParent(t *testing.T) {
 
 func newTestAPIAuthConfiguration(namespace, name string) *konnectv1alpha1.KonnectAPIAuthConfiguration { //nolint:unparam
 	return &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 	}
 }
 
 func newTestPortal(namespace, name, apiAuthName string) *konnectv1alpha1.Portal {
 	return &konnectv1alpha1.Portal{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: konnectv1alpha1.PortalSpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -408,10 +377,8 @@ func newTestEventGatewayWithAPIAuthNamespace(namespace, name, apiAuthName, apiAu
 	}
 
 	return &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -425,10 +392,8 @@ func newTestEventGatewayWithAPIAuthNamespace(namespace, name, apiAuthName, apiAu
 
 func newTestEventGatewayBackendCluster(namespace, name, gatewayName string) *configurationv1alpha1.EventGatewayBackendCluster {
 	return &configurationv1alpha1.EventGatewayBackendCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 			GatewayRef: testNamespacedObjectRef(gatewayName),
 		},
@@ -437,10 +402,8 @@ func newTestEventGatewayBackendCluster(namespace, name, gatewayName string) *con
 
 func newTestEventGatewayVirtualCluster(namespace, name, backendClusterName string) *configurationv1alpha1.EventGatewayVirtualCluster {
 	return &configurationv1alpha1.EventGatewayVirtualCluster{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: testNamespacedObjectRef(backendClusterName),
 		},
@@ -449,10 +412,8 @@ func newTestEventGatewayVirtualCluster(namespace, name, backendClusterName strin
 
 func newTestEventGatewayListener(namespace, name, gatewayName string) *configurationv1alpha1.EventGatewayListener {
 	return &configurationv1alpha1.EventGatewayListener{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: configurationv1alpha1.EventGatewayListenerSpec{
 			GatewayRef: testNamespacedObjectRef(gatewayName),
 		},
@@ -461,10 +422,8 @@ func newTestEventGatewayListener(namespace, name, gatewayName string) *configura
 
 func newTestKonnectAIGateway(namespace, name, apiAuthName string) *konnectv1alpha1.KonnectAIGateway {
 	return &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -477,10 +436,8 @@ func newTestKonnectAIGateway(namespace, name, apiAuthName string) *konnectv1alph
 
 func newTestAIGatewayConsumer(namespace, name, gatewayName string) *aiconfigurationv1alpha1.AIGatewayConsumer {
 	return &aiconfigurationv1alpha1.AIGatewayConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
 			AIGatewayRef: testNamespacedObjectRef(gatewayName),
 		},
@@ -498,10 +455,8 @@ func testNamespacedObjectRef(name string) commonv1alpha1.ObjectRef {
 
 func newTestAPIAuthReferenceGrant(fromNamespace, toNamespace, fromKind string) *configurationv1alpha1.KongReferenceGrant {
 	return &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "allow-api-auth",
-			Namespace: toNamespace,
-		},
+		Name:      "allow-api-auth",
+		Namespace: toNamespace,
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{

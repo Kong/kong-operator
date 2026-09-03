@@ -58,10 +58,8 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 		Namespace: namespace.Name,
 	}
 	kpiPublic := &operatorv1alpha1.KongPluginInstallation{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kpiPublicNN.Name,
-			Namespace: kpiPublicNN.Namespace,
-		},
+		Name:      kpiPublicNN.Name,
+		Namespace: kpiPublicNN.Namespace,
 		Spec: operatorv1alpha1.KongPluginInstallationSpec{
 			Image: pluginInvalidLayersImage,
 		},
@@ -111,10 +109,8 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 			Namespace: createRandomNamespace(t),
 		}
 		kpiPrivate := &operatorv1alpha1.KongPluginInstallation{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      kpiPrivateNN.Name,
-				Namespace: kpiPrivateNN.Namespace,
-			},
+			Name:      kpiPrivateNN.Name,
+			Namespace: kpiPrivateNN.Namespace,
 			Spec: operatorv1alpha1.KongPluginInstallationSpec{
 				Image: pluginMyHeader2Image,
 			},
@@ -151,10 +147,8 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 
 		t.Log("add missing ReferenceGrant for the Secret with credentials")
 		refGrant := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kong-plugin-image-registry-credentials",
-				Namespace: namespaceForSecret,
-			},
+			Name:      "kong-plugin-image-registry-credentials",
+			Namespace: namespaceForSecret,
 			Spec: gwtypes.ReferenceGrantSpec{
 				To: []gwtypes.ReferenceGrantTo{
 					{
@@ -186,11 +180,9 @@ func TestKongPluginInstallationEssentials(t *testing.T) {
 
 		t.Log("add missing Secret with credentials")
 		secret := corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: string(secretRef.Name),
-				Labels: map[string]string{
-					config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
-				},
+			Name: string(secretRef.Name),
+			Labels: map[string]string{
+				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 			},
 			Type: corev1.SecretTypeDockerConfigJson,
 			StringData: map[string]string{
@@ -342,10 +334,8 @@ func attachKongPluginBasedOnKPIToRoute(
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		// To have it in the same namespace as the HTTPRoute to which it is attached.
 		kongPlugin := configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      kongPluginName,
-				Namespace: kongPluginNamespace,
-			},
+			Name:       kongPluginName,
+			Namespace:  kongPluginNamespace,
 			PluginName: kpiNN.Name,
 		}
 		_, err := integration.GetClients().ConfigurationClient.ConfigurationV1().KongPlugins(kongPluginNamespace).Create(ctx, &kongPlugin, metav1.CreateOptions{})
@@ -424,9 +414,7 @@ func verifyCustomPlugins(t *testing.T, ip string, expectedHeaders ...http.Header
 
 func createRandomNamespace(t *testing.T) string {
 	namespace := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 	}
 	ctx := t.Context()
 	_, err := integration.GetClients().K8sClient.CoreV1().Namespaces().Create(ctx, namespace, metav1.CreateOptions{})

@@ -23,7 +23,6 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -141,14 +140,10 @@ func generateBaseKafkaService(egdp *eventgatewayv1alpha1.KegDataPlane) *corev1.S
 		}
 	}
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      egdp.Name + "-kafka",
-			Namespace: egdp.Namespace,
-		},
+		APIVersion: "v1",
+		Kind:       "Service",
+		Name:       egdp.Name + "-kafka",
+		Namespace:  egdp.Namespace,
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
 				consts.GatewayOperatorManagedByLabel:     consts.DataPlaneManagedByLabelValue,
@@ -191,16 +186,12 @@ func generateKafkaServiceOverlay(egdp *eventgatewayv1alpha1.KegDataPlane) *corev
 	}
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        egdp.Name + "-kafka",
-			Namespace:   egdp.Namespace,
-			Labels:      extraLabels,
-			Annotations: kafka.Annotations,
-		},
+		APIVersion:  "v1",
+		Kind:        "Service",
+		Name:        egdp.Name + "-kafka",
+		Namespace:   egdp.Namespace,
+		Labels:      extraLabels,
+		Annotations: kafka.Annotations,
 		Spec: corev1.ServiceSpec{
 			Type:  kafka.Type,
 			Ports: ports,

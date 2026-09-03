@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -60,9 +59,7 @@ func testNewKonnectEntityReconciler[
 		mgr, logs := envtest.NewManager(t, ctx, cfg, scheme.Get())
 
 		ns := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: envtest.NameFromT(t),
-			},
+			GenerateName: envtest.NameFromT(t),
 		}
 		require.NoError(t, mgr.GetClient().Create(ctx, ns))
 

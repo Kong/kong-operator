@@ -62,27 +62,25 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 		{
 			name: "sanitizes all consumers and certificates and copies all other fields",
 			in: KongState{
-				Services:       []Service{{Service: kong.Service{ID: new("1")}}},
-				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: new("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: new("1"), Key: new("secret")}}},
+				Services:       []Service{{ID: new("1")}},
+				Upstreams:      []Upstream{{ID: new("1")}},
+				Certificates:   []Certificate{{ID: new("1"), Key: new("secret")}},
 				CACertificates: []kong.CACertificate{{ID: new("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: new("1"), Config: map[string]any{"key": "secret"}}}},
+				Plugins:        []Plugin{{ID: new("1"), Config: map[string]any{"key": "secret"}}},
 				Consumers: []Consumer{{
 					KeyAuths: []*KeyAuth{
 						{
-							KeyAuth: kong.KeyAuth{ID: new("1"), Key: new("secret")},
+							ID: new("1"), Key: new("secret"),
 						},
 					},
 				}},
 				Licenses: []License{{kong.License{ID: new("1"), Payload: new("secret")}}},
 				ConsumerGroups: []ConsumerGroup{{
-					ConsumerGroup: kong.ConsumerGroup{ID: new("1"), Name: new("consumer-group")},
+					ID: new("1"), Name: new("consumer-group"),
 				}},
 				Vaults: []Vault{
 					{
-						Vault: kong.Vault{
-							Name: new("test-vault"), Prefix: new("test-vault"),
-						},
+						Name: new("test-vault"), Prefix: new("test-vault"),
 					},
 				},
 				CustomEntities: map[string]*KongCustomEntityCollection{
@@ -106,29 +104,27 @@ func TestKongState_SanitizedCopy(t *testing.T) {
 				},
 			},
 			want: KongState{
-				Services:       []Service{{Service: kong.Service{ID: new("1")}}},
-				Upstreams:      []Upstream{{Upstream: kong.Upstream{ID: new("1")}}},
-				Certificates:   []Certificate{{Certificate: kong.Certificate{ID: new("1"), Key: redactedString}}},
+				Services:       []Service{{ID: new("1")}},
+				Upstreams:      []Upstream{{ID: new("1")}},
+				Certificates:   []Certificate{{ID: new("1"), Key: redactedString}},
 				CACertificates: []kong.CACertificate{{ID: new("1")}},
-				Plugins:        []Plugin{{Plugin: kong.Plugin{ID: new("1"), Config: map[string]any{"key": "secret"}}}}, // We don't redact plugins' config.
+				Plugins:        []Plugin{{ID: new("1"), Config: map[string]any{"key": "secret"}}}, // We don't redact plugins' config.
 				Consumers: []Consumer{
 					{
 						KeyAuths: []*KeyAuth{
 							{
-								KeyAuth: kong.KeyAuth{ID: new("1"), Key: deterministicRedactedString("secret")},
+								ID: new("1"), Key: deterministicRedactedString("secret"),
 							},
 						},
 					},
 				},
 				Licenses: []License{{kong.License{ID: new("1"), Payload: redactedString}}},
 				ConsumerGroups: []ConsumerGroup{{
-					ConsumerGroup: kong.ConsumerGroup{ID: new("1"), Name: new("consumer-group")},
+					ID: new("1"), Name: new("consumer-group"),
 				}},
 				Vaults: []Vault{
 					{
-						Vault: kong.Vault{
-							Name: new("test-vault"), Prefix: new("test-vault"),
-						},
+						Name: new("test-vault"), Prefix: new("test-vault"),
 					},
 				},
 				CustomEntities: map[string]*KongCustomEntityCollection{
@@ -180,7 +176,7 @@ func BenchmarkSanitizedCopy(b *testing.B) {
 			for i := range count {
 				consumers = append(consumers,
 					Consumer{
-						Consumer: kong.Consumer{ID: new(strconv.Itoa(i))},
+						ID: new(strconv.Itoa(i)),
 					},
 				)
 			}
@@ -255,11 +251,9 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "single consumer annotation",
 			data: func() data {
 				k8sKongConsumer := configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 
@@ -267,9 +261,7 @@ func TestGetPluginRelations(t *testing.T) {
 					inputState: KongState{
 						Consumers: []Consumer{
 							{
-								Consumer: kong.Consumer{
-									Username: new("foo-consumer"),
-								},
+								Username:        new("foo-consumer"),
 								K8sKongConsumer: k8sKongConsumer,
 							},
 						},
@@ -285,11 +277,9 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "single consumer group annotation",
 			data: func() data {
 				k8sKongConsumerGroup := configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 
@@ -297,9 +287,7 @@ func TestGetPluginRelations(t *testing.T) {
 					inputState: KongState{
 						ConsumerGroups: []ConsumerGroup{
 							{
-								ConsumerGroup: kong.ConsumerGroup{
-									Name: new("foo-consumer-group"),
-								},
+								Name:                 new("foo-consumer-group"),
 								K8sKongConsumerGroup: k8sKongConsumerGroup,
 							},
 						},
@@ -315,11 +303,9 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "single service annotation",
 			data: func() data {
 				k8sService := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 
@@ -327,9 +313,7 @@ func TestGetPluginRelations(t *testing.T) {
 					inputState: KongState{
 						Services: []Service{
 							{
-								Service: kong.Service{
-									Name: new("foo-service"),
-								},
+								Name: new("foo-service"),
 								K8sServices: map[string]*corev1.Service{
 									"foo-service": k8sService,
 								},
@@ -347,24 +331,18 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "single Ingress annotation",
 			data: func() data {
 				k8sIngress := netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "some-ingress",
-						Namespace: "ns2",
-					},
+					Name:      "some-ingress",
+					Namespace: "ns2",
 				}
 
 				return data{
 					inputState: KongState{
 						Services: []Service{
 							{
-								Service: kong.Service{
-									Name: new("foo-service"),
-								},
+								Name: new("foo-service"),
 								Routes: []Route{
 									{
-										Route: kong.Route{
-											Name: new("foo-route"),
-										},
+										Name: new("foo-route"),
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
 											Namespace: k8sIngress.Namespace,
@@ -388,24 +366,18 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "multiple routes with annotation",
 			data: func() data {
 				k8sIngress := &netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "some-ingress",
-						Namespace: "ns2",
-					},
+					Name:      "some-ingress",
+					Namespace: "ns2",
 				}
 
 				return data{
 					inputState: KongState{
 						Services: []Service{
 							{
-								Service: kong.Service{
-									Name: new("foo-service"),
-								},
+								Name: new("foo-service"),
 								Routes: []Route{
 									{
-										Route: kong.Route{
-											Name: new("foo-route"),
-										},
+										Name: new("foo-route"),
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
 											Namespace: k8sIngress.Namespace,
@@ -415,9 +387,7 @@ func TestGetPluginRelations(t *testing.T) {
 										},
 									},
 									{
-										Route: kong.Route{
-											Name: new("bar-route"),
-										},
+										Name: new("bar-route"),
 										Ingress: util.K8sObjectInfo{
 											Name:      k8sIngress.Name,
 											Namespace: k8sIngress.Namespace,
@@ -443,127 +413,95 @@ func TestGetPluginRelations(t *testing.T) {
 			data: func() data {
 				// Kong consumers.
 				k8sKongConsumer1Foobar := configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foobar",
 					},
 				}
 				k8sKongConsumer1FooBar := configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 				k8sKongConsumer2FooBar := configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns2",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns2",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 				// Kong consumer groups.
 				k8sKongConsumerGroup1FooBar := configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 				k8sKongConsumerGroup2FooBar := configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns2",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns2",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 
 				k8sKongConsumerGroup2BarBaz := configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns2",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
-						},
+					Namespace: "ns2",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "bar,baz",
 					},
 				}
 				// Services
 				k8sService := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "ns1",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
-						},
+					Namespace: "ns1",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "foo,bar",
 					},
 				}
 				// Ingress
 				k8sIngress := &netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "some-ingress",
-						Namespace: "ns2",
-					},
+					Name:      "some-ingress",
+					Namespace: "ns2",
 				}
 
 				return data{
 					inputState: KongState{
 						Consumers: []Consumer{
 							{
-								Consumer: kong.Consumer{
-									Username: new("foo-consumer"),
-								},
+								Username:        new("foo-consumer"),
 								K8sKongConsumer: k8sKongConsumer1FooBar,
 							},
 							{
-								Consumer: kong.Consumer{
-									Username: new("foo-consumer"),
-								},
+								Username:        new("foo-consumer"),
 								K8sKongConsumer: k8sKongConsumer2FooBar,
 							},
 							{
-								Consumer: kong.Consumer{
-									Username: new("bar-consumer"),
-								},
+								Username:        new("bar-consumer"),
 								K8sKongConsumer: k8sKongConsumer1Foobar,
 							},
 						},
 						ConsumerGroups: []ConsumerGroup{
 							{
-								ConsumerGroup: kong.ConsumerGroup{
-									Name: new("foo-consumer-group"),
-								},
+								Name:                 new("foo-consumer-group"),
 								K8sKongConsumerGroup: k8sKongConsumerGroup1FooBar,
 							},
 							{
-								ConsumerGroup: kong.ConsumerGroup{
-									Name: new("foo-consumer-group"),
-								},
+								Name:                 new("foo-consumer-group"),
 								K8sKongConsumerGroup: k8sKongConsumerGroup2FooBar,
 							},
 							{
-								ConsumerGroup: kong.ConsumerGroup{
-									Name: new("bar-consumer-group"),
-								},
+								Name:                 new("bar-consumer-group"),
 								K8sKongConsumerGroup: k8sKongConsumerGroup2BarBaz,
 							},
 						},
 						Services: []Service{
 							{
-								Service: kong.Service{
-									Name: new("foo-service"),
-								},
+								Name: new("foo-service"),
 								K8sServices: map[string]*corev1.Service{
 									"foo-service": k8sService,
 								},
 								Routes: []Route{
 									{
-										Route: kong.Route{
-											Name: new("foo-route"),
-										},
+										Name: new("foo-route"),
 										Ingress: util.K8sObjectInfo{
 											Name:      "some-ingress",
 											Namespace: "ns2",
@@ -573,9 +511,7 @@ func TestGetPluginRelations(t *testing.T) {
 										},
 									},
 									{
-										Route: kong.Route{
-											Name: new("bar-route"),
-										},
+										Name: new("bar-route"),
 										Ingress: util.K8sObjectInfo{
 											Name:      "some-ingress",
 											Namespace: "ns2",
@@ -624,11 +560,9 @@ func TestGetPluginRelations(t *testing.T) {
 			name: "consumer with custom_id and a plugin attached",
 			data: func() data {
 				k8sKongConsumer := configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "rate-limiting-1",
-						},
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "rate-limiting-1",
 					},
 				}
 
@@ -636,34 +570,24 @@ func TestGetPluginRelations(t *testing.T) {
 					inputState: KongState{
 						Consumers: []Consumer{
 							{
-								Consumer: kong.Consumer{
-									CustomID: new("1234-1234"),
-								},
+								CustomID:        new("1234-1234"),
 								K8sKongConsumer: k8sKongConsumer,
 							},
 						},
 						Plugins: []Plugin{
 							{
-								Plugin: kong.Plugin{
-									Name: new("rate-limiting"),
-								},
+								Name: new("rate-limiting"),
 								K8sParent: &configurationv1.KongPlugin{
-									ObjectMeta: metav1.ObjectMeta{
-										Namespace: "default",
-										Name:      "rate-limiting-1",
-									},
+									Namespace:  "default",
+									Name:       "rate-limiting-1",
 									PluginName: "rate-limiting",
 								},
 							},
 							{
-								Plugin: kong.Plugin{
-									Name: new("basic-auth"),
-								},
+								Name: new("basic-auth"),
 								K8sParent: &configurationv1.KongPlugin{
-									ObjectMeta: metav1.ObjectMeta{
-										Namespace: "default",
-										Name:      "basic-auth-1",
-									},
+									Namespace:  "default",
+									Name:       "basic-auth-1",
 									PluginName: "basic-auth",
 								},
 							},
@@ -692,9 +616,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 	ks := KongState{
 		Consumers: []Consumer{
 			{
-				Consumer: kong.Consumer{
-					Username: new("foo-consumer"),
-				},
+				Username: new("foo-consumer"),
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -705,9 +627,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				},
 			},
 			{
-				Consumer: kong.Consumer{
-					Username: new("foo-consumer"),
-				},
+				Username: new("foo-consumer"),
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
@@ -718,9 +638,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				},
 			},
 			{
-				Consumer: kong.Consumer{
-					Username: new("bar-consumer"),
-				},
+				Username: new("bar-consumer"),
 				K8sKongConsumer: configurationv1.KongConsumer{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -733,9 +651,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 		},
 		ConsumerGroups: []ConsumerGroup{
 			{
-				ConsumerGroup: kong.ConsumerGroup{
-					Name: new("foo-consumer-group"),
-				},
+				Name: new("foo-consumer-group"),
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns1",
@@ -746,9 +662,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				},
 			},
 			{
-				ConsumerGroup: kong.ConsumerGroup{
-					Name: new("foo-consumer-group"),
-				},
+				Name: new("foo-consumer-group"),
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
@@ -759,9 +673,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				},
 			},
 			{
-				ConsumerGroup: kong.ConsumerGroup{
-					Name: new("bar-consumer-group"),
-				},
+				Name: new("bar-consumer-group"),
 				K8sKongConsumerGroup: configurationv1beta1.KongConsumerGroup{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "ns2",
@@ -774,9 +686,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 		},
 		Services: []Service{
 			{
-				Service: kong.Service{
-					Name: new("foo-service"),
-				},
+				Name: new("foo-service"),
 				K8sServices: map[string]*corev1.Service{
 					"foo-service": {
 						ObjectMeta: metav1.ObjectMeta{
@@ -789,9 +699,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 				},
 				Routes: []Route{
 					{
-						Route: kong.Route{
-							Name: new("foo-route"),
-						},
+						Name: new("foo-route"),
 						Ingress: util.K8sObjectInfo{
 							Name:      "some-ingress",
 							Namespace: "ns2",
@@ -801,9 +709,7 @@ func BenchmarkGetPluginRelations(b *testing.B) {
 						},
 					},
 					{
-						Route: kong.Route{
-							Name: new("bar-route"),
-						},
+						Name: new("bar-route"),
 						Ingress: util.K8sObjectInfo{
 							Name:      "some-ingress",
 							Namespace: "ns2",
@@ -835,13 +741,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 	}
 	secrets := []*corev1.Secret{
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fooCredSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "fooCredSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{
 				"key": []byte("whatever"),
@@ -849,13 +753,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "barCredSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "oauth2",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "barCredSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "oauth2",
 			},
 			Data: map[string][]byte{
 				"name":          []byte("whatever"),
@@ -866,63 +768,53 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "emptyCredSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "emptyCredSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "unsupportedCredSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "unsupported",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "unsupportedCredSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "unsupported",
 			},
 			Data: map[string][]byte{
 				"foo": []byte("bar"),
 			},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "labeledSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "labeledSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{
 				"key": []byte("little-rabbits-be-good"),
 			},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "conflictingSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "key-auth",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "conflictingSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "key-auth",
 			},
 			Data: map[string][]byte{
 				"key": []byte("little-rabbits-be-good"),
 			},
 		},
 		{
-			TypeMeta: secretTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "badTypeLabeledSecret",
-				Namespace: "default",
-				Labels: map[string]string{
-					labels.CredentialTypeLabel: "bee-auth",
-				},
+			TypeMeta:  secretTypeMeta,
+			Name:      "badTypeLabeledSecret",
+			Namespace: "default",
+			Labels: map[string]string{
+				labels.CredentialTypeLabel: "bee-auth",
 			},
 			Data: map[string][]byte{
 				"foo": []byte("bar"),
@@ -940,13 +832,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "KongConsumer with key-auth and oauth2",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					CustomID: "foo",
@@ -958,35 +848,29 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("foo"),
-						CustomID: new("foo"),
-					},
+					Username: new("foo"),
+					CustomID: new("foo"),
 					KeyAuths: []*KeyAuth{
 						{
-							KeyAuth: kong.KeyAuth{
-								Key: new("whatever"),
-								TTL: new(1024),
-								Tags: util.GenerateTagsForObject(&corev1.Secret{
-									TypeMeta:   secretTypeMeta,
-									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "fooCredSecret"},
-								}),
-							},
+							Key: new("whatever"),
+							TTL: new(1024),
+							Tags: util.GenerateTagsForObject(&corev1.Secret{
+								TypeMeta:  secretTypeMeta,
+								Namespace: "default", Name: "fooCredSecret",
+							}),
 						},
 					},
 					Oauth2Creds: []*Oauth2Credential{
 						{
-							Oauth2Credential: kong.Oauth2Credential{
-								Name:         new("whatever"),
-								ClientID:     new("whatever"),
-								ClientSecret: new("whatever"),
-								HashSecret:   new(true),
-								RedirectURIs: []*string{new("http://example.com")},
-								Tags: util.GenerateTagsForObject(&corev1.Secret{
-									TypeMeta:   secretTypeMeta,
-									ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "barCredSecret"},
-								}),
-							},
+							Name:         new("whatever"),
+							ClientID:     new("whatever"),
+							ClientSecret: new("whatever"),
+							HashSecret:   new(true),
+							RedirectURIs: []*string{new("http://example.com")},
+							Tags: util.GenerateTagsForObject(&corev1.Secret{
+								TypeMeta:  secretTypeMeta,
+								Namespace: "default", Name: "barCredSecret",
+							}),
 						},
 					},
 				},
@@ -996,13 +880,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "missing username and custom_id",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Credentials: []string{
 						"fooCredSecret",
@@ -1018,13 +900,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "referring to non-exist secret",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					Credentials: []string{
@@ -1034,9 +914,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("foo"),
-					},
+					Username: new("foo"),
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
@@ -1047,13 +925,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "referring to secret with unsupported credType",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					Credentials: []string{
@@ -1063,9 +939,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("foo"),
-					},
+					Username: new("foo"),
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
@@ -1076,13 +950,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "referring to secret with unsupported credential label",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					Credentials: []string{
@@ -1092,9 +964,7 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("foo"),
-					},
+					Username: new("foo"),
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
@@ -1105,13 +975,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "KongConsumer with key-auth from label secret",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					CustomID: "foo",
@@ -1122,21 +990,15 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("foo"),
-						CustomID: new("foo"),
-					},
+					Username: new("foo"),
+					CustomID: new("foo"),
 					KeyAuths: []*KeyAuth{
 						{
-							KeyAuth: kong.KeyAuth{
-								Key: new("little-rabbits-be-good"),
-								Tags: util.GenerateTagsForObject(&corev1.Secret{
-									TypeMeta: secretTypeMeta,
-									ObjectMeta: metav1.ObjectMeta{
-										Namespace: "default", Name: "labeledSecret",
-									},
-								}),
-							},
+							Key: new("little-rabbits-be-good"),
+							Tags: util.GenerateTagsForObject(&corev1.Secret{
+								TypeMeta:  secretTypeMeta,
+								Namespace: "default", Name: "labeledSecret",
+							}),
 						},
 					},
 				},
@@ -1146,13 +1008,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			name: "KongConusmers with conflicting key-auths",
 			k8sConsumers: []*configurationv1.KongConsumer{
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "foo",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "foo",
 					CustomID: "foo",
@@ -1161,13 +1021,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "bar",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "bar",
 					CustomID: "bar",
@@ -1176,13 +1034,11 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: kongConsumerTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "baz",
-						Namespace: "default",
-						Annotations: map[string]string{
-							"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongConsumerTypeMeta,
+					Name:      "baz",
+					Namespace: "default",
+					Annotations: map[string]string{
+						"kubernetes.io/ingress.class": annotations.DefaultIngressClass,
 					},
 					Username: "baz",
 					CustomID: "baz",
@@ -1190,10 +1046,8 @@ func TestFillConsumersAndCredentials(t *testing.T) {
 			},
 			expectedKongStateConsumers: []Consumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("baz"),
-						CustomID: new("baz"),
-					},
+					Username: new("baz"),
+					CustomID: new("baz"),
 				},
 			},
 			expectedTranslationFailureMessages: map[k8stypes.NamespacedName]string{
@@ -1266,14 +1120,10 @@ func TestKongState_FillIDs(t *testing.T) {
 			state: KongState{
 				Services: []Service{
 					{
-						Service: kong.Service{
-							Name: new("service.foo"),
-						},
+						Name: new("service.foo"),
 					},
 					{
-						Service: kong.Service{
-							Name: new("service.bar"),
-						},
+						Name: new("service.bar"),
 					},
 				},
 			},
@@ -1287,19 +1137,13 @@ func TestKongState_FillIDs(t *testing.T) {
 			state: KongState{
 				Services: []Service{
 					{
-						Service: kong.Service{
-							Name: new("service.foo"),
-						},
+						Name: new("service.foo"),
 						Routes: []Route{
 							{
-								Route: kong.Route{
-									Name: new("route.foo"),
-								},
+								Name: new("route.foo"),
 							},
 							{
-								Route: kong.Route{
-									Name: new("route.bar"),
-								},
+								Name: new("route.bar"),
 							},
 						},
 					},
@@ -1316,14 +1160,10 @@ func TestKongState_FillIDs(t *testing.T) {
 			state: KongState{
 				Consumers: []Consumer{
 					{
-						Consumer: kong.Consumer{
-							Username: new("user.foo"),
-						},
+						Username: new("user.foo"),
 					},
 					{
-						Consumer: kong.Consumer{
-							Username: new("user.bar"),
-						},
+						Username: new("user.bar"),
 					},
 				},
 			},
@@ -1337,23 +1177,17 @@ func TestKongState_FillIDs(t *testing.T) {
 			state: KongState{
 				Services: []Service{
 					{
-						Service: kong.Service{
-							Name: new("service.foo"),
-						},
+						Name: new("service.foo"),
 						Routes: []Route{
 							{
-								Route: kong.Route{
-									Name: new("route.bar"),
-								},
+								Name: new("route.bar"),
 							},
 						},
 					},
 				},
 				Consumers: []Consumer{
 					{
-						Consumer: kong.Consumer{
-							Username: new("user.baz"),
-						},
+						Username: new("user.baz"),
 					},
 				},
 			},
@@ -1368,23 +1202,17 @@ func TestKongState_FillIDs(t *testing.T) {
 			state: KongState{
 				Consumers: []Consumer{
 					{
-						Consumer: kong.Consumer{
-							Username: new("user.0"),
-						},
+						Username: new("user.0"),
 					},
 				},
 				ConsumerGroups: []ConsumerGroup{
 					{
-						ConsumerGroup: kong.ConsumerGroup{
-							Name: new("cg.0"),
-						},
+						Name: new("cg.0"),
 					},
 				},
 				Vaults: []Vault{
 					{
-						Vault: kong.Vault{
-							Prefix: new("vault.0"),
-						},
+						Prefix: new("vault.0"),
 					},
 				},
 			},
@@ -1415,10 +1243,8 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			name: "collision test",
 			in: []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:         "foo-plugin",
+					Namespace:    "default",
 					PluginName:   "jwt",
 					InstanceName: "test",
 				},
@@ -1439,10 +1265,8 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			name: "binding to route and consumer group",
 			in: []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:         "foo-plugin",
+					Namespace:    "default",
 					InstanceName: "test",
 				},
 			},
@@ -1462,10 +1286,8 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			name: "binding to routes and consumer",
 			in: []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:         "foo-plugin",
+					Namespace:    "default",
 					InstanceName: "test",
 				},
 			},
@@ -1485,10 +1307,8 @@ func TestKongState_BuildPluginsCollisions(t *testing.T) {
 			name: "binding to service and consumer group",
 			in: []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:         "foo-plugin",
+					Namespace:    "default",
 					InstanceName: "test",
 				},
 			},
@@ -1529,16 +1349,12 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 	)
 	serviceAnnotatedWithKongUpstreamPolicy := func() *corev1.Service {
 		return &corev1.Service{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Service",
-				APIVersion: "v1",
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service",
-				Namespace: "default",
-				Annotations: map[string]string{
-					configurationv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
-				},
+			Kind:       "Service",
+			APIVersion: "v1",
+			Name:       "service",
+			Namespace:  "default",
+			Annotations: map[string]string{
+				configurationv1beta1.KongUpstreamPolicyAnnotationKey: kongUpstreamPolicyName,
 			},
 		}
 	}
@@ -1576,10 +1392,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongUpstreamPolicyName,
-						Namespace: "default",
-					},
+					Name:      kongUpstreamPolicyName,
+					Namespace: "default",
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: new("least-connections"),
 					},
@@ -1624,10 +1438,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongUpstreamPolicyName,
-						Namespace: "default",
-					},
+					Name:      kongUpstreamPolicyName,
+					Namespace: "default",
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: new("sticky-sessions"),
 					},
@@ -1656,10 +1468,8 @@ func TestKongState_FillUpstreamOverrides(t *testing.T) {
 			},
 			kongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      kongUpstreamPolicyName,
-						Namespace: "default",
-					},
+					Name:      kongUpstreamPolicyName,
+					Namespace: "default",
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: new("sticky-sessions"),
 					},
@@ -1705,13 +1515,11 @@ func TestFillVaults(t *testing.T) {
 			name: "single valid KongVault",
 			kongVaults: []*configurationv1alpha1.KongVault{
 				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "",
-						Name:      "vault-1",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					TypeMeta:  kongVaultTypeMeta,
+					Namespace: "",
+					Name:      "vault-1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1721,14 +1529,10 @@ func TestFillVaults(t *testing.T) {
 			},
 			expectedTranslatedVaults: []Vault{
 				{
-					Vault: kong.Vault{
-						Name:   new("env"),
-						Prefix: new("env-1"),
-					},
+					Name:   new("env"),
+					Prefix: new("env-1"),
 					K8sKongVault: &configurationv1alpha1.KongVault{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "vault-1",
-						},
+						Name: "vault-1",
 					},
 				},
 			},
@@ -1738,11 +1542,9 @@ func TestFillVaults(t *testing.T) {
 			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:     "vault-1",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1751,11 +1553,9 @@ func TestFillVaults(t *testing.T) {
 				},
 				{
 					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-2",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: "other-ingress-class",
-						},
+					Name:     "vault-2",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: "other-ingress-class",
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1765,14 +1565,10 @@ func TestFillVaults(t *testing.T) {
 			},
 			expectedTranslatedVaults: []Vault{
 				{
-					Vault: kong.Vault{
-						Name:   new("env"),
-						Prefix: new("env-1"),
-					},
+					Name:   new("env"),
+					Prefix: new("env-1"),
 					K8sKongVault: &configurationv1alpha1.KongVault{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "vault-1",
-						},
+						Name: "vault-1",
 					},
 				},
 			},
@@ -1782,11 +1578,9 @@ func TestFillVaults(t *testing.T) {
 			kongVaults: []*configurationv1alpha1.KongVault{
 				{
 					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-invalid",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:     "vault-invalid",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1805,13 +1599,11 @@ func TestFillVaults(t *testing.T) {
 			name: "multiple KongVaults with same spec.prefix, only one translated and translation failure for the other",
 			kongVaults: []*configurationv1alpha1.KongVault{
 				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "vault-0-newer",
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					TypeMeta:          kongVaultTypeMeta,
+					Name:              "vault-0-newer",
+					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1819,13 +1611,11 @@ func TestFillVaults(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "vault-1",
-						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					TypeMeta:          kongVaultTypeMeta,
+					Name:              "vault-1",
+					CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1833,13 +1623,11 @@ func TestFillVaults(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: kongVaultTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "vault-2",
-						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					TypeMeta:          kongVaultTypeMeta,
+					Name:              "vault-2",
+					CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "env",
@@ -1849,14 +1637,10 @@ func TestFillVaults(t *testing.T) {
 			},
 			expectedTranslatedVaults: []Vault{
 				{
-					Vault: kong.Vault{
-						Name:   new("env"),
-						Prefix: new("env-1"),
-					},
+					Name:   new("env"),
+					Prefix: new("env-1"),
 					K8sKongVault: &configurationv1alpha1.KongVault{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "vault-1",
-						},
+						Name: "vault-1",
 					},
 				},
 			},
@@ -2033,11 +1817,9 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 		{
 			name: "no reference grant",
 			referrer: &corev1.Service{
-				TypeMeta: serviceTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "foo",
-					Name:      "service-foo",
-				},
+				TypeMeta:  serviceTypeMeta,
+				Namespace: "foo",
+				Name:      "service-foo",
 			},
 			pluginNamespace: "bar",
 			pluginName:      "plugin-bar",
@@ -2046,20 +1828,16 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 		{
 			name: "have reference grant",
 			referrer: &corev1.Service{
-				TypeMeta: serviceTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "foo",
-					Name:      "service-foo",
-				},
+				TypeMeta:  serviceTypeMeta,
+				Namespace: "foo",
+				Name:      "service-foo",
 			},
 			pluginNamespace: "bar",
 			pluginName:      "plugin-bar",
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "bar", // same namespace as plugin
-						Name:      "grant-1",
-					},
+					Namespace: "bar", // same namespace as plugin
+					Name:      "grant-1",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{
@@ -2081,20 +1859,16 @@ func TestIsRemotePluginReferenceAllowed(t *testing.T) {
 		{
 			name: "reference grant created but in different namespace",
 			referrer: &corev1.Service{
-				TypeMeta: serviceTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "foo",
-					Name:      "service-foo",
-				},
+				TypeMeta:  serviceTypeMeta,
+				Namespace: "foo",
+				Name:      "service-foo",
 			},
 			pluginNamespace: "bar",
 			pluginName:      "plugin-bar",
 			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "foo", // Not same namespace as plugin
-						Name:      "grant-1",
-					},
+					Namespace: "foo", // Not same namespace as plugin
+					Name:      "grant-1",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{

@@ -1,7 +1,6 @@
 package resources
 
 import (
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -20,13 +19,11 @@ func GenerateKongDataPlaneClientCertificate(
 	opts ...func(dpCert *configurationv1alpha1.KongDataPlaneClientCertificate),
 ) configurationv1alpha1.KongDataPlaneClientCertificate {
 	dpCert := configurationv1alpha1.KongDataPlaneClientCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-			Labels: map[string]string{
-				consts.GatewayOperatorManagedByLabel:     "KonnectExtension",
-				consts.GatewayOperatorManagedByNameLabel: owner.GetName(),
-			},
+		Name:      name,
+		Namespace: namespace,
+		Labels: map[string]string{
+			consts.GatewayOperatorManagedByLabel:     "KonnectExtension",
+			consts.GatewayOperatorManagedByNameLabel: owner.GetName(),
 		},
 		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
 			KongDataPlaneClientCertificateAPISpec: configurationv1alpha1.KongDataPlaneClientCertificateAPISpec{

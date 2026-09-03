@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -24,11 +23,9 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			name: "returns HTTPRoute for a Gateway",
 			httpRoutes: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -43,22 +40,16 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: []gwtypes.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -77,23 +68,17 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			name: "does not return HTTPRoute for a Gateway when it is not a parent",
 			httpRoutes: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
-					Spec: gwtypes.HTTPRouteSpec{},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
+					Spec:            gwtypes.HTTPRouteSpec{},
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: nil,
 		},
@@ -101,11 +86,9 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			name: "returns HTTPRoute when section name does match",
 			httpRoutes: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -121,14 +104,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -140,11 +119,9 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			},
 			expected: []gwtypes.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -164,11 +141,9 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			name: "does not return HTTPRoute when section name does not match",
 			httpRoutes: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -184,14 +159,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -207,11 +178,9 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 			name: "does not return HTTPRoute when port does not match",
 			httpRoutes: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "http-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "http-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -228,14 +197,10 @@ func TestListHTTPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -279,11 +244,9 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			name: "returns GRPCRoute for a Gateway",
 			grpcRoutes: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -298,22 +261,16 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: []gwtypes.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -332,23 +289,17 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			name: "does not return GRPCRoute for a Gateway when it is not a parent",
 			grpcRoutes: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
-					Spec: gwtypes.GRPCRouteSpec{},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
+					Spec:            gwtypes.GRPCRouteSpec{},
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: nil,
 		},
@@ -356,11 +307,9 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			name: "returns GRPCRoute when section name does match",
 			grpcRoutes: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -376,14 +325,10 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -395,11 +340,9 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			},
 			expected: []gwtypes.GRPCRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -419,11 +362,9 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			name: "does not return GRPCRoute when section name does not match",
 			grpcRoutes: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -439,14 +380,10 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -462,11 +399,9 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 			name: "does not return GRPCRoute when port does not match",
 			grpcRoutes: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "grpc-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "grpc-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -483,14 +418,10 @@ func TestListGRPCRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -534,11 +465,9 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			name: "returns TCPRoute for a Gateway",
 			tcpRoutes: []client.Object{
 				&gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -553,22 +482,16 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: []gwtypes.TCPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -587,23 +510,17 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			name: "does not return TCPRoute for a Gateway when it is not a parent",
 			tcpRoutes: []client.Object{
 				&gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
-					Spec: gwtypes.TCPRouteSpec{},
+					Name:            "tcp-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
+					Spec:            gwtypes.TCPRouteSpec{},
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: nil,
 		},
@@ -611,11 +528,9 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			name: "does not return TCPRoute referencing a same-named Gateway in another namespace",
 			tcpRoutes: []client.Object{
 				&gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "other-namespace",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "other-namespace",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -633,14 +548,10 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: nil,
 		},
@@ -648,11 +559,9 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			name: "returns TCPRoute referencing the Gateway by explicit namespace",
 			tcpRoutes: []client.Object{
 				&gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "other-namespace",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "other-namespace",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -668,22 +577,16 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 			},
 			expected: []gwtypes.TCPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "other-namespace",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "other-namespace",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -703,11 +606,9 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			name: "returns TCPRoute when section name and port match",
 			tcpRoutes: []client.Object{
 				&gwtypes.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -724,14 +625,10 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Gateway",
-					APIVersion: gwtypes.GroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gw-1",
-					Namespace: "default",
-				},
+				Kind:       "Gateway",
+				APIVersion: gwtypes.GroupVersion.String(),
+				Name:       "gw-1",
+				Namespace:  "default",
 				Spec: gwtypes.GatewaySpec{
 					Listeners: []gwtypes.Listener{
 						{
@@ -743,11 +640,9 @@ func TestListTCPRoutesForGateway(t *testing.T) {
 			},
 			expected: []gwtypes.TCPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "tcp-route-1",
-						Namespace:       "default",
-						ResourceVersion: "1",
-					},
+					Name:            "tcp-route-1",
+					Namespace:       "default",
+					ResourceVersion: "1",
 					Spec: gwtypes.TCPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{

@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -22,36 +21,28 @@ func TestMapHTTPRouteForClientCertSecret(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-cert", Namespace: "ns1"},
+		Name: "my-cert", Namespace: "ns1",
 	}
 	svcWithAnnotation := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc1",
-			Namespace: "ns1",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "my-cert",
-			},
+		Name:      "svc1",
+		Namespace: "ns1",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "my-cert",
 		},
 	}
 	svcOtherAnnotation := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc2",
-			Namespace: "ns1",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "other-cert",
-			},
+		Name:      "svc2",
+		Namespace: "ns1",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "other-cert",
 		},
 	}
 	route1 := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "route1", Namespace: "ns1"},
+		Name: "route1", Namespace: "ns1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc1",
-						},
-					},
+					Name: "svc1",
 				}},
 			}},
 		},
@@ -155,36 +146,28 @@ func TestMapGRPCRouteForClientCertSecret(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-cert", Namespace: "ns1"},
+		Name: "my-cert", Namespace: "ns1",
 	}
 	svcWithAnnotation := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc1",
-			Namespace: "ns1",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "my-cert",
-			},
+		Name:      "svc1",
+		Namespace: "ns1",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "my-cert",
 		},
 	}
 	svcOtherAnnotation := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc2",
-			Namespace: "ns1",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "other-cert",
-			},
+		Name:      "svc2",
+		Namespace: "ns1",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "other-cert",
 		},
 	}
 	route1 := &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "route1", Namespace: "ns1"},
+		Name: "route1", Namespace: "ns1",
 		Spec: gwtypes.GRPCRouteSpec{
 			Rules: []gwtypes.GRPCRouteRule{{
 				BackendRefs: []gwtypes.GRPCBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: "svc1",
-						},
-					},
+					Name: "svc1",
 				}},
 			}},
 		},
@@ -288,25 +271,21 @@ func TestMapTLSRouteForClientCertSecret(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-cert", Namespace: "ns1"},
+		Name: "my-cert", Namespace: "ns1",
 	}
 	svcWithAnnotation := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc1",
-			Namespace: "ns1",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "my-cert",
-			},
+		Name:      "svc1",
+		Namespace: "ns1",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "my-cert",
 		},
 	}
 	tlsRoute1 := &gwtypes.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "tlsroute1", Namespace: "ns1"},
+		Name: "tlsroute1", Namespace: "ns1",
 		Spec: gwtypes.TLSRouteSpec{
 			Rules: []gwtypes.TLSRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc1",
-					},
+					Name: "svc1",
 				}},
 			}},
 		},

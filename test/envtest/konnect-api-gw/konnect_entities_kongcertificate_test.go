@@ -323,10 +323,8 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Creating KongCertificate with cross-namespace SecretRef (no grant yet)")
 		certType := configurationv1alpha1.KongCertificateSourceTypeSecretRef
 		createdCert := &configurationv1alpha1.KongCertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "cert-xns-",
-				Namespace:    ns.Name,
-			},
+			GenerateName: "cert-xns-",
+			Namespace:    ns.Name,
 			Spec: configurationv1alpha1.KongCertificateSpec{
 				Type: &certType,
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
@@ -496,10 +494,8 @@ func TestKongCertificate(t *testing.T) {
 		t.Log("Creating KongCertificate with cross-namespace SecretRef and SecretRefAlt")
 		certType := configurationv1alpha1.KongCertificateSourceTypeSecretRef
 		createdCert := &configurationv1alpha1.KongCertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "cert-xns-alt-",
-				Namespace:    ns.Name,
-			},
+			GenerateName: "cert-xns-alt-",
+			Namespace:    ns.Name,
 			Spec: configurationv1alpha1.KongCertificateSpec{
 				Type: &certType,
 				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{

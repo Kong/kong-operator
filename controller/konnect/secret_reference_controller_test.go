@@ -10,7 +10,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,10 +38,8 @@ func TestKonnectSecretReferenceController_isSecretReferencedByKonnectResources(t
 		{
 			name: "secret not referenced by any resources",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{},
 			expected:     false,
@@ -51,17 +48,13 @@ func TestKonnectSecretReferenceController_isSecretReferencedByKonnectResources(t
 		{
 			name: "secret referenced by KonnectAPIAuthConfiguration",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "auth-config",
-						Namespace: "test-ns",
-					},
+					Name:      "auth-config",
+					Namespace: "test-ns",
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -77,17 +70,13 @@ func TestKonnectSecretReferenceController_isSecretReferencedByKonnectResources(t
 		{
 			name: "secret in different namespace not referenced",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "other-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "other-ns",
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "auth-config",
-						Namespace: "test-ns",
-					},
+					Name:      "auth-config",
+					Namespace: "test-ns",
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -103,10 +92,8 @@ func TestKonnectSecretReferenceController_isSecretReferencedByKonnectResources(t
 		{
 			name: "client error when listing resources",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{},
 			interceptor: interceptor.Funcs{
@@ -173,10 +160,8 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret not found - should be ignored",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "nonexistent-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "nonexistent-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs:    []client.Object{},
 			expectedRequeue: false,
@@ -185,23 +170,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret referenced by KonnectAPIAuthConfiguration - should add finalizer",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "test-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "test-ns",
 				},
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "auth-config",
-						Namespace: "test-ns",
-					},
+					Name:      "auth-config",
+					Namespace: "test-ns",
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -219,19 +198,15 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret not referenced - should remove finalizer if present",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-secret",
-					Namespace:  "test-ns",
-					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
-				},
+				Name:       "test-secret",
+				Namespace:  "test-ns",
+				Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 			},
 			existingObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-secret",
-						Namespace:  "test-ns",
-						Finalizers: []string{consts.KonnectSecretInUseFinalizer},
-					},
+					Name:       "test-secret",
+					Namespace:  "test-ns",
+					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			expectedRequeue:     false,
@@ -242,21 +217,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret being deleted but still under grace period - should requeue",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-secret",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &futureTime,
+				Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
+			},
+			existingObjs: []client.Object{
+				&corev1.Secret{
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &futureTime,
 					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-				},
-			},
-			existingObjs: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-secret",
-						Namespace:         "test-ns",
-						DeletionTimestamp: &futureTime,
-						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-					},
 				},
 			},
 			expectedRequeue: true,
@@ -265,21 +236,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret being deleted, grace period expired, not referenced - should remove finalizer",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-secret",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &pastTime,
+				Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
+			},
+			existingObjs: []client.Object{
+				&corev1.Secret{
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
 					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-				},
-			},
-			existingObjs: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-secret",
-						Namespace:         "test-ns",
-						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-					},
 				},
 			},
 			expectedRequeue: false,
@@ -291,27 +258,21 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "secret being deleted, grace period expired, still referenced - should keep finalizer",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-secret",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &pastTime,
+				Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
+			},
+			existingObjs: []client.Object{
+				&corev1.Secret{
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
 					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
 				},
-			},
-			existingObjs: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-secret",
-						Namespace:         "test-ns",
-						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-					},
-				},
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "auth-config",
-						Namespace: "test-ns",
-					},
+					Name:      "auth-config",
+					Namespace: "test-ns",
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -329,17 +290,13 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error checking if secret is referenced",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "test-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "test-ns",
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -353,10 +310,8 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error getting secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{},
 			interceptor: interceptor.Funcs{
@@ -370,23 +325,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error adding finalizer to referenced secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-secret",
-					Namespace: "test-ns",
-				},
+				Name:      "test-secret",
+				Namespace: "test-ns",
 			},
 			existingObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "test-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "test-ns",
 				},
 				&konnectv1alpha1.KonnectAPIAuthConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "auth-config",
-						Namespace: "test-ns",
-					},
+					Name:      "auth-config",
+					Namespace: "test-ns",
 					Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 						Type: konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 						SecretRef: &corev1.SecretReference{
@@ -407,19 +356,15 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error removing finalizer from unreferenced secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-secret",
-					Namespace:  "test-ns",
-					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
-				},
+				Name:       "test-secret",
+				Namespace:  "test-ns",
+				Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 			},
 			existingObjs: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test-secret",
-						Namespace:  "test-ns",
-						Finalizers: []string{consts.KonnectSecretInUseFinalizer},
-					},
+					Name:       "test-secret",
+					Namespace:  "test-ns",
+					Finalizers: []string{consts.KonnectSecretInUseFinalizer},
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -433,21 +378,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error removing finalizer from deleted unreferenced secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-secret",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &pastTime,
+				Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
+			},
+			existingObjs: []client.Object{
+				&corev1.Secret{
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
 					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-				},
-			},
-			existingObjs: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-secret",
-						Namespace:         "test-ns",
-						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-					},
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -461,21 +402,17 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 		{
 			name: "error checking if deleted secret is still referenced (grace period expired)",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
+				Name:              "test-secret",
+				Namespace:         "test-ns",
+				DeletionTimestamp: &pastTime,
+				Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
+			},
+			existingObjs: []client.Object{
+				&corev1.Secret{
 					Name:              "test-secret",
 					Namespace:         "test-ns",
 					DeletionTimestamp: &pastTime,
 					Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-				},
-			},
-			existingObjs: []client.Object{
-				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-secret",
-						Namespace:         "test-ns",
-						DeletionTimestamp: &pastTime,
-						Finalizers:        []string{consts.KonnectSecretInUseFinalizer},
-					},
 				},
 			},
 			interceptor: interceptor.Funcs{
@@ -512,10 +449,8 @@ func TestKonnectSecretReferenceController_Reconcile(t *testing.T) {
 			}
 
 			req := ctrl.Request{
-				NamespacedName: types.NamespacedName{
-					Name:      tc.secret.Name,
-					Namespace: tc.secret.Namespace,
-				},
+				Name:      tc.secret.Name,
+				Namespace: tc.secret.Namespace,
 			}
 
 			secret := new(corev1.Secret)

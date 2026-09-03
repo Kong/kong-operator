@@ -134,9 +134,7 @@ func TestGetListenerStatus(t *testing.T) {
 			name: "only one listener",
 			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "single-listener",
-				},
+				Name:     "single-listener",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayapi.Listener{
@@ -170,9 +168,7 @@ func TestGetListenerStatus(t *testing.T) {
 			name: "only one listener without a matching protocol or port",
 			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "single-listener",
-				},
+				Name:     "single-listener",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayapi.Listener{
@@ -206,9 +202,7 @@ func TestGetListenerStatus(t *testing.T) {
 			name: "2 listeners, 1 with a matching protocol",
 			gateway: &gatewayapi.Gateway{
 				TypeMeta: gatewayapi.V1GatewayTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "single-listener",
-				},
+				Name:     "single-listener",
 				Spec: gatewayapi.GatewaySpec{
 					GatewayClassName: "kong",
 					Listeners: []gatewayapi.Listener{
@@ -285,10 +279,8 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 	sectionName := gatewayapi.SectionName("http")
 	gatewayName := "my-gateway"
 	myGateway := gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      gatewayName,
-			Namespace: "default",
-		},
+		Name:      gatewayName,
+		Namespace: "default",
 		Spec: gatewayapi.GatewaySpec{
 			Listeners: []gatewayapi.Listener{{
 				Name:     sectionName,
@@ -338,10 +330,8 @@ func TestGetAttachedRoutesForListener(t *testing.T) {
 		}
 		// Create a single HTTPRoute with the specified parentRefs
 		return gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "http-1-",
-				Namespace:    "default",
-			},
+			GenerateName: "http-1-",
+			Namespace:    "default",
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{
 					ParentRefs: parentRefs,
@@ -453,10 +443,8 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 			name:           "returns the gateway regardless of the route parent status conditions",
 			routeNamespace: "default",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route-1",
-				},
+				Namespace: "default",
+				Name:      "route-1",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -471,10 +459,8 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 			},
 			gateways: []client.Object{
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gateway-1",
-					},
+					Namespace: "default",
+					Name:      "gateway-1",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
@@ -504,10 +490,8 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 			name:           "returns the gateway regardless of the route parent status conditions",
 			routeNamespace: "default",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "route-1",
-				},
+				Namespace: "default",
+				Name:      "route-1",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -563,14 +547,10 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 			},
 			gateways: []client.Object{
 				&gatewayapi.Gateway{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "wrong-group/v1",
-						Kind:       "Gateway",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gateway-1",
-					},
+					APIVersion: "wrong-group/v1",
+					Kind:       "Gateway",
+					Namespace:  "default",
+					Name:       "gateway-1",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
@@ -589,14 +569,10 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayapi.GroupVersion.String(),
-						Kind:       "wrong-kind",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gateway-2",
-					},
+					APIVersion: gatewayapi.GroupVersion.String(),
+					Kind:       "wrong-kind",
+					Namespace:  "default",
+					Name:       "gateway-2",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
@@ -615,10 +591,8 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gateway-3",
-					},
+					Namespace: "default",
+					Name:      "gateway-3",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},
@@ -637,10 +611,8 @@ func TestRouteAcceptedByGateways(t *testing.T) {
 					},
 				},
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "gateway-4",
-					},
+					Namespace: "default",
+					Name:      "gateway-4",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: builder.NewListener("http").WithPort(8080).HTTP().IntoSlice(),
 					},

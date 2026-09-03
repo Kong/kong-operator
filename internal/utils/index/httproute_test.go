@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -21,7 +20,7 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 		{
 			name: "no backendRefs",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{},
@@ -33,18 +32,14 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 		{
 			name: "single backendRef with default group/kind in single rule",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									BackendRef: gatewayv1.BackendRef{
-										BackendObjectReference: gatewayv1.BackendObjectReference{
-											Name: gatewayv1.ObjectName("svc1"),
-											Port: ptrPort(80),
-										},
-									},
+									Name: gatewayv1.ObjectName("svc1"),
+									Port: ptrPort(80),
 								},
 							},
 						},
@@ -56,33 +51,25 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 		{
 			name: "backendRef in different namespaces",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									BackendRef: gatewayv1.BackendRef{
-										BackendObjectReference: gatewayv1.BackendObjectReference{
-											Group: ptrGroup("core"),
-											Kind:  ptrKind("Service"),
-											Name:  gatewayv1.ObjectName("svc1"),
-											Port:  ptrPort(80),
-										},
-									},
+									Group: ptrGroup("core"),
+									Kind:  ptrKind("Service"),
+									Name:  gatewayv1.ObjectName("svc1"),
+									Port:  ptrPort(80),
 								},
 							},
 						},
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									BackendRef: gatewayv1.BackendRef{
-										BackendObjectReference: gatewayv1.BackendObjectReference{
-											Namespace: ptrNamespace("ns2"),
-											Name:      gatewayv1.ObjectName("svc2"),
-											Port:      ptrPort(80),
-										},
-									},
+									Namespace: ptrNamespace("ns2"),
+									Name:      gatewayv1.ObjectName("svc2"),
+									Port:      ptrPort(80),
 								},
 							},
 						},
@@ -94,20 +81,16 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 		{
 			name: "unmatched group/kind",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									BackendRef: gatewayv1.BackendRef{
-										BackendObjectReference: gatewayv1.BackendObjectReference{
-											Group: ptrGroup("configuration.konghq.com"),
-											Kind:  ptrKind("KongService"),
-											Name:  gatewayv1.ObjectName("svc1"),
-											Port:  ptrPort(8080),
-										},
-									},
+									Group: ptrGroup("configuration.konghq.com"),
+									Kind:  ptrKind("KongService"),
+									Name:  gatewayv1.ObjectName("svc1"),
+									Port:  ptrPort(8080),
 								},
 							},
 						},
@@ -119,17 +102,13 @@ func TestBackendRefOnHTTPRoute(t *testing.T) {
 		{
 			name: "empty port",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
 							BackendRefs: []gwtypes.HTTPBackendRef{
 								{
-									BackendRef: gatewayv1.BackendRef{
-										BackendObjectReference: gatewayv1.BackendObjectReference{
-											Name: gatewayv1.ObjectName("svc1"),
-										},
-									},
+									Name: gatewayv1.ObjectName("svc1"),
 								},
 							},
 						},
@@ -157,7 +136,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 		{
 			name: "no filters",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{},
@@ -169,7 +148,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 		{
 			name: "single filter with extensionRef type",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
@@ -192,7 +171,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 		{
 			name: "extensionRef with unmatched group/kind",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{
@@ -215,7 +194,7 @@ func TestKongPluginsOnHTTPRoute(t *testing.T) {
 		{
 			name: "multiple extensionRefs with duplicate names",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns1"},
+				Namespace: "ns1",
 				Spec: gwtypes.HTTPRouteSpec{
 					Rules: []gwtypes.HTTPRouteRule{
 						{

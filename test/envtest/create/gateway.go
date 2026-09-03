@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/test/controllers/gateway"
@@ -24,11 +23,9 @@ func Gateway(ctx context.Context, t *testing.T, client client.Client) (gatewayap
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: gateway.GetControllerName(),
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwc-",
-			Annotations: map[string]string{
-				"konghq.com/gatewayclass-unmanaged": "placeholder",
-			},
+		GenerateName: "gwc-",
+		Annotations: map[string]string{
+			"konghq.com/gatewayclass-unmanaged": "placeholder",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &gwc))
@@ -62,10 +59,8 @@ func GatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.C
 	ns := Namespace(ctx, t, client)
 
 	publishSvc := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      PublishServiceName,
-		},
+		Namespace: ns.Name,
+		Name:      PublishServiceName,
 		Spec: corev1.ServiceSpec{
 			Ports: builder.NewServicePort().
 				WithName("http").
@@ -89,10 +84,8 @@ func GatewayUsingGatewayClass(ctx context.Context, t *testing.T, client client.C
 				},
 			},
 		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns.Name,
-			GenerateName: "gw-",
-		},
+		Namespace:    ns.Name,
+		GenerateName: "gw-",
 	}
 	require.NoError(t, client.Create(ctx, &gw))
 	t.Cleanup(func() { _ = client.Delete(ctx, &gw) })

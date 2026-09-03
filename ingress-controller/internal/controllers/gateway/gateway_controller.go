@@ -275,10 +275,8 @@ func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, o
 				from.Kind == gatewayapi.Kind("Gateway") &&
 				from.Group == gatewayapi.Group("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: gateway.Namespace,
-						Name:      gateway.Name,
-					},
+					Namespace: gateway.Namespace,
+					Name:      gateway.Name,
 				})
 			}
 		}
@@ -318,10 +316,8 @@ func (r *GatewayReconciler) listGatewaysForService(ctx context.Context, svc clie
 		}
 		if isGatewayClassControlled(gatewayClass) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: k8stypes.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}

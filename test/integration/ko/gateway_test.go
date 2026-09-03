@@ -393,12 +393,10 @@ func TestGatewayMultiple(t *testing.T) {
 
 func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *gatewayv1.HTTPRoute {
 	return &gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: parentRef.GetNamespace(),
-			Name:      uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Namespace: parentRef.GetNamespace(),
+		Name:      uuid.NewString(),
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -418,13 +416,9 @@ func createHTTPRoute(parentRef metav1.Object, svc metav1.Object, path string) *g
 					},
 					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1.BackendRef{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name: gatewayv1.ObjectName(svc.GetName()),
-									Port: new(gatewayv1.PortNumber(80)),
-									Kind: new(gatewayv1.Kind("Service")),
-								},
-							},
+							Name: gatewayv1.ObjectName(svc.GetName()),
+							Port: new(gatewayv1.PortNumber(80)),
+							Kind: new(gatewayv1.Kind("Service")),
 						},
 					},
 				},

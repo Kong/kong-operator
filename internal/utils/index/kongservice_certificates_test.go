@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -30,7 +29,7 @@ func TestKongServiceRefersToKongCertificate(t *testing.T) {
 		{
 			name: "same-NS ref (nil namespace) uses object namespace",
 			input: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{
@@ -44,7 +43,7 @@ func TestKongServiceRefersToKongCertificate(t *testing.T) {
 		{
 			name: "explicit cross-NS ref uses specified namespace",
 			input: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{
@@ -80,14 +79,14 @@ func TestKongServiceRefersToKongCACertificates(t *testing.T) {
 		{
 			name: "empty CACertificateRefs returns empty slice",
 			input: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 			},
 			expected: []string{},
 		},
 		{
 			name: "single same-NS ref uses object namespace",
 			input: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						CACertificateRefs: []commonv1alpha1.NamespacedRef{
@@ -101,7 +100,7 @@ func TestKongServiceRefersToKongCACertificates(t *testing.T) {
 		{
 			name: "multiple refs including cross-NS",
 			input: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						CACertificateRefs: []commonv1alpha1.NamespacedRef{

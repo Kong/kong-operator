@@ -5,7 +5,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
@@ -17,10 +16,8 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testIngressClass(t, "1"),
@@ -34,12 +31,10 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> IngressClass - annotation",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: "1",
-					},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "1",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -51,10 +46,8 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> IngressClass - field",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
 				Spec: netv1.IngressSpec{
 					IngressClassName: new("1"),
 				},
@@ -68,28 +61,24 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> Service",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "1",
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "1",
 											},
 										},
-										{
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "2",
-												},
+									},
+									{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "2",
 											},
 										},
 									},
@@ -112,32 +101,28 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> KongServiceFacade",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Backend: netv1.IngressBackend{
-												Resource: &corev1.TypedLocalObjectReference{
-													Name:     "1",
-													Kind:     "KongServiceFacade",
-													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												Name:     "1",
+												Kind:     "KongServiceFacade",
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											},
 										},
-										{
-											Backend: netv1.IngressBackend{
-												Resource: &corev1.TypedLocalObjectReference{
-													Name:     "2",
-													Kind:     "KongServiceFacade",
-													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												},
+									},
+									{
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												Name:     "2",
+												Kind:     "KongServiceFacade",
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											},
 										},
 									},
@@ -160,12 +145,10 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> KongPlugin, KongClusterPlugin",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -186,33 +169,29 @@ func TestResolveDependencies_Ingress(t *testing.T) {
 		{
 			name: "Ingress -> all dependencies at once",
 			object: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-					},
+				Name:      "test-ingress",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Backend: netv1.IngressBackend{
-												Resource: &corev1.TypedLocalObjectReference{
-													Name:     "1",
-													Kind:     "KongServiceFacade",
-													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												Name:     "1",
+												Kind:     "KongServiceFacade",
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											},
 										},
-										{
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "1",
-												},
+									},
+									{
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "1",
 											},
 										},
 									},

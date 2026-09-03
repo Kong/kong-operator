@@ -6,8 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -29,10 +27,8 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 		{
 			name: "object is not a KongPlugin",
 			plugin: &corev1.ConfigMap{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "not-a-plugin",
-					Namespace: "default",
-				},
+				Name:      "not-a-plugin",
+				Namespace: "default",
 			},
 			bindings: []client.Object{},
 			expected: nil,
@@ -40,17 +36,13 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 		{
 			name: "no KongPluginBindings reference the KongPlugin",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "different-plugin",
@@ -69,17 +61,13 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 		{
 			name: "single KongPluginBinding with ControlPlane reference",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -95,27 +83,21 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 				},
 			},
 		},
 		{
 			name: "single KongPluginBinding without ControlPlane reference is filtered out",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -128,17 +110,13 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 		{
 			name: "multiple KongPluginBindings, some with ControlPlane reference",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -152,10 +130,8 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding2",
-						Namespace: "default",
-					},
+					Name:      "binding2",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -163,10 +139,8 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding3",
-						Namespace: "default",
-					},
+					Name:      "binding3",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -182,33 +156,25 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 				},
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding3",
-						Namespace: "default",
-					},
+					Name:      "binding3",
+					Namespace: "default",
 				},
 			},
 		},
 		{
 			name: "cross-namespace plugin reference",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "plugin-ns",
-				},
+				Name:      "rate-limiting",
+				Namespace: "plugin-ns",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "app-ns",
-					},
+					Name:      "binding1",
+					Namespace: "app-ns",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name:      "rate-limiting",
@@ -223,10 +189,8 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding2",
-						Namespace: "plugin-ns",
-					},
+					Name:      "binding2",
+					Namespace: "plugin-ns",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -242,33 +206,25 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding1",
-						Namespace: "app-ns",
-					},
+					Name:      "binding1",
+					Namespace: "app-ns",
 				},
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding2",
-						Namespace: "plugin-ns",
-					},
+					Name:      "binding2",
+					Namespace: "plugin-ns",
 				},
 			},
 		},
 		{
 			name: "plugin reference with explicit Kind set to KongPlugin",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -288,27 +244,21 @@ func TestEnqueueKongPluginBindingForKongPlugin(t *testing.T) {
 			},
 			expected: []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 				},
 			},
 		},
 		{
 			name: "plugin reference with Kind set to KongClusterPlugin is filtered out by index",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rate-limiting",
-					Namespace: "default",
-				},
+				Name:      "rate-limiting",
+				Namespace: "default",
 			},
 			bindings: []client.Object{
 				&configurationv1alpha1.KongPluginBinding{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "binding1",
-						Namespace: "default",
-					},
+					Name:      "binding1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongPluginBindingSpec{
 						PluginReference: configurationv1alpha1.PluginRef{
 							Name: "rate-limiting",
@@ -366,20 +316,16 @@ func TestEnqueueKongPluginBindingForKongPlugin_CrossNamespace(t *testing.T) {
 
 	// Create a KongPlugin in namespace "plugin-ns"
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "rate-limiting",
-			Namespace: "plugin-ns",
-		},
+		Name:      "rate-limiting",
+		Namespace: "plugin-ns",
 	}
 
 	// Create KongPluginBindings in different namespaces
 	bindings := []client.Object{
 		// Binding in app-ns-1 referencing plugin in plugin-ns
 		&configurationv1alpha1.KongPluginBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "binding1",
-				Namespace: "app-ns-1",
-			},
+			Name:      "binding1",
+			Namespace: "app-ns-1",
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				PluginReference: configurationv1alpha1.PluginRef{
 					Name:      "rate-limiting",
@@ -395,10 +341,8 @@ func TestEnqueueKongPluginBindingForKongPlugin_CrossNamespace(t *testing.T) {
 		},
 		// Binding in app-ns-2 referencing plugin in plugin-ns
 		&configurationv1alpha1.KongPluginBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "binding2",
-				Namespace: "app-ns-2",
-			},
+			Name:      "binding2",
+			Namespace: "app-ns-2",
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				PluginReference: configurationv1alpha1.PluginRef{
 					Name:      "rate-limiting",
@@ -414,10 +358,8 @@ func TestEnqueueKongPluginBindingForKongPlugin_CrossNamespace(t *testing.T) {
 		},
 		// Binding in plugin-ns referencing plugin in same namespace
 		&configurationv1alpha1.KongPluginBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "binding3",
-				Namespace: "plugin-ns",
-			},
+			Name:      "binding3",
+			Namespace: "plugin-ns",
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				PluginReference: configurationv1alpha1.PluginRef{
 					Name: "rate-limiting",
@@ -432,10 +374,8 @@ func TestEnqueueKongPluginBindingForKongPlugin_CrossNamespace(t *testing.T) {
 		},
 		// Binding in app-ns-1 referencing different plugin - should not be returned
 		&configurationv1alpha1.KongPluginBinding{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "binding4",
-				Namespace: "app-ns-1",
-			},
+			Name:      "binding4",
+			Namespace: "app-ns-1",
 			Spec: configurationv1alpha1.KongPluginBindingSpec{
 				PluginReference: configurationv1alpha1.PluginRef{
 					Name:      "different-plugin",
@@ -472,22 +412,16 @@ func TestEnqueueKongPluginBindingForKongPlugin_CrossNamespace(t *testing.T) {
 	// Assert: Should return all bindings referencing this plugin across all namespaces
 	expected := []ctrl.Request{
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      "binding1",
-				Namespace: "app-ns-1",
-			},
+			Name:      "binding1",
+			Namespace: "app-ns-1",
 		},
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      "binding2",
-				Namespace: "app-ns-2",
-			},
+			Name:      "binding2",
+			Namespace: "app-ns-2",
 		},
 		{
-			NamespacedName: types.NamespacedName{
-				Name:      "binding3",
-				Namespace: "plugin-ns",
-			},
+			Name:      "binding3",
+			Namespace: "plugin-ns",
 		},
 	}
 

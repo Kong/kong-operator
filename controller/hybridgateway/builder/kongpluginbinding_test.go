@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -38,10 +37,8 @@ func TestKongPluginBindingBuilder_WithNamespace(t *testing.T) {
 
 func TestKongPluginBindingBuilder_WithLabels(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -58,10 +55,8 @@ func TestKongPluginBindingBuilder_WithLabels(t *testing.T) {
 
 func TestKongPluginBindingBuilder_WithAnnotations(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
@@ -130,11 +125,9 @@ func TestKongPluginBindingBuilder_WithControlPlaneRef(t *testing.T) {
 
 func TestKongPluginBindingBuilder_WithOwner(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	t.Run("valid owner", func(t *testing.T) {
 		builder := NewKongPluginBinding().
@@ -162,11 +155,9 @@ func TestKongPluginBindingBuilder_WithOwner(t *testing.T) {
 	})
 	t.Run("owner reference error", func(t *testing.T) {
 		httpRouteWithoutTypeMeta := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-http-route",
-				Namespace: "test-namespace",
-				UID:       "test-uid",
-			},
+			Name:      "test-http-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
 		}
 
 		builder := NewKongPluginBinding().WithOwner(httpRouteWithoutTypeMeta)
@@ -200,10 +191,8 @@ func TestKongPluginBindingBuilder_MustBuild(t *testing.T) {
 
 func TestKongPluginBindingBuilder_ChainedCalls(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -240,15 +229,11 @@ func TestKongPluginBindingBuilder_ChainedCalls(t *testing.T) {
 
 func TestKongPluginBindingBuilder_FullBinding(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "gateway.networking.k8s.io/v1",
-			Kind:       "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Kind:       "HTTPRoute",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
+		UID:        "test-uid",
 	}
 
 	parentRef := &gwtypes.ParentReference{

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -53,19 +52,15 @@ func TestExtractClientCertFromBackendRef(t *testing.T) {
 	require.NoError(t, corev1.AddToScheme(scheme))
 
 	svcWithAnnotation := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-with-cert",
-			Namespace: "test-ns",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "my-secret",
-			},
+		Name:      "svc-with-cert",
+		Namespace: "test-ns",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "my-secret",
 		},
 	}
 	svcWithoutAnnotation := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-no-cert",
-			Namespace: "test-ns",
-		},
+		Name:      "svc-no-cert",
+		Namespace: "test-ns",
 	}
 
 	tests := []struct {
@@ -158,26 +153,22 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 		{
 			name: "first backend has annotation",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a"}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-b"}},
+				{Name: "svc-a"},
+				{Name: "svc-b"},
 			},
 			objects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-a",
-						Namespace: "ns",
-						Annotations: map[string]string{
-							"konghq.com/client-cert": "secret-a",
-						},
+					Name:      "svc-a",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret-a",
 					},
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-b",
-						Namespace: "ns",
-						Annotations: map[string]string{
-							"konghq.com/client-cert": "secret-b",
-						},
+					Name:      "svc-b",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "secret-b",
 					},
 				},
 			},
@@ -187,20 +178,18 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 		{
 			name: "only second backend has annotation - first-wins from second",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-no-cert"}},
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-with-cert"}},
+				{Name: "svc-no-cert"},
+				{Name: "svc-with-cert"},
 			},
 			objects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-no-cert", Namespace: "ns"},
+					Name: "svc-no-cert", Namespace: "ns",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-with-cert",
-						Namespace: "ns",
-						Annotations: map[string]string{
-							"konghq.com/client-cert": "my-secret",
-						},
+					Name:      "svc-with-cert",
+					Namespace: "ns",
+					Annotations: map[string]string{
+						"konghq.com/client-cert": "my-secret",
 					},
 				},
 			},
@@ -210,11 +199,11 @@ func TestResolveClientCertFromBackendRefs(t *testing.T) {
 		{
 			name: "no backend has annotation",
 			backendRefs: []gwtypes.BackendRef{
-				{BackendObjectReference: gatewayv1.BackendObjectReference{Name: "svc-a"}},
+				{Name: "svc-a"},
 			},
 			objects: []client.Object{
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-a", Namespace: "ns"},
+					Name: "svc-a", Namespace: "ns",
 				},
 			},
 			wantSecretName: "",
@@ -254,11 +243,9 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	port443 := gatewayv1.PortNumber(443)
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "test-ns"},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route", Namespace: "test-ns",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "test-gateway"}},
@@ -268,24 +255,18 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gatewayv1.HTTPBackendRef{
 			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "my-svc",
-						Port: &port443,
-					},
-				},
+				Name: "my-svc",
+				Port: &port443,
 			},
 		},
 	}
 	serviceName := namegen.NewKongServiceNameForHTTPRouteRule(httpRoute, cp, rule)
 
 	certSecret := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-client-cert",
-			Namespace: "test-ns",
-			Annotations: map[string]string{
-				"konghq.com/tags": "cc-tag",
-			},
+		Name:      "my-client-cert",
+		Namespace: "test-ns",
+		Annotations: map[string]string{
+			"konghq.com/tags": "cc-tag",
 		},
 		Data: map[string][]byte{
 			"tls.crt": []byte("cert-data"),
@@ -296,7 +277,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	// certSecretNoTags carries no konghq.com/tags annotation; used to prove that tags on
 	// the backend Service do not leak into the client-cert KongCertificate (Secret-only).
 	certSecretNoTags := corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-client-cert", Namespace: "test-ns"},
+		Name: "my-client-cert", Namespace: "test-ns",
 		Data: map[string][]byte{
 			"tls.crt": []byte("cert-data"),
 			"tls.key": []byte("key-data"),
@@ -381,11 +362,9 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			backendSvc := corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "my-svc",
-					Namespace:   "test-ns",
-					Annotations: tt.svcAnnotations,
-				},
+				Name:        "my-svc",
+				Namespace:   "test-ns",
+				Annotations: tt.svcAnnotations,
 			}
 			objects := []client.Object{&backendSvc}
 			objects = append(objects, tt.secrets...)
@@ -432,11 +411,9 @@ func TestBuildClientCertReferenceGrant(t *testing.T) {
 
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "route-ns"},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route", Namespace: "route-ns",
 	}
 
 	tests := []struct {
@@ -522,39 +499,31 @@ func TestServiceForRule_ClientCertAnnotation_CrossNamespace(t *testing.T) {
 	port443 := gatewayv1.PortNumber(443)
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "route-ns"},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route", Namespace: "route-ns",
 	}
 	rule := gwtypes.HTTPRouteRule{
 		BackendRefs: []gatewayv1.HTTPBackendRef{
 			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "my-svc",
-						Port: &port443,
-					},
-				},
+				Name: "my-svc",
+				Port: &port443,
 			},
 		},
 	}
 	serviceName := namegen.NewKongServiceNameForHTTPRouteRule(httpRoute, cp, rule)
 
 	backendSvc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-svc",
-			Namespace: "route-ns",
-			Annotations: map[string]string{
-				"konghq.com/client-cert": "my-client-cert",
-				"konghq.com/protocol":    "https",
-			},
+		Name:      "my-svc",
+		Namespace: "route-ns",
+		Annotations: map[string]string{
+			"konghq.com/client-cert": "my-client-cert",
+			"konghq.com/protocol":    "https",
 		},
 	}
 	certSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-client-cert", Namespace: "route-ns"},
-		Data:       map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
+		Name: "my-client-cert", Namespace: "route-ns",
+		Data: map[string][]byte{"tls.crt": []byte("cert"), "tls.key": []byte("key")},
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(backendSvc, certSecret).Build()

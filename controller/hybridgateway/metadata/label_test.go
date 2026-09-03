@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -21,13 +20,9 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "basic HTTPRoute without parentRef",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind: "HTTPRoute",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Kind:      "HTTPRoute",
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			parentRef: nil,
 			expected: map[string]string{
@@ -38,13 +33,9 @@ func TestBuildLabels(t *testing.T) {
 		{
 			name: "HTTPRoute with parentRef",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: metav1.TypeMeta{
-					Kind: "HTTPRoute",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-api-route",
-					Namespace: "production",
-				},
+				Kind:      "HTTPRoute",
+				Name:      "my-api-route",
+				Namespace: "production",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "test-gateway",
@@ -66,13 +57,9 @@ func TestBuildLabels(t *testing.T) {
 
 func TestBuildLabelsConstants(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:      "HTTPRoute",
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	result := BuildLabels(httpRoute, nil)
@@ -90,10 +77,8 @@ func TestBuildLabelsConstants(t *testing.T) {
 
 func TestBuildLabelsImmutability(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	// Call the function multiple times
@@ -114,13 +99,9 @@ func TestBuildLabelsImmutability(t *testing.T) {
 
 func TestLabelSelectorForOwnedResources(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind: "HTTPRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:      "HTTPRoute",
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	t.Run("without parentRef", func(t *testing.T) {

@@ -6,7 +6,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -32,10 +31,8 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 	)
 	referenceGrantForObj := func(obj client.Object) gwtypes.ReferenceGrant {
 		return gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "ref-grant-gateway",
-				Namespace: "default",
-			},
+			Name:      "ref-grant-gateway",
+			Namespace: "default",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{
 					{
@@ -56,22 +53,14 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 	}
 	var (
 		objGateway = &gatewayv1.Gateway{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "Gateway",
-				APIVersion: gatewayv1.GroupVersion.Group,
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "goodNamespace",
-			},
+			Kind:       "Gateway",
+			APIVersion: gatewayv1.GroupVersion.Group,
+			Namespace:  "goodNamespace",
 		}
 		objKPI = &operatorv1alpha1.KongPluginInstallation{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongPluginInstallation",
-				APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "goodNamespace",
-			},
+			Kind:       "KongPluginInstallation",
+			APIVersion: operatorv1alpha1.SchemeGroupVersion.String(),
+			Namespace:  "goodNamespace",
 		}
 	)
 

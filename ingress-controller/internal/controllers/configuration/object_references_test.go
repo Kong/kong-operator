@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -22,32 +21,26 @@ func TestListCoreV1ServiceReferredSecrets(t *testing.T) {
 		{
 			name: "service_has_no_annotations",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service1",
-				},
+				Namespace: "ns1",
+				Name:      "service1",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "service_not_referring_secret_in_annotations",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service2",
-				},
+				Namespace: "ns1",
+				Name:      "service2",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "service_referring_secret_in_annotations",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns1",
-					Name:      "service2",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret1",
-					},
+				Namespace: "ns1",
+				Name:      "service2",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret1",
 				},
 			},
 			secretNum:     1,
@@ -76,20 +69,16 @@ func TestListIngressReferredSecrets(t *testing.T) {
 		{
 			name: "ingress_has_no_tls_should_refer_no_secrets",
 			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "ing1",
-				},
+				Namespace: "ns",
+				Name:      "ing1",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "ingress_has_tls_should_refer_to_secrets",
 			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "ing1",
-				},
+				Namespace: "ns",
+				Name:      "ing1",
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
 						{Hosts: []string{"example.com"}, SecretName: "secret1"},
@@ -102,10 +91,8 @@ func TestListIngressReferredSecrets(t *testing.T) {
 		{
 			name: "ingress_has_tls_without_secretName_should_refer_no_secrets",
 			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "ing1",
-				},
+				Namespace: "ns",
+				Name:      "ing1",
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
 						{Hosts: []string{"example.com"}},
@@ -137,20 +124,16 @@ func TestListKongPluginReferredSecrets(t *testing.T) {
 		{
 			name: "kong_plugin_refer_no_secrets",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "plugin1",
-				},
+				Namespace: "ns",
+				Name:      "plugin1",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "kong_plugin_refer_secrets",
 			plugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "plugin1",
-				},
+				Namespace: "ns",
+				Name:      "plugin1",
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "secret1",
@@ -187,18 +170,14 @@ func TestListKongClusterPluginReferredSecrets(t *testing.T) {
 		{
 			name: "kong_cluster_plugin_refer_no_secrets",
 			plugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "plugin1",
-				},
+				Name: "plugin1",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "kong_cluster_plugin_refer_secrets",
 			plugin: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "plugin1",
-				},
+				Name: "plugin1",
 				ConfigFrom: &configurationv1.NamespacedConfigSource{
 					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: "ns",
@@ -236,20 +215,16 @@ func TestListKongConsumerReferredSecrets(t *testing.T) {
 		{
 			name: "consumer_refer_no_secrets",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "consumer1",
-				},
+				Namespace: "ns",
+				Name:      "consumer1",
 			},
 			secretNum: 0,
 		},
 		{
 			name: "consumer_refer_secrets",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "ns",
-					Name:      "consumer1",
-				},
+				Namespace:   "ns",
+				Name:        "consumer1",
 				Credentials: []string{"secret1", "secret2"},
 			},
 			secretNum: 2,

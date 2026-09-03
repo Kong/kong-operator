@@ -14,7 +14,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -280,10 +279,8 @@ func TestKonnectEntityAdoption_Plugin(t *testing.T) {
 
 	t.Log("Creating a KongPlugin and a KongPluginBinding to adopt the plugin")
 	kongPluginReqTransformer := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "kongplugin-global-request-transformer",
-		},
+		Namespace:  ns.Name,
+		Name:       "kongplugin-global-request-transformer",
 		PluginName: "request-transformer",
 		Config: apiextensionsv1.JSON{
 			Raw: buf,
@@ -478,10 +475,8 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	t.Log("Create a KongCredentialBasicAuth to adopt the BasicAuth credential in Konnect")
 	kongCredentialBasicAuth := &configurationv1alpha1.KongCredentialBasicAuth{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "basic-auth-adopt-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "basic-auth-adopt-",
+		Namespace:    ns.Name,
 		Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: kongConsumer.Name,
@@ -513,10 +508,8 @@ func TestKonnectEntityAdoption_ConsumerWithCredentials(t *testing.T) {
 
 	t.Log("Create a KongCredentialAPIKey to adopt the APIKey credential in Konnect")
 	kongCredentialAPIKey := &configurationv1alpha1.KongCredentialAPIKey{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "api-key-adopt-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "api-key-adopt-",
+		Namespace:    ns.Name,
 		Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
 			ConsumerRef: corev1.LocalObjectReference{
 				Name: kongConsumer.Name,
