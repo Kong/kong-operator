@@ -137,7 +137,7 @@ func TestValidationWebhook(t *testing.T) {
 			{
 				name:               "request with present empty body",
 				wantRespCode:       http.StatusBadRequest,
-				wantFailureMessage: "EOF\n",
+				wantFailureMessage: "invalid admission request\n",
 			},
 			{
 				name: "validate kong consumer",
@@ -289,7 +289,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`,
 				validator:          KongFakeValidator{Error: errors.New("error making API call to kong")},
 				wantRespCode:       http.StatusInternalServerError,
-				wantFailureMessage: "error making API call to kong\n",
+				wantFailureMessage: "internal validation error\n",
 			},
 			{
 				name: "kong consumer validator error on username change",
@@ -319,7 +319,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`,
 				validator:          KongFakeValidator{Error: errors.New("error making API call to kong")},
 				wantRespCode:       http.StatusInternalServerError,
-				wantFailureMessage: "error making API call to kong\n",
+				wantFailureMessage: "internal validation error\n",
 			},
 			{
 				name: "unknown resource",
@@ -343,7 +343,7 @@ func TestValidationWebhook(t *testing.T) {
 					}`,
 				validator:          KongFakeValidator{Result: false, Message: "consumer is not valid"},
 				wantRespCode:       http.StatusInternalServerError,
-				wantFailureMessage: "unknown resource type to validate: configuration.konghq.com/v1 kongunknown\n",
+				wantFailureMessage: "internal validation error\n",
 			},
 			{
 				name: "validate kong plugin",
