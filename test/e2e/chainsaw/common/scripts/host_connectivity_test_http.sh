@@ -124,7 +124,7 @@ done
 rm -f $BODY_FILE
 cat <<EOF
 {
-  "http_status": ${HTTP_CODE:-"000"},
+  "http_status": "${HTTP_CODE:-000}",
   "success": false,
   "error": "Request failed with status ${HTTP_CODE:-unknown} after $MAX_RETRIES attempts",
   "proxy_ip": "$PROXY_IP",
