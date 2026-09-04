@@ -18,6 +18,7 @@ on:
     types: [created]
 
 env:
+  # renovate: datasource=github-tags depName=Kong/ksai extractVersion=^ksai/v(?<version>.+)$
   KSAI_REF: ksai/v3.28.0
 
 jobs:
