@@ -94,6 +94,9 @@ webhooks:
   failurePolicy: Fail
   matchPolicy: Equivalent
   name: secrets.validations.kong.konghq.com
+  objectSelector:
+    matchLabels:
+      konghq.com/secret: "true"
   rules:
   - apiGroups:
     - ""
