@@ -61,6 +61,14 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- The deprecated `--konnect-controller-max-concurrent-reconciles` CLI flag (and
+  the corresponding `KONG_OPERATOR_KONNECT_CONTROLLER_MAX_CONCURRENT_RECONCILES`
+  environment variable) has been removed. Please use
+  `--max-concurrent-reconciles-konnect-controller` instead.
+  [#2768](https://github.com/Kong/kong-operator/issues/2768)
+
 ### Fixes
 
 - On-prem gateway: generate a distinct Kong route for each match when its parent

@@ -192,10 +192,6 @@ rows:
     type: '`string`'
     description: "The address the probe endpoint binds to."
     default: '`:8081`'
-  - flag: '`--konnect-controller-max-concurrent-reconciles`'
-    type: '`uint`'
-    description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."
-    default: '`8`'
   - flag: '`--konnect-request-timeout`'
     type: '`duration`'
     description: "Timeout for Konnect API requests."
