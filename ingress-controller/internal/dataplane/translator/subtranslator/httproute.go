@@ -332,6 +332,135 @@ func getHTTPRouteHostnamesAsSliceOfStringPointers(httproute *gatewayapi.HTTPRout
 	})
 }
 
+func groupTraditionalHTTPRouteMatchesWithPrioritiesByRule(
+	routes []*gatewayapi.HTTPRoute,
+) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
+	splitMatches := []SplitHTTPRouteMatch{}
+	for _, route := range routes {
+		for ruleIndex, rule := range route.Spec.Rules {
+			optionalNamedRouteRule := string(lo.FromPtr(rule.Name))
+			// Rules without matches translate to catch-all routes that keep the Kong route
+			// default regex_priority, so they are excluded from priority assignment to not
+			// occupy a precedence class.
+			for matchIndex, match := range rule.Matches {
+				splitMatches = append(splitMatches, SplitHTTPRouteMatch{
+					Source:                 route,
+					Match:                  *match.DeepCopy(),
+					OptionalNamedRouteRule: optionalNamedRouteRule,
+					RuleIndex:              ruleIndex,
+					MatchIndex:             matchIndex,
+				})
+			}
+		}
+	}
+
+	matchesWithPriorities := assignTraditionalRoutePriorityToSplitHTTPRouteMatches(splitMatches)
+
+	ret := splitHTTPRouteMatchesWithPrioritiesGroupedByRule{}
+	for _, matchWithPriority := range matchesWithPriorities {
+		sourceRoute := matchWithPriority.Match.Source
+		ruleKey := fmt.Sprintf("%s/%s.%d", sourceRoute.Namespace, sourceRoute.Name, matchWithPriority.Match.RuleIndex)
+		ret[ruleKey] = append(ret[ruleKey], matchWithPriority)
+	}
+	return ret
+}
+
+// traditionalMatchPriorityClassSize is the size of the priority range reserved for each Gateway
+// API precedence class by assignTraditionalRoutePriorityToSplitHTTPRouteMatches. It must exceed
+// the largest possible within-route offset, i.e. the maximum number of matches in one HTTPRoute
+// (16 rules with 64 matches each), minus one.
+const traditionalMatchPriorityClassSize = 1 << 10
+
+// assignTraditionalRoutePriorityToSplitHTTPRouteMatches assigns the priorities translated to the
+// regex_priority of Kong routes generated from the given split matches.
+//
+// The Gateway API precedence class of each match (encoded from its hostname specificity, path type
+// and length, method, header and query parameter counts) is ranked across all HTTPRoutes. Matches
+// sharing both the HTTPRoute and the class are additionally ordered by their rule and match indexes,
+// since within one HTTPRoute earlier rules must win ties. The priority of a match is
+// classRank*traditionalMatchPriorityClassSize + withinRouteOffset.
+//
+// A match's priority deliberately depends only on the set of precedence classes in use and its own
+// HTTPRoute-local tie position. Adding or removing HTTPRoutes whose match shapes already exist does
+// not renumber routes translated from other HTTPRoutes. The trade-off is that introducing a new
+// precedence class can renumber existing routes, and ties between equally specific matches of
+// different HTTPRoutes are not broken by creation timestamp as the Gateway API specifies.
+// Compact class ranks are required because Kong's original traditional-compatible route match
+// calculation only retains the low bits of regex_priority. Passing the expression router's sparse,
+// high-bit trait encoding directly causes those class bits to be discarded and its low rule-order
+// bits to overlap Kong's header-count bits.
+//
+// Matches in the lowest present class with no within-route tie get priority 0, which is translated
+// to an unset regex_priority.
+func assignTraditionalRoutePriorityToSplitHTTPRouteMatches(
+	splitMatches []SplitHTTPRouteMatch,
+) []SplitHTTPRouteMatchToKongRoutePriority {
+	type routeAndClass struct {
+		namespace string
+		name      string
+		class     RoutePriorityType
+	}
+
+	classes := make([]RoutePriorityType, len(splitMatches))
+	classSet := make(map[RoutePriorityType]struct{}, len(splitMatches))
+	matchCountByRouteAndClass := make(map[routeAndClass]int, len(splitMatches))
+	for i, match := range splitMatches {
+		class := traditionalHTTPRouteMatchPriorityClass(match)
+		classes[i] = class
+		classSet[class] = struct{}{}
+		matchCountByRouteAndClass[routeAndClass{match.Source.Namespace, match.Source.Name, class}]++
+	}
+
+	rankByClass := make(map[RoutePriorityType]RoutePriorityType, len(classSet))
+	for rank, class := range slices.Sorted(maps.Keys(classSet)) {
+		rankByClass[class] = RoutePriorityType(rank)
+	}
+
+	// splitMatches are appended in rule and match order within each HTTPRoute, so earlier
+	// matches of a route get larger within-route offsets, thus higher priorities.
+	seenByRouteAndClass := make(map[routeAndClass]int, len(matchCountByRouteAndClass))
+	matchesWithPriorities := make([]SplitHTTPRouteMatchToKongRoutePriority, 0, len(splitMatches))
+	for i, match := range splitMatches {
+		key := routeAndClass{match.Source.Namespace, match.Source.Name, classes[i]}
+		offset := matchCountByRouteAndClass[key] - 1 - seenByRouteAndClass[key]
+		seenByRouteAndClass[key]++
+		matchesWithPriorities = append(matchesWithPriorities, SplitHTTPRouteMatchToKongRoutePriority{
+			Match:    match,
+			Priority: rankByClass[classes[i]]*traditionalMatchPriorityClassSize + RoutePriorityType(offset),
+		})
+	}
+	return matchesWithPriorities
+}
+
+func traditionalHTTPRouteMatchPriorityClass(match SplitHTTPRouteMatch) RoutePriorityType {
+	const httpRouteResourceKindPriority = RoutePriorityType(ResourceKindBitsHTTPRoute << FromResourceKindPriorityShiftBits)
+	return calculateHTTPRouteMatchPriorityTraits(match).EncodeToPriority() - httpRouteResourceKindPriority
+}
+
+// filtersContainURLRewriteReplacePrefixMatch reports whether filters contains a URLRewrite filter
+// with a ReplacePrefixMatch path modifier. The rewritten path for such a filter depends on which
+// prefix matched, so matches sharing this filter must never be consolidated into a single Kong
+// route/plugin.
+func filtersContainURLRewriteReplacePrefixMatch(filters []gatewayapi.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
+			filter.URLRewrite.Path != nil &&
+			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
+			filter.URLRewrite.Path.ReplacePrefixMatch != nil
+	})
+}
+
+// filtersContainRequestRedirect reports whether filters contains a RequestRedirect filter. A
+// RequestRedirect's generated plugin (e.g. its Location header, when no path override is set)
+// generally depends on which match fired, so matches sharing this filter must never be
+// consolidated into a single Kong route/plugin either - see getRoutesFromMatches, which already
+// builds one independent route per match for this reason.
+func filtersContainRequestRedirect(filters []gatewayapi.HTTPRouteFilter) bool {
+	return lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
+		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
+	})
+}
+
 // translateHTTPRouteRulesMetaToKongstateRoutes translate the matches and filters under the rules sharing the same backends
 // to list of kongstate.Route.
 func translateHTTPRouteRulesMetaToKongstateRoutes(
@@ -348,9 +477,17 @@ func translateHTTPRouteRulesMetaToKongstateRoutes(
 		filters := rulesWithSameFilter[0].Rule.Filters
 		// Group the matches for each rule. Then aggregate the matches eligible for the consolidation
 		// into a single match group.
+		//
+		// ReplacePrefixMatch's rewritten path, and RequestRedirect's generated plugin, both depend on
+		// which match fired, so when either is present we must never fold matches from different
+		// rules together - keep every match in its own group.
+		keyFn := httpRouteMatchMeta.getKey
+		if filtersContainURLRewriteReplacePrefixMatch(filters) || filtersContainRequestRedirect(filters) {
+			keyFn = httpRouteMatchMeta.getUniqueKey
+		}
 		matchGroups := make(map[string]httpRouteMatchMetaList)
 		for _, ruleMeta := range rulesWithSameFilter {
-			ruleMatchGroups := groupSliceByKeyFn(ruleMeta.matches(), httpRouteMatchMeta.getKey)
+			ruleMatchGroups := groupSliceByKeyFn(ruleMeta.matches(), keyFn)
 			for matchGroupKey, matchGroup := range ruleMatchGroups {
 				matchGroups[matchGroupKey] = append(matchGroups[matchGroupKey], matchGroup...)
 			}
@@ -645,6 +782,13 @@ func (m httpRouteMatchMeta) getKey() string {
 	return mustMarshalJSON(keySource)
 }
 
+// getUniqueKey computes a key that is unique to this particular HTTPRouteMatch, i.e. it never
+// collides with the key of any other httpRouteMatchMeta. It is used in place of getKey() when
+// matches must not be consolidated with any other match, regardless of how similar they are.
+func (m httpRouteMatchMeta) getUniqueKey() string {
+	return fmt.Sprintf("%s/%s.%d.%d", m.parentRoute.Namespace, m.parentRoute.Name, m.RuleNumber, m.MatchNumber)
+}
+
 type httpRouteMatchMetaList []httpRouteMatchMeta
 
 func (l httpRouteMatchMetaList) httpRouteMatches() (
@@ -758,9 +902,7 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 
 	// Check if the route has a RequestRedirect or URLRewrite with non-nil ReplacePrefixMatch - if it does, we need to
 	// generate a route for each match as the path is used to modify routes and generate plugins.
-	hasRedirectFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterRequestRedirect
-	})
+	hasRedirectFilter := filtersContainRequestRedirect(filters)
 
 	routes, err := getRoutesFromMatches(matches, &r, filters, tags, hasRedirectFilter, options.SupportRedirectPlugin)
 	if err != nil {
@@ -768,16 +910,14 @@ func GenerateKongRoutesFromHTTPRouteMatches(
 	}
 
 	var path string
-	if hasURLRewriteWithReplacePrefixMatchFilter := lo.ContainsBy(filters, func(filter gatewayapi.HTTPRouteFilter) bool {
-		return filter.Type == gatewayapi.HTTPRouteFilterURLRewrite &&
-			filter.URLRewrite.Path != nil &&
-			filter.URLRewrite.Path.Type == gatewayapi.PrefixMatchHTTPPathModifier &&
-			filter.URLRewrite.Path.ReplacePrefixMatch != nil
-	}); hasURLRewriteWithReplacePrefixMatchFilter {
-		// In the case of URLRewrite with non-nil ReplacePrefixMatch, we rely on a CEL validation rule that disallows
-		// rules with multiple matches if the URLRewrite filter is present. We can be certain that if the filter is
-		// present, there is at most only one match. Based on that, we can determine the path from the first match.
-		// See: https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131
+	if filtersContainURLRewriteReplacePrefixMatch(filters) {
+		// In the case of URLRewrite with non-nil ReplacePrefixMatch, a CEL validation rule disallows
+		// rules with multiple matches if the URLRewrite filter is present (see:
+		// https://github.com/kubernetes-sigs/gateway-api/blob/29e68bffffb9af568e35545305d78d0001a1a0f7/apis/v1/httproute_types.go#L131),
+		// and translateHTTPRouteRulesMetaToKongstateRoutes additionally never consolidates matches from
+		// different rules when this filter is present (see filtersContainURLRewriteReplacePrefixMatch's
+		// usage there). So we can be certain that if the filter is present, there is at most only one
+		// match here, and can determine the path from it.
 		if len(matches) > 0 && matches[0].Path != nil && matches[0].Path.Value != nil {
 			path = *matches[0].Path.Value
 		}
@@ -885,12 +1025,26 @@ func getRoutesFromMatches(
 ) ([]kongstate.Route, error) {
 	seenMethods := make(map[string]struct{})
 	routes := make([]kongstate.Route, 0)
+	// baseRoute is a clean snapshot of route's state as passed in, before any match-specific
+	// mutation below. It's used to build an independent kongstate.Route per match when
+	// hasRedirectFilter (see below), instead of mutating the single shared *route across matches.
+	baseRoute := *route
+	baseRouteName := lo.FromPtr(baseRoute.Name)
 
-	for _, match := range matches {
+	for i, match := range matches {
 		// if the rule specifies the redirectFilter, we cannot put all the paths under the same route,
-		// as the kong plugin needs to know the exact path to use to perform redirection.
+		// as the kong plugin needs to know the exact path to use to perform redirection. Each match
+		// therefore gets its own independent kongstate.Route, built from a fresh copy of baseRoute,
+		// rather than sharing (and accumulating onto) the single *route passed in.
 		if hasRedirectFilter {
-			matchRoute := route
+			matchRoute := baseRoute
+			if len(matches) > 1 {
+				// Kong route names (and the IDs generated from them) must be unique. Only disambiguate
+				// when there's more than one independent route to build from this call, so the common
+				// single-match case keeps its existing name (and thus Kong route ID) unchanged.
+				matchRoute.Name = new(fmt.Sprintf("%s.%d", baseRouteName, i))
+			}
+
 			// configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
 			// default if it is not. For those types, we use the path value as-is and let Kong determine the type.
@@ -902,14 +1056,11 @@ func getRoutesFromMatches(
 				}
 			}
 
-			// configure method matching information about the route if method
-			// matching was defined.
+			// configure method matching information about the route if method matching was defined.
+			// Since matchRoute is independent per match, there's no need to deduplicate methods
+			// across matches here (unlike the non-redirect branch below).
 			if match.Method != nil {
-				method := string(*match.Method)
-				if _, ok := seenMethods[method]; !ok {
-					matchRoute.Methods = append(matchRoute.Methods, new(string(*match.Method)))
-					seenMethods[method] = struct{}{}
-				}
+				matchRoute.Methods = append(matchRoute.Methods, new(string(*match.Method)))
 			}
 			path := ""
 			if match.Path.Value != nil {
@@ -921,11 +1072,11 @@ func getRoutesFromMatches(
 				expressionsRouterEnabled:  false,
 				redirectKongPluginEnabled: supportRedirectPlugin,
 			}
-			if err := setRoutePlugins(matchRoute, filters, path, tags, setPluginsOptions); err != nil {
+			if err := setRoutePlugins(&matchRoute, filters, path, tags, setPluginsOptions); err != nil {
 				return nil, err
 			}
 
-			routes = append(routes, *route)
+			routes = append(routes, matchRoute)
 		} else {
 			// Configure path matching information about the route if paths matching was defined
 			// Kong automatically infers whether or not a path is a regular expression and uses a prefix match by
