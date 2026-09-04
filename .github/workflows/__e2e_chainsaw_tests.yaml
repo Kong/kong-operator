@@ -28,12 +28,16 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite:
-        - gateway
-        - hybridgateway
-        - konnect
-        - aigateway
-        - eventgateway
+        include:
+          - suite: gateway
+          - suite: gateway
+            ip_family: ipv4 # placeholder for dual-stack tests coming soon
+          - suite: hybridgateway
+          - suite: hybridgateway
+            ip_family: ipv4 # placeholder for dual-stack tests coming soon
+          - suite: konnect
+          - suite: aigateway
+          - suite: eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -74,6 +78,71 @@ jobs:
           --addon metallb \
           --addon cert-manager \
           --kubernetes-version "$NODE_IMAGE_VERSION"
+
+    # IPv6-only kind clusters on IPv4-only GitHub runners have no route to IPv4-only/legacy external
+    # services (e.g. Konnect's API): the pod network can't reach the real internet on its own.
+    # NAT64 (Jool) translates that egress traffic onto this host's real IPv4 uplink, and DNS64 (unbound)
+    # synthesizes AAAA answers for hostnames that only have an A record, so pods route through the
+    # NAT64 prefix automatically.
+    - name: Set up NAT64 + DNS64 for IPv6-only cluster external reachability
+      if: ${{ matrix.ip_family == 'ipv6' }}
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install -y jool-dkms jool-tools unbound
+        sudo modprobe jool
+
+        sudo sysctl -w net.ipv4.ip_forward=1
+        sudo sysctl -w net.ipv6.conf.all.forwarding=1
+        sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+        RUNNER_IP4=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+        sudo jool instance add nat64 --netfilter --pool6 64:ff9b::/96
+        sudo jool -i nat64 pool4 add --tcp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --udp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --icmp "${RUNNER_IP4}" 61001-65535
+
+        # This host needs a route for the NAT64 prefix to accept forwarding
+        # it at all. It has no real IPv6 default route, so an on-link route
+        # (no gateway) makes the kernel try to NDP-resolve the fake NAT64
+        # destination itself, which just times out. A permanent, never-
+        # verified fake neighbor gives the kernel a resolved next hop
+        # without that - Jool intercepts and re-injects as IPv4 long before
+        # any real L2 delivery to that (nonexistent) neighbor is attempted.
+        PRIMARY_IF=$(ip -6 route show default | awk '{print $5; exit}')
+        PRIMARY_IF="${PRIMARY_IF:-eth0}"
+        sudo ip -6 neigh add fe80::64 lladdr 00:00:00:00:00:64 dev "${PRIMARY_IF}" nud permanent
+        sudo ip -6 route add 64:ff9b::/96 via fe80::64 dev "${PRIMARY_IF}"
+
+        # DNS64 has to run on this host, not as a cluster pod: it needs to
+        # be reachable via IPv6 from the pod network AND do real IPv4 DNS
+        # lookups itself, which an IPv6-only CoreDNS pod can't do.
+        GW=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Gateway')
+        if [ -z "$GW" ] || [ "$GW" = "null" ]; then
+          SUBNET=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
+          GW=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('$SUBNET').network.network_address + 1)")
+        fi
+        echo "kind bridge IPv6 gateway (this host): $GW"
+
+        sudo tee /etc/unbound/unbound.conf.d/dns64.conf >/dev/null <<EOF
+        server:
+          interface: ${GW}
+          interface: 127.0.0.1
+          access-control: ::0/0 allow
+          access-control: 0.0.0.0/0 allow
+          do-ip4: yes
+          do-ip6: yes
+          module-config: "dns64 validator iterator"
+          dns64-prefix: 64:ff9b::/96
+        EOF
+        sudo systemctl restart unbound
+
+        NEW_COREFILE=$(kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
+          | sed "s#forward \. /etc/resolv.conf#forward . ${GW}#")
+        kubectl -n kube-system get configmap coredns -o json \
+          | jq --arg cf "$NEW_COREFILE" '.data.Corefile = $cf' \
+          | kubectl apply -f -
+        kubectl -n kube-system rollout restart deployment coredns
+        kubectl -n kube-system rollout status deployment coredns --timeout=60s
 
     - name: Load image to kind cluster
       run: kind load docker-image "$IMG:$TAG" --name "$CLUSTER_NAME"
