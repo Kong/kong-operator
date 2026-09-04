@@ -59,6 +59,17 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- On-prem gateway: generate a distinct Kong route for each match when its parent
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
+  ** This change will delete the combined Kong routes created for the matches with
+  these filters in their parent rules and create new distinct ones.
+ [#5521](https://github.com/Kong/kong-operator/pull/5521)
+
 ## [v2.3.0]
 
 > Release date: 2026-09-01
