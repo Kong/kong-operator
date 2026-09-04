@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -24,6 +25,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 const (
@@ -81,7 +83,20 @@ func newTestCertSecret() *corev1.Secret {
 	}
 }
 
+func Test_certEntityName(t *testing.T) {
+	aigwdp := newTestAIGWDP()
+
+	name1 := certEntityName(aigwdp, "abcdef1234567890")
+	name2 := certEntityName(aigwdp, "1234567890abcdef")
+
+	assert.NotEqual(t, name1, name2, "different checksums must produce different names")
+	assert.Equal(t, name1, certEntityName(aigwdp, "abcdef1234567890"), "must be deterministic for the same inputs")
+	assert.Contains(t, name1, aigwdp.Name, "name must remain traceable to the owning AIGatewayDataPlane")
+}
+
 func TestEnsureKonnectCertificate(t *testing.T) {
+	certName := certEntityName(newTestAIGWDP(), certificateChecksum(newTestCertSecret()))
+
 	tests := []struct {
 		name         string
 		extraObjs    []client.Object
@@ -108,11 +123,17 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 				assert.Equal(t, aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Cert.Type)
 				require.NotNil(t, cert.Spec.APISpec.Cert.SecretRef)
 				assert.Equal(t, testCertSecretName, cert.Spec.APISpec.Cert.SecretRef.Name)
-				assert.Equal(t, "test-dp", cert.Spec.APISpec.Title)
+				// Title must be checksum-derived, not just the CR's own K8s name: Konnect
+				// enforces a "unique-certificate-per-entity" constraint scoped to
+				// (gateway, title). A constant Title across rotations would make every
+				// subsequent create collide with the previous one, silently reusing
+				// (and never updating) the original Konnect-side certificate.
+				assert.Equal(t, certName, cert.Spec.APISpec.Title)
 				require.Len(t, cert.OwnerReferences, 1)
 				assert.Equal(t, "test-dp", cert.OwnerReferences[0].Name)
 				assert.Equal(t, types.UID("aigwdp-uid-123"), cert.OwnerReferences[0].UID)
 				assert.True(t, *cert.OwnerReferences[0].Controller)
+				assert.Equal(t, "test-dp", cert.Labels[consts.GatewayOperatorManagedByNameLabel])
 			},
 		},
 		{
@@ -130,7 +151,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 						Kind:       "AIGatewayDataPlaneCertificate",
 					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: certName, Namespace: "default"},
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -180,7 +201,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 						Kind:       "AIGatewayDataPlaneCertificate",
 					},
-					ObjectMeta: metav1.ObjectMeta{Name: "test-dp", Namespace: "default"},
+					ObjectMeta: metav1.ObjectMeta{Name: certName, Namespace: "default"},
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -249,11 +270,11 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			}
 
 			if tc.preCall {
-				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret)
+				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret, certificateChecksum(certSecret))
 				require.NoError(t, err)
 			}
 
-			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret)
+			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret, certificateChecksum(certSecret))
 
 			if tc.wantErrContains != "" {
 				require.Error(t, err)
@@ -270,9 +291,94 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 
 			if tc.verifyCert != nil {
 				var cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate
-				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: aigwdp.Name, Namespace: aigwdp.Namespace}, &cert))
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: certName, Namespace: aigwdp.Namespace}, &cert))
 				tc.verifyCert(t, cert)
 			}
 		})
 	}
+}
+
+// managedCert builds an AIGatewayDataPlaneCertificate CR carrying the same
+// managed-by labels ensureKonnectCertificate sets, so it's discoverable by
+// cleanupStaleKonnectCertificates' List call.
+func managedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: aigwdp.Namespace,
+			Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
+		},
+	}
+}
+
+func Test_cleanupStaleKonnectCertificates(t *testing.T) {
+	aigwdp := newTestAIGWDP()
+
+	t.Run("deletes every managed cert except the current one", func(t *testing.T) {
+		current := managedCert("test-dp-current", aigwdp)
+		stale1 := managedCert("test-dp-stale1", aigwdp)
+		stale2 := managedCert("test-dp-stale2", aigwdp)
+		// A cert belonging to a different AIGatewayDataPlane must never be touched.
+		otherDPCert := managedCert("other-dp-current", &aigatewayv1alpha1.AIGatewayDataPlane{
+			ObjectMeta: metav1.ObjectMeta{Name: "other-dp", Namespace: "default"},
+		})
+
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithObjects(current, stale1, stale2, otherDPCert).
+			Build()
+		r := &Reconciler{Client: cl, eventRecorder: events.NewFakeRecorder(10)}
+
+		err := r.cleanupStaleKonnectCertificates(t.Context(), logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"current cert must survive")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stale1.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"stale1 must be deleted")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stale2.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"stale2 must be deleted")
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: otherDPCert.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"cert belonging to a different AIGatewayDataPlane must not be touched")
+	})
+
+	t.Run("no-op when only the current cert exists", func(t *testing.T) {
+		current := managedCert("test-dp-current", aigwdp)
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(current).Build()
+		r := &Reconciler{Client: cl, eventRecorder: events.NewFakeRecorder(10)}
+
+		err := r.cleanupStaleKonnectCertificates(t.Context(), logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
+	})
+
+	t.Run("List error is propagated", func(t *testing.T) {
+		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return assert.AnError
+			},
+		})
+		r := &Reconciler{Client: cl, eventRecorder: events.NewFakeRecorder(10)}
+
+		err := r.cleanupStaleKonnectCertificates(t.Context(), logr.Discard(), aigwdp, "test-dp-current")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to list AIGatewayDataPlaneCertificates")
+	})
+
+	t.Run("non-NotFound Delete error is propagated", func(t *testing.T) {
+		stale := managedCert("test-dp-stale", aigwdp)
+		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(stale).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+				return assert.AnError
+			},
+		})
+		r := &Reconciler{Client: cl, eventRecorder: events.NewFakeRecorder(10)}
+
+		err := r.cleanupStaleKonnectCertificates(t.Context(), logr.Discard(), aigwdp, "test-dp-current")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete stale AIGatewayDataPlaneCertificate")
+	})
 }

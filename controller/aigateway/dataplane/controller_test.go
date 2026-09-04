@@ -85,6 +85,39 @@ func newReconcileAIGWDPNoControlPlaneRef() *aigatewayv1alpha1.AIGatewayDataPlane
 	return aigwdp
 }
 
+// newReconcileAIGWDPManualCert builds an AIGatewayDataPlane with no
+// ControlPlaneRef and a Manual certificateSecret referencing manualCertSecretName.
+func newReconcileAIGWDPManualCert() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDPNoControlPlaneRef()
+	aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+		Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+		SecretRef:    &aigatewayv1alpha1.SecretRef{Name: manualCertSecretName},
+	}
+	return aigwdp
+}
+
+// newReconcileAIGWDPAutomaticCertNoControlPlaneRef builds an AIGatewayDataPlane
+// with no ControlPlaneRef but an explicit Automatic certificateSecret, to
+// exercise the mismatch-surfacing path for the Automatic (not just Manual) case.
+func newReconcileAIGWDPAutomaticCertNoControlPlaneRef() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDPNoControlPlaneRef()
+	aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+		Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
+	}
+	return aigwdp
+}
+
+// newReconcileAIGWDPManualCertWithControlPlane is like newReconcileAIGWDPManualCert
+// but keeps ControlPlaneRef set, so Konnect certificate registration runs.
+func newReconcileAIGWDPManualCertWithControlPlane() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDP()
+	aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+		Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+		SecretRef:    &aigatewayv1alpha1.SecretRef{Name: manualCertSecretName},
+	}
+	return aigwdp
+}
+
 // newProgrammedKonnectAIGateway builds a KonnectAIGateway (controlplane)
 // with Programmed=True and endpoints set.
 func newProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
@@ -178,11 +211,31 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
-// newProgrammedKonnectCert builds an AIGatewayDataPlaneCertificate with Programmed=True,
-// modelling the state after the Konnect controller has registered it.
-func newProgrammedKonnectCert() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
-	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: reconcileTestDPName},
+// markGeneratedCertProgrammed finds the automatically-generated mTLS
+// certificate Secret and creates a Programmed=True AIGatewayDataPlaneCertificate
+// for it, named exactly as the real reconciler would name it (certEntityName
+// is checksum-derived, so the name can't be known statically ahead of the
+// Secret actually being generated). Safe to call more than once: it's a
+// no-op once the CR already exists.
+func markGeneratedCertProgrammed(t *testing.T, cl client.Client) {
+	t.Helper()
+
+	var secrets corev1.SecretList
+	require.NoError(t, cl.List(t.Context(), &secrets,
+		client.InNamespace(reconcileTestNS),
+		client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneCertificateLabel: "true"},
+	))
+	require.Len(t, secrets.Items, 1, "expected exactly one automatically-generated certificate Secret")
+	secret := &secrets.Items[0]
+
+	certName := certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+	existing := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
+	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, existing); err == nil {
+		return
+	}
+
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: certName},
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -191,21 +244,69 @@ func newProgrammedKonnectCert() *aiconfigurationv1alpha1.AIGatewayDataPlaneCerti
 			APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
 				Cert: aiconfigurationv1alpha1.SensitiveDataSource{
 					Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
-					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: reconcileTestDPName, Key: corev1.TLSCertKey},
+					SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: secret.Name, Key: corev1.TLSCertKey},
 				},
 				Title: reconcileTestDPName,
 			},
 		},
-		Status: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateStatus{
-			Conditions: []metav1.Condition{
-				{
-					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
-					Status: metav1.ConditionTrue,
-					Reason: "Programmed",
-				},
-			},
+	}
+	require.NoError(t, cl.Create(t.Context(), cert))
+	cert.Status.Conditions = []metav1.Condition{
+		{
+			Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status: metav1.ConditionTrue,
+			Reason: "Programmed",
 		},
 	}
+	require.NoError(t, cl.Status().Update(t.Context(), cert))
+}
+
+// markManualCertProgrammed creates (or, if the reconciler already created it,
+// marks) a Programmed=True AIGatewayDataPlaneCertificate for the
+// manually-referenced certificate Secret (manualCertSecret(true)), named
+// exactly as the real reconciler would name it. Safe to call more than once.
+func markManualCertProgrammed(t *testing.T, cl client.Client) {
+	t.Helper()
+
+	secret := &corev1.Secret{}
+	require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+		Namespace: reconcileTestNS, Name: manualCertSecretName,
+	}, secret))
+
+	certName := certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
+	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, cert); err != nil {
+		require.True(t, apierrors.IsNotFound(err))
+		cert = &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+			ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: certName},
+			Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
+				AIGatewayRef: commonv1alpha1.ObjectRef{
+					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestAIGWCPName},
+				},
+				APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
+					Cert: aiconfigurationv1alpha1.SensitiveDataSource{
+						Type:      aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef,
+						SecretRef: &aiconfigurationv1alpha1.SensitiveDataSecretRef{Name: secret.Name, Key: corev1.TLSCertKey},
+					},
+					Title: reconcileTestDPName,
+				},
+			},
+		}
+		require.NoError(t, cl.Create(t.Context(), cert))
+	}
+
+	if apimeta.IsStatusConditionTrue(cert.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType) {
+		return
+	}
+	cert.Status.Conditions = []metav1.Condition{
+		{
+			Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status: metav1.ConditionTrue,
+			Reason: "Programmed",
+		},
+	}
+	require.NoError(t, cl.Status().Update(t.Context(), cert))
 }
 
 // -----------------------------------------------------------------
@@ -224,6 +325,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 		reconcileCount int
 		wantResult     ctrl.Result
 		wantErr        bool
+		// betweenReconciles runs after each intermediate reconcile (i.e. every
+		// call except the last), before the next one. Used to seed state that
+		// depends on what a previous reconcile actually produced (e.g. marking
+		// the real, checksum-named AIGatewayDataPlaneCertificate as Programmed
+		// once the automatically-generated cert Secret exists).
+		betweenReconciles func(t *testing.T, cl client.Client)
 		// assertFn runs after all reconcile calls to check cluster state.
 		assertFn func(t *testing.T, cl client.Client, recorder *events.FakeRecorder)
 	}{
@@ -315,12 +422,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newReconcileAIGWDP(),
 				newProgrammedKonnectAIGateway(),
 				caSecret(),
-				newProgrammedKonnectCert(),
 			},
 			// 1st reconcile: cert Secret created → returns early (owned Secret watch triggers next reconcile).
+			// betweenReconciles marks the resulting (checksum-named) AIGatewayDataPlaneCertificate as Programmed.
 			// 2nd reconcile: cert Secret + programmed AIGatewayDataPlaneCertificate present → Deployment + Service created.
-			reconcileCount: 2,
-			wantResult:     ctrl.Result{},
+			reconcileCount:    2,
+			betweenReconciles: markGeneratedCertProgrammed,
+			wantResult:        ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
 				t.Helper()
 
@@ -365,15 +473,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 			name: "no ControlPlaneRef: Deployment and Service created without Konnect resolution or cert registration",
 			objects: []client.Object{
 				newReconcileAIGWDPNoControlPlaneRef(),
-				caSecret(),
 			},
-			// 1st reconcile: cert Secret created → returns early. 2nd: Deployment + Service created.
-			reconcileCount: 2,
-			wantResult:     ctrl.Result{},
+			wantResult: ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 
-				// Deployment exists, without the Konnect endpoint env vars.
+				// Deployment exists, without the Konnect endpoint env vars or any cert wiring.
 				deploy := &appsv1.Deployment{}
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
 					Namespace: reconcileTestNS, Name: reconcileTestDPName,
@@ -385,7 +490,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 				}
 				assert.NotContains(t, envNames, EnvKongClusterControlPlane)
 				assert.NotContains(t, envNames, EnvKongClusterServerName)
-				assert.Contains(t, envNames, EnvClientCertPath)
+				assert.NotContains(t, envNames, EnvClientCertPath)
+				for _, vm := range deploy.Spec.Template.Spec.Containers[0].VolumeMounts {
+					assert.NotEqual(t, KonnectCertVolumeName, vm.Name)
+				}
+				for _, v := range deploy.Spec.Template.Spec.Volumes {
+					assert.NotEqual(t, KonnectCertVolumeName, v.Name)
+				}
 
 				// No AIGatewayDataPlaneCertificate is created: there's no KonnectAIGateway to register against.
 				cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
@@ -398,12 +509,138 @@ func TestReconciler_Reconcile(t *testing.T) {
 				// Konnect-specific conditions are never set, so they can't block Ready.
 				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)))
 				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectCertificateRegisteredType)))
-				// The mTLS secret is control-plane independent, so it's still provisioned.
+				// No cert was requested, so no certificate is provisioned and no condition is set either.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
+			},
+		},
+		{
+			name: "no ControlPlaneRef but certificateSecret Manual configured: no Deployment, mismatch surfaced",
+			objects: []client.Object{
+				newReconcileAIGWDPManualCert(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.CertificateControlPlaneRefMissingReason,
+				)
+				deploy := &appsv1.Deployment{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy)
+				assert.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "no ControlPlaneRef but certificateSecret Automatic configured: no Deployment, mismatch surfaced",
+			objects: []client.Object{
+				newReconcileAIGWDPAutomaticCertNoControlPlaneRef(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.CertificateControlPlaneRefMissingReason,
+				)
+				deploy := &appsv1.Deployment{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy)
+				assert.True(t, apierrors.IsNotFound(err))
+
+				// No automatic certificate Secret should have been created either.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
+				assert.Empty(t, secretList.Items)
+			},
+		},
+		{
+			name: "Manual certificate: referenced secret not found, error returned",
+			objects: []client.Object{
+				newReconcileAIGWDPManualCertWithControlPlane(),
+				newProgrammedKonnectAIGateway(),
+			},
+			wantErr: true,
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.CertificateSecretRefNotFoundReason,
+				)
+			},
+		},
+		{
+			name: "Manual certificate: referenced secret invalid, no error, no Deployment",
+			objects: []client.Object{
+				newReconcileAIGWDPManualCertWithControlPlane(),
+				newProgrammedKonnectAIGateway(),
+				manualCertSecret(false),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.CertificateProvisionedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.CertificateSecretInvalidReason,
+				)
+				deploy := &appsv1.Deployment{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy)
+				assert.True(t, apierrors.IsNotFound(err))
+			},
+		},
+		{
+			name: "Manual certificate: valid secret, Deployment mounts it directly, no automatic secret",
+			objects: []client.Object{
+				newReconcileAIGWDPManualCertWithControlPlane(),
+				newProgrammedKonnectAIGateway(),
+				manualCertSecret(true),
+			},
+			// 1st reconcile: registers the cert entity, not yet Programmed. 2nd
+			// (after betweenReconciles marks it Programmed): Deployment created.
+			reconcileCount:    2,
+			betweenReconciles: markManualCertProgrammed,
+			wantResult:        ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.CertificateProvisionedType,
 					metav1.ConditionTrue,
 					aigatewayv1alpha1.CertificateProvisionedReason,
 				)
+
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Volumes)
+				var certVolume *corev1.Volume
+				for i := range deploy.Spec.Template.Spec.Volumes {
+					if deploy.Spec.Template.Spec.Volumes[i].Name == KonnectCertVolumeName {
+						certVolume = &deploy.Spec.Template.Spec.Volumes[i]
+					}
+				}
+				require.NotNil(t, certVolume)
+				require.NotNil(t, certVolume.Secret)
+				assert.Equal(t, manualCertSecretName, certVolume.Secret.SecretName)
+				assert.NotEmpty(t, deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+
+				// No automatic certificate Secret should have been created.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
+				assert.Len(t, secretList.Items, 1, "only the manually-referenced Secret should exist")
 			},
 		},
 		{
@@ -412,11 +649,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 				newReconcileAIGWDP(),
 				newProgrammedKonnectAIGateway(),
 				caSecret(),
-				newProgrammedKonnectCert(),
 			},
-			// 1st: cert Secret created. 2nd: Deployment+Service created. 3rd: everything exists → noop.
-			reconcileCount: 3,
-			wantResult:     ctrl.Result{},
+			// 1st: cert Secret created. betweenReconciles marks the cert Programmed.
+			// 2nd: Deployment+Service created. 3rd: everything exists → noop.
+			reconcileCount:    3,
+			betweenReconciles: markGeneratedCertProgrammed,
+			wantResult:        ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
 				t.Helper()
 				events := drainEvents(recorder)
@@ -462,6 +700,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 				if i < count-1 {
 					require.NoError(t, err, "intermediate reconcile %d should not error", i+1)
 					drainEvents(recorder)
+					if tc.betweenReconciles != nil {
+						tc.betweenReconciles(t, base)
+					}
 				}
 			}
 
@@ -584,4 +825,117 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 		assert.Equal(t, "203.0.113.5", aigwdp.Status.Addresses[0].Value)
 		assert.Equal(t, aigatewayv1alpha1.PublicLoadBalancerAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
 	})
+}
+
+// TestReconciler_KonnectCertificateBlueGreenRotation verifies that when the
+// mTLS certificate's content changes (a Secret updated in place, or any other
+// cause), the operator registers the new certificate as a SEPARATE Konnect
+// entity rather than overwriting the previous one, and keeps the previous
+// entity registered for as long as the new one isn't yet Programmed on
+// Konnect, so replicas still running with the old certificate (which
+// doesn't get reloaded until they're restarted by the rollout) are never left
+// presenting a certificate Konnect no longer trusts.
+//
+// This only exercises the structural guarantee (gated by certProgrammed,
+// deterministic regardless of Deployment status bookkeeping). The further
+// guarantee, that the old entity survives until the Deployment rollout is
+// fully complete and not merely started, depends on the real apiserver's
+// automatic metadata.generation bumping on every spec write, which the fake
+// client used here does not simulate; that part is covered by
+// TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation in
+// test/envtest instead.
+func TestReconciler_KonnectCertificateBlueGreenRotation(t *testing.T) {
+	scheme := managerscheme.Get()
+	ctx := t.Context()
+
+	aigwdp := newReconcileAIGWDPManualCertWithControlPlane()
+	secretV1 := manualCertSecret(true)
+
+	base := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(aigwdp, newProgrammedKonnectAIGateway(), secretV1).
+		WithStatusSubresource(aigwdp, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}).
+		Build()
+	recorder := events.NewFakeRecorder(30)
+	r := newTestReconciler(base, recorder)
+
+	reconcile := func() {
+		t.Helper()
+		current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+		require.NoError(t, r.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, current))
+		_, err := r.Reconcile(ctx, current)
+		require.NoError(t, err)
+		drainEvents(recorder)
+	}
+	certNameFor := func(secret *corev1.Secret) string {
+		return certEntityName(newReconcileAIGWDP(), certificateChecksum(secret))
+	}
+	certExists := func(name string) bool {
+		t.Helper()
+		err := base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: name}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})
+		if err != nil && !apierrors.IsNotFound(err) {
+			require.NoError(t, err)
+		}
+		return err == nil
+	}
+	markCertProgrammed := func(name string) {
+		t.Helper()
+		cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
+		require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: name}, cert))
+		cert.Status.Conditions = []metav1.Condition{{
+			Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+			Status: metav1.ConditionTrue,
+			Reason: "Programmed",
+		}}
+		require.NoError(t, base.Status().Update(ctx, cert))
+	}
+
+	certAName := certNameFor(secretV1)
+
+	// 1st reconcile: registers the cert entity for V1; not yet Programmed, so
+	// no Deployment exists yet.
+	reconcile()
+	assert.True(t, certExists(certAName))
+	assert.True(t, apierrors.IsNotFound(
+		base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, &appsv1.Deployment{})))
+
+	// 2nd reconcile: cert A Programmed -> Deployment created, mounting secretV1.
+	markCertProgrammed(certAName)
+	reconcile()
+	deploy := &appsv1.Deployment{}
+	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
+	assert.Equal(t, certificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+
+	// Rotate the Secret's content in place (same name, new cert material):
+	// exactly the "cert-manager renewed it" scenario the design targets.
+	secretV2 := manualCertSecret(true)
+	existing := &corev1.Secret{}
+	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: manualCertSecretName}, existing))
+	existing.Data = secretV2.Data
+	require.NoError(t, base.Update(ctx, existing))
+	certBName := certNameFor(existing)
+	require.NotEqual(t, certAName, certBName, "test secrets must produce different checksums")
+
+	// 3rd reconcile: a new cert entity (B) is registered for V2, but it isn't
+	// Programmed yet, so the Deployment must not be touched; cert A must
+	// remain fully intact, since replicas still mounting V1 need Konnect to
+	// keep trusting it.
+	reconcile()
+	assert.True(t, certExists(certAName), "old certificate must survive while the new one isn't Programmed yet")
+	assert.True(t, certExists(certBName))
+	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
+	assert.Equal(t, certificateChecksum(secretV1), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation],
+		"deployment must not roll to V2 before its certificate is Programmed on Konnect")
+
+	// 4th reconcile: cert B Programmed -> Deployment rolls to V2. Cert A must
+	// still exist immediately after this reconcile: cleanup only ever runs
+	// once the Deployment's own rollout status confirms completion, and here
+	// this is the very reconcile that just changed the spec.
+	markCertProgrammed(certBName)
+	reconcile()
+	require.NoError(t, base.Get(ctx, types.NamespacedName{Namespace: reconcileTestNS, Name: reconcileTestDPName}, deploy))
+	assert.Equal(t, certificateChecksum(secretV2), deploy.Spec.Template.Annotations[pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+	assert.True(t, certExists(certBName))
+	assert.True(t, certExists(certAName),
+		"old certificate must still exist right after the spec changes: the fake Deployment's status is never populated, so rollout is never reported complete")
 }

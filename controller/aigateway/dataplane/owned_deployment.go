@@ -18,6 +18,8 @@ package dataplane
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"os"
 
@@ -47,9 +49,10 @@ func (r *Reconciler) ensureDeployment(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	certSecretName string,
+	certChecksum string,
 ) error {
 	image := resolveImage(aigwdp, consts.DefaultAIGatewayDataPlaneImage)
-	desired, err := buildDeployment(logger, r.TypeConverter, aigwdp, aigatewaycp, image, certSecretName)
+	desired, err := buildDeployment(logger, r.TypeConverter, aigwdp, aigatewaycp, image, certSecretName, certChecksum)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
@@ -104,8 +107,9 @@ func buildDeployment(
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
 	certSecretName string,
+	certChecksum string,
 ) (*unstructured.Unstructured, error) {
-	base, err := generateBaseDeployment(logger, aigwdp, aigatewaycp, image, certSecretName)
+	base, err := generateBaseDeployment(logger, aigwdp, aigatewaycp, image, certSecretName, certChecksum)
 	if err != nil {
 		return nil, err
 	}
@@ -164,42 +168,49 @@ func generateBaseDeployment(
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
 	image string,
 	certSecretName string,
+	certChecksum string,
 ) (*appsv1.Deployment, error) {
 	labels := selectorLabelsForAIGatewayDataPlane(aigwdp)
 	labels["app.kubernetes.io/name"] = consts.AIGatewayDataPlaneContainerName
 
 	selector := selectorLabelsForAIGatewayDataPlane(aigwdp)
 
-	envVars, err := buildAIGatewayEnvVars(aigatewaycp)
+	envVars, err := buildAIGatewayEnvVars(aigatewaycp, certSecretName)
 	if err != nil {
 		return nil, err
 	}
 
 	container := corev1.Container{
-		Name:  consts.AIGatewayDataPlaneContainerName,
-		Image: image,
-		Env:   envVars,
-		VolumeMounts: []corev1.VolumeMount{
+		Name:           consts.AIGatewayDataPlaneContainerName,
+		Image:          image,
+		Env:            envVars,
+		ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+	}
+	// No cert Secret was provisioned (no ControlPlaneRef, Automatic skipped):
+	// omit the volumeMount too, a Pod can't mount a volume that doesn't exist.
+	if certSecretName != "" {
+		container.VolumeMounts = []corev1.VolumeMount{
 			{
 				Name:      KonnectCertVolumeName,
 				MountPath: KonnectCertMountPath,
 				ReadOnly:  true,
 			},
-		},
-		ReadinessProbe: k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusReadyEndpoint),
+		}
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 
-	volumes = append(
-		volumes,
-		corev1.Volume{
-			Name: KonnectCertVolumeName,
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName: certSecretName,
+	if certSecretName != "" {
+		volumes = append(
+			volumes,
+			corev1.Volume{
+				Name: KonnectCertVolumeName,
+				VolumeSource: corev1.VolumeSource{
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: certSecretName,
+					},
 				},
-			},
-		})
+			})
+	}
 
 	var replicas *int32
 	if aigwdp.Spec.Deployment != nil {
@@ -235,7 +246,8 @@ func generateBaseDeployment(
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: labels,
+					Labels:      labels,
+					Annotations: certChecksumAnnotation(certChecksum),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{container},
@@ -253,6 +265,29 @@ func generateBaseDeployment(
 	addLabelsForAIGatewayDataPlaneDeployment(logger, d, aigwdp)
 
 	return d, nil
+}
+
+// certChecksumAnnotation returns the Pod-template annotation map recording
+// the mTLS certificate Secret's content checksum, or nil when checksum is
+// empty. Setting it as a Pod-template (rather than Deployment-level)
+// annotation ensures an in-place edit to a manually-referenced Secret's
+// content, which does not otherwise change the Deployment spec, still rolls
+// the Deployment.
+func certChecksumAnnotation(checksum string) map[string]string {
+	if checksum == "" {
+		return nil
+	}
+	return map[string]string{consts.AIGatewayDataPlaneCertificateChecksumAnnotation: checksum}
+}
+
+// certificateChecksum computes a stable checksum of a certificate Secret's
+// tls.crt and tls.key content, used to trigger a Deployment rollout when a
+// manually-referenced Secret is edited in place.
+func certificateChecksum(secret *corev1.Secret) string {
+	h := sha256.New()
+	h.Write(secret.Data[corev1.TLSCertKey])
+	h.Write(secret.Data[corev1.TLSPrivateKeyKey])
+	return hex.EncodeToString(h.Sum(nil))
 }
 
 // aiGatewayDataPlaneDeploymentReservedKeys reports whether a label/annotation key is
@@ -290,14 +325,21 @@ func addLabelsForAIGatewayDataPlaneDeployment(logger logr.Logger, deployment *ap
 // aigatewaycp is nil when the AIGatewayDataPlane has no ControlPlaneRef
 // configured; in that case the Konnect-endpoint env vars are omitted and the
 // user is expected to supply them manually (e.g. via PodTemplateSpec).
+// certSecretName is empty when no cert Secret was provisioned at all, in
+// which case the cert-path env vars are omitted too since there's nothing
+// mounted at KonnectCertMountPath.
 func buildAIGatewayEnvVars(
 	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	certSecretName string,
 ) ([]corev1.EnvVar, error) {
-	envVars := append(
-		RequiredHardcodedEnvVars(),
-		corev1.EnvVar{Name: EnvClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
-		corev1.EnvVar{Name: EnvKonnectClientCertKey, Value: KonnectCertMountPath + "tls.key"},
-	)
+	envVars := RequiredHardcodedEnvVars()
+	if certSecretName != "" {
+		envVars = append(
+			envVars,
+			corev1.EnvVar{Name: EnvClientCertPath, Value: KonnectCertMountPath + "tls.crt"},
+			corev1.EnvVar{Name: EnvKonnectClientCertKey, Value: KonnectCertMountPath + "tls.key"},
+		)
+	}
 
 	if aigatewaycp == nil {
 		return envVars, nil

@@ -26,6 +26,10 @@ const (
 	// IndexFieldAIGatewayDataPlaneOnKonnectAIGateway is the index field for
 	// AIGatewayDataPlane -> KonnectAIGateway (via spec.controlPlaneRef.konnectNamespacedRef.name).
 	IndexFieldAIGatewayDataPlaneOnKonnectAIGateway = "aiGatewayDataPlaneKonnectAIGatewayRef"
+	// IndexFieldAIGatewayDataPlaneOnCertificateSecret is the index field for
+	// AIGatewayDataPlane -> Secret (via spec.certificateSecret.secretRef.name),
+	// used to reconcile when a manually-referenced certificate Secret changes.
+	IndexFieldAIGatewayDataPlaneOnCertificateSecret = "aiGatewayDataPlaneCertificateSecretRef"
 )
 
 // OptionsForAIGatewayDataPlane returns required Index options for the AIGatewayDataPlane controller.
@@ -36,7 +40,21 @@ func OptionsForAIGatewayDataPlane() []Option {
 			Field:          IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 			ExtractValueFn: aiGatewayDataPlaneControlPlaneRef,
 		},
+		{
+			Object:         &aigatewayv1alpha1.AIGatewayDataPlane{},
+			Field:          IndexFieldAIGatewayDataPlaneOnCertificateSecret,
+			ExtractValueFn: aiGatewayDataPlaneCertificateSecretRef,
+		},
 	}
+}
+
+func aiGatewayDataPlaneCertificateSecretRef(object client.Object) []string {
+	aigwdp, ok := object.(*aigatewayv1alpha1.AIGatewayDataPlane)
+	if !ok || aigwdp.Spec.CertificateSecret == nil || aigwdp.Spec.CertificateSecret.SecretRef == nil {
+		return nil
+	}
+	secretRef := aigwdp.Spec.CertificateSecret.SecretRef
+	return []string{aigwdp.Namespace + "/" + secretRef.Name}
 }
 
 func aiGatewayDataPlaneControlPlaneRef(object client.Object) []string {

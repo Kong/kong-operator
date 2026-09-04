@@ -282,6 +282,59 @@ func TestAIGatewayDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("certificateSecret provisioning validation", func(t *testing.T) {
+		common.TestCasesGroup[*aigatewayv1alpha1.AIGatewayDataPlane]{
+			{
+				Name:       "certificateSecret unset - valid (defaults to Automatic)",
+				TestObject: validDataPlane(ns.Name),
+			},
+			{
+				Name: "Automatic without secretRef - valid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual with secretRef - valid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+						SecretRef:    &aigatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+			},
+			{
+				Name: "Manual without secretRef - invalid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("secretRef must be set when provisioning is Manual"),
+			},
+			{
+				Name: "Automatic with secretRef - invalid",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
+						SecretRef:    &aigatewayv1alpha1.SecretRef{Name: "user-cert"},
+					}
+					return dp
+				}(),
+				ExpectedErrorMessage: new("secretRef must not be set when provisioning is Automatic"),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("status defaults", func(t *testing.T) {
 		common.TestCasesGroup[*aigatewayv1alpha1.AIGatewayDataPlane]{
 			{
