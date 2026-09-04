@@ -92,7 +92,6 @@ func New(m metadata.Info) *CLI {
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
 	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
-	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesDataPlane, "max-concurrent-reconciles-dataplane-controller", consts.DefaultMaxConcurrentReconcilesDataPlane, "Maximum number of concurrent reconciles for DataPlane controllers.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesControlPlane, "max-concurrent-reconciles-controlplane-controller", consts.DefaultMaxConcurrentReconcilesControlPlane, "Maximum number of concurrent reconciles for ControlPlane controllers.")
@@ -264,17 +263,6 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 	c.cfg.ClusterCASecretNamespace = clusterCASecretNamespace
 	c.cfg.LoggerOpts = logging.SetupLogEncoder(c.cfg.LoggingMode, c.loggerOpts)
 	c.cfg.LeaderElectionNamespace = controllerNamespace
-
-	// TODO: https://github.com/Kong/kong-operator/issues/2768
-	if c.cfg.KonnectControllerMaxConcurrentReconciles != consts.DefaultMaxConcurrentReconcilesKonnect {
-		if c.cfg.MaxConcurrentReconcilesKonnect != consts.DefaultMaxConcurrentReconcilesKonnect {
-			fmt.Println("ERROR: both --konnect-controller-max-concurrent-reconciles and --max-concurrent-reconciles-konnect-controller have been set. Please use only --max-concurrent-reconciles-konnect-controller.")
-			os.Exit(1)
-		}
-
-		fmt.Println("WARN: --konnect-controller-max-concurrent-reconciles is deprecated, please use --max-concurrent-reconciles-konnect-controller instead")
-		c.cfg.MaxConcurrentReconcilesKonnect = c.cfg.KonnectControllerMaxConcurrentReconciles
-	}
 
 	if c.cfg.CertExpirationMargin >= c.cfg.CertTTL {
 		fmt.Printf("ERROR: --cert-expiration-margin (%s) must be lower than --cert-ttl (%s)\n", c.cfg.CertExpirationMargin, c.cfg.CertTTL)
