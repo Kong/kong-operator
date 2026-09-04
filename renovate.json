@@ -110,13 +110,13 @@
       ]
     },
     {
-      "description": "Match dependencies in .github/workflows/* that are properly annotated with `# renovate: datasource={} depName={}.`",
+      "description": "Match dependencies in .github/workflows/* that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [extractVersion={}] [versioning={}].` The value may carry a tag prefix (e.g. `ksai/v3.28.0`); only the version part is captured and rewritten.",
       "customType": "regex",
       "fileMatch": [
         "\\.github/workflows/.*\\.yaml$"
       ],
       "matchStrings": [
-        "# renovate: datasource=(?<datasource>.*?) depName=(?<depName>.*?)\\n.+:\\s*\"?(?<currentValue>[0-9]+\\.[0-9.]+)\"?\\n"
+        "#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(\\s+packageName=(?<packageName>\\S+))?(\\s+extractVersion=(?<extractVersion>\\S+))?(\\s+versioning=(?<versioning>\\S+))?[^\\n]*\\n[^\\n]*?:\\s*\"?[^\"\\s]*?v?(?<currentValue>[0-9]+\\.[0-9.]+)\"?"
       ]
     },
     {
@@ -146,39 +146,6 @@
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>.*?)\\s+depName=(?<depName>.*?)\\s+(packageName=(?<packageName>.*)\\s+)?(registryUrl=(?<registryUrl>.*)\\s+)?versioning=(?<versioning>.*?)\\n.+'(?<currentValue>.*?)'"
       ]
-    },
-    {
-      "description": "Bump CODEOWNERS_AUTHZ_REF in .github/workflows/muthur.yaml to the latest Kong/ksai codeowners-authz release",
-      "customType": "regex",
-      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
-      "matchStrings": ["CODEOWNERS_AUTHZ_REF:\\s*codeowners-authz/v(?<currentValue>[0-9.]+)"],
-      "depNameTemplate": "Kong/ksai/codeowners-authz",
-      "packageNameTemplate": "Kong/ksai",
-      "extractVersionTemplate": "^codeowners-authz/v(?<version>[0-9.]+)$",
-      "datasourceTemplate": "github-tags",
-      "versioningTemplate": "semver"
-    },
-    {
-      "description": "Bump AI_REVIEWER_FEDERATED_REF in .github/workflows/muthur.yaml to the latest Kong/ksai ai-reviewer-federated release",
-      "customType": "regex",
-      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
-      "matchStrings": ["AI_REVIEWER_FEDERATED_REF:\\s*ai-reviewer-federated/v(?<currentValue>[0-9.]+)"],
-      "depNameTemplate": "Kong/ksai/ai-reviewer-federated",
-      "packageNameTemplate": "Kong/ksai",
-      "extractVersionTemplate": "^ai-reviewer-federated/v(?<version>[0-9.]+)$",
-      "datasourceTemplate": "github-tags",
-      "versioningTemplate": "semver"
-    },
-    {
-      "description": "Bump KREVIEW_PLUGIN_REF in .github/workflows/muthur.yaml to the latest Kong/ksai kreview plugin release",
-      "customType": "regex",
-      "fileMatch": ["^\\.github/workflows/muthur\\.yaml$"],
-      "matchStrings": ["KREVIEW_PLUGIN_REF:\\s*plugins/kreview/v(?<currentValue>[0-9.]+)"],
-      "depNameTemplate": "Kong/ksai/plugins/kreview",
-      "packageNameTemplate": "Kong/ksai",
-      "extractVersionTemplate": "^plugins/kreview/v(?<version>[0-9.]+)$",
-      "datasourceTemplate": "github-tags",
-      "versioningTemplate": "semver"
     }
   ],
   "packageRules": [
