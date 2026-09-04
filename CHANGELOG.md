@@ -64,7 +64,8 @@
 ### Fixes
 
 - On-prem gateway: generate a distinct Kong route for each match when its parent
- `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter.
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
 
 ## [v2.3.0]

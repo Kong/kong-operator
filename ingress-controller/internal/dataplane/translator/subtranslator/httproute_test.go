@@ -2151,6 +2151,188 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPa
 	require.Equal(t, []kong.Plugin{expectedReplacePlugin}, route2.Plugins)
 }
 
+// TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchForRequestRedirect calls
+// GenerateKongRoutesFromHTTPRouteMatches directly with 2 matches sharing a RequestRedirect filter,
+// bypassing translateHTTPRouteRulesMetaToKongstateRoutes' match-grouping entirely. This proves
+// getRoutesFromMatches builds independent per-match routes on its own (root-cause fix), rather than
+// relying solely on the grouping phase never handing it more than one match at a time.
+//
+// Before the fix, getRoutesFromMatches mutated a single shared *kongstate.Route across matches
+// (`matchRoute := route` only copied the pointer), so each successively-appended route accumulated
+// the Paths and Plugins of every match processed before it, and all shared the same Name (and thus
+// the same Kong route ID, since Route IDs are derived from Name).
+func TestGenerateKongRoutesFromHTTPRouteMatchesBuildsIndependentRoutesPerMatchForRequestRedirect(t *testing.T) {
+	matches := []gatewayapi.HTTPRouteMatch{
+		builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+		builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
+	}
+	filters := []gatewayapi.HTTPRouteFilter{
+		{
+			Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+			RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+				Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+				StatusCode: new(302),
+			},
+		},
+	}
+
+	routes, err := GenerateKongRoutesFromHTTPRouteMatches(
+		"httproute.default.httproute-1.0.0",
+		matches,
+		filters,
+		util.K8sObjectInfo{},
+		nil,
+		nil,
+		nil,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 2)
+
+	pluginsForPath := func(path string) []kong.Plugin {
+		return []kong.Plugin{
+			{
+				Name: new("request-termination"),
+				Config: kong.Configuration{
+					"status_code": new(302),
+				},
+			},
+			{
+				Name: new("response-transformer"),
+				Config: kong.Configuration{
+					"add": TransformerPluginConfig{
+						Headers: []Header{
+							NewHeader("Location", "http://example.org"+path),
+						},
+					},
+				},
+			},
+		}
+	}
+
+	require.Equal(t, "httproute.default.httproute-1.0.0.0", *routes[0].Name)
+	require.Equal(t, kong.StringSlice("~/path-1$", "/path-1/"), routes[0].Paths)
+	require.Equal(t, pluginsForPath("/path-1"), routes[0].Plugins)
+
+	require.Equal(t, "httproute.default.httproute-1.0.0.1", *routes[1].Name)
+	require.Equal(t, kong.StringSlice("~/path-2$", "/path-2/"), routes[1].Paths)
+	require.Equal(t, pluginsForPath("/path-2"), routes[1].Plugins)
+}
+
+// TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesSeparateWhenRequestRedirectIsPresent
+// mirrors the URLRewrite/ReplacePrefixMatch regression test above: two rules sharing backendRefs
+// and the exact same RequestRedirect filter, but with different match path prefixes, must never be
+// consolidated into a single Kong route/plugin. Unlike ReplacePrefixMatch, Gateway API's CEL rules
+// don't cap RequestRedirect (without a ReplacePrefixMatch path override) to one match per rule, so
+// this scenario is reachable both across rules (as tested here) and within a single rule's own
+// multiple matches - getUniqueKey's per-(rule,match) keying handles both the same way.
+func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesSeparateWhenRequestRedirectIsPresent(t *testing.T) {
+	httpRoute := &gatewayapi.HTTPRoute{
+		ObjectMeta: metav1.ObjectMeta{
+			Namespace: "default",
+			Name:      "httproute-1",
+		},
+	}
+	requestRedirectFilters := []gatewayapi.HTTPRouteFilter{
+		{
+			Type: gatewayapi.HTTPRouteFilterRequestRedirect,
+			RequestRedirect: &gatewayapi.HTTPRequestRedirectFilter{
+				Hostname:   (*gatewayapi.PreciseHostname)(new("example.org")),
+				StatusCode: new(302),
+			},
+		},
+	}
+	rulesMeta := []httpRouteRuleMeta{
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Filters:     requestRedirectFilters,
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathPrefix("/path-1").Build(),
+				},
+			},
+			RuleNumber:  0,
+			parentRoute: httpRoute,
+		},
+		{
+			Rule: gatewayapi.HTTPRouteRule{
+				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
+				Filters:     requestRedirectFilters,
+				Matches: []gatewayapi.HTTPRouteMatch{
+					builder.NewHTTPRouteMatch().WithPathPrefix("/path-2").Build(),
+				},
+			},
+			RuleNumber:  1,
+			parentRoute: httpRoute,
+		},
+	}
+	matchesWithPriorities := []SplitHTTPRouteMatchToKongRoutePriority{
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  0,
+				MatchIndex: 0,
+			},
+			Priority: 1,
+		},
+		{
+			Match: SplitHTTPRouteMatch{
+				Source:     httpRoute,
+				RuleIndex:  1,
+				MatchIndex: 0,
+			},
+			Priority: 1,
+		},
+	}
+
+	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
+		rulesMeta,
+		matchesWithPriorities,
+		TranslateHTTPRouteRulesToKongRouteOptions{},
+	)
+	require.NoError(t, err)
+	require.Len(t, routes, 2)
+
+	routesByName := make(map[string]kongstate.Route, len(routes))
+	for _, route := range routes {
+		routesByName[*route.Name] = route
+	}
+
+	pluginsForPath := func(path string) []kong.Plugin {
+		return []kong.Plugin{
+			{
+				Name: new("request-termination"),
+				Config: kong.Configuration{
+					"status_code": new(302),
+				},
+				Tags: util.GenerateTagsForObject(httpRoute),
+			},
+			{
+				Name: new("response-transformer"),
+				Config: kong.Configuration{
+					"add": TransformerPluginConfig{
+						Headers: []Header{
+							NewHeader("Location", "http://example.org"+path),
+						},
+					},
+				},
+				Tags: util.GenerateTagsForObject(httpRoute),
+			},
+		}
+	}
+
+	// getUniqueKey splits these into singleton groups (one match per GenerateKongRoutesFromHTTPRouteMatches
+	// call), so getRoutesFromMatches never needs to disambiguate a Name here - each keeps its
+	// original, unsuffixed name.
+	route1 := routesByName["httproute.default.httproute-1.0.0"]
+	require.Equal(t, kong.StringSlice("~/path-1$", "/path-1/"), route1.Paths)
+	require.Equal(t, pluginsForPath("/path-1"), route1.Plugins)
+
+	route2 := routesByName["httproute.default.httproute-1.1.0"]
+	require.Equal(t, kong.StringSlice("~/path-2$", "/path-2/"), route2.Paths)
+	require.Equal(t, pluginsForPath("/path-2"), route2.Plugins)
+}
+
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesSplitsHeaderOnlyMatchesFromPathMatches(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
