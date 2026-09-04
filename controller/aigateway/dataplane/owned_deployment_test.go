@@ -150,19 +150,22 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 	)
 
 	tests := []struct {
-		name      string
-		aigwcp    *konnectv1alpha1.KonnectAIGateway
-		wantErr   bool
-		checkEnvs func(t *testing.T, envs []corev1.EnvVar)
+		name           string
+		aigwcp         *konnectv1alpha1.KonnectAIGateway
+		certSecretName string
+		wantErr        bool
+		checkEnvs      func(t *testing.T, envs []corev1.EnvVar)
 	}{
 		{
-			name:    "no endpoints in status returns error",
-			aigwcp:  &konnectv1alpha1.KonnectAIGateway{},
-			wantErr: true,
+			name:           "no endpoints in status returns error",
+			aigwcp:         &konnectv1alpha1.KonnectAIGateway{},
+			certSecretName: "my-cert",
+			wantErr:        true,
 		},
 		{
-			name:   "nil aigwcp (no ControlPlaneRef): Konnect endpoint env vars omitted, no error",
-			aigwcp: nil,
+			name:           "nil aigwcp (no ControlPlaneRef): Konnect endpoint env vars omitted, no error",
+			aigwcp:         nil,
+			certSecretName: "my-cert",
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
 				for _, name := range []string{
 					EnvKongClusterControlPlane,
@@ -180,8 +183,22 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 			},
 		},
 		{
-			name:   "env vars set correctly from endpoints",
-			aigwcp: testKonnectAIGateway(cpHost, tpHost),
+			name:           "no cert Secret at all: cert-path env vars omitted too",
+			aigwcp:         nil,
+			certSecretName: "",
+			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
+				for _, name := range []string{EnvClientCertPath, EnvKonnectClientCertKey} {
+					for _, e := range envs {
+						assert.NotEqual(t, name, e.Name, "env var %q must not be set when there's no cert Secret", name)
+					}
+				}
+				assert.Equal(t, "data_plane", mustEnv(t, envs, "KONG_ROLE"))
+			},
+		},
+		{
+			name:           "env vars set correctly from endpoints",
+			aigwcp:         testKonnectAIGateway(cpHost, tpHost),
+			certSecretName: "my-cert",
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
 				assert.Equal(t, cpHost+":443", mustEnv(t, envs, EnvKongClusterControlPlane))
 				assert.Equal(t, cpHost, mustEnv(t, envs, EnvKongClusterServerName))
@@ -192,8 +209,9 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 			},
 		},
 		{
-			name:   "required hardcoded env vars are present",
-			aigwcp: testKonnectAIGateway(cpHost, tpHost),
+			name:           "required hardcoded env vars are present",
+			aigwcp:         testKonnectAIGateway(cpHost, tpHost),
+			certSecretName: "my-cert",
 			checkEnvs: func(t *testing.T, envs []corev1.EnvVar) {
 				assert.Equal(t, "data_plane", mustEnv(t, envs, "KONG_ROLE"))
 				assert.Equal(t, "off", mustEnv(t, envs, "KONG_DATABASE"))
@@ -205,7 +223,7 @@ func Test_buildAIGatewayEnvVars(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			envs, err := buildAIGatewayEnvVars(tc.aigwcp)
+			envs, err := buildAIGatewayEnvVars(tc.aigwcp, tc.certSecretName)
 			if tc.wantErr {
 				require.Error(t, err)
 				return
@@ -349,7 +367,7 @@ func Test_generateBaseDeployment_hardening(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
-	d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret")
+	d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "")
 	require.NoError(t, err)
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
 	container := d.Spec.Template.Spec.Containers[0]
@@ -403,7 +421,7 @@ func Test_generateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
-	d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret")
+	d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "")
 	require.NoError(t, err)
 
 	assert.Equal(t, "value", d.Labels["deployment-label"])
@@ -416,6 +434,53 @@ func Test_generateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	// The Pod template shares the base labels map with the Deployment; the
 	// custom Deployment-level label must not leak into it.
 	assert.NotContains(t, d.Spec.Template.Labels, "deployment-label")
+}
+
+// Test_generateBaseDeployment_CertificateChecksum verifies that a non-empty
+// certChecksum is recorded as a Pod-template annotation (so that an in-place
+// edit to a manually-referenced certificate Secret's content, which does not
+// otherwise change the Deployment spec, still rolls the Deployment), and that
+// an empty checksum results in no such annotation.
+func Test_generateBaseDeployment_CertificateChecksum(t *testing.T) {
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+	}
+	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
+
+	d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "deadbeef")
+	require.NoError(t, err)
+	assert.Equal(t, "deadbeef", d.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation])
+
+	d, err = generateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "")
+	require.NoError(t, err)
+	assert.NotContains(t, d.Spec.Template.Annotations, consts.AIGatewayDataPlaneCertificateChecksumAnnotation)
+}
+
+// Test_generateBaseDeployment_NoCertSecret verifies that when certSecretName
+// is empty (no certificate was provisioned at all, e.g. no ControlPlaneRef),
+// the cert volume, its volumeMount, and the cert-path env vars are all
+// omitted together: a Pod can't mount a volume that doesn't exist.
+func Test_generateBaseDeployment_NoCertSecret(t *testing.T) {
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+	}
+
+	d, err := generateBaseDeployment(logr.Discard(), aigwdp, nil, "kong/aigw:test", "", "")
+	require.NoError(t, err)
+	require.Len(t, d.Spec.Template.Spec.Containers, 1)
+	container := d.Spec.Template.Spec.Containers[0]
+
+	for _, vm := range container.VolumeMounts {
+		assert.NotEqual(t, KonnectCertVolumeName, vm.Name)
+	}
+	for _, v := range d.Spec.Template.Spec.Volumes {
+		assert.NotEqual(t, KonnectCertVolumeName, v.Name)
+	}
+	for _, name := range []string{EnvClientCertPath, EnvKonnectClientCertKey} {
+		for _, e := range container.Env {
+			assert.NotEqual(t, name, e.Name)
+		}
+	}
 }
 
 // -----------------------------------------------------------------
@@ -522,7 +587,7 @@ func Test_buildDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := buildDeployment(logr.Discard(), tc, tt.aigwdp, tt.aigwcp, tt.image, tt.certSecretName)
+			u, err := buildDeployment(logr.Discard(), tc, tt.aigwdp, tt.aigwcp, tt.image, tt.certSecretName, "")
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -576,7 +641,7 @@ func Test_ensureDeployment(t *testing.T) {
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			// Run once first so the object exists, then drain the creation event.
 			prepareRecorder: func(r *Reconciler, rec *events.FakeRecorder) {
-				_ = r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret")
+				_ = r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret", "")
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -610,7 +675,7 @@ func Test_ensureDeployment(t *testing.T) {
 				tc2.prepareRecorder(r, recorder)
 			}
 
-			err := r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret")
+			err := r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret", "")
 
 			if tc2.wantErr {
 				require.Error(t, err)

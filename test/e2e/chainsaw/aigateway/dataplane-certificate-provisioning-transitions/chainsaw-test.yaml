@@ -1,0 +1,328 @@
+# AIGatewayDataPlane spec.certificateSecret.provisioning Automatic<->Manual transition test.
+#
+# Note: spec.certificateSecret.secretRef is always resolved in the AIGatewayDataPlane's own
+# namespace. Cross-namespace references are intentionally NOT supported: a Kubernetes Secret
+# volume can only ever be mounted into a Pod from the Pod's own namespace, so there is no
+# KongReferenceGrant involved anywhere in this test.
+#
+# Scenario A: Manual provisioning referencing a same-namespace Secret. CertificateProvisioned=True,
+#   Ready=True, and the Deployment mounts that exact user-owned Secret.
+#
+# Scenario B: switch provisioning to Automatic. The operator provisions its own Secret (found by
+#   label since its name isn't predictable) and the Deployment is rolled onto it.
+#
+# Scenario C: switch back to Manual with the same secretRef. The Deployment is rolled back onto
+#   the user-owned Secret from Scenario A.
+#
+# Scenario D: switch to Automatic again. The SAME operator-provisioned Secret from Scenario B is
+#   reused (proving EnsureCertificate finds it by owner/subject rather than creating a new one
+#   every time), and the AIGatewayDataPlane remains Ready=True throughout.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-dataplane-certificate-provisioning-transitions
+spec:
+  description: |
+    Tests that switching an AIGatewayDataPlane's spec.certificateSecret.provisioning between
+    Manual (same-namespace secretRef) and Automatic repeatedly re-evaluates certificate
+    provisioning correctly every time: Manual mounts the exact user-owned Secret referenced,
+    Automatic provisions (and later reuses, rather than recreating) its own operator-managed
+    Secret, and the AIGatewayDataPlane's conditions and Deployment volume are updated to match
+    on every transition.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: manual_cert_secret_name
+      value: (join('-', [($test_name), 'manual-cert']))
+    - name: cert_managed_by_label_selector
+      value: gateway-operator.konghq.com/managed-by=aigateway-dataplane,gateway.konghq.com/secret-provisioning=automatic,konghq.com/aigw-dp-cert=true
+    - name: sni_hostname
+      value: (join('', [($test_name), '.example.com']))
+
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: 4-Create-manual-certificate-secret
+      description: |
+        Create a valid TLS Secret in the AIGatewayDataPlane's own namespace, carrying the
+        operator's secret-label-selector label (without which the operator's Secret cache
+        would not surface it at all).
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: manual_cert
+                value: (json_parse($stdout).cert)
+              - name: manual_key
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($manual_cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($manual_cert)
+                tls.key: ($manual_key)
+
+    # =========================================================================
+    # Scenario A: Manual provisioning, same-namespace secretRef.
+    # =========================================================================
+
+    - name: 5-Create-aigatewaydataplane-with-manual-provisioning
+      try:
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($aigw_cp_name)
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($manual_cert_secret_name)
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: aigw
+                          image: ($aigw_dp_image)
+                network:
+                  services:
+                    ingress:
+                      type: LoadBalancer
+                      ports:
+                        - name: ingress
+                          port: 443
+                          targetPort: 8443
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($manual_cert_secret_name)
+
+    # =========================================================================
+    # Scenario B: switch Manual -> Automatic; Scenario C: switch back to Manual
+    # (same secretRef as Scenario A); Scenario D: switch to Automatic again,
+    # reusing the SAME operator-managed Secret from Scenario B rather than
+    # creating a new one. All three live in one step: chainsaw scopes a
+    # script's outputs to the step they're captured in, and automatic_cert_secret_name
+    # (captured once here) is needed again in Scenario D.
+    # =========================================================================
+
+    - name: 6-Switch-Automatic-Manual-Automatic-and-verify-transitions
+      description: |
+        secretRef must be explicitly nulled out when switching to Automatic:
+        server-side-apply only prunes an omitted field if the same field manager that
+        set it now omits it, which isn't reliable across independent apply steps in a test.
+      try:
+        # Scenario B: Manual -> Automatic.
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Automatic
+                  secretRef: null
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        # The Automatic Secret's name isn't predictable (generated by the operator), so it's
+        # looked up by the labels the operator itself sets, rather than assumed.
+        # get_single_resource_name.sh retries, since the conditions asserted above report the
+        # same status/reason values on both Manual and Automatic success, so they may already
+        # be "True"/matching before the Secret has actually been provisioned.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: ($cert_managed_by_label_selector)
+            content: |
+              bash ../../common/scripts/get_single_resource_name.sh
+            outputs:
+              - name: automatic_cert_secret_name
+                value: (json_parse($stdout).name)
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($automatic_cert_secret_name)
+        # Scenario C: switch back to Manual, same secretRef as Scenario A.
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($manual_cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($manual_cert_secret_name)
+        # Scenario D: switch to Automatic again; the SAME Secret from Scenario B must be reused.
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                certificateSecret:
+                  provisioning: Automatic
+                  secretRef: null
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($automatic_cert_secret_name)

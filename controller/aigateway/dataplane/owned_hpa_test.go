@@ -144,7 +144,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{Replicas: &replicas}
 
-		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret")
+		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", "")
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, replicas, *d.Spec.Replicas)
@@ -154,7 +154,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Replicas = new(int32(3))
 
-		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret")
+		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", "")
 		require.NoError(t, err)
 		assert.Nil(t, d.Spec.Replicas, "spec.replicas must be nil when HPA is active so HPA owns the field")
 	})
@@ -163,7 +163,7 @@ func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
 		aigwdp := newHPAAIGWDP()
 		aigwdp.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(2))
 
-		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret")
+		d, err := generateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", "")
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, int32(2), *d.Spec.Replicas)
