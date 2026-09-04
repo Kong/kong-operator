@@ -29,17 +29,17 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
-	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
-// newHPAEGDP returns a KegDataPlane with horizontal scaling configured.
-func newHPAEGDP() *eventgatewayv1alpha1.KegDataPlane {
-	dp := newReconcileEGDP()
-	dp.Spec.Deployment = &eventgatewayv1alpha1.DeploymentOptions{
-		Scaling: &eventgatewayv1alpha1.Scaling{
-			HorizontalScaling: &eventgatewayv1alpha1.HorizontalScaling{
+// newHPAAIGWDP returns an AIGatewayDataPlane with horizontal scaling configured.
+func newHPAAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
+	dp := newReconcileAIGWDP()
+	dp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{
+		Scaling: &aigatewayv1alpha1.Scaling{
+			HorizontalScaling: &aigatewayv1alpha1.HorizontalScaling{
 				MaxReplicas: 5,
 			},
 		},
@@ -48,7 +48,7 @@ func newHPAEGDP() *eventgatewayv1alpha1.KegDataPlane {
 }
 
 // newReconcilerForHPATest builds a reconciler + fake client seeded with the given objects.
-func newReconcilerForHPATest(t *testing.T, objs ...client.Object) (*Reconciler, client.Client) {
+func newReconcilerForHPATest(t *testing.T, objs ...client.Object) (*testReconciler, client.Client) {
 	t.Helper()
 	cl := fake.NewClientBuilder().
 		WithScheme(managerscheme.Get()).
@@ -60,27 +60,27 @@ func newReconcilerForHPATest(t *testing.T, objs ...client.Object) (*Reconciler, 
 
 func TestEnsureHPA(t *testing.T) {
 	t.Run("creates HPA when scaling is configured", func(t *testing.T) {
-		egdp := newHPAEGDP()
-		r, cl := newReconcilerForHPATest(t, egdp)
+		aigwdp := newHPAAIGWDP()
+		r, cl := newReconcilerForHPATest(t, aigwdp)
 
-		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), egdp, egdp.Name))
+		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), aigwdp, aigwdp.Name))
 
 		var hpa autoscalingv2.HorizontalPodAutoscaler
-		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: egdp.Name}, &hpa))
+		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: aigwdp.Name}, &hpa))
 		assert.Equal(t, int32(5), hpa.Spec.MaxReplicas)
-		assert.Equal(t, egdp.Name, hpa.Spec.ScaleTargetRef.Name)
+		assert.Equal(t, aigwdp.Name, hpa.Spec.ScaleTargetRef.Name)
 		assert.Equal(t, "Deployment", hpa.Spec.ScaleTargetRef.Kind)
 	})
 
 	t.Run("deletes HPA when scaling is removed", func(t *testing.T) {
-		egdp := newHPAEGDP()
-		r, cl := newReconcilerForHPATest(t, egdp)
+		aigwdp := newHPAAIGWDP()
+		r, cl := newReconcilerForHPATest(t, aigwdp)
 
 		// First call creates the HPA.
-		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), egdp, egdp.Name))
+		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), aigwdp, aigwdp.Name))
 
 		// Remove scaling and call again.
-		noScaling := egdp.DeepCopy()
+		noScaling := aigwdp.DeepCopy()
 		noScaling.Spec.Deployment = nil
 		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), noScaling, noScaling.Name))
 
@@ -90,45 +90,45 @@ func TestEnsureHPA(t *testing.T) {
 	})
 
 	t.Run("updates HPA when maxReplicas changes", func(t *testing.T) {
-		egdp := newHPAEGDP()
-		r, cl := newReconcilerForHPATest(t, egdp)
+		aigwdp := newHPAAIGWDP()
+		r, cl := newReconcilerForHPATest(t, aigwdp)
 
 		// Create HPA.
-		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), egdp, egdp.Name))
+		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), aigwdp, aigwdp.Name))
 
 		// Update maxReplicas.
-		updated := egdp.DeepCopy()
+		updated := aigwdp.DeepCopy()
 		updated.Spec.Deployment.Scaling.HorizontalScaling.MaxReplicas = 10
 		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), updated, updated.Name))
 
 		var hpa autoscalingv2.HorizontalPodAutoscaler
-		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: egdp.Name}, &hpa))
+		require.NoError(t, cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: aigwdp.Name}, &hpa))
 		assert.Equal(t, int32(10), hpa.Spec.MaxReplicas)
 	})
 
 	t.Run("reduces to one HPA when multiple exist", func(t *testing.T) {
-		egdp := newHPAEGDP()
+		aigwdp := newHPAAIGWDP()
 		// Managed labels are required so ListHPAsForOwner's label selector finds the HPAs.
-		labels := k8sresources.GetManagedLabelForOwner(egdp)
-		ownerRef := metav1.OwnerReference{UID: egdp.UID, Name: egdp.Name}
+		labels := k8sresources.GetManagedLabelForOwner(aigwdp)
+		ownerRef := metav1.OwnerReference{UID: aigwdp.UID, Name: aigwdp.Name}
 
 		hpa1 := &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: egdp.Name + "-1", Namespace: reconcileTestNS,
+				Name: aigwdp.Name + "-1", Namespace: reconcileTestNS,
 				Labels:          labels,
 				OwnerReferences: []metav1.OwnerReference{ownerRef},
 			},
 		}
 		hpa2 := &autoscalingv2.HorizontalPodAutoscaler{
 			ObjectMeta: metav1.ObjectMeta{
-				Name: egdp.Name + "-2", Namespace: reconcileTestNS,
+				Name: aigwdp.Name + "-2", Namespace: reconcileTestNS,
 				Labels:          labels,
 				OwnerReferences: []metav1.OwnerReference{ownerRef},
 			},
 		}
-		r, cl := newReconcilerForHPATest(t, egdp, hpa1, hpa2)
+		r, cl := newReconcilerForHPATest(t, aigwdp, hpa1, hpa2)
 
-		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), egdp, egdp.Name))
+		require.NoError(t, r.ensureHPA(t.Context(), logr.Discard(), aigwdp, aigwdp.Name))
 
 		var hpaList autoscalingv2.HorizontalPodAutoscalerList
 		require.NoError(t, cl.List(t.Context(), &hpaList, client.InNamespace(reconcileTestNS)))
@@ -137,33 +137,33 @@ func TestEnsureHPA(t *testing.T) {
 }
 
 func TestGenerateBaseDeployment_ReplicaGuard(t *testing.T) {
-	keg := newProgrammedKEG()
+	aigatewaycp := testKonnectAIGateway()
 
 	t.Run("sets replicas when HPA is not configured", func(t *testing.T) {
 		replicas := int32(3)
-		egdp := newReconcileEGDP()
-		egdp.Spec.Deployment = &eventgatewayv1alpha1.DeploymentOptions{Replicas: &replicas}
+		aigwdp := newReconcileAIGWDP()
+		aigwdp.Spec.Deployment = &aigatewayv1alpha1.DeploymentOptions{Replicas: &replicas}
 
-		d, err := generateBaseDeployment(logr.Discard(), egdp, keg, "kong/keg:latest", "cert-secret")
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", testConfig)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, replicas, *d.Spec.Replicas)
 	})
 
 	t.Run("omits replicas when HPA is active", func(t *testing.T) {
-		egdp := newHPAEGDP()
-		egdp.Spec.Deployment.Replicas = new(int32(3))
+		aigwdp := newHPAAIGWDP()
+		aigwdp.Spec.Deployment.Replicas = new(int32(3))
 
-		d, err := generateBaseDeployment(logr.Discard(), egdp, keg, "kong/keg:latest", "cert-secret")
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", testConfig)
 		require.NoError(t, err)
 		assert.Nil(t, d.Spec.Replicas, "spec.replicas must be nil when HPA is active so HPA owns the field")
 	})
 
 	t.Run("seeds replicas from minReplicas when HPA is active and minReplicas is set", func(t *testing.T) {
-		egdp := newHPAEGDP()
-		egdp.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(2))
+		aigwdp := newHPAAIGWDP()
+		aigwdp.Spec.Deployment.Scaling.HorizontalScaling.MinReplicas = new(int32(2))
 
-		d, err := generateBaseDeployment(logr.Discard(), egdp, keg, "kong/keg:latest", "cert-secret")
+		d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, aigatewaycp, "kong/aigw:latest", "cert-secret", testConfig)
 		require.NoError(t, err)
 		require.NotNil(t, d.Spec.Replicas)
 		assert.Equal(t, int32(2), *d.Spec.Replicas)

@@ -22,34 +22,31 @@ import (
 
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
-	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
-// ensureCertificateSecret provisions (or finds) the mTLS client certificate Secret
-// for the given AIGatewayDataPlane, signed by the cluster CA.
-func (r *Reconciler) ensureCertificateSecret(
+// ensureCertificateSecret provisions (or finds) the mTLS client certificate
+// Secret for the given DataPlane, signed by the cluster CA.
+func (r *Reconciler[T, CP, Cert]) ensureCertificateSecret(
 	ctx context.Context,
-	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	dp T,
 ) (op.Result, *corev1.Secret, error) {
 	matchingLabels := client.MatchingLabels{
-		consts.SecretProvisioningLabelKey:               consts.SecretProvisioningAutomaticLabelValue,
-		consts.SecretAIGatewayDataPlaneCertificateLabel: "true",
+		consts.SecretProvisioningLabelKey: consts.SecretProvisioningAutomaticLabelValue,
+		r.Config.CertificateLabelKey:      "true",
 	}
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}
-	res, secret, err := secrets.EnsureCertificate(
+	res, secret, err := r.Config.EnsureCertificate(
 		ctx,
-		aigwdp,
-		fmt.Sprintf("%s.%s", aigwdp.Name, aigwdp.Namespace),
+		dp,
+		fmt.Sprintf("%s.%s", dp.GetName(), dp.GetNamespace()),
 		types.NamespacedName{
 			Namespace: r.ClusterCASecretNamespace,
 			Name:      r.ClusterCASecretName,
@@ -64,21 +61,21 @@ func (r *Reconciler) ensureCertificateSecret(
 		r.CertTTL,
 	)
 	if err != nil {
-		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
-			Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+		setStatusCondition(dp, metav1.Condition{
+			Type:               r.Config.Conditions.CertificateProvisionedType,
 			Status:             metav1.ConditionFalse,
-			Reason:             string(aigatewayv1alpha1.UnableToProvisionReason),
+			Reason:             r.Config.Conditions.UnableToProvisionReason,
 			Message:            fmt.Sprintf("failed to provision mTLS certificate Secret: %v", err),
-			ObservedGeneration: aigwdp.Generation,
+			ObservedGeneration: dp.GetGeneration(),
 		})
 		return op.Noop, nil, err
 	}
-	apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
-		Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+	setStatusCondition(dp, metav1.Condition{
+		Type:               r.Config.Conditions.CertificateProvisionedType,
 		Status:             metav1.ConditionTrue,
-		Reason:             string(aigatewayv1alpha1.CertificateProvisionedReason),
+		Reason:             r.Config.Conditions.CertificateProvisionedReason,
 		Message:            "mTLS certificate Secret provisioned",
-		ObservedGeneration: aigwdp.Generation,
+		ObservedGeneration: dp.GetGeneration(),
 	})
 	return res, secret, nil
 }

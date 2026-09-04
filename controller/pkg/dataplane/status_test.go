@@ -175,7 +175,7 @@ func Test_ensureReadyStatus(t *testing.T) {
 
 			dp := aigwdp()
 			dp.Status.Conditions = append(dp.Status.Conditions, tc.preConditions...)
-			err := ensureReadyStatus(context.Background(), cl, dp)
+			err := (&testReconciler{Client: cl, Config: testConfig}).ensureReadyStatus(context.Background(), dp)
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -215,11 +215,12 @@ func Test_applyStatus(t *testing.T) {
 	scheme := managerscheme.Get()
 	tc := managedfields.NewDeducedTypeConverter()
 
-	newReconciler := func(cl client.Client, rec *events.FakeRecorder) *Reconciler {
-		return &Reconciler{
+	newReconciler := func(cl client.Client, rec *events.FakeRecorder) *testReconciler {
+		return &testReconciler{
+			Config:        testConfig,
 			Client:        cl,
 			TypeConverter: tc,
-			eventRecorder: rec,
+			EventRecorder: rec,
 		}
 	}
 

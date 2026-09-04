@@ -23,50 +23,42 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/go-cmp/cmp"
 
-	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
-// ensureHPA reconciles the HPA for the given AIGatewayDataPlane.
+// ensureHPA reconciles the HPA for the given DataPlane.
 // If horizontal scaling is not configured, any existing HPA is deleted.
-func (r *Reconciler) ensureHPA(
+func (r *Reconciler[T, CP, Cert]) ensureHPA(
 	ctx context.Context,
 	logger logr.Logger,
-	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	dp T,
 	deploymentName string,
 ) error {
-	matchingLabels := k8sresources.GetManagedLabelForOwner(aigwdp)
-	hpas, err := k8sutils.ListHPAsForOwner(ctx, r.Client, aigwdp.Namespace, aigwdp.UID, matchingLabels)
+	matchingLabels := k8sresources.GetManagedLabelForOwner(dp)
+	hpas, err := k8sutils.ListHPAsForOwner(ctx, r.Client, dp.GetNamespace(), dp.GetUID(), matchingLabels)
 	if err != nil {
-		return fmt.Errorf("failed listing HPAs for AIGatewayDataPlane %s/%s: %w", aigwdp.Namespace, aigwdp.Name, err)
+		return fmt.Errorf("failed listing HPAs for %s %s/%s: %w", r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
-	if aigwdp.Spec.Deployment == nil ||
-		aigwdp.Spec.Deployment.Scaling == nil ||
-		aigwdp.Spec.Deployment.Scaling.HorizontalScaling == nil {
+	scalingSpec := r.Config.HPAScalingSpec(dp)
+	if scalingSpec == nil {
 		if err := k8sreduce.ReduceHPAs(ctx, r.Client, hpas, k8sreduce.FilterNone); err != nil {
-			return fmt.Errorf("failed reducing HPAs for AIGatewayDataPlane %s/%s: %w", aigwdp.Namespace, aigwdp.Name, err)
+			return fmt.Errorf("failed reducing HPAs for %s %s/%s: %w", r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 		}
 		return nil
 	}
 
 	if len(hpas) > 1 {
 		if err := k8sreduce.ReduceHPAs(ctx, r.Client, hpas, k8sreduce.FilterHPAs); err != nil {
-			return fmt.Errorf("failed reducing HPAs for AIGatewayDataPlane %s/%s: %w", aigwdp.Namespace, aigwdp.Name, err)
+			return fmt.Errorf("failed reducing HPAs for %s %s/%s: %w", r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 		}
 		return nil
 	}
 
-	hs := aigwdp.Spec.Deployment.Scaling.HorizontalScaling
-	generatedHPA, err := k8sresources.GenerateHPA(aigwdp, &k8sresources.HPAScalingSpec{
-		MinReplicas: hs.MinReplicas,
-		MaxReplicas: hs.MaxReplicas,
-		Metrics:     hs.Metrics,
-		Behavior:    hs.Behavior,
-	}, deploymentName)
+	generatedHPA, err := k8sresources.GenerateHPA(dp, scalingSpec, deploymentName)
 	if err != nil {
 		return err
 	}
@@ -86,7 +78,7 @@ func (r *Reconciler) ensureHPA(
 	}
 
 	if err := r.Create(ctx, generatedHPA); err != nil {
-		return fmt.Errorf("failed creating HPA for AIGatewayDataPlane %s: %w", aigwdp.Name, err)
+		return fmt.Errorf("failed creating HPA for %s %s: %w", r.Config.Kind, dp.GetName(), err)
 	}
 	return nil
 }

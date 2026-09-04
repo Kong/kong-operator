@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -24,7 +23,7 @@ func (c *errListClient) List(_ context.Context, _ client.ObjectList, _ ...client
 	return assert.AnError
 }
 
-func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
+func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
 	const (
 		ns       = "test-ns"
 		aigwcpNM = "my-aigwcp"
@@ -86,12 +85,6 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 			wantNamespace: ns,
 		},
 		{
-			name:    "returns nil when obj is not KonnectAIGateway",
-			cl:      cl,
-			obj:     &corev1.ConfigMap{},
-			wantNil: true,
-		},
-		{
 			name:    "returns nil when List fails",
 			cl:      &errListClient{},
 			obj:     aigwcp,
@@ -101,7 +94,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := enqueueForKonnectAIGatewayRef(tc.cl)
+			mapFunc := EnqueueDataPlanesForControlPlane(tc.cl, testConfig.NewObjectList, testConfig.ControlPlaneRefIndexField, testConfig.Kind, testConfig.ControlPlaneKind)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)

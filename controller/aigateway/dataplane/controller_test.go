@@ -42,6 +42,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // -----------------------------------------------------------------
@@ -49,10 +50,29 @@ import (
 // -----------------------------------------------------------------
 
 const (
+	testCASecretName      = "test-ca"
+	testCASecretNamespace = "test-ns"
+	testDPName            = "my-dp"
+
 	reconcileTestNS         = testCASecretNamespace
 	reconcileTestDPName     = testDPName
 	reconcileTestAIGWCPName = "my-aigwcp"
 )
+
+// caSecret builds the cluster CA Secret used across Reconcile tests.
+func caSecret() *corev1.Secret {
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("Kong Test CA"),
+		certificate.WithCATrue(),
+	)
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testCASecretName},
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+}
 
 // newReconcileAIGWDP builds the standard AIGatewayDataPlane used across Reconcile tests.
 func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
@@ -480,108 +500,4 @@ func TestReconciler_Reconcile(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestIngressServiceIsReady(t *testing.T) {
-	tests := []struct {
-		name string
-		svc  *corev1.Service
-		want bool
-	}{
-		{
-			name: "ClusterIP service is always ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}},
-			want: true,
-		},
-		{
-			name: "NodePort service is always ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeNodePort}},
-			want: true,
-		},
-		{
-			name: "LoadBalancer with no ingress is not ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}},
-			want: false,
-		},
-		{
-			name: "LoadBalancer with IP is ready",
-			svc: &corev1.Service{
-				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-				Status: corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}},
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "LoadBalancer with hostname is ready",
-			svc: &corev1.Service{
-				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-				Status: corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{Hostname: "lb.example.com"}},
-					},
-				},
-			},
-			want: true,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ingressServiceIsReady(tc.svc))
-		})
-	}
-}
-
-func TestEnsureServiceReadyCondition(t *testing.T) {
-	r := &Reconciler{}
-
-	t.Run("ClusterIP sets ServiceReady=True and reports the ClusterIP", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{
-			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},
-		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		assert.Equal(t, string(aigatewayv1alpha1.ServiceReadyReason), cond.Reason)
-		assert.Len(t, aigwdp.Status.Addresses, 1)
-		assert.Equal(t, aigatewayv1alpha1.PrivateIPAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
-	})
-
-	t.Run("LoadBalancer with no ingress sets ServiceReady=False", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, string(aigatewayv1alpha1.WaitingForAddressReason), cond.Reason)
-		assert.Empty(t, aigwdp.Status.Addresses)
-	})
-
-	t.Run("LoadBalancer with IP sets ServiceReady=True and populates addresses", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{
-			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-			Status: corev1.ServiceStatus{
-				LoadBalancer: corev1.LoadBalancerStatus{
-					Ingress: []corev1.LoadBalancerIngress{{IP: "203.0.113.5"}},
-				},
-			},
-		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		require.Len(t, aigwdp.Status.Addresses, 1)
-		assert.Equal(t, "203.0.113.5", aigwdp.Status.Addresses[0].Value)
-		assert.Equal(t, aigatewayv1alpha1.PublicLoadBalancerAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
-	})
 }
