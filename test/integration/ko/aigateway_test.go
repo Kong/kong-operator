@@ -13,6 +13,7 @@ import (
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	dpconfig "github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -51,11 +52,12 @@ func TestAIGatewayCreation(t *testing.T) {
 									Env: []corev1.EnvVar{
 										{
 											Name:  "KONG_ADMIN_GUI_LISTEN",
-											Value: "0.0.0.0:8002",
+											Value: dpconfig.DualStackListen(8002),
 										},
 										{
-											Name:  "KONG_ADMIN_LISTEN",
-											Value: "0.0.0.0:8001, 0.0.0.0:8444 ssl reuseport backlog=16384",
+											Name: "KONG_ADMIN_LISTEN",
+											Value: dpconfig.DualStackListen(8001) + ", " +
+												dpconfig.DualStackListen(8444, "ssl", "reuseport", "backlog=16384"),
 										},
 									},
 								}},
@@ -189,7 +191,7 @@ func TestAIGatewayCreation(t *testing.T) {
 	})
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
 
 	dataplaneNN := types.NamespacedName{Namespace: namespace.Name, Name: dataplane.Name}
 

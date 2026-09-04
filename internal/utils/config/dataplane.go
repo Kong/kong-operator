@@ -2,7 +2,9 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/samber/lo"
@@ -12,27 +14,46 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
+// DualStackListen renders a Kong listen value bound to both the IPv4 and the
+// IPv6 wildcard address for the given port, so the listener is reachable on
+// IPv4-only and IPv6-only clusters alike. See consts.ListenAddressIPv6 for why
+// both addresses are needed.
+func DualStackListen(port int, options ...string) string {
+	var suffix string
+	if len(options) > 0 {
+		suffix = " " + strings.Join(options, " ")
+	}
+	p := strconv.Itoa(port)
+	return fmt.Sprintf("%s%s, %s%s",
+		net.JoinHostPort(consts.ListenAddressIPv4, p), suffix,
+		net.JoinHostPort(consts.ListenAddressIPv6, p), suffix,
+	)
+}
+
 // KongDefaults are the baseline Kong proxy configuration options needed for
 // the proxy to function.
 var KongDefaults = map[string]string{
-	"KONG_ADMIN_ACCESS_LOG":               "/dev/stdout",
-	"KONG_ADMIN_ERROR_LOG":                "/dev/stderr",
-	"KONG_ADMIN_GUI_ACCESS_LOG":           "/dev/stdout",
-	"KONG_ADMIN_GUI_ERROR_LOG":            "/dev/stderr",
-	"KONG_CLUSTER_LISTEN":                 "off",
-	"KONG_DATABASE":                       "off",
-	"KONG_NGINX_WORKER_PROCESSES":         "2",
-	kongPluginsEnvVarName:                 kongPluginsDefaultValue,
-	"KONG_PORTAL_API_ACCESS_LOG":          "/dev/stdout",
-	"KONG_PORTAL_API_ERROR_LOG":           "/dev/stderr",
-	"KONG_PORT_MAPS":                      "80:8000, 443:8443",
-	"KONG_PROXY_ACCESS_LOG":               "/dev/stdout",
-	"KONG_PROXY_ERROR_LOG":                "/dev/stderr",
-	"KONG_PROXY_LISTEN":                   fmt.Sprintf("0.0.0.0:%d reuseport backlog=16384, 0.0.0.0:%d http2 ssl reuseport backlog=16384", consts.DataPlaneProxyPort, consts.DataPlaneProxySSLPort),
-	"KONG_STATUS_LISTEN":                  fmt.Sprintf("0.0.0.0:%d", consts.DataPlaneStatusPort),
+	"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
+	"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
+	"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
+	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
+	"KONG_CLUSTER_LISTEN":         "off",
+	"KONG_DATABASE":               "off",
+	"KONG_NGINX_WORKER_PROCESSES": "2",
+	kongPluginsEnvVarName:         kongPluginsDefaultValue,
+	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
+	"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
+	"KONG_PORT_MAPS":              "80:8000, 443:8443",
+	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
+	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
+	"KONG_PROXY_LISTEN": strings.Join([]string{
+		DualStackListen(consts.DataPlaneProxyPort, "reuseport", "backlog=16384"),
+		DualStackListen(consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384"),
+	}, ", "),
+	"KONG_STATUS_LISTEN":                  DualStackListen(consts.DataPlaneStatusPort),
 	"KONG_USE_STANDARD_GRPC_STATUS_CODES": "on",
 
-	"KONG_ADMIN_LISTEN": fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", consts.DataPlaneAdminAPIPort),
+	"KONG_ADMIN_LISTEN": DualStackListen(consts.DataPlaneAdminAPIPort, "ssl", "reuseport", "backlog=16384"),
 
 	// MTLS
 	"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",

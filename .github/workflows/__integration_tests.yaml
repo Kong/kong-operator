@@ -33,17 +33,26 @@ jobs:
   integration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1} {2} - {3}', matrix.suite, matrix.kong-variant, matrix.router_flavor, inputs.cluster_version) }}
+    name: ${{ format('{0} {1} {2} {3} - {4}', matrix.suite, matrix.kong-variant, matrix.router_flavor, matrix.ip_family, inputs.cluster_version) }}
+    # Only the ipv6 legs opt into this (see matrix below): IPv6 cluster support
+    # is new (tracked in #5348) and shouldn't block merges yet while it proves out.
+    continue-on-error: ${{ matrix.continue-on-error || false }}
     strategy:
       matrix:
         include:
           - suite: ko
+          - suite: ko
+            ip_family: ipv6
+            continue-on-error: true
           - suite: konnect
           - suite: kic
             kong-variant: enterprise
           - suite: kic
             kong-variant: oss
           - suite: bluegreen
+          - suite: bluegreen
+            ip_family: ipv6
+            continue-on-error: true
           - suite: validatingwebhook
             router_flavor: traditional_compatible
           - suite: validatingwebhook
@@ -159,6 +168,7 @@ jobs:
       run: make "test.integration-$SUITE"
       env:
         SUITE: ${{ matrix.suite }}
+        KONG_TEST_CLUSTER_IP_FAMILY: ${{ matrix.ip_family }}
         KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS: ${{ secrets.KONG_PLUGIN_IMAGE_REGISTRY_CREDENTIALS }}
         KONG_CONTROLLER_OUT: stdout
         GOTESTSUM_JUNITFILE: "integration-tests-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.xml"
@@ -182,7 +192,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: pcap-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}
+        name: pcap-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}-${{ matrix.ip_family }}
         path: /tmp/capture-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.pcap
         if-no-files-found: ignore
 
@@ -190,19 +200,19 @@ jobs:
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: diagnostics-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}
+        name: diagnostics-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-coverage-integration
+        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}-coverage-integration
         path: coverage.integration.${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.out
 
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-tests-report-integration
+        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}-tests-report-integration
         path: integration-tests-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.xml

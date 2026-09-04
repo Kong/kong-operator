@@ -168,7 +168,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, waitTime, tickTime)
 
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), waitTime, tickTime)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(dataplaneIP)), waitTime, tickTime)
 
 	t.Log("deleting the dataplane deployment")
 	dataplaneDeployments := testutils.MustListDataPlaneDeployments(t, ctx, dataplane, clients, client.MatchingLabels{
@@ -202,7 +202,7 @@ func TestDataPlaneEssentials(t *testing.T) {
 		return false
 	}, waitTime, tickTime)
 
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), waitTime, tickTime)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(dataplaneIP)), waitTime, tickTime)
 
 	t.Log("verifying dataplane status is properly filled with backing service name and its addresses")
 	require.Eventually(t, testutils.DataPlaneHasServiceAndAddressesInStatus(t, ctx, dataplaneName, clients), waitTime, tickTime)
@@ -1194,7 +1194,7 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 		return false
 	}, waitTime, tickTime)
 
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), waitTime, tickTime)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(dataplaneIP)), waitTime, tickTime)
 
 	oldServiceName := serviceName
 	serviceName = "ingress-service-" + uuid.NewString()
@@ -1230,5 +1230,5 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 		return false
 	}, waitTime, tickTime)
 
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+dataplaneIP), waitTime, tickTime)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(dataplaneIP)), waitTime, tickTime)
 }

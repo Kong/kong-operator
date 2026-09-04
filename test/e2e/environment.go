@@ -116,6 +116,14 @@ func CreateEnvironment(t *testing.T, ctx context.Context) TestEnvironment {
 		}
 	} else {
 		t.Log("no existing cluster found, deploying using Kubernetes In Docker (KIND)")
+		switch ipFamily := test.ClusterIPFamily(); ipFamily {
+		case clusters.IPv6:
+			builder.WithIPv6Only()
+		case clusters.Dual:
+			t.Fatal("dual-stack test clusters are not yet supported (KONG_TEST_CLUSTER_IP_FAMILY=dual)")
+		case clusters.IPv4:
+			// KIND's default, nothing to configure.
+		}
 		if !test.IsCertManagerDisabled() {
 			builder.WithAddons(certmanager.New())
 		}
