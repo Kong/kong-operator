@@ -14,7 +14,8 @@
     "custom.regex",
     "kustomize",
      "gomod",
-     "dockerfile"
+     "dockerfile",
+     "github-actions"
   ],
   "postUpdateOptions": [
     // Run `go mod tidy` after updating Go modules to ensure go.sum is updated and tidy up any indirect dependencies.
@@ -23,6 +24,13 @@
   ],
   "dockerfile": {
     "fileMatch": ["^Dockerfile$", "^debug\\.Dockerfile$"]
+  },
+  "github-actions": {
+    // Dependabot (.github/dependabot.yml) already updates action pins in
+    // .github/workflows/*. Scope Renovate's github-actions manager to
+    // composite actions under .github/actions/, whose nested `uses:` pins
+    // (e.g. jdx/mise-action in setup-mise/action.yml) Dependabot does not see.
+    "fileMatch": ["^\\.github/actions/.+/action\\.ya?ml$"]
   },
   "automerge": false,
   "separateMinorPatch": true,
