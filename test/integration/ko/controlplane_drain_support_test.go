@@ -8,10 +8,10 @@ import (
 	"fmt"
 	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"os/exec"
 	"slices"
-	"strings"
 	"testing"
 	"time"
 
@@ -161,7 +161,7 @@ func TestControlPlaneDrainSupport(t *testing.T) {
 	require.NotEmpty(t, podList.Items)
 	var podName string
 	for _, pod := range podList.Items {
-		if pod.Status.PodIP == terminatingPodIP {
+		if ipEqual(pod.Status.PodIP, terminatingPodIP) {
 			podName = pod.Name
 			break
 		}
@@ -182,6 +182,20 @@ func TestControlPlaneDrainSupport(t *testing.T) {
 	waitForTerminatingEndpoint(t, ctx, namespace.Name, service.Name, terminatingPodIP)
 
 	waitForWeightZero(t, ctx, kongClient, upstream, terminatingPodIP)
+}
+
+// ipEqual reports whether a and b are the same IP address, regardless of
+// textual notation. Kong's Admin API reports IPv6 addresses fully expanded
+// (e.g. "fd00:0010:0244:0000:0000:0000:0000:0012"), while Kubernetes reports
+// them in canonical compressed form (e.g. "fd00:10:244::12"), so plain string
+// comparison never matches.
+func ipEqual(a, b string) bool {
+	addrA, errA := netip.ParseAddr(a)
+	addrB, errB := netip.ParseAddr(b)
+	if errA != nil || errB != nil {
+		return a == b
+	}
+	return addrA == addrB
 }
 
 func fetchControlPlaneAdminSecret(t *testing.T, ctx context.Context, cl client.Client, cp *gwtypes.ControlPlane) *corev1.Secret {
@@ -208,7 +222,7 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 
 	labels := map[string]string{"app": "drain-backend"}
 
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	container.Lifecycle = &corev1.Lifecycle{
 		PreStop: &corev1.LifecycleHandler{
 			Exec: &corev1.ExecAction{Command: []string{"/bin/sh", "-c", "sleep 30"}},
@@ -373,16 +387,18 @@ func waitForInitialTargets(t *testing.T, ctx context.Context, kongClient *kong.C
 			if node.Target == nil {
 				return false
 			}
-			parts := strings.Split(*node.Target, ":")
-			if len(parts) != 2 {
-				t.Logf("unexpected target format: %s", *node.Target)
+			// Kong targets are host:port, and an IPv6 host is bracketed, so
+			// splitting on ":" does not work for them.
+			targetHost, _, err := net.SplitHostPort(*node.Target)
+			if err != nil {
+				t.Logf("unexpected target format %s: %v", *node.Target, err)
 				return false
 			}
 			if node.Weight != nil && *node.Weight == 0 {
 				t.Logf("node %s already has zero weight", *node.Target)
 				return false
 			}
-			ips = append(ips, parts[0])
+			ips = append(ips, targetHost)
 		}
 		podIPs = ips
 		return true
@@ -405,9 +421,13 @@ func waitForTerminatingEndpoint(t *testing.T, ctx context.Context, namespace, se
 		}
 		for _, slice := range sliceList.Items {
 			for _, endpoint := range slice.Endpoints {
-				if endpoint.Conditions.Terminating != nil && *endpoint.Conditions.Terminating &&
-					slices.Contains(endpoint.Addresses, terminatingIP) {
-					return true
+				if endpoint.Conditions.Terminating == nil || !*endpoint.Conditions.Terminating {
+					continue
+				}
+				for _, addr := range endpoint.Addresses {
+					if ipEqual(addr, terminatingIP) {
+						return true
+					}
 				}
 			}
 		}
@@ -430,7 +450,14 @@ func waitForWeightZero(t *testing.T, ctx context.Context, kongClient *kong.Clien
 			if node.Target == nil {
 				continue
 			}
-			if strings.HasPrefix(*node.Target, terminatingIP+":") {
+			// Kong targets are host:port, and an IPv6 host is bracketed, so
+			// match on the host rather than on a raw address prefix.
+			targetHost, _, err := net.SplitHostPort(*node.Target)
+			if err != nil {
+				t.Logf("error parsing upstream target %q: %v", *node.Target, err)
+				continue
+			}
+			if ipEqual(targetHost, terminatingIP) {
 				if node.Weight == nil || *node.Weight != 0 {
 					return false
 				}

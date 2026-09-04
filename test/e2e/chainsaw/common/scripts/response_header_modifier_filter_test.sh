@@ -18,6 +18,12 @@ set -o pipefail
 #   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 
 PROXY_IP="${PROXY_IP}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 ROUTE_PATH="${ROUTE_PATH}"
 PROXY_PORT="${PROXY_PORT}"
 HOST="${HOST}"
@@ -55,7 +61,7 @@ build_curl_cmd() {
     done
   fi
 
-  CMD="$CMD '${PROTOCOL}://${PROXY_IP}:${PROXY_PORT}${ROUTE_PATH}'"
+  CMD="$CMD '${PROTOCOL}://${PROXY_HOST}:${PROXY_PORT}${ROUTE_PATH}'"
   echo "$CMD"
 }
 

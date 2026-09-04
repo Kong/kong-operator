@@ -23,6 +23,7 @@ import (
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
+	dpconfig "github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/gatewayapi"
@@ -96,7 +97,7 @@ func TestGatewayEssentials(t *testing.T) {
 	})
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying GatewayClass has supportedFeatures set")
 	requiredFeatures, err := gatewayapi.GetSupportedFeatures(consts.RouterFlavorTraditionalCompatible)
@@ -151,7 +152,7 @@ func TestGatewayEssentials(t *testing.T) {
 	gatewayIPAddress = gateway.Status.Addresses[0].Value
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services managed by the dataplane")
 	var dataplaneService corev1.Service
@@ -283,8 +284,8 @@ func TestGatewayMultiple(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneHasNReadyPods(t, ctx, dataplaneTwoNN, clients, 1), time.Minute, time.Second)
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayOneIPAddress), testutils.SubresourceReadinessWait, time.Second)
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+gatewayTwoIPAddress), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(gatewayOneIPAddress)), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, "http://"+helpers.URLHost(gatewayTwoIPAddress)), testutils.SubresourceReadinessWait, time.Second)
 
 	t.Log("verifying services are managed by their dataplanes")
 	var dataplaneOneService corev1.Service
@@ -308,7 +309,7 @@ func TestGatewayMultiple(t *testing.T) {
 	}), time.Minute, time.Second)
 
 	t.Log("deploying backend deployment (httpbin) of HTTPRoute")
-	container := generators.NewContainer("httpbin", testutils.HTTPBinImage, 80)
+	container := testutils.NewHTTPBinContainer("httpbin", 80)
 	deployment := generators.NewDeploymentForContainer(container)
 	deployment, err = integration.GetEnv().Cluster().Client().AppsV1().Deployments(namespace.Name).Create(ctx, deployment, metav1.CreateOptions{})
 	require.NoError(t, err)
@@ -340,8 +341,8 @@ func TestGatewayMultiple(t *testing.T) {
 
 	checkPaths := func(gatewayIpAddress, goodPath, badPath string) func(t *assert.CollectT) {
 		return func(t *assert.CollectT) {
-			url := fmt.Sprintf("http://%s%s", gatewayIpAddress, goodPath)
-			bad := fmt.Sprintf("http://%s%s", gatewayIpAddress, badPath)
+			url := fmt.Sprintf("http://%s%s", helpers.URLHost(gatewayIpAddress), goodPath)
+			bad := fmt.Sprintf("http://%s%s", helpers.URLHost(gatewayIpAddress), badPath)
 
 			req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 			require.NoError(t, err)
@@ -492,8 +493,8 @@ func TestGatewayWithMultipleListeners(t *testing.T) {
 	})
 
 	t.Log("verifying connectivity to the Gateway")
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:80", gatewayIPAddress)), testutils.SubresourceReadinessWait, time.Second)
-	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s:%d", gatewayIPAddress, port8080)), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", helpers.HostPort(gatewayIPAddress, 80))), testutils.SubresourceReadinessWait, time.Second)
+	require.Eventually(t, asserts.Expect404WithNoRouteFunc(t, ctx, fmt.Sprintf("http://%s", helpers.HostPort(gatewayIPAddress, port8080))), testutils.SubresourceReadinessWait, time.Second)
 }
 
 func TestScalingDataPlaneThroughGatewayConfiguration(t *testing.T) {
@@ -776,7 +777,7 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 
 	container.Env = envs.SetValueByName(container.Env,
 		"KONG_ADMIN_LISTEN",
-		fmt.Sprintf("0.0.0.0:%d ssl reuseport backlog=16384", adminAPIPort),
+		dpconfig.DualStackListen(adminAPIPort, "ssl", "reuseport", "backlog=16384"),
 	)
 
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
