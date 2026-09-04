@@ -25,6 +25,7 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
@@ -40,6 +41,7 @@ import (
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -78,6 +80,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			&konnectv1alpha1.KonnectAIGateway{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectAIGatewayRef(mgr.GetClient())),
 		).
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestsFromMapFunc(enqueueForAIGatewayDataPlaneCertificateSecretRef(mgr.GetClient())),
+		).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
@@ -98,8 +104,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 		return ctrl.Result{}, err
 	}
 
-	// Ensure mTLS client certificate secret and set certificate condition.
-	certResult, certSecret, err := r.ensureCertificateSecret(ctx, aigwdp)
+	// Resolve the mTLS client certificate secret (automatically-provisioned
+	// or a manually-referenced one, per spec.certificateSecret) and set the
+	// certificate condition.
+	certResult, certSecret, err := r.getCertificateSecret(ctx, aigwdp, aigatewaycp)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -111,6 +119,28 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 		return ctrl.Result{}, nil
 	}
 
+	// certSecret is nil either because spec.certificateSecret was configured
+	// (Manual and invalid/missing, or configured at all with no
+	// ControlPlaneRef): a condition is already set in both cases, and there's
+	// nothing more to do until the user fixes it; or because nothing was
+	// configured and there's no ControlPlaneRef either (no condition is set,
+	// same as the Konnect conditions below; the Deployment proceeds below
+	// without any cert wiring at all). Only the former should block.
+	if certSecret == nil && aigwdp.Spec.CertificateSecret != nil {
+		return ctrl.Result{}, nil
+	}
+
+	// certChecksum identifies the certificate's content: it names the Konnect
+	// certificate entity (see certEntityName) and, further down, the Pod
+	// template's rollout-trigger annotation. Computed once so both stay in
+	// sync with exactly the Secret content read above. Both are left empty
+	// when no certificate was provisioned at all (see above).
+	var certSecretName, certChecksum string
+	if certSecret != nil {
+		certSecretName = certSecret.Name
+		certChecksum = certificateChecksum(certSecret)
+	}
+
 	// Ensure the AIGatewayDataPlaneCertificate is registered with Konnect.
 	// Return early if not yet programmed; the Owns() watch retriggeres once
 	// the Konnect controller flips Programmed to True.
@@ -118,7 +148,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 	// register the certificate against, so Konnect cert automation is skipped.
 	certProgrammed := true
 	if aigatewaycp != nil {
-		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret)
+		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret, certChecksum)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -130,8 +160,27 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 	}
 
 	// Reconcile the full AI Gateway Deployment spec.
-	if err := r.ensureDeployment(ctx, logger, aigwdp, aigatewaycp, certSecret.Name); err != nil {
+	if err := r.ensureDeployment(ctx, logger, aigwdp, aigatewaycp, certSecretName, certChecksum); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Once the rollout to the current certificate is confirmed complete (no
+	// replica can still be relying on a previous one), it's safe to remove
+	// any other Konnect certificate entities left over from an earlier
+	// rotation. Until then they're deliberately left registered so replicas
+	// still running the old certificate keep a Konnect-trusted identity.
+	if aigatewaycp != nil {
+		deployment := &appsv1.Deployment{}
+		if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
+			if !apierrors.IsNotFound(err) {
+				return ctrl.Result{}, err
+			}
+		} else if k8sutils.DeploymentRolloutComplete(deployment) &&
+			deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] == certChecksum {
+			if err := r.cleanupStaleKonnectCertificates(ctx, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
+				return ctrl.Result{}, err
+			}
+		}
 	}
 
 	// Reconcile the HPA if horizontal scaling is configured.

@@ -1,0 +1,291 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-dataplane-manual-certificate-secret
+spec:
+  description: |
+    Exercises spec.certificateSecret (Manual provisioning) on AIGatewayDataPlane: the
+    operator references an existing, user-owned TLS Secret instead of generating its own
+    mTLS client certificate.
+    1. Referenced Secret doesn't exist yet -> CertificateProvisioned=False/SecretRefNotFound,
+       Ready=False/DependenciesNotReady, no KonnectCertificateRegistered condition at all
+       (the operator never attempts Konnect registration without a usable certificate).
+    2. Referenced Secret exists but has no tls.key -> CertificateProvisioned=False/InvalidSecret.
+    3. Referenced Secret is fixed to a valid TLS keypair -> AIGatewayDataPlane reaches Ready=True,
+       and the Deployment mounts that exact Secret (never one the operator generated itself).
+    4. The Secret's content is rotated in place (same name, new keypair, e.g. simulating a
+       cert-manager renewal) -> the Deployment's pod-template checksum annotation changes,
+       proving the in-place edit triggers a rollout even though the Secret's name never changes.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: cert_secret_name
+      value: (join('-', [($test_name), 'manual-cert']))
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('', [($test_name), '.example.com']))
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Create-aigatewaydataplane-referencing-missing-secret
+      try:
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($aigw_cp_name)
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($cert_secret_name)
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: aigw
+                          image: ($aigw_dp_image)
+                network:
+                  services:
+                    ingress:
+                      type: LoadBalancer
+                      ports:
+                        - name: ingress
+                          port: 443
+                          targetPort: 8443
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectAIGatewayResolved']):
+                  - status: 'True'
+                    reason: Resolved
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: SecretRefNotFound
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (conditions[?type == 'Ready']):
+                  - status: 'False'
+                    reason: DependenciesNotReady
+    - name: 5-Create-invalid-secret
+      description: |
+        Type is deliberately Opaque, not kubernetes.io/tls: the apiserver enforces
+        tls.crt+tls.key on kubernetes.io/tls Secrets itself, which would reject this
+        apply before the operator ever saw it. Opaque lets the operator's own
+        validation (which only inspects .data, not .type) be the one under test.
+      try:
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($cert_secret_namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: not-a-real-certificate
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: InvalidSecret
+                (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (conditions[?type == 'Ready']):
+                  - status: 'False'
+                    reason: DependenciesNotReady
+    - name: 6-Fix-secret-with-valid-certificate
+      try:
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data
+                value: (json_parse($stdout).cert)
+              - name: key_data
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($cert_secret_namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_data)
+                tls.key: ($key_data)
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'KonnectAIGatewayResolved']):
+                  - status: 'True'
+                    reason: Resolved
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'KonnectCertificateRegistered']):
+                  - status: 'True'
+                    reason: KonnectCertificateRegistered
+                (conditions[?type == 'ServiceReady']):
+                  - status: 'True'
+                    reason: ServiceReady
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+                (addresses[0].value != null): true
+                (addresses[0].value != ''): true
+        - assert:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                template:
+                  spec:
+                    (volumes[?name == 'konnect-cert']):
+                      - secret:
+                          secretName: ($cert_secret_name)
+    - name: 7-Rotate-secret-in-place-and-assert-rollout
+      description: |
+        Same Secret name, brand new keypair -- the "cert-manager renewed it" scenario:
+        nothing about the AIGatewayDataPlane spec or the Secret's name changes.
+        Capturing the checksum, rotating, and asserting it changed must all happen within
+        this one step: Chainsaw scopes a script's `outputs` to the step's own try: list,
+        they are not visible from a separately-named step.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($aigw_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/aigw-dp-cert-checksum
+            content: |
+              bash ../../common/scripts/get_deployment_pod_annotation.sh
+            outputs:
+              - name: checksum_before
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data_v2
+                value: (json_parse($stdout).cert)
+              - name: key_data_v2
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($cert_secret_namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: Opaque
+              stringData:
+                tls.crt: ($cert_data_v2)
+                tls.key: ($key_data_v2)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DEPLOYMENT_NAME
+                value: ($aigw_dp_name)
+              - name: ANNOTATION_KEY
+                value: konghq.com/aigw-dp-cert-checksum
+              - name: BEFORE_VALUE
+                value: ($checksum_before)
+            content: |
+              bash ../../common/scripts/wait_for_deployment_pod_annotation_change.sh
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-dataplane-manual-certificate-secret
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -5,16 +5,18 @@ metadata:
 spec:
   description: |
     Exercises the fully-manual control plane path: spec.controlPlaneRef is left unset on the
-    AIGatewayDataPlane, so the operator performs no KonnectAIGateway lookup and no certificate
-    registration automation for it. A KonnectAIGateway and a self-signed mTLS certificate are
-    still created, and the certificate is registered with Konnect manually via an
-    AIGatewayDataPlaneCertificate referencing the KonnectAIGateway directly (the same mechanism
-    the operator itself would use, just driven by hand). The AIGatewayDataPlane's Deployment is
-    then wired to them purely through spec.deployment.podTemplateSpec: the four Konnect endpoint
-    env vars are supplied explicitly (read from the KonnectAIGateway's status), and the
-    operator's auto-provisioned cert volume is overridden to mount the manually-registered
-    certificate instead. Verifies the AIGatewayDataPlane still reaches Ready=True with no
-    KonnectAIGatewayResolved/KonnectCertificateRegistered conditions set.
+    AIGatewayDataPlane, so the operator performs no KonnectAIGateway lookup and, with no
+    certificateSecret configured either, no mTLS certificate Secret provisioning or Konnect
+    certificate registration automation at all. A KonnectAIGateway and a self-signed mTLS
+    certificate are still created, and the certificate is registered with Konnect manually via
+    an AIGatewayDataPlaneCertificate referencing the KonnectAIGateway directly (the same
+    mechanism the operator itself would use, just driven by hand). The AIGatewayDataPlane's
+    Deployment is then wired to them purely through spec.deployment.podTemplateSpec: the four
+    Konnect endpoint env vars (read from the KonnectAIGateway's status), the two Konnect mTLS
+    client cert env vars, the cert volume, and its volumeMount are all supplied explicitly, since
+    the operator adds none of them on its own with no ControlPlaneRef configured. Verifies the
+    AIGatewayDataPlane still reaches Ready=True with no
+    KonnectAIGatewayResolved/KonnectCertificateRegistered/CertificateProvisioned conditions set.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -36,6 +38,10 @@ spec:
       value: ($namespace)
     - name: aigw_dp_name
       value: (join('-', [($test_name), 'dp']))
+    - name: mismatch_dp_name
+      value: (join('-', [($test_name), 'dp-mismatch']))
+    - name: mismatch_auto_dp_name
+      value: (join('-', [($test_name), 'dp-mismatch-auto']))
     - name: aigw_dp_image
       value: (env('AIGW_DP_IMAGE'))
     - name: cert_secret_name
@@ -96,7 +102,98 @@ spec:
                 (conditions[?type == 'Programmed']):
                   - status: 'True'
                 (id != null): true
-    - name: 6-Create-aigateway-dataplane-without-controlplaneref
+    - name: 6-No-controlplaneref-but-certificateSecret-set-surfaces-mismatch
+      try:
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($mismatch_dp_name)
+                namespace: ($namespace)
+              spec:
+                # No controlPlaneRef, but certificateSecret IS configured: there's no control
+                # plane to ever use the certificate against, so the operator must refuse to
+                # provision one and surface the misconfiguration via status instead of silently
+                # ignoring it or creating a Deployment.
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($cert_secret_name)
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($mismatch_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: ControlPlaneRefMissing
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($mismatch_dp_name)
+                namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              name: ($mismatch_dp_name)
+              namespace: ($namespace)
+    - name: 7-No-controlplaneref-but-automatic-certificateSecret-surfaces-mismatch
+      try:
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($mismatch_auto_dp_name)
+                namespace: ($namespace)
+              spec:
+                # Same mismatch as the previous step, but with the default (Automatic)
+                # provisioning method instead of an explicit Manual secretRef.
+                certificateSecret:
+                  provisioning: Automatic
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($mismatch_auto_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'False'
+                    reason: ControlPlaneRefMissing
+        - error:
+            resource:
+              apiVersion: apps/v1
+              kind: Deployment
+              metadata:
+                name: ($mismatch_auto_dp_name)
+                namespace: ($namespace)
+        # No automatic certificate Secret should have been created either.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: konghq.com/aigw-dp-cert=true
+            content: |
+              bash ../../common/scripts/assert_no_resources_by_label.sh
+        - delete:
+            ref:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              name: ($mismatch_auto_dp_name)
+              namespace: ($namespace)
+    - name: 8-Create-aigateway-dataplane-without-controlplaneref
       try:
         # Read the Konnect endpoints off the manually-created KonnectAIGateway. With no
         # controlPlaneRef, the operator never reads these itself; they must be supplied
@@ -122,8 +219,9 @@ spec:
                 name: ($aigw_dp_name)
                 namespace: ($namespace)
               spec:
-                # No controlPlaneRef: the operator does no Konnect lookup or certificate
-                # automation for this AIGatewayDataPlane at all.
+                # No controlPlaneRef and no certificateSecret: the operator does no Konnect
+                # lookup and no certificate/volume/env var wiring at all for this
+                # AIGatewayDataPlane; everything below is supplied by hand.
                 deployment:
                   replicas: 1
                   podTemplateSpec:
@@ -140,10 +238,16 @@ spec:
                               value: (join(':', [($tp_endpoint), '443']))
                             - name: KONG_CLUSTER_TELEMETRY_SERVER_NAME
                               value: ($tp_endpoint)
-                      # Overrides the operator's auto-provisioned (but Konnect-unregistered)
-                      # cert secret with the one manually registered above. The operator still
-                      # sets KONG_CLUSTER_CERT/KONG_CLUSTER_CERT_KEY to point at this same
-                      # mount path regardless of controlPlaneRef.
+                            - name: KONG_CLUSTER_CERT
+                              value: /var/konnect-client-certificate/tls.crt
+                            - name: KONG_CLUSTER_CERT_KEY
+                              value: /var/konnect-client-certificate/tls.key
+                          volumeMounts:
+                            - name: konnect-cert
+                              mountPath: /var/konnect-client-certificate/
+                              readOnly: true
+                      # Mounts the certificate manually registered with Konnect above; the
+                      # operator provisions no cert volume of its own to override here.
                       volumes:
                         - name: konnect-cert
                           secret:
@@ -170,6 +274,7 @@ spec:
                   - status: 'True'
                 (length(conditions[?type == 'KonnectAIGatewayResolved'])): 0
                 (length(conditions[?type == 'KonnectCertificateRegistered'])): 0
+                (length(conditions[?type == 'CertificateProvisioned'])): 0
                 (readyReplicas > `0`): true
                 (addresses[0].value != null): true
                 (addresses[0].value != ''): true

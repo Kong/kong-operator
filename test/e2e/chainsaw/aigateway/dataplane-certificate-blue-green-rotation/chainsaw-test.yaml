@@ -1,0 +1,263 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-dataplane-certificate-blue-green-rotation
+spec:
+  description: |
+    Verifies the blue-green Konnect certificate rotation for AIGatewayDataPlane: when the
+    mTLS certificate Secret's content changes (here via Manual provisioning, since that gives
+    deterministic control over exactly when the rotation happens -- the underlying mechanism
+    is provisioning-mode-agnostic and is additionally covered for Automatic provisioning by
+    Go envtest/unit tests), the operator registers the new certificate as a SEPARATE Konnect
+    entity (AIGatewayDataPlaneCertificate) instead of overwriting the previous one in place,
+    and keeps the previous entity registered -- so replicas still running with the old
+    certificate keep a Konnect-trusted identity -- until the Deployment's rollout to the new
+    certificate genuinely completes, only then removing it.
+    1. Registers the first certificate entity (A) and reaches Ready=True.
+    2. Rotates the Secret's content in place -> a second entity (B) is registered alongside A;
+       A must still exist.
+    3. Once B is Programmed on Konnect, the Deployment rolls to it; A must still exist
+       immediately afterward, since replicas may still be running the old certificate.
+    4. Once the real rollout to the new certificate completes, A is removed and only B remains.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+    - name: cert_secret_name
+      value: (join('-', [($test_name), 'rotating-cert']))
+    - name: cert_secret_namespace
+      value: ($namespace)
+    - name: sni_hostname
+      value: (join('', [($test_name), '.example.com']))
+    - name: cert_managed_by_label_selector
+      value: (join('', ['gateway-operator.konghq.com/managed-by-name=', ($aigw_dp_name)]))
+  steps:
+    - name: 1-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 2-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 3-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: 4-Generate-and-create-tls-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-tlsSecret.yaml
+    - name: 5-Create-aigatewaydataplane-with-manual-cert
+      try:
+        - apply:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              spec:
+                controlPlaneRef:
+                  type: konnectNamespacedRef
+                  konnectNamespacedRef:
+                    name: ($aigw_cp_name)
+                certificateSecret:
+                  provisioning: Manual
+                  secretRef:
+                    name: ($cert_secret_name)
+                deployment:
+                  replicas: 1
+                  podTemplateSpec:
+                    spec:
+                      containers:
+                        - name: aigw
+                          image: ($aigw_dp_image)
+                network:
+                  services:
+                    ingress:
+                      type: LoadBalancer
+                      ports:
+                        - name: ingress
+                          port: 443
+                          targetPort: 8443
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'CertificateProvisioned']):
+                  - status: 'True'
+                    reason: CertificateProvisioned
+                (conditions[?type == 'KonnectCertificateRegistered']):
+                  - status: 'True'
+                    reason: KonnectCertificateRegistered
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+    - name: 6-Rotate-certificate-and-verify-blue-green-lifecycle
+      description: |
+        Everything from capturing the pre-rotation certificate name through the final
+        post-cleanup checks lives in this single step's try: list. Chainsaw scopes a
+        script's `outputs` to the step they're captured in -- cert_a_name and cert_b_name
+        are both needed throughout this whole sequence, so it cannot be split into
+        separately-named steps the way the numbered comments below might suggest.
+
+        1. Capture the first certificate entity's name (A).
+        2. Rotate the Secret's content in place (same name, new keypair) -- the
+           "cert-manager renewed it" scenario.
+        3. Assert a second entity (B) is registered alongside A, and A hasn't been removed.
+        4. Assert B reaches Programmed on Konnect.
+        5. Assert A is still present immediately after B is Programmed (the Deployment is
+           only just starting to roll to it -- replicas may still be running with A).
+        6. Wait for the real rollout to B to complete and A to be cleaned up as a result.
+        7. Assert the final state: AIGatewayDataPlane Ready, only B remains.
+      try:
+        # 1. Capture the first certificate entity's name (A).
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: aigatewaydataplanecertificates
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: ($cert_managed_by_label_selector)
+            content: |
+              bash ../../common/scripts/get_single_resource_name.sh
+            outputs:
+              - name: cert_a_name
+                value: (json_parse($stdout).name)
+        # 2. Rotate the Secret's content in place (same name, new keypair).
+        - script:
+            env:
+              - name: HOSTNAME
+                value: ($sni_hostname)
+            content: |
+              bash ../../common/scripts/generate_tls_certificate.sh
+            outputs:
+              - name: cert_data_v2
+                value: (json_parse($stdout).cert)
+              - name: key_data_v2
+                value: (json_parse($stdout).key)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($cert_secret_name)
+                namespace: ($cert_secret_namespace)
+                labels:
+                  konghq.com/secret: "true"
+              type: kubernetes.io/tls
+              stringData:
+                tls.crt: ($cert_data_v2)
+                tls.key: ($key_data_v2)
+        # 3. Assert a second entity (B) is registered alongside A (A must not be removed).
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: ($cert_managed_by_label_selector)
+              - name: CERT_A_NAME
+                value: ($cert_a_name)
+            content: |
+              bash ../../common/scripts/wait_for_second_aigw_certificate.sh
+            outputs:
+              - name: cert_b_name
+                value: (json_parse($stdout).cert_b_name)
+        # 4. Assert B reaches Programmed on Konnect.
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayDataPlaneCertificate
+              metadata:
+                name: ($cert_b_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        # 5. Point-in-time check (a single kubectl get, not a retry loop): right after B
+        #    becomes Programmed and the Deployment starts rolling to it, A must not have
+        #    been removed yet -- replicas may still be running with it.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: aigatewaydataplanecertificates
+              - name: RESOURCE_NAME
+                value: ($cert_a_name)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/assert_resource_exists.sh
+        # 6. Wait for the real rollout to B to complete and A to be cleaned up as a result.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: aigatewaydataplanecertificates
+              - name: RESOURCE_NAME
+                value: ($cert_a_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: TIMEOUT
+                value: "300"
+            content: |
+              bash ../../common/scripts/wait_for_resource_deleted.sh
+        # 7. Assert the final state: AIGatewayDataPlane Ready, only B remains.
+        - assert:
+            resource:
+              apiVersion: aigateway.konghq.com/v1alpha1
+              kind: AIGatewayDataPlane
+              metadata:
+                name: ($aigw_dp_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Ready']):
+                  - status: 'True'
+                    reason: Ready
+                (readyReplicas > `0`): true
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: aigatewaydataplanecertificates
+              - name: RESOURCE_NAME
+                value: ($cert_b_name)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/assert_resource_exists.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-dataplane-certificate-blue-green-rotation
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

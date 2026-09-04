@@ -32,6 +32,12 @@ const (
 
 	// SecretAIGatewayDataPlaneCertificateLabel marks a Secret as the mTLS certificate for an AI Gateway DataPlane.
 	SecretAIGatewayDataPlaneCertificateLabel = "konghq.com/aigw-dp-cert" //nolint:gosec
+
+	// AIGatewayDataPlaneCertificateChecksumAnnotation records a checksum of the mTLS
+	// certificate Secret's tls.crt/tls.key content on the Pod template, so that an
+	// in-place edit to a manually-referenced Secret (whose name does not change)
+	// still triggers a Deployment rollout.
+	AIGatewayDataPlaneCertificateChecksumAnnotation = "konghq.com/aigw-dp-cert-checksum" //nolint:gosec
 )
 
 // -----------------------------------------------------------------------------
