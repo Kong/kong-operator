@@ -19,7 +19,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
@@ -226,7 +225,7 @@ func ensureAdminServiceForDataPlane(
 
 	count := len(services)
 	if count > 1 {
-		if err := k8sreduce.ReduceServices(ctx, cl, services, dataplane.OwnedObjectPreDeleteHook); err != nil {
+		if err := k8sreduce.ReduceServices(ctx, cl, services, k8sreduce.OwnedObjectPreDeleteHook); err != nil {
 			return op.Noop, nil, err
 		}
 		return op.Noop, nil, errors.New("number of DataPlane Admin API services reduced")
@@ -304,13 +303,13 @@ func ensureIngressServiceForDataPlane(
 	count := len(services)
 	if serviceName := k8sresources.GetDataPlaneIngressServiceName(dataPlane); serviceName != "" {
 		if count > 1 || (count == 1 && services[0].Name != serviceName) {
-			if err := k8sreduce.ReduceServicesByName(ctx, cl, services, serviceName, dataplane.OwnedObjectPreDeleteHook); err != nil {
+			if err := k8sreduce.ReduceServicesByName(ctx, cl, services, serviceName, k8sreduce.OwnedObjectPreDeleteHook); err != nil {
 				return op.Noop, nil, err
 			}
 			return op.Noop, nil, errors.New("DataPlane ingress services with different names reduced")
 		}
 	} else if count > 1 {
-		if err := k8sreduce.ReduceServices(ctx, cl, services, dataplane.OwnedObjectPreDeleteHook); err != nil {
+		if err := k8sreduce.ReduceServices(ctx, cl, services, k8sreduce.OwnedObjectPreDeleteHook); err != nil {
 			return op.Noop, nil, err
 		}
 		return op.Noop, nil, errors.New("number of DataPlane ingress services reduced")

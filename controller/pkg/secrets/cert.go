@@ -31,7 +31,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -275,7 +274,7 @@ func getPreDeleteHooks[T interface {
 ) []k8sreduce.PreDeleteHook {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
-		return []k8sreduce.PreDeleteHook{dataplane.OwnedObjectPreDeleteHook}
+		return []k8sreduce.PreDeleteHook{k8sreduce.OwnedObjectPreDeleteHook}
 	default:
 		return nil
 	}

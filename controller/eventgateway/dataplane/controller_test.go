@@ -43,6 +43,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // -----------------------------------------------------------------
@@ -50,10 +51,29 @@ import (
 // -----------------------------------------------------------------
 
 const (
+	testCASecretName      = "test-ca"
+	testCASecretNamespace = "test-ns"
+	testDPName            = "my-dp"
+
 	reconcileTestNS      = testCASecretNamespace
 	reconcileTestDPName  = testDPName
 	reconcileTestKEGName = "my-keg"
 )
+
+// caSecret builds the cluster CA Secret used across Reconcile tests.
+func caSecret() *corev1.Secret {
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("Kong Test CA"),
+		certificate.WithCATrue(),
+	)
+	return &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testCASecretName},
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+}
 
 // newReconcileEGDP builds the standard KegDataPlane used across Reconcile tests.
 func newReconcileEGDP() *eventgatewayv1alpha1.KegDataPlane {

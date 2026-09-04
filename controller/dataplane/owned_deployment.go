@@ -17,7 +17,6 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane/certificates"
-	dataplanepkg "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -271,7 +270,7 @@ func listOrReduceDataPlaneDeployments(
 
 	count := len(deployments)
 	if count > 1 {
-		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, dataplanepkg.OwnedObjectPreDeleteHook); err != nil {
+		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, k8sreduce.OwnedObjectPreDeleteHook); err != nil {
 			return false, nil, err
 		}
 		return true, nil, errors.New("number of deployments reduced")

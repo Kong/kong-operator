@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -18,7 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
-	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -27,63 +28,63 @@ import (
 // helpers
 // -----------------------------------------------------------------
 
-func minimalEGDP(ns, name string) *eventgatewayv1alpha1.KegDataPlane {
-	return &eventgatewayv1alpha1.KegDataPlane{
+func minimalAIGWDP(ns, name string) *aigatewayv1alpha1.AIGatewayDataPlane {
+	return &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
 	}
 }
 
 // -----------------------------------------------------------------
-// generateBaseKafkaService
+// generateBaseIngressService
 // -----------------------------------------------------------------
 
-func Test_generateBaseKafkaService(t *testing.T) {
+func Test_GenerateBaseService(t *testing.T) {
 	const (
 		ns   = "test-ns"
 		name = "my-dp"
 	)
 
-	egdp := minimalEGDP(ns, name)
-	svc := generateBaseKafkaService(egdp)
+	aigwdp := minimalAIGWDP(ns, name)
+	svc := GenerateBaseService(aigwdp, testConfig.Service)
 
 	assert.Equal(t, "v1", svc.APIVersion)
 	assert.Equal(t, "Service", svc.Kind)
-	assert.Equal(t, name+"-kafka", svc.Name)
+	assert.Equal(t, name+"-ingress", svc.Name)
 	assert.Equal(t, ns, svc.Namespace)
 
 	// Selector must target the owning DataPlane.
-	assert.Equal(t, consts.DataPlaneManagedByLabelValue, svc.Spec.Selector[consts.GatewayOperatorManagedByLabel])
+	assert.Equal(t, consts.AIGatewayDataPlaneManagedByLabelValue, svc.Spec.Selector[consts.GatewayOperatorManagedByLabel])
 	assert.Equal(t, name, svc.Spec.Selector[consts.GatewayOperatorManagedByNameLabel])
 
-	// Default port must be the Kafka port.
+	// Default port must be the ingress port.
 	require.Len(t, svc.Spec.Ports, 1)
-	assert.Equal(t, DefaultKafkaPort, svc.Spec.Ports[0].Port)
-	assert.Equal(t, intstr.FromInt32(DefaultKafkaPort), svc.Spec.Ports[0].TargetPort)
+	assert.Equal(t, testDefaultIngressPort, svc.Spec.Ports[0].Port)
+	assert.Equal(t, intstr.FromInt32(testDefaultIngressPort), svc.Spec.Ports[0].TargetPort)
 	assert.Equal(t, corev1.ProtocolTCP, svc.Spec.Ports[0].Protocol)
 
 	// Owner reference must be set.
 	require.Len(t, svc.OwnerReferences, 1)
-	assert.Equal(t, egdp.Name, svc.OwnerReferences[0].Name)
+	assert.Equal(t, aigwdp.Name, svc.OwnerReferences[0].Name)
 }
 
 // -----------------------------------------------------------------
-// generateKafkaServiceOverlay
+// generateIngressServiceOverlay
 // -----------------------------------------------------------------
 
-func Test_generateKafkaServiceOverlay(t *testing.T) {
+func Test_GenerateServiceOverlay(t *testing.T) {
 	tests := []struct {
-		name  string
-		egdp  *eventgatewayv1alpha1.KegDataPlane
-		check func(t *testing.T, svc *corev1.Service)
+		name   string
+		aigwdp *aigatewayv1alpha1.AIGatewayDataPlane
+		check  func(t *testing.T, svc *corev1.Service)
 	}{
 		{
 			name: "type LoadBalancer propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
 								Type: corev1.ServiceTypeLoadBalancer,
 							},
 						},
@@ -96,13 +97,13 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		},
 		{
 			name: "labels and annotations propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
-								Labels:      map[eventgatewayv1alpha1.LabelName]eventgatewayv1alpha1.LabelValue{"env": "prod"},
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
+								Labels:      map[aigatewayv1alpha1.LabelName]aigatewayv1alpha1.LabelValue{"env": "prod"},
 								Annotations: map[string]string{"example.com/key": "val"},
 							},
 						},
@@ -116,18 +117,18 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		},
 		{
 			name: "custom ports mapped correctly",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
-								Ports: []eventgatewayv1alpha1.ServicePort{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
+								Ports: []aigatewayv1alpha1.ServicePort{
 									{
-										Name:       new("kafka-tls"),
-										Port:       9093,
-										TargetPort: &intstr.IntOrString{IntVal: 9093, Type: intstr.Int},
-										NodePort:   new(int32(30093)),
+										Name:       new("ingress-tls"),
+										Port:       8444,
+										TargetPort: &intstr.IntOrString{IntVal: 8444, Type: intstr.Int},
+										NodePort:   new(int32(30444)),
 									},
 								},
 							},
@@ -138,20 +139,20 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 			check: func(t *testing.T, svc *corev1.Service) {
 				require.Len(t, svc.Spec.Ports, 1)
 				p := svc.Spec.Ports[0]
-				assert.Equal(t, "kafka-tls", p.Name)
-				assert.Equal(t, int32(9093), p.Port)
-				assert.Equal(t, int32(9093), p.TargetPort.IntVal)
-				assert.Equal(t, int32(30093), p.NodePort)
+				assert.Equal(t, "ingress-tls", p.Name)
+				assert.Equal(t, int32(8444), p.Port)
+				assert.Equal(t, int32(8444), p.TargetPort.IntVal)
+				assert.Equal(t, int32(30444), p.NodePort)
 			},
 		},
 		{
 			name: "externalTrafficPolicy propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
 								ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
 							},
 						},
@@ -164,12 +165,12 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		},
 		{
 			name: "trafficDistribution propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
 								TrafficDistribution: new("PreferSameZone"),
 							},
 						},
@@ -183,12 +184,12 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		},
 		{
 			name: "internalTrafficPolicy propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
 								InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyLocal),
 							},
 						},
@@ -204,7 +205,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := generateKafkaServiceOverlay(tc.egdp)
+			svc := GenerateServiceOverlay(tc.aigwdp, testConfig.Service, testServiceOptions(tc.aigwdp))
 			require.NotNil(t, svc)
 			tc.check(t, svc)
 		})
@@ -212,50 +213,50 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 }
 
 // -----------------------------------------------------------------
-// buildKafkaService
+// buildIngressService
 // -----------------------------------------------------------------
 
-func Test_buildKafkaService(t *testing.T) {
+func Test_BuildService(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 
 	tests := []struct {
 		name    string
-		egdp    *eventgatewayv1alpha1.KegDataPlane
+		aigwdp  *aigatewayv1alpha1.AIGatewayDataPlane
 		wantErr bool
 		check   func(t *testing.T, obj client.Object)
 	}{
 		{
-			name: "no network spec: returns base service",
-			egdp: minimalEGDP("ns", "dp"),
+			name:   "no network spec: returns base service",
+			aigwdp: minimalAIGWDP("ns", "dp"),
 			check: func(t *testing.T, obj client.Object) {
-				assert.Equal(t, "dp-kafka", obj.GetName())
+				assert.Equal(t, "dp-ingress", obj.GetName())
 			},
 		},
 		{
-			name: "network set but kafka nil: returns base service",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			name: "network set but ingress nil: returns base service",
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{Services: nil},
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{Services: nil},
 				},
 			},
 			check: func(t *testing.T, obj client.Object) {
-				assert.Equal(t, "dp-kafka", obj.GetName())
+				assert.Equal(t, "dp-ingress", obj.GetName())
 			},
 		},
 		{
-			// A user port named "kafka" (same name as the base port) but on a
+			// A user port named "ingress" (same name as the base port) but on a
 			// different port number must replace the base port and not produce a
 			// Service with two ports that share the same name.
 			name: "user port with same name as base port replaces it (no duplicate names)",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
-								Ports: []eventgatewayv1alpha1.ServicePort{
-									{Name: new("kafka"), Port: 19092},
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
+								Ports: []aigatewayv1alpha1.ServicePort{
+									{Name: new("ingress"), Port: 18443},
 								},
 							},
 						},
@@ -266,26 +267,26 @@ func Test_buildKafkaService(t *testing.T) {
 				u, ok := obj.(*unstructured.Unstructured)
 				require.True(t, ok)
 				ports, _, _ := unstructured.NestedSlice(u.Object, "spec", "ports")
-				var kafkaPorts []any
+				var ingressPorts []any
 				for _, p := range ports {
 					pm, ok := p.(map[string]any)
-					if ok && pm["name"] == "kafka" {
-						kafkaPorts = append(kafkaPorts, pm)
+					if ok && pm["name"] == "ingress" {
+						ingressPorts = append(ingressPorts, pm)
 					}
 				}
-				require.Len(t, kafkaPorts, 1, "expected exactly one port named 'kafka'")
-				portNum, _, _ := unstructured.NestedInt64(kafkaPorts[0].(map[string]any), "port")
-				assert.Equal(t, int64(19092), portNum)
+				require.Len(t, ingressPorts, 1, "expected exactly one port named 'ingress'")
+				portNum, _, _ := unstructured.NestedInt64(ingressPorts[0].(map[string]any), "port")
+				assert.Equal(t, int64(18443), portNum)
 			},
 		},
 		{
-			name: "kafka service options merged: type propagated",
-			egdp: &eventgatewayv1alpha1.KegDataPlane{
+			name: "ingress service options merged: type propagated",
+			aigwdp: &aigatewayv1alpha1.AIGatewayDataPlane{
 				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
-				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
-					Network: &eventgatewayv1alpha1.NetworkOptions{
-						Services: &eventgatewayv1alpha1.Services{
-							Kafka: &eventgatewayv1alpha1.ServiceOptions{
+				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+					Network: &aigatewayv1alpha1.NetworkOptions{
+						Services: &aigatewayv1alpha1.Services{
+							Ingress: &aigatewayv1alpha1.ServiceOptions{
 								Type: corev1.ServiceTypeLoadBalancer,
 							},
 						},
@@ -294,14 +295,14 @@ func Test_buildKafkaService(t *testing.T) {
 			},
 			check: func(t *testing.T, obj client.Object) {
 				require.NotNil(t, obj)
-				assert.Equal(t, "dp-kafka", obj.GetName())
+				assert.Equal(t, "dp-ingress", obj.GetName())
 			},
 		},
 	}
 
 	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
-			obj, err := buildKafkaService(tc, testcase.egdp)
+			obj, err := BuildService(tc, testcase.aigwdp, testConfig.Service)
 			if testcase.wantErr {
 				require.Error(t, err)
 				return
@@ -314,10 +315,10 @@ func Test_buildKafkaService(t *testing.T) {
 }
 
 // -----------------------------------------------------------------
-// ensureKafkaService
+// ensureIngressService
 // -----------------------------------------------------------------
 
-func Test_ensureKafkaService(t *testing.T) {
+func Test_ensureService(t *testing.T) {
 	const (
 		ns     = "test-ns"
 		dpName = "my-dp"
@@ -326,16 +327,16 @@ func Test_ensureKafkaService(t *testing.T) {
 	tc := managedfields.NewDeducedTypeConverter()
 	scheme := managerscheme.Get()
 
-	egdp := &eventgatewayv1alpha1.KegDataPlane{
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
 		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: dpName},
 	}
 
 	tests := []struct {
-		name        string
-		buildClient func(base client.WithWatch) client.Client
-		// prepareRecorder runs before the assertion (e.g. pre-call to set state).
-		prepareRecorder func(r *Reconciler, rec *events.FakeRecorder)
+		name            string
+		buildClient     func(base client.WithWatch) client.Client
+		prepareRecorder func(r *testReconciler, rec *events.FakeRecorder)
 		wantErr         bool
+		wantNilService  bool
 		wantEvent       string
 	}{
 		{
@@ -347,8 +348,8 @@ func Test_ensureKafkaService(t *testing.T) {
 		{
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
-			prepareRecorder: func(r *Reconciler, rec *events.FakeRecorder) {
-				_, _ = r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
+			prepareRecorder: func(r *testReconciler, rec *events.FakeRecorder) {
+				_, _ = r.ensureService(context.Background(), logr.Discard(), aigwdp)
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -366,28 +367,46 @@ func Test_ensureKafkaService(t *testing.T) {
 			wantErr:   true,
 			wantEvent: "ServiceFailed",
 		},
+		{
+			name: "Get returns NotFound after apply: returns nil, nil (cache lag)",
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return apierrors.NewNotFound(corev1.Resource("services"), key.Name)
+					},
+				})
+			},
+			wantErr:        false,
+			wantNilService: true,
+			wantEvent:      "ServiceCreated",
+		},
 	}
 
 	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
 			recorder := events.NewFakeRecorder(10)
 			base := fake.NewClientBuilder().WithScheme(scheme).Build()
-			r := &Reconciler{
+			r := &testReconciler{
+				Config:        testConfig,
 				Client:        testcase.buildClient(base),
 				TypeConverter: tc,
-				eventRecorder: recorder,
+				EventRecorder: recorder,
 			}
 
 			if testcase.prepareRecorder != nil {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			_, err := r.ensureKafkaService(context.Background(), logr.Discard(), egdp)
+			svc, err := r.ensureService(context.Background(), logr.Discard(), aigwdp)
 
 			if testcase.wantErr {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
+			}
+
+			if testcase.wantNilService {
+				assert.Nil(t, svc)
 			}
 
 			if testcase.wantEvent != "" {
