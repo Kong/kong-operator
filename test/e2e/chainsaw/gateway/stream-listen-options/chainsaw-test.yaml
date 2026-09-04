@@ -6,8 +6,8 @@ spec:
   description: |
     Verifies how the operator generates the KONG_STREAM_LISTEN env on the
     DataPlane proxy Deployment for a TLS listener:
-    1. Default: with no user value, the operator generates
-       "0.0.0.0:<port> ssl reuseport".
+    1. Default: with no user value, the operator generates both the IPv4 and
+       IPv6 wildcard binds ("0.0.0.0:<port> ssl reuseport,[::]:<port> ssl reuseport").
     2. Custom options: a user-set IPv6 address and extra options
        ("[::]:<port> ssl reuseport backlog=16384") are preserved; the operator
        only enforces the port and the ssl token.
