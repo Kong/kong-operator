@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	appsv1 "k8s.io/api/apps/v1"
+	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -126,6 +127,7 @@ func (r *MCPServerDataPlaneReconciler) SetupWithManager(ctx context.Context, mgr
 		Owns(&appsv1.Deployment{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
+		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Owns(&configurationv1alpha1.KongService{}).
 		Owns(&configurationv1alpha1.KongRoute{}).
 		Owns(&configurationv1.KongPlugin{}).
@@ -223,6 +225,11 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 
 	// Ensure a Service exists for this MCPServer.
 	if err := r.ensureService(ctx, logger, mcpDataPlane); err != nil {
+		return ctrl.Result{}, err
+	}
+
+	// Ensure the HPA (or its absence) matches spec.deployment.scaling.horizontal.
+	if err := r.ensureHPA(ctx, logger, mcpDataPlane, generateWorkloadNN(mcpDataPlane).Name); err != nil {
 		return ctrl.Result{}, err
 	}
 

@@ -766,24 +766,42 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 	tests := []struct {
 		name       string
 		deployment *mcpv1alpha1.DeploymentOptions
-		want       int32
+		want       *int32
 	}{
 		{
 			name:       "no deployment options defaults to 1 replica",
 			deployment: nil,
-			want:       1,
+			want:       new(int32(1)),
 		},
 		{
 			name: "explicit replicas",
 			deployment: &mcpv1alpha1.DeploymentOptions{
 				Replicas: new(int32(3)),
 			},
-			want: 3,
+			want: new(int32(3)),
 		},
 		{
 			name:       "nil replicas defaults to 1",
 			deployment: &mcpv1alpha1.DeploymentOptions{},
-			want:       1,
+			want:       new(int32(1)),
+		},
+		{
+			name: "HPA active without minReplicas leaves replicas nil so the HPA owns it",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				Scaling: &mcpv1alpha1.Scaling{
+					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{MaxReplicas: 5},
+				},
+			},
+			want: nil,
+		},
+		{
+			name: "HPA active with minReplicas seeds replicas from it",
+			deployment: &mcpv1alpha1.DeploymentOptions{
+				Scaling: &mcpv1alpha1.Scaling{
+					HorizontalScaling: &mcpv1alpha1.HorizontalScaling{MaxReplicas: 5, MinReplicas: new(int32(2))},
+				},
+			},
+			want: new(int32(2)),
 		},
 	}
 
@@ -795,8 +813,12 @@ func Test_generateDeployment_Replicas(t *testing.T) {
 			tokenSecret := tokenSecret(mcpDataPlane)
 			deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
 
+			if tc.want == nil {
+				assert.Nil(t, deploy.Spec.Replicas)
+				return
+			}
 			require.NotNil(t, deploy.Spec.Replicas)
-			assert.Equal(t, tc.want, *deploy.Spec.Replicas)
+			assert.Equal(t, *tc.want, *deploy.Spec.Replicas)
 		})
 	}
 }

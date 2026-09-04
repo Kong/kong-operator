@@ -61,6 +61,12 @@
 
 ## Unreleased
 
+### Added
+
+- `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
+  via `spec.deployment.scaling.horizontal`.
+  [#5556](https://github.com/Kong/kong-operator/pull/5556)
+
 ### Fixes
 
 - On-prem gateway: generate a distinct Kong route for each match when its parent
