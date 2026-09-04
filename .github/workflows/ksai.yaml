@@ -19,7 +19,7 @@ on:
 
 env:
   # renovate: datasource=github-tags depName=Kong/ksai extractVersion=^ksai/v(?<version>.+)$
-  KSAI_REF: ksai/v3.28.0
+  KSAI_REF: ksai/v3.31.1
 
 jobs:
   # Authorization runs in its own job, before the review job's concurrency group, so an
