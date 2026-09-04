@@ -9,16 +9,11 @@ import (
 // skippedTestsShared are ShortNames of tests need to be skipped for both Standard and Hybrid.
 var skippedTestsShared = []string{}
 
-var skippedTestsForStandard = []string{
-	// TODO: https://github.com/kubernetes-sigs/gateway-api/issues/5121
-	// The readiness probe can establish a TCP connection before the TCPRoute
-	// configuration reaches the data plane, causing the test to fail with EOF.
-	tests.TCPRouteWeightedRouting.ShortName,
-}
+var skippedTestsForStandard = []string{}
 
 var skippedTestsForHybrid = []string{
 
-	// Core profile.
+	// Extended profile.
 	tests.HTTPRouteMethodMatching.ShortName,
 	tests.HTTPRouteQueryParamMatching.ShortName,
 }
