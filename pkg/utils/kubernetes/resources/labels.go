@@ -9,6 +9,7 @@ import (
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -91,6 +92,10 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 			consts.GatewayOperatorManagedByLabel: consts.KonnectExtensionManagedByLabelValue,
 		}
 	case *konnectv1alpha1.MCPServer:
+		return client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.MCPServerManagedByLabelValue,
+		}
+	case *mcpv1alpha1.MCPServerDataPlane:
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.MCPServerManagedByLabelValue,
 		}

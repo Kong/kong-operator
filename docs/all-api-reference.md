@@ -18022,7 +18022,8 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 
 | Field | Description |
 | --- | --- |
-| `replicas` _*int32_ | Replicas describes the number of desired pods. |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This field and the scaling field are mutually exclusive: you can only configure one or the other. |
+| `scaling` _[Scaling](#mcp-konghq-com-v1alpha1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
 | `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the MCP server Deployment metadata by the operator. |
 | `labels` _map[string]string_ | Labels are custom labels that are propagated to the MCP server Deployment metadata by the operator. |
 | `podTemplateSpec` _[MCPServerDataPlanePodTemplateSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanepodtemplatespec)_ | PodTemplateSpec defines PodTemplateSpec for managed Deployment's Pods. |
@@ -18030,6 +18031,26 @@ DeploymentOptions specifies options for the Deployment managed by the MCPServerD
 _Appears in:_
 
 - [MCPServerDataPlaneSpec](#mcp-konghq-com-v1alpha1-types-mcpserverdataplanespec)
+
+#### HorizontalScaling
+
+
+HorizontalScaling defines horizontal scaling options for the deployment.
+It holds all the options from the HorizontalPodAutoscalerSpec besides the
+ScaleTargetRef which is being controlled by the Operator.
+
+
+
+| Field | Description |
+| --- | --- |
+| `minReplicas` _*int32_ | minReplicas is the lower limit for the number of replicas to which the autoscaler can scale down.  It defaults to 1 pod.  minReplicas is allowed to be 0 if the alpha feature gate HPAScaleToZero is enabled and at least one Object or External metric is configured.  Scaling is active as long as at least one metric value is available. |
+| `maxReplicas` _int32_ | maxReplicas is the upper limit for the number of replicas to which the autoscaler can scale up. It cannot be less that minReplicas. |
+| `metrics` _[MetricSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#metricspec-v2-autoscaling) array_ | metrics contains the specifications for which to use to calculate the desired replica count (the maximum replica count across all metrics will be used).  The desired replica count is calculated multiplying the ratio between the target value and the current value by the current number of pods.  Ergo, metrics used must decrease as the pod count is increased, and vice-versa.  See the individual metric source types for more information about how each type of metric must respond. If not set, the default metric will be set to 80% average CPU utilization. |
+| `behavior` _[HorizontalPodAutoscalerBehavior](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#horizontalpodautoscalerbehavior-v2-autoscaling)_ | behavior configures the scaling behavior of the target in both Up and Down directions (scaleUp and scaleDown fields respectively). If not set, the default HPAScalingRules for scale up and scale down are used. |
+
+_Appears in:_
+
+- [Scaling](#mcp-konghq-com-v1alpha1-types-scaling)
 
 #### KonnectNamespacedRef
 
@@ -18184,4 +18205,19 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnectNamespacedRef` | MCPServerRefTypeKonnectNamespacedRef references a MCPServer<br />resource in the same namespace as the MCPServerDataPlane.<br /> |
+
+#### Scaling
+
+
+Scaling defines the scaling options for the deployment.
+
+
+
+| Field | Description |
+| --- | --- |
+| `horizontal` _[HorizontalScaling](#mcp-konghq-com-v1alpha1-types-horizontalscaling)_ | HorizontalScaling defines horizontal scaling options for the deployment. |
+
+_Appears in:_
+
+- [DeploymentOptions](#mcp-konghq-com-v1alpha1-types-deploymentoptions)
 

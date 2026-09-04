@@ -236,13 +236,33 @@ func generateDeployment(
 		consts.GatewayOperatorManagedByNameLabel: mcpDataPlane.Name,
 	}
 
-	var replicas int32 = 1
-	if deploy := mcpDataPlane.Spec.Deployment; deploy != nil {
-		if deploy.Replicas != nil {
-			replicas = *deploy.Replicas
-		}
+	// dpOpts may be nil since spec.deployment is optional, unlike DataPlane's
+	// always-present spec.deployment.
+	dpOpts := mcpDataPlane.Spec.Deployment
+	var replicas *int32
+	switch {
+	// When the replicas are set and scaling is unset then set the replicas
+	// to the value of the replicas field.
+	case dpOpts != nil && dpOpts.Replicas != nil && dpOpts.Scaling == nil:
+		replicas = dpOpts.Replicas
 
-		// TODO: handle other scaling types (e.g. HPA) in the future when API adds them.
+	// When replicas field is unset and scaling is set, we set the replicas
+	// to the minReplicas value (if it's specified).
+	// We do this to ensure immediate scaling up to the minReplicas value
+	// before the HPA kicks in.
+	case dpOpts != nil &&
+		dpOpts.Replicas == nil &&
+		dpOpts.Scaling != nil &&
+		dpOpts.Scaling.HorizontalScaling != nil &&
+		dpOpts.Scaling.HorizontalScaling.MinReplicas != nil:
+		replicas = dpOpts.Scaling.HorizontalScaling.MinReplicas
+
+	// We set the default to 1 if no replicas or scaling is specified because
+	// we cannot set the default in the CRD due to the fact that the default
+	// would prevent us from being able to use CRD Validation Rules to enforce
+	// either replicas or scaling sections specified.
+	case dpOpts == nil || (dpOpts.Replicas == nil && dpOpts.Scaling == nil):
+		replicas = new(int32(1))
 	}
 
 	patEnvVar := patEnvVarFromAuth(tokenSecret)
@@ -265,7 +285,7 @@ func generateDeployment(
 			},
 		},
 		Spec: appsv1.DeploymentSpec{
-			Replicas: &replicas,
+			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
 				MatchLabels: selectorLabels,
 			},
