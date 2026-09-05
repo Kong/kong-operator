@@ -209,7 +209,8 @@ func getKongSNIForUID(ctx context.Context, sdk sdkkonnectgo.SNIsSDK, sni *config
 		return "", fmt.Errorf("failed listing %s: %w", sni.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), sni)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), sni)
+	return id, err
 }
 
 func sniMatch(konnectSNI *sdkkonnectcomp.Sni, sni *configurationv1alpha1.KongSNI) bool {
