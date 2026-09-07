@@ -82,6 +82,7 @@ spec:
                   operator cannot see it at all.
                 properties:
                   provisioning:
+                    default: Automatic
                     description: |-
                       Provisioning is the method used to provision the certificate. It can be
                       either Manual or Automatic. In case manual provisioning is used, the

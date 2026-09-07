@@ -202,18 +202,19 @@ func (r *Reconciler) cleanupStaleKonnectCertificates(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 	currentCertName string,
 ) error {
+	// Select by owner reference rather than the managed-by labels: certificates
+	// created before those labels existed still carry an owner reference (see
+	// SetOwnerForObject in ensureKonnectCertificate) and would otherwise be
+	// invisible to this List, left orphaned in Konnect forever.
 	var certs aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList
-	if err := r.List(ctx, &certs,
-		client.InNamespace(aigwdp.Namespace),
-		client.MatchingLabels(selectorLabelsForAIGatewayDataPlane(aigwdp)),
-	); err != nil {
+	if err := r.List(ctx, &certs, client.InNamespace(aigwdp.Namespace)); err != nil {
 		return fmt.Errorf("failed to list AIGatewayDataPlaneCertificates for AIGatewayDataPlane %s/%s: %w",
 			aigwdp.Namespace, aigwdp.Name, err)
 	}
 
 	for i := range certs.Items {
 		stale := &certs.Items[i]
-		if stale.Name == currentCertName {
+		if stale.Name == currentCertName || !metav1.IsControlledBy(stale, aigwdp) {
 			continue
 		}
 		if err := r.Delete(ctx, stale); err != nil && !apierrors.IsNotFound(err) {

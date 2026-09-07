@@ -26,6 +26,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 const (
@@ -290,17 +291,34 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 	}
 }
 
-// managedCert builds an AIGatewayDataPlaneCertificate CR carrying the same
-// managed-by labels ensureKonnectCertificate sets, so it's discoverable by
-// cleanupStaleKonnectCertificates' List call.
+// managedCert builds an AIGatewayDataPlaneCertificate CR owned by aigwdp, so
+// it's discoverable by cleanupStaleKonnectCertificates' List call regardless
+// of whether it also carries the managed-by labels (older, pre-upgrade CRs
+// may not).
 func managedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
-	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		ObjectMeta: metav1.ObjectMeta{
 			Name:      name,
 			Namespace: aigwdp.Namespace,
 			Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
 		},
 	}
+	k8sutils.SetOwnerForObject(cert, aigwdp)
+	return cert
+}
+
+// unlabeledManagedCert builds an AIGatewayDataPlaneCertificate CR owned by
+// aigwdp but carrying no managed-by labels, mirroring certificates created
+// before those labels existed.
+func unlabeledManagedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      name,
+			Namespace: aigwdp.Namespace,
+		},
+	}
+	k8sutils.SetOwnerForObject(cert, aigwdp)
+	return cert
 }
 
 func Test_cleanupStaleKonnectCertificates(t *testing.T) {
@@ -312,7 +330,7 @@ func Test_cleanupStaleKonnectCertificates(t *testing.T) {
 		stale2 := managedCert("test-dp-stale2", aigwdp)
 		// A cert belonging to a different AIGatewayDataPlane must never be touched.
 		otherDPCert := managedCert("other-dp-current", &aigatewayv1alpha1.AIGatewayDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: "other-dp", Namespace: "default"},
+			ObjectMeta: metav1.ObjectMeta{Name: "other-dp", Namespace: "default", UID: types.UID("other-dp-uid-456")},
 		})
 
 		cl := fake.NewClientBuilder().
@@ -343,6 +361,27 @@ func Test_cleanupStaleKonnectCertificates(t *testing.T) {
 		require.NoError(t, err)
 
 		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
+	})
+
+	t.Run("deletes a stale cert with no managed-by labels, as long as it's owned by aigwdp", func(t *testing.T) {
+		// Mirrors a certificate created before the managed-by labels existed:
+		// it must still be found and cleaned up via its owner reference.
+		current := managedCert("test-dp-current", aigwdp)
+		stalePreUpgrade := unlabeledManagedCert("test-dp", aigwdp)
+
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithObjects(current, stalePreUpgrade).
+			Build()
+		r := &Reconciler{Client: cl, eventRecorder: events.NewFakeRecorder(10)}
+
+		err := r.cleanupStaleKonnectCertificates(t.Context(), logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"current cert must survive")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stalePreUpgrade.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"unlabeled pre-upgrade cert must be deleted based on its owner reference")
 	})
 
 	t.Run("List error is propagated", func(t *testing.T) {

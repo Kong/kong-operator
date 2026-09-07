@@ -147,6 +147,7 @@ type CertificateSecret struct {
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Manual;Automatic
+	// +kubebuilder:default=Automatic
 	Provisioning *CertificateProvisioningMethod `json:"provisioning,omitempty"`
 
 	// SecretRef is the reference to the Secret containing the mTLS client
@@ -164,7 +165,7 @@ type SecretRef struct {
 	//
 	// +required
 	// +kubebuilder:validation:MaxLength=253
-	Name string `json:"name"`
+	Name string `json:"name,omitempty"`
 }
 
 // DeploymentOptions specifies options for the Deployment managed by the AIGatewayDataPlane controller.

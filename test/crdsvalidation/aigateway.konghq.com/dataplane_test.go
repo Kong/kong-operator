@@ -287,6 +287,20 @@ func TestAIGatewayDataPlane(t *testing.T) {
 			{
 				Name:       "certificateSecret unset - valid (defaults to Automatic)",
 				TestObject: validDataPlane(ns.Name),
+				Assert: func(t *testing.T, dp *aigatewayv1alpha1.AIGatewayDataPlane) {
+					// provisioning's default only applies once certificateSecret itself is
+					// present; omitting certificateSecret entirely must not make the API
+					// server materialize it just to fill in the nested default.
+					assert.Nil(t, dp.Spec.CertificateSecret)
+				},
+			},
+			{
+				Name: "certificateSecret set with provisioning absent - valid (defaults to Automatic)",
+				TestObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					dp := validDataPlane(ns.Name)
+					dp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{}
+					return dp
+				}(),
 			},
 			{
 				Name: "Automatic without secretRef - valid",

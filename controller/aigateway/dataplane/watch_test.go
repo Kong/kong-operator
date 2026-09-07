@@ -117,17 +117,6 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	}
 }
 
-// aiGatewayDataPlaneCertificateSecretRefForTest mirrors the production index
-// extractor (internal/utils/index/aigatewaydataplane.go), so these tests
-// exercise the same "namespace/name" index shape the real controller registers.
-func aiGatewayDataPlaneCertificateSecretRefForTest(obj client.Object) []string {
-	dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
-	if !ok || dp.Spec.CertificateSecret == nil || dp.Spec.CertificateSecret.SecretRef == nil {
-		return nil
-	}
-	return []string{dp.Namespace + "/" + dp.Spec.CertificateSecret.SecretRef.Name}
-}
-
 func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 	const (
 		ns         = "test-ns"
@@ -160,15 +149,15 @@ func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 
 	scheme := managerscheme.Get()
 
-	cl := fake.NewClientBuilder().
+	builder := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(secret, aigwdpMatching, aigwdpOther).
-		WithIndex(
-			&aigatewayv1alpha1.AIGatewayDataPlane{},
-			index.IndexFieldAIGatewayDataPlaneOnCertificateSecret,
-			aiGatewayDataPlaneCertificateSecretRefForTest,
-		).
-		Build()
+		WithObjects(secret, aigwdpMatching, aigwdpOther)
+	for _, o := range index.OptionsForAIGatewayDataPlane() {
+		if o.Field == index.IndexFieldAIGatewayDataPlaneOnCertificateSecret {
+			builder = builder.WithIndex(o.Object, o.Field, o.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
 
 	tests := []struct {
 		name    string

@@ -185,10 +185,10 @@ func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
 }
 
 // TestAIGatewayDataPlaneReconciler_ManualCertificateSecret verifies that an
-// AIGatewayDataPlane referencing an existing, user-owned TLS Secret via
-// spec.certificateSecret gets a Deployment that mounts that exact Secret,
-// without the operator ever creating its own automatically-provisioned
-// certificate Secret.
+// AIGatewayDataPlane with a resolved ControlPlaneRef, referencing an
+// existing, user-owned TLS Secret via spec.certificateSecret, gets a
+// Deployment that mounts that exact Secret, without the operator ever
+// creating its own automatically-provisioned certificate Secret.
 func TestAIGatewayDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	t.Parallel()
 
@@ -221,16 +221,15 @@ func TestAIGatewayDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 	}
 	require.NoError(t, cl.Create(ctx, userSecret))
 
-	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "aigwdp-manual-cert", Namespace: ns.Name},
-		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+	aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+		"aigwcp-manual-cert", "konnect-id-manual-cert", "aigwdp-manual-cert",
+		aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			CertificateSecret: &aigatewayv1alpha1.CertificateSecret{
 				Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
 				SecretRef:    &aigatewayv1alpha1.SecretRef{Name: userSecret.Name},
 			},
 		},
-	}
-	require.NoError(t, cl.Create(ctx, aigwdp))
+	)
 
 	deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
 	var certVolume *corev1.Volume

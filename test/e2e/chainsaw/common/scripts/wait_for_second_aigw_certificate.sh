@@ -14,8 +14,8 @@ set -o pipefail
 #   NAMESPACE: The namespace to search in.
 #   LABEL_SELECTOR: Label selector matching all certificates owned by the AIGatewayDataPlane.
 #   CERT_A_NAME: Name of the certificate entity that existed before the rotation.
-#   MAX_RETRIES: (optional) Number of attempts. Default: 90.
-#   RETRY_DELAY: (optional) Seconds between attempts. Default: 2.
+#   MAX_RETRIES: (optional) Number of attempts. Default: 180.
+#   RETRY_DELAY: (optional) Seconds between attempts. Default: 1.
 
 NAMESPACE="${NAMESPACE}"
 LABEL_SELECTOR="${LABEL_SELECTOR}"
