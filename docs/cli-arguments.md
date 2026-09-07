@@ -128,7 +128,7 @@ rows:
   - flag: '`--enable-conversion-webhook`'
     type: '`bool`'
     description: "Enable the conversion webhook."
-    default: '`true`'
+    default: '`false`'
   - flag: '`--enable-fqdn-mode`'
     type: '`bool`'
     description: "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery."
