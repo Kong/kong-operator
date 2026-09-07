@@ -18717,7 +18717,7 @@ spec:
             == ''konnect.konghq.com'' && e.kind == ''KonnectExtension'') || (e.group
             == ''gateway-operator.konghq.com'' && e.kind == ''DataPlaneMetricsExtension''))
             : true'
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}

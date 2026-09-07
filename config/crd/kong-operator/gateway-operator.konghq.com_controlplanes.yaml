@@ -8823,7 +8823,7 @@ spec:
           rule: has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers)
             && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name
             == 'controller' && has(c.image))
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}

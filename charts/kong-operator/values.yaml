@@ -140,7 +140,7 @@ global:
     # prints a deprecation warning after install/upgrade.
     # See charts/kong-operator/CHANGELOG.md for details.
     conversion:
-      enabled: true
+      enabled: false
     # Enable validating admission webhook for ControlPlane resources.
     validating:
       # Enable the creation of ValidatingWebhookConfiguration for resources

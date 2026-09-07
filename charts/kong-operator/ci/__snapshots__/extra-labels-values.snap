@@ -61777,7 +61777,7 @@ spec:
         x-kubernetes-validations:
         - message: ControlPlane requires an image to be set on controller container
           rule: has(self.spec.deployment.podTemplateSpec) && has(self.spec.deployment.podTemplateSpec.spec.containers) && self.spec.deployment.podTemplateSpec.spec.containers.exists(c, c.name == 'controller' && has(c.image))
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
@@ -89558,7 +89558,7 @@ spec:
         x-kubernetes-validations:
         - message: Extension not allowed for GatewayConfiguration
           rule: 'has(self.spec.extensions) ? self.spec.extensions.all(e, (e.group == ''konnect.konghq.com'' && e.kind == ''KonnectExtension'') || (e.group == ''gateway-operator.konghq.com'' && e.kind == ''DataPlaneMetricsExtension'')) : true'
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
