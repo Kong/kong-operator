@@ -8,7 +8,7 @@ spec:
     DataPlane proxy Deployment for a TLS listener:
     1. Default: with no user value, the operator generates a listen bound to
        the wildcard address(es) of the cluster's detected IP family
-       (--dataplane-ip-family=auto). This test runs against an IPv4-only
+       (--ip-family=auto). This test runs against an IPv4-only
        cluster, so the default is IPv4-only ("0.0.0.0:<port> ssl reuseport");
        a dual-stack or IPv6-only cluster would additionally/instead get the
        IPv6 wildcard bind.
