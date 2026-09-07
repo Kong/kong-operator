@@ -10,57 +10,68 @@ import (
 	"github.com/samber/lo"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 )
 
-// DualStackListen renders a Kong listen value bound to both the IPv4 and the
-// IPv6 wildcard address for the given port, so the listener is reachable on
-// IPv4-only and IPv6-only clusters alike. See consts.ListenAddressIPv6 for why
-// both addresses are needed.
-func DualStackListen(port int, options ...string) string {
+// ListenValue renders a Kong listen value for the given port, bound to the
+// wildcard address(es) of the given IP family.
+func ListenValue(family ipfamily.IPFamily, port int, options ...string) string {
 	var suffix string
 	if len(options) > 0 {
 		suffix = " " + strings.Join(options, " ")
 	}
 	p := strconv.Itoa(port)
-	return fmt.Sprintf("%s%s, %s%s",
-		net.JoinHostPort(consts.ListenAddressIPv4, p), suffix,
-		net.JoinHostPort(consts.ListenAddressIPv6, p), suffix,
-	)
+	ipv4 := net.JoinHostPort(consts.ListenAddressIPv4, p) + suffix
+	ipv6 := net.JoinHostPort(consts.ListenAddressIPv6, p) + suffix
+
+	switch family {
+	case ipfamily.IPv6:
+		return ipv6
+	case ipfamily.Dual:
+		return fmt.Sprintf("%s, %s", ipv4, ipv6)
+	case ipfamily.IPv4, ipfamily.Auto:
+		fallthrough
+	default:
+		return ipv4
+	}
 }
 
-// KongDefaults are the baseline Kong proxy configuration options needed for
-// the proxy to function.
-var KongDefaults = map[string]string{
-	"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
-	"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
-	"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
-	"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
-	"KONG_CLUSTER_LISTEN":         "off",
-	"KONG_DATABASE":               "off",
-	"KONG_NGINX_WORKER_PROCESSES": "2",
-	kongPluginsEnvVarName:         kongPluginsDefaultValue,
-	"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
-	"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
-	"KONG_PORT_MAPS":              "80:8000, 443:8443",
-	"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
-	"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
-	"KONG_PROXY_LISTEN": strings.Join([]string{
-		DualStackListen(consts.DataPlaneProxyPort, "reuseport", "backlog=16384"),
-		DualStackListen(consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384"),
-	}, ", "),
-	"KONG_STATUS_LISTEN":                  DualStackListen(consts.DataPlaneStatusPort),
-	"KONG_USE_STANDARD_GRPC_STATUS_CODES": "on",
+// KongDefaults returns the baseline Kong proxy configuration options needed
+// for the proxy to function, with its listen addresses rendered for the
+// given IP family.
+func KongDefaults(family ipfamily.IPFamily) map[string]string {
+	return map[string]string{
+		"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
+		"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
+		"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
+		"KONG_ADMIN_GUI_ERROR_LOG":    "/dev/stderr",
+		"KONG_CLUSTER_LISTEN":         "off",
+		"KONG_DATABASE":               "off",
+		"KONG_NGINX_WORKER_PROCESSES": "2",
+		kongPluginsEnvVarName:         kongPluginsDefaultValue,
+		"KONG_PORTAL_API_ACCESS_LOG":  "/dev/stdout",
+		"KONG_PORTAL_API_ERROR_LOG":   "/dev/stderr",
+		"KONG_PORT_MAPS":              "80:8000, 443:8443",
+		"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
+		"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
+		"KONG_PROXY_LISTEN": strings.Join([]string{
+			ListenValue(family, consts.DataPlaneProxyPort, "reuseport", "backlog=16384"),
+			ListenValue(family, consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384"),
+		}, ", "),
+		"KONG_STATUS_LISTEN":                  ListenValue(family, consts.DataPlaneStatusPort),
+		"KONG_USE_STANDARD_GRPC_STATUS_CODES": "on",
 
-	"KONG_ADMIN_LISTEN": DualStackListen(consts.DataPlaneAdminAPIPort, "ssl", "reuseport", "backlog=16384"),
+		"KONG_ADMIN_LISTEN": ListenValue(family, consts.DataPlaneAdminAPIPort, "ssl", "reuseport", "backlog=16384"),
 
-	// MTLS
-	"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
-	"KONG_ADMIN_SSL_CERT_KEY":                 "/var/cluster-certificate/tls.key",
-	"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
-	"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
-	"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
+		// MTLS
+		"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
+		"KONG_ADMIN_SSL_CERT_KEY":                 "/var/cluster-certificate/tls.key",
+		"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
+		"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
+	}
 }
 
 // kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for

@@ -15,6 +15,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 )
 
 const deprecationPrefix = "WARN: DEPRECATED (it has no effect): "
@@ -59,6 +60,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.DurationVar(&cfg.CacheSyncTimeout, "cache-sync-timeout", 0, "Sets the time limit for syncing controller caches. Defaults to the controller-runtime value if set to `0`.")
 	flagSet.StringVar(&cfg.ClusterDomain, "cluster-domain", ingressmgrconfig.DefaultClusterDomain, "The cluster domain. This is used e.g. in generating addresses for upstream services.")
 	flagSet.BoolVar(&cfg.FQDNModeEnabled, "enable-fqdn-mode", ingressmgrconfig.DefaultFQDNModeEnabled, "Enable FQDN mode for the operator. FQDNMode indicates whether to use FQDN endpoints for service discovery.")
+	flagSet.Var(newValidatedValue(&cfg.IPFamily, ipfamily.New, withDefault(ipfamily.Auto)), "ip-family", "IP family of the cluster, used e.g. to decide which IP family (or families) DataPlanes' Kong listens bind to. Possible values: auto, ipv4, ipv6, dual. When 'auto' (default), the operator detects the cluster's IP family at startup.")
 	flagSet.DurationVar(&cfg.CacheSyncPeriod, "cache-sync-period", 0, "Sets the minimum frequency for reconciling watched resources. Defaults to the controller-runtime value if unspecified or set to 0s.")
 	flagSet.BoolVar(&cfg.EmitKubernetesEvents, "emit-kubernetes-events", ingressmgrconfig.DefaultEmitKubernetesEvents, "Emit Kubernetes events for successful configuration applies, translation failures and configuration apply failures on managed objects.")
 	flagSet.Var(newValidatedValue(&cfg.WatchNamespaces, manager.NewWatchNamespaces), "watch-namespaces", "Comma-separated list of namespaces to watch. If empty (default), all namespaces are watched.")

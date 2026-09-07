@@ -10,6 +10,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -26,7 +27,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 	}
 
 	t.Run("nil doesn't panic", func(t *testing.T) {
-		FillContainerEnvs(nil, nil, consts.DataPlaneProxyContainerName, EnvVarMapToSlice(KongDefaults))
+		FillContainerEnvs(nil, nil, consts.DataPlaneProxyContainerName, EnvVarMapToSlice(KongDefaults(ipfamily.IPv4)))
 	})
 
 	testcases := []struct {
@@ -53,7 +54,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				},
 			},
 			expected: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["TEST_1"] = "VALUE_1"
 				ret := toSortedSlice(m)
 				sort.Sort(k8sutils.SortableEnvVars(ret))
@@ -78,7 +79,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				},
 			},
 			expected: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["KONG_ADMIN_ACCESS_LOG"] = "/dev/null"
 				ret := toSortedSlice(m)
 				sort.Sort(k8sutils.SortableEnvVars(ret))
@@ -98,7 +99,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				},
 			},
 			existing: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["RED"] = "RED"
 				m["BLUE"] = "BLUE"
 				ret := toSortedSlice(m)
@@ -106,7 +107,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				return ret
 			}(),
 			expected: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["RED"] = "RED"
 				m["BLUE"] = "BLUE"
 				ret := toSortedSlice(m)
@@ -132,7 +133,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				},
 			},
 			existing: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["RED"] = "RED"
 				m["BLUE"] = "BLUE"
 				ret := toSortedSlice(m)
@@ -140,7 +141,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 				return ret
 			}(),
 			expected: func() []corev1.EnvVar {
-				m := maps.Clone(KongDefaults)
+				m := maps.Clone(KongDefaults(ipfamily.IPv4))
 				m["RED"] = "RED"
 				m["BLUE"] = "OVERRIDE"
 				ret := toSortedSlice(m)
@@ -151,7 +152,7 @@ func TestFillDataPlaneProxyContainerEnvs(t *testing.T) {
 	}
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			FillContainerEnvs(tc.existing, tc.podTemplateSpec, consts.DataPlaneProxyContainerName, EnvVarMapToSlice(KongDefaults))
+			FillContainerEnvs(tc.existing, tc.podTemplateSpec, consts.DataPlaneProxyContainerName, EnvVarMapToSlice(KongDefaults(ipfamily.IPv4)))
 			container := k8sutils.GetPodContainerByName(&tc.podTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 			require.Equal(t, tc.expected, container.Env)
 		})

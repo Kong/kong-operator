@@ -27,6 +27,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers"
 )
@@ -1067,7 +1068,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					},
 				},
 			}
-			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners)
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners, ipfamily.Dual)
 			if tc.expectedError != nil {
 				require.EqualError(t, tc.expectedError, err.Error())
 				return
@@ -1088,6 +1089,48 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				"listener port maps should equal: expected %v, actual %v",
 				tc.expectedPortMap, portMap,
 			)
+		})
+	}
+}
+
+func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
+	listeners := []gwtypes.Listener{
+		{
+			Name:     "tls",
+			Protocol: gatewayv1.TLSProtocolType,
+			Port:     gatewayv1.PortNumber(8899),
+		},
+	}
+
+	for _, tt := range []struct {
+		family   ipfamily.IPFamily
+		expected string
+	}{
+		{family: ipfamily.IPv4, expected: "0.0.0.0:8899 ssl reuseport"},
+		{family: ipfamily.IPv6, expected: "[::]:8899 ssl reuseport"},
+		{family: ipfamily.Dual, expected: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport"},
+	} {
+		t.Run(tt.family.String(), func(t *testing.T) {
+			opts := operatorv1beta1.DataPlaneOptions{
+				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+					DeploymentOptions: operatorv1beta1.DeploymentOptions{
+						PodTemplateSpec: &corev1.PodTemplateSpec{
+							Spec: corev1.PodSpec{
+								Containers: []corev1.Container{
+									{Name: consts.DataPlaneProxyContainerName},
+								},
+							},
+						},
+					},
+				},
+			}
+
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+			require.NoError(t, err)
+
+			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container)
+			assert.Equal(t, tt.expected, k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"))
 		})
 	}
 }

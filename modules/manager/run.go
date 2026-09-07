@@ -53,6 +53,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -87,6 +88,11 @@ type Config struct {
 	ClusterDomain            string
 	FQDNModeEnabled          bool
 	EmitKubernetesEvents     bool
+	// IPFamily is the cluster's IP family, used to decide which IP family
+	// (or families) DataPlanes' Kong listens bind to. Defaults to
+	// ipfamily.Auto, in which case Run resolves it to a concrete family by
+	// detecting the cluster's IP family before controllers are set up.
+	IPFamily ipfamily.IPFamily
 	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
 	SecretLabelSelector string
 	// ConfigMapLabelSelector specifies the label which will be used to limit the ingestion of configmaps. Only those that have this label set to "true" will be ingested.
@@ -179,6 +185,7 @@ func DefaultConfig() Config {
 		SecretLabelSelector:           mgrconfig.DefaultSecretLabelSelector,
 		ConfigMapLabelSelector:        mgrconfig.DefaultConfigMapLabelSelector,
 		LoggerOpts:                    &zap.Options{},
+		IPFamily:                      ipfamily.Auto,
 		GatewayControllerEnabled:      true,
 		ControlPlaneControllerEnabled: true,
 		DataPlaneControllerEnabled:    true,
@@ -338,6 +345,8 @@ func Run(
 			return fmt.Errorf("unable to add SSA TypeConverter readyz check: %w", err)
 		}
 	}
+
+	cfg.IPFamily = ipfamily.Resolve(ctx, cfg.IPFamily, mgr.GetAPIReader(), setupLog.WithName("ipfamily"))
 
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {

@@ -41,6 +41,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
@@ -74,6 +75,7 @@ func (r *Reconciler) createDataPlane(
 		&dataplane.Spec.DataPlaneOptions,
 		gateway.Spec.Listeners,
 		gatewayConfig.Spec.ListenersOptions,
+		r.DataPlaneIPFamily,
 	); err != nil {
 		return nil, err
 	}
@@ -1298,8 +1300,9 @@ func setDataPlaneOptionsForListeners(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
 	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+	dataPlaneIPFamily ipfamily.IPFamily,
 ) error {
-	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners)
+	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners, dataPlaneIPFamily)
 	if err != nil {
 		return err
 	}
@@ -1318,6 +1321,7 @@ func isKnownPort(portNumber int) bool {
 func setDataPlaneDeploymentListenPorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
+	dataPlaneIPFamily ipfamily.IPFamily,
 ) (map[int]int, error) {
 
 	if opts.Deployment.PodTemplateSpec == nil {
@@ -1416,9 +1420,23 @@ func setDataPlaneDeploymentListenPorts(
 		// One template is derived per user-configured SSL endpoint, so a dual-stack
 		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
 		// bind addresses (with their own options) for every generated Kong port.
-		templates := []streamListenTemplate{
-			{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
-			{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
+		var templates []streamListenTemplate
+		switch dataPlaneIPFamily {
+		case ipfamily.IPv6:
+			templates = []streamListenTemplate{
+				{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
+			}
+		case ipfamily.Dual:
+			templates = []streamListenTemplate{
+				{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
+				{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
+			}
+		case ipfamily.IPv4, ipfamily.Auto:
+			fallthrough
+		default:
+			templates = []streamListenTemplate{
+				{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
+			}
 		}
 		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
