@@ -115,6 +115,7 @@ jobs:
       # any change there breaks this workflow with no change here.
       - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
         with:
+          allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
           ksai_ref: ${{ env.KSAI_REF }}
           trigger_phrase: "/ksai"
           # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
