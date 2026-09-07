@@ -601,6 +601,43 @@ func Test_buildDeployment(t *testing.T) {
 	}
 }
 
+// Test_buildDeployment_ChecksumSurvivesUserAnnotationOverlay verifies that a
+// user-supplied PodTemplateSpec overlay cannot pin the certificate checksum
+// annotation to its own value: SMD merge lets the user overlay win on
+// conflicts, so without re-asserting the operator's checksum afterward, a
+// user-set value here would silently stop certificate rotations from
+// triggering a rollout.
+func Test_buildDeployment_ChecksumSurvivesUserAnnotationOverlay(t *testing.T) {
+	tc := managedfields.NewDeducedTypeConverter()
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			Deployment: &aigatewayv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					ObjectMeta: metav1.ObjectMeta{
+						Annotations: map[string]string{
+							consts.AIGatewayDataPlaneCertificateChecksumAnnotation: "user-pinned-value",
+						},
+					},
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{Name: consts.AIGatewayDataPlaneContainerName, Image: "custom/aigw:overlay"},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	u, err := buildDeployment(logr.Discard(), tc, aigwdp, testKonnectAIGateway("cp.example.com", "tp.example.com"),
+		"custom/aigw:overlay", "cert-secret", "operator-checksum")
+	require.NoError(t, err)
+
+	checksum, _, err := unstructured.NestedString(u.Object,
+		"spec", "template", "metadata", "annotations", consts.AIGatewayDataPlaneCertificateChecksumAnnotation)
+	require.NoError(t, err)
+	assert.Equal(t, "operator-checksum", checksum)
+}
+
 // -----------------------------------------------------------------
 // ensureDeployment
 // -----------------------------------------------------------------

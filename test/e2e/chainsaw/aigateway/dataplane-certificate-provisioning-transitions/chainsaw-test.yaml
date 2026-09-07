@@ -14,9 +14,14 @@
 # Scenario C: switch back to Manual with the same secretRef. The Deployment is rolled back onto
 #   the user-owned Secret from Scenario A.
 #
-# Scenario D: switch to Automatic again. The SAME operator-provisioned Secret from Scenario B is
-#   reused (proving EnsureCertificate finds it by owner/subject rather than creating a new one
-#   every time), and the AIGatewayDataPlane remains Ready=True throughout.
+# The switch back to Manual in Scenario C also deletes the Automatic Secret provisioned in
+#   Scenario B once the Deployment has rolled onto the Manual one: nothing guarantees a later
+#   switch back to Automatic ever happens, so the Secret can't be left around indefinitely
+#   waiting for that.
+#
+# Scenario D: switch to Automatic again. Since the Scenario B Secret was deleted in Scenario C,
+#   the operator provisions a brand new Secret (not the same one as Scenario B), and the
+#   AIGatewayDataPlane remains Ready=True throughout.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: Test
 metadata:
@@ -26,9 +31,9 @@ spec:
     Tests that switching an AIGatewayDataPlane's spec.certificateSecret.provisioning between
     Manual (same-namespace secretRef) and Automatic repeatedly re-evaluates certificate
     provisioning correctly every time: Manual mounts the exact user-owned Secret referenced,
-    Automatic provisions (and later reuses, rather than recreating) its own operator-managed
-    Secret, and the AIGatewayDataPlane's conditions and Deployment volume are updated to match
-    on every transition.
+    Automatic provisions its own operator-managed Secret and deletes it once a later switch to
+    Manual has fully rolled out, and the AIGatewayDataPlane's conditions and Deployment volume
+    are updated to match on every transition.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -188,7 +193,7 @@ spec:
         set it now omits it, which isn't reliable across independent apply steps in a test.
       try:
         # Scenario B: Manual -> Automatic.
-        - apply:
+        - patch:
             resource:
               apiVersion: aigateway.konghq.com/v1alpha1
               kind: AIGatewayDataPlane
@@ -246,7 +251,7 @@ spec:
                       - secret:
                           secretName: ($automatic_cert_secret_name)
         # Scenario C: switch back to Manual, same secretRef as Scenario A.
-        - apply:
+        - patch:
             resource:
               apiVersion: aigateway.konghq.com/v1alpha1
               kind: AIGatewayDataPlane
@@ -286,8 +291,21 @@ spec:
                     (volumes[?name == 'konnect-cert']):
                       - secret:
                           secretName: ($manual_cert_secret_name)
-        # Scenario D: switch to Automatic again; the SAME Secret from Scenario B must be reused.
-        - apply:
+        # The Deployment's rollout onto the Manual Secret above confirms cleanupStaleAutomaticCertificateSecret's
+        # rollout-complete gate is satisfied, so the Scenario B Automatic Secret must now be deleted.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: RESOURCE_NAME
+                value: ($automatic_cert_secret_name)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/wait_for_resource_deleted.sh
+        # Scenario D: switch to Automatic again; a NEW Secret is provisioned since the Scenario B
+        # one was just deleted above.
+        - patch:
             resource:
               apiVersion: aigateway.konghq.com/v1alpha1
               kind: AIGatewayDataPlane
@@ -313,6 +331,21 @@ spec:
                   - status: 'True'
                     reason: Ready
                 (readyReplicas > `0`): true
+        # The new Secret's name isn't predictable and must differ from the deleted Scenario B one,
+        # so it's looked up by label again rather than assumed to be ($automatic_cert_secret_name).
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: LABEL_SELECTOR
+                value: ($cert_managed_by_label_selector)
+            content: |
+              bash ../../common/scripts/get_single_resource_name.sh
+            outputs:
+              - name: second_automatic_cert_secret_name
+                value: (json_parse($stdout).name)
         - assert:
             resource:
               apiVersion: apps/v1
@@ -325,4 +358,16 @@ spec:
                   spec:
                     (volumes[?name == 'konnect-cert']):
                       - secret:
-                          secretName: ($automatic_cert_secret_name)
+                          secretName: ($second_automatic_cert_secret_name)
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-dataplane-certificate-provisioning-transitions
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

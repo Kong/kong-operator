@@ -140,6 +140,17 @@ func buildDeployment(
 		if err != nil {
 			return nil, err
 		}
+
+		// The user overlay wins on annotation conflicts, so a user-supplied
+		// value for this key would otherwise silently pin the checksum and
+		// stop rollouts from being triggered on certificate rotation.
+		if certChecksum != "" {
+			if err := unstructured.SetNestedField(u.Object, certChecksum,
+				"spec", "template", "metadata", "annotations",
+				consts.AIGatewayDataPlaneCertificateChecksumAnnotation); err != nil {
+				return nil, fmt.Errorf("failed to re-assert certificate checksum annotation: %w", err)
+			}
+		}
 	}
 
 	// Remove spec.strategy so we don't claim SSA ownership of it.

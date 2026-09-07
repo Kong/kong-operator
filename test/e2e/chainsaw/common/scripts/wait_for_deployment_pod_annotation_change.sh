@@ -29,8 +29,11 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 AFTER_VALUE=""
 
 for ATTEMPT in $(seq 1 "$MAX_RETRIES"); do
-  AFTER_VALUE=$(kubectl get deployment "$DEPLOYMENT_NAME" -n "$NAMESPACE" -o json | \
-    jq -r --arg key "$ANNOTATION_KEY" '.spec.template.metadata.annotations[$key] // ""')
+  if ! RAW=$(kubectl get deployment "$DEPLOYMENT_NAME" -n "$NAMESPACE" -o json 2>/dev/null); then
+    [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]] && sleep "$RETRY_DELAY"
+    continue
+  fi
+  AFTER_VALUE=$(echo "$RAW" | jq -r --arg key "$ANNOTATION_KEY" '.spec.template.metadata.annotations[$key] // ""')
 
   if [[ -n "$AFTER_VALUE" && "$AFTER_VALUE" != "$BEFORE_VALUE" ]]; then
     cat <<EOF

@@ -95,8 +95,12 @@
    `controlPlaneRef`-less `AIGatewayDataPlane` hand-wired (via
    `spec.deployment.podTemplateSpec`) to a same-cluster, operator-managed
    `ControlPlane` loses that auto-issued certificate and must supply its own via
-   `spec.certificateSecret` or `spec.deployment.podTemplateSpec`.
+   `spec.deployment.podTemplateSpec`. `spec.certificateSecret` is not a valid
+   remedy here: with no `spec.controlPlaneRef` it sets
+   `CertificateProvisioned=False/ControlPlaneRefMissing` and the operator stops
+   reconciling the Deployment, the HPA and the ingress Service entirely.
    [#5548](https://github.com/Kong/kong-operator/pull/5548)
+
 - `AIGatewayDataPlane`: the Deployment's Pod template now carries a certificate
    checksum annotation. On upgrade, this causes a one-time rolling restart of
    every existing `AIGatewayDataPlane` Deployment that has a `spec.controlPlaneRef`.
@@ -140,9 +144,8 @@
    `ResolvedRefs=False` with reason `RefNotPermitted` and is marked invalid.
    Previously such references were allowed with a warning only.
    [#2908](https://github.com/Kong/kong-operator/issues/2908)
-
 - EventGateway CRDs (Tech Preview) which allow referencing a `Secret` through
-`secretRef`, now require the key name to be provided.
+   `secretRef`, now require the key name to be provided.
 
 So:
 
@@ -372,6 +375,7 @@ secretRef:
    [#4990](https://github.com/Kong/kong-operator/pull/4990)
 - Security: harden container for `AIGatewayDataPlane` and `KegDataPlane`
    runtime `Deployment` with a tight security context:
+
    - disallows privilege escalation
    - drop all capabilities (except for `NET_BIND_SERVICE` to allow binding to ports < 1024)
    - run as non-root user
@@ -837,6 +841,7 @@ secretRef:
    [#4143](https://github.com/Kong/kong-operator/issues/4143)
 - Add the following headers in requests of `ingress-controller` sent to Konnect
    for uploading configuration for tracing:
+
    - `X-Kic-Konnect-Sync-Instance-Id` for instance ID of Konnect config synchronizer.
       It is set to use the `ControlPlane`'s instance ID.
    - `X-Kic-Konnect-Sync-Serial-Number` for serial number of config sync round.
@@ -880,6 +885,7 @@ secretRef:
    grant is deleted or the Gateway is deleted.
    [#3258](https://github.com/Kong/kong-operator/pull/3258)
 - Added leader election configuration through the following flags:
+
    - `--leader-election-lease-duration`
    - `--leader-election-renew-deadline`
    - `--leader-election-retry-period`
@@ -1510,6 +1516,7 @@ secretRef:
       [#2336](https://github.com/Kong/kong-operator/pull/2336)
    - Add `adopt.mode` field to the CRDs that support adopting existing entities.
       Supported modes:
+
       - `match`: read-only adoption. The operator adopts the referenced remote entity
          only when this CR's spec matches the remote configuration
          (no writes to the remote system).
@@ -1847,6 +1854,7 @@ secretRef:
    unless explicitly overridden.
    [#1870](https://github.com/Kong/kong-operator/pull/1870)
 - Introduce `ControlPlane` in version `v2alpha1`
+
    - Usage of the last valid config for fallback configuration is enabled by default,
       can be adjusted in the `spec.translation.fallbackConfiguration.useLastValidConfig` field.
       [#1939](https://github.com/Kong/kong-operator/issues/1939)
@@ -1909,6 +1917,7 @@ secretRef:
    actual configured values based on the defaults and the `spec` fields.
    [#1771](https://github.com/kong/kong-operator/pull/1771)
 - Added the following CLI flags to control operator's behavior:
+
    - `--cache-sync-timeout` to control controller-runtime's time limit set to wait for syncing caches.
       [#1818](https://github.com/kong/kong-operator/pull/1818)
    - `--cache-sync-period` to control controller-runtime's cache sync period.
@@ -1916,6 +1925,7 @@ secretRef:
 
 - Support the following configuration for running control plane managers in
    the `ControlPlane` CRD:
+
    - Specifying the delay to wait for Kubernetes object caches sync before
       updating dataplanes by `spec.cache.initSyncDuration`
       [#1858](https://github.com/Kong/kong-operator/pull/1858)
@@ -1946,6 +1956,7 @@ secretRef:
    only available when the `ControlPlane`'s `spec.configDump.state` is set to `enabled`.
    The `{req_type}` stands for the request type of dumping configuration.
    Supported `{req_type}`s are:
+
    - `successful` for configuration in the last successful application.
    - `failed` for configuration in the last failed application.
    - `fallback` for configuration applied in the last fallback procedure.
@@ -2040,6 +2051,7 @@ secretRef:
 - Add `namespacedRef` support for referencing networks in `KonnectCloudGatewayDataPlaneGroupConfiguration`
    [#1423](https://github.com/kong/kong-operator/pull/1423)
 - Introduced new CLI flags:
+
    - `--logging-mode` (or `GATEWAY_OPERATOR_LOGGING_MODE` env var) to set the logging mode (`development` can be set
       for simplified logging).
    - `--validate-images` (or `GATEWAY_OPERATOR_VALIDATE_IMAGES` env var) to enable ControlPlane and DataPlane image
@@ -2174,6 +2186,7 @@ secretRef:
 - Added support for `KongConsumer` `credentials` in Konnect entities support.
    Users can now specify credentials for `KongConsumer`s in `Secret`s and reference
    them in `KongConsumer`s' `credentials` field.
+
    - `basic-auth` [#1120](https://github.com/kong/kong-operator/pull/1120)
    - `key-auth` [#1168](https://github.com/kong/kong-operator/pull/1168)
    - `acl` [#1187](https://github.com/kong/kong-operator/pull/1187)
@@ -2181,6 +2194,7 @@ secretRef:
    - `hmac` [#1222](https://github.com/kong/kong-operator/pull/1222)
 
 - Added prometheus metrics for Konnect entity operations in the metrics server:
+
    - `gateway_operator_konnect_entity_operation_count` for number of operations.
    - `gateway_operator_konnect_entity_operation_duration_milliseconds` for duration of operations.
       [#953](https://github.com/kong/kong-operator/pull/953)
@@ -2410,6 +2424,7 @@ secretRef:
    [#571](https://github.com/kong/kong-operator/pull/571)
 - Annotating the following resource with the `konghq.com/plugins` annotation results in
    the creation of a managed `KongPluginBinding` resource:
+
    - `KongService` [#550](https://github.com/kong/kong-operator/pull/550)
    - `KongRoute` [#644](https://github.com/kong/kong-operator/pull/644)
    - `KongConsumer` [#676](https://github.com/kong/kong-operator/pull/676)
@@ -2421,6 +2436,7 @@ secretRef:
    the consumer from/to the consumer groups.
    [#592](https://github.com/kong/kong-operator/pull/592)
 - Add support for `KongConsumer` credentials:
+
    - basic-auth [#625](https://github.com/kong/kong-operator/pull/625)
    - API key [#635](https://github.com/kong/kong-operator/pull/635)
    - ACL [#661](https://github.com/kong/kong-operator/pull/661)
@@ -2805,6 +2821,7 @@ Due to [golang proxy caching modules indefinitely](https://sum.golang.org/#faq-r
 - Added `spec.deployment.rollout.strategy.blueGreen.resources.plan.deployment`
    which controls how operator manages `DataPlane` `Deployment`'s during and after
    a rollout. This can currently take 1 value:
+
    - `ScaleDownOnPromotionScaleUpOnRollout` which will scale down the `DataPlane`
       preview deployment to 0 replicas before a rollout is triggered via a spec change.
       [kong/kong-operator-archive#1000](https://github.com/kong/kong-operator-archive/pull/1000)
@@ -2858,6 +2875,7 @@ Due to [golang proxy caching modules indefinitely](https://sum.golang.org/#faq-r
    [kong/kong-operator-archive#989](https://github.com/kong/kong-operator-archive/pull/989)
 - Disable `ControlPlane` and `Gateway` controllers by default.
    Users who want to enable those can use the command line flags:
+
    - `-enable-controller-controlplane` and
    - `-enable-controller-gateway`
       At this time, the Gateway API and `ControlPlane` resources that these

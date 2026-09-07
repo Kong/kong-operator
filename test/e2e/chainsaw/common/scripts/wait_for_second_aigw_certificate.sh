@@ -26,8 +26,11 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 NAMES_JSON="[]"
 
 for ATTEMPT in $(seq 1 "$MAX_RETRIES"); do
-  NAMES_JSON=$(kubectl get aigatewaydataplanecertificates -n "$NAMESPACE" -l "$LABEL_SELECTOR" -o json | \
-    jq -c '[.items[].metadata.name]')
+  if ! RAW=$(kubectl get aigatewaydataplanecertificates -n "$NAMESPACE" -l "$LABEL_SELECTOR" -o json 2>/dev/null); then
+    [[ "$ATTEMPT" -lt "$MAX_RETRIES" ]] && sleep "$RETRY_DELAY"
+    continue
+  fi
+  NAMES_JSON=$(echo "$RAW" | jq -c '[.items[].metadata.name]')
 
   FOUND_A=$(echo "$NAMES_JSON" | jq --arg a "$CERT_A_NAME" 'any(. == $a)')
   if [[ "$FOUND_A" != "true" ]]; then

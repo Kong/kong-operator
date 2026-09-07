@@ -168,7 +168,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 	// replica can still be relying on a previous one), it's safe to remove
 	// any other Konnect certificate entities left over from an earlier
 	// rotation. Until then they're deliberately left registered so replicas
-	// still running the old certificate keep a Konnect-trusted identity.
+	// still running the old certificate keep a Konnect-trusted identity. The
+	// same rollout-complete gate applies to removing an operator-provisioned
+	// Secret left behind by a switch away from Automatic provisioning.
 	if aigatewaycp != nil {
 		deployment := &appsv1.Deployment{}
 		if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
@@ -179,6 +181,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 			deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] == certChecksum {
 			if err := r.cleanupStaleKonnectCertificates(ctx, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
 				return ctrl.Result{}, err
+			}
+			cs := aigwdp.Spec.CertificateSecret
+			if cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning {
+				if err := r.cleanupStaleAutomaticCertificateSecret(ctx, logger, aigwdp); err != nil {
+					return ctrl.Result{}, err
+				}
 			}
 		}
 	}

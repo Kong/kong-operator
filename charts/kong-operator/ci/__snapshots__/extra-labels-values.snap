@@ -20627,7 +20627,10 @@ spec:
                   when ControlPlaneRef is unset, no certificate is provisioned at all (there's no
                   KonnectAIGateway to ever register one against), and mTLS, if the AI Gateway
                   needs it for a manually-wired control plane, must be configured entirely by
-                  hand via Deployment.PodTemplateSpec.
+                  hand via Deployment.PodTemplateSpec. Setting this field while ControlPlaneRef
+                  is unset is rejected rather than ignored: CertificateProvisioned goes
+                  False/ControlPlaneRefMissing and the operator stops reconciling the
+                  Deployment, the HPA and the ingress Service entirely.
 
                   When Provisioning is Manual, SecretRef must point to an existing Secret
                   of type kubernetes.io/tls (tls.crt + tls.key) that the operator will use
@@ -20635,7 +20638,10 @@ spec:
                   must live in this AIGatewayDataPlane's own namespace and must carry the operator's
                   secret label selector (default "konghq.com/secret: \"true\"",
                   configurable via --secret-label-selector on the operator), or the
-                  operator cannot see it at all.
+                  operator cannot see it at all. Switching Provisioning from Automatic to
+                  Manual deletes the previously operator-provisioned Secret once the
+                  Deployment has rolled onto the Manual one; switching back to Automatic
+                  later provisions a new one rather than reusing the deleted one.
                 properties:
                   provisioning:
                     default: Automatic

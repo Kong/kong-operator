@@ -4,14 +4,17 @@ import (
 	"context"
 	"testing"
 
+	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonconsts "github.com/kong/kong-operator/v2/api/common/consts"
@@ -251,6 +254,29 @@ func Test_getManualCertificateSecret(t *testing.T) {
 			assert.Equal(t, string(tc.wantCondReason), cond.Reason)
 		})
 	}
+
+	t.Run("transient Get error is not reported as a missing Secret", func(t *testing.T) {
+		aigwdp := aigwdpWithManualCertRef()
+		base := fake.NewClientBuilder().WithScheme(scheme).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			Get: func(_ context.Context, _ client.WithWatch, _ client.ObjectKey, _ client.Object, _ ...client.GetOption) error {
+				return assert.AnError
+			},
+		})
+		r := &Reconciler{Client: cl}
+
+		res, secret, err := r.getManualCertificateSecret(context.Background(), aigwdp)
+
+		assert.Equal(t, op.Noop, res)
+		assert.Nil(t, secret)
+		require.Error(t, err)
+
+		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType))
+		require.NotNil(t, cond)
+		assert.Equal(t, metav1.ConditionFalse, cond.Status)
+		assert.Equal(t, string(aigatewayv1alpha1.UnableToProvisionReason), cond.Reason)
+		assert.Contains(t, cond.Message, "failed to read certificate Secret")
+	})
 }
 
 func Test_getCertificateSecret_dispatch(t *testing.T) {
@@ -333,5 +359,78 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 		require.NotNil(t, cond)
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, string(aigatewayv1alpha1.CertificateControlPlaneRefMissingReason), cond.Reason)
+	})
+}
+
+func Test_cleanupStaleAutomaticCertificateSecret(t *testing.T) {
+	scheme := managerscheme.Get()
+
+	t.Run("deletes the operator-provisioned Secret owned by the AIGatewayDataPlane", func(t *testing.T) {
+		aigwdp := makeAIGWDP()
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp, caSecret()).Build()
+		r := &Reconciler{
+			Client:                   cl,
+			ClusterCASecretName:      testCASecretName,
+			ClusterCASecretNamespace: testCASecretNamespace,
+			CertTTL:                  consts.DefaultCertTTL,
+		}
+		_, automaticSecret, err := r.ensureCertificateSecret(context.Background(), aigwdp)
+		require.NoError(t, err)
+		require.NotNil(t, automaticSecret)
+
+		err = r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		require.NoError(t, err)
+
+		err = cl.Get(t.Context(), types.NamespacedName{Namespace: automaticSecret.Namespace, Name: automaticSecret.Name}, &corev1.Secret{})
+		assert.True(t, apierrors.IsNotFound(err), "automatic certificate Secret must be deleted")
+	})
+
+	t.Run("no automatic Secret present: no-op", func(t *testing.T) {
+		aigwdp := makeAIGWDP()
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp).Build()
+		r := &Reconciler{Client: cl}
+
+		err := r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		require.NoError(t, err)
+	})
+
+	t.Run("List error is propagated", func(t *testing.T) {
+		aigwdp := makeAIGWDP()
+		base := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return assert.AnError
+			},
+		})
+		r := &Reconciler{Client: cl}
+
+		err := r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to list automatic certificate Secrets")
+	})
+
+	t.Run("non-NotFound Delete error is propagated", func(t *testing.T) {
+		aigwdp := makeAIGWDP()
+		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp, caSecret()).Build()
+		r := &Reconciler{
+			Client:                   cl,
+			ClusterCASecretName:      testCASecretName,
+			ClusterCASecretNamespace: testCASecretNamespace,
+			CertTTL:                  consts.DefaultCertTTL,
+		}
+		_, automaticSecret, err := r.ensureCertificateSecret(context.Background(), aigwdp)
+		require.NoError(t, err)
+		require.NotNil(t, automaticSecret)
+
+		failingClient := interceptor.NewClient(cl, interceptor.Funcs{
+			Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+				return assert.AnError
+			},
+		})
+		r.Client = failingClient
+
+		err = r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete stale automatic certificate Secret")
 	})
 }
