@@ -105,6 +105,51 @@ func TestMCPServerDataPlane(t *testing.T) {
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("deployment replicas and scaling are mutually exclusive", func(t *testing.T) {
+		common.TestCasesGroup[*mcpv1alpha1.MCPServerDataPlane]{
+			{
+				Name: "only replicas set - valid",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						Replicas: new(int32(2)),
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "only scaling set - valid",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						Scaling: &mcpv1alpha1.Scaling{
+							HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
+								MaxReplicas: 5,
+							},
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "both replicas and scaling set - invalid",
+				TestObject: func() *mcpv1alpha1.MCPServerDataPlane {
+					obj := validMCPServerDataPlane(ns.Name)
+					obj.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+						Replicas: new(int32(2)),
+						Scaling: &mcpv1alpha1.Scaling{
+							HorizontalScaling: &mcpv1alpha1.HorizontalScaling{
+								MaxReplicas: 5,
+							},
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("Using both replicas and scaling fields is not allowed."),
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("pod template metadata labels and annotations", func(t *testing.T) {
 		common.TestCasesGroup[*mcpv1alpha1.MCPServerDataPlane]{
 			{
