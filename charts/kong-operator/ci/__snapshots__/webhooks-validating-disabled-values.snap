@@ -102692,7 +102692,7 @@ spec:
           rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef'
         - message: spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration
           rule: '(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''APIAuthValid'' && c.status == ''True'')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef'
-    served: true
+    served: false
     storage: false
     subresources:
       status: {}
