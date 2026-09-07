@@ -72,8 +72,7 @@
 - Removed the conversion webhook wiring from generated CRDs and the Helm chart.
   `ControlPlane`, `GatewayConfiguration` and `KonnectGatewayControlPlane` CRDs no
   longer carry a `spec.conversion` block, and their deprecated versions
-  (`v1beta1`/`v1alpha1`) are now always installed with `strategy: None` instead of
-  being gated behind `global.webhooks.conversion.enabled`. Reads of these resources
+  (`v1beta1`/`v1alpha1`) are now unserved. Reads of these resources
   through a deprecated version no longer get field translation; migrate to the
   storage version (`v2beta1`/`v1alpha2`) instead. The chart keeps
   `global.webhooks.conversion.enabled` in its values for backward compatibility, but
