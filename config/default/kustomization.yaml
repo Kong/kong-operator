@@ -39,13 +39,6 @@ replacements:
     options:
       delimiter: '.'
       index: 0
-  - select:
-      kind: CustomResourceDefinition
-      group: apiextensions.k8s.io
-      version: v1
-      name: controlplanes.gateway-operator.konghq.com
-    fieldPaths:
-    - spec.conversion.webhook.clientConfig.service.name
 - source:
     kind: Service
     version: v1
@@ -67,44 +60,3 @@ replacements:
     options:
       delimiter: '.'
       index: 1
-  - select:
-      kind: CustomResourceDefinition
-      group: apiextensions.k8s.io
-      version: v1
-      name: controlplanes.gateway-operator.konghq.com
-    fieldPaths:
-    - spec.conversion.webhook.clientConfig.service.namespace
-- source:
-    kind: Certificate
-    group: cert-manager.io
-    version: v1
-    name: gateway-operator-serving-cert
-    fieldPath: metadata.name
-  targets:
-  - select:
-      kind: CustomResourceDefinition
-      group: apiextensions.k8s.io
-      version: v1
-      name: controlplanes.gateway-operator.konghq.com
-    fieldPaths:
-    - metadata.annotations.[cert-manager.io/inject-ca-from]
-    options:
-      delimiter: '/'
-      index: 1
-- source:
-    kind: Certificate
-    group: cert-manager.io
-    version: v1
-    name: gateway-operator-serving-cert
-    fieldPath: metadata.namespace
-  targets:
-  - select:
-      kind: CustomResourceDefinition
-      group: apiextensions.k8s.io
-      version: v1
-      name: controlplanes.gateway-operator.konghq.com
-    fieldPaths:
-    - metadata.annotations.[cert-manager.io/inject-ca-from]
-    options:
-      delimiter: '/'
-      index: 0

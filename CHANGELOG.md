@@ -67,6 +67,21 @@
   via `spec.deployment.scaling.horizontal`.
   [#5556](https://github.com/Kong/kong-operator/pull/5556)
 
+### Deprecated
+
+- Removed the conversion webhook wiring from generated CRDs and the Helm chart.
+  `ControlPlane`, `GatewayConfiguration` and `KonnectGatewayControlPlane` CRDs no
+  longer carry a `spec.conversion` block, and their deprecated versions
+  (`v1beta1`/`v1alpha1`) are now always installed with `strategy: None` instead of
+  being gated behind `global.webhooks.conversion.enabled`. Reads of these resources
+  through a deprecated version no longer get field translation; migrate to the
+  storage version (`v2beta1`/`v1alpha2`) instead. The chart keeps
+  `global.webhooks.conversion.enabled` in its values for backward compatibility, but
+  it no longer has any effect other than printing a deprecation warning when set to
+  `true`. The `--enable-conversion-webhook` CLI flag and the conversion webhook Go
+  code are unchanged, but the chart no longer provisions a serving certificate for
+  it, so it now defaults to disabled.
+
 ### Fixes
 
 - On-prem gateway: generate a distinct Kong route for each match when its parent

@@ -99,11 +99,6 @@ spec:
         - containerPort: 8080
           name: metrics
           protocol: TCP
-{{- if .Values.global.webhooks.conversion.enabled }}
-        - containerPort: 9443
-          name: webhook-server
-          protocol: TCP
-{{- end }}
 {{- if .Values.global.webhooks.validating.enabled }}
         - containerPort: 5443
           name: admission

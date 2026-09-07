@@ -1,7 +1,5 @@
 global:
   webhooks:
-    conversion:
-      enabled: false
     validating:
       enabled: false
 env:

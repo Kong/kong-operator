@@ -18,9 +18,6 @@ kind: Kustomization
 resources:
   - kong-operator
 
-patches:
-  - path: patches/zz_generated_conversion_webhook.yaml
-
 configurations:
   - kustomizeconfig.yaml" > "${file_path}"
 }
