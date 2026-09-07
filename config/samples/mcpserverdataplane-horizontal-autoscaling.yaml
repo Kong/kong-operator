@@ -1,0 +1,91 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: demo-auth
+  namespace: default
+spec:
+  type: token
+  token: kpat_XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  serverURL: eu.api.konghq.tech
+---
+kind: KonnectGatewayControlPlane
+apiVersion: konnect.konghq.com/v1alpha2
+metadata:
+  name: cp-test1
+  namespace: default
+spec:
+  createControlPlaneRequest:
+    name: test1
+    labels:
+      app: test1
+      key1: test1
+    description: "An API Gateway for testing"
+  konnect:
+    authRef:
+      name: demo-auth
+---
+kind: MCPServer
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: mcpserver1
+  namespace: default
+spec:
+  source: Mirror
+  mirror:
+    konnect:
+      id: 045cf9df-0000-0000-0000-000000000000
+  controlPlaneRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: cp-test1
+---
+kind: MCPServerDataPlane
+apiVersion: mcp.konghq.com/v1alpha1
+metadata:
+  name: horizontal-autoscaling
+  namespace: default
+spec:
+  mcpServerRef:
+    type: konnectNamespacedRef
+    konnectNamespacedRef:
+      name: mcpserver1
+  deployment:
+    scaling:
+      horizontal:
+        minReplicas: 2
+        maxReplicas: 10
+        metrics:
+        - type: Resource
+          resource:
+            name: cpu
+            target:
+              type: Utilization
+              averageUtilization: 20
+        behavior:
+          scaleDown:
+            stabilizationWindowSeconds: 1
+            policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 2
+          scaleUp:
+            stabilizationWindowSeconds: 1
+            policies:
+            - type: Percent
+              value: 100
+              periodSeconds: 2
+            - type: Pods
+              value: 5
+              periodSeconds: 2
+            selectPolicy: Max
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: mcp-server
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "250m"
+            limits:
+              memory: "512Mi"
+              cpu: "500m"
