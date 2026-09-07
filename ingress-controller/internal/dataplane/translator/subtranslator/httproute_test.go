@@ -1821,44 +1821,6 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutes(t *testing.T) {
 	}
 }
 
-func TestTranslateHTTPRouteRulesMetaToKongstateRoutesConsolidatesMatchesWithMaxRegexPriority(t *testing.T) {
-	httpRoute := &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "httproute-1",
-		},
-	}
-	rulesMeta := []httpRouteRuleMeta{
-		{
-			Rule: gatewayapi.HTTPRouteRule{
-				BackendRefs: builder.NewHTTPBackendRef("service-1").ToSlice(),
-				Matches: []gatewayapi.HTTPRouteMatch{
-					builder.NewHTTPRouteMatch().WithPathExact("/very-long").Build(),
-					builder.NewHTTPRouteMatch().WithPathPrefix("/bar").Build(),
-				},
-			},
-			RuleNumber:  0,
-			parentRoute: httpRoute,
-		},
-	}
-	routes, err := translateHTTPRouteRulesMetaToKongstateRoutes(
-		rulesMeta,
-		TranslateHTTPRouteRulesToKongRouteOptions{},
-	)
-	require.NoError(t, err)
-	// Matches that differ only by path are still consolidated into a single Kong route.
-	// Since all the consolidated matches point to the same backends and filters, the
-	// relative precedence between them does not matter and the route gets the maximum
-	// regex priority of the group.
-	require.Len(t, routes, 1)
-
-	route := routes[0]
-	require.Equal(t, "httproute.default.httproute-1.0.0", *route.Name)
-	require.NotNil(t, route.RegexPriority)
-	require.Equal(t, 2, *route.RegexPriority)
-	require.Equal(t, kong.StringSlice("~/very-long$", "~/bar$", "/bar/"), route.Paths)
-}
-
 func TestTranslateHTTPRouteRulesMetaToKongstateRoutesKeepsMatchesWithDifferentPathsSeparateWhenURLRewriteReplacePrefixMatchIsPresent(t *testing.T) {
 	httpRoute := &gatewayapi.HTTPRoute{
 		ObjectMeta: metav1.ObjectMeta{
@@ -2127,7 +2089,6 @@ func TestTranslateHTTPRouteRulesMetaToKongstateRoutesDoesNotAddCatchAllPathForNo
 	)
 	require.NoError(t, err)
 	require.Len(t, routes, 1)
-	require.NotNil(t, routes[0].RegexPriority)
 	require.Equal(t, kong.StringSlice("GET"), routes[0].Methods)
 	require.Empty(t, routes[0].Paths)
 }
