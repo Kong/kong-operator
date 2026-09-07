@@ -30,9 +30,7 @@ jobs:
       matrix:
         include:
           - suite: gateway
-          - suite: gateway
             ip_family: ipv4 # placeholder for dual-stack tests coming soon
-          - suite: hybridgateway
           - suite: hybridgateway
             ip_family: ipv4 # placeholder for dual-stack tests coming soon
           - suite: konnect
@@ -87,6 +85,8 @@ jobs:
     - name: Set up NAT64 + DNS64 for IPv6-only cluster external reachability
       if: ${{ matrix.ip_family == 'ipv6' }}
       run: |
+        set -o pipefail
+
         sudo apt-get update -qq
         sudo apt-get install -y jool-dkms jool-tools unbound
         sudo modprobe jool
@@ -95,7 +95,11 @@ jobs:
         sudo sysctl -w net.ipv6.conf.all.forwarding=1
         sudo sysctl -w net.ipv6.conf.default.forwarding=1
 
-        RUNNER_IP4=$(ip -4 -o addr show scope global | awk '{print $4}' | cut -d/ -f1 | head -1)
+        # Read the uplink address from the route table instead of listing
+        # global-scope addresses: by this point kind's own docker bridge
+        # also has one, and list order isn't guaranteed to put the real
+        # uplink first.
+        RUNNER_IP4=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')
         sudo jool instance add nat64 --netfilter --pool6 64:ff9b::/96
         sudo jool -i nat64 pool4 add --tcp "${RUNNER_IP4}" 61001-65535
         sudo jool -i nat64 pool4 add --udp "${RUNNER_IP4}" 61001-65535
@@ -138,6 +142,10 @@ jobs:
 
         NEW_COREFILE=$(kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
           | sed "s#forward \. /etc/resolv.conf#forward . ${GW}#")
+        case "$NEW_COREFILE" in
+          *"forward . ${GW}"*) ;;
+          *) echo "Corefile rewrite did not apply" >&2; exit 1 ;;
+        esac
         kubectl -n kube-system get configmap coredns -o json \
           | jq --arg cf "$NEW_COREFILE" '.data.Corefile = $cf' \
           | kubectl apply -f -
