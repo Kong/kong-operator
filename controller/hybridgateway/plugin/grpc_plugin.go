@@ -89,12 +89,18 @@ func GRPCPluginsForRule(
 		}
 		pluginName := plugin.Name
 		log.Debug(logger, "Successfully retrieved referenced KongPlugin")
+		// Resolve spec.configFrom and spec.configPatches before mirroring the plugin, so that
+		// Secret-sourced configuration reaches the control plane instead of being dropped.
+		pluginConfig, err := ResolveConfig(ctx, cl, plugin)
+		if err != nil {
+			return nil, err
+		}
 		pluginCopy, err := builder.NewKongPlugin().
 			WithName(namegen.NewKongPluginNameForGRPCRouteFilter(filter, grpcRoute.Namespace, plugin.PluginName)).
 			WithNamespace(metadata.NamespaceFromParentRef(grpcRoute, pRef)).
 			WithLabels(grpcRoute, pRef).
 			WithPluginName(plugin.PluginName).
-			WithPluginConfig(plugin.Config.Raw).
+			WithPluginConfig(pluginConfig).
 			WithAnnotations(grpcRoute, pRef).
 			// Copy the tags annotation from the original plugin to the new plugin copy.
 			WithTagsFromAnnotations(plugin).
