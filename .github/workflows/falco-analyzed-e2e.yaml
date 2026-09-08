@@ -36,7 +36,7 @@ jobs:
         egress-policy: audit
 
     - name: checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
       with:
         fetch-depth: 0
 
@@ -118,7 +118,7 @@ jobs:
           egress-policy: audit
 
       - name: Checkout Source Code
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
       - name: Analyze Falco Results
         uses: falcosecurity/falco-actions/analyze@4a4ff48cca452b3b03f06073d1ae0ff564503fc9

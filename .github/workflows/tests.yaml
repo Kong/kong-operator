@@ -55,7 +55,7 @@ jobs:
         with:
           egress-policy: audit
       - name: checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
       - name: setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -86,7 +86,7 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
         with:
           fetch-depth: 50
       - id: check-files
@@ -103,7 +103,7 @@ jobs:
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
     - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@60e3a74c7b74a319e8e53e46bc455205f7173e1a # v5.0.8
 
   ossf-scorecard:
@@ -113,7 +113,7 @@ jobs:
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
     # Ref: https://github.com/ossf/scorecard
     - env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -133,7 +133,7 @@ jobs:
     if: ${{ needs.check-docs-only.outputs.docs_only != 'true' }}
     steps:
     - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
     - uses: ./.github/actions/setup-mise
       with:
@@ -153,7 +153,7 @@ jobs:
       with:
         egress-policy: audit
     - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
       with:
@@ -179,7 +179,7 @@ jobs:
       matrix: ${{ steps.set-matrix.outputs.matrix }}
       latest: ${{ steps.set-latest.outputs.latest }}
     steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
       - id: set-matrix
         run: |
           (
@@ -207,7 +207,7 @@ jobs:
       with:
         egress-policy: audit
     - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -257,7 +257,7 @@ jobs:
       with:
         egress-policy: audit
     - name: Checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
     - name: Setup go
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -319,7 +319,7 @@ jobs:
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
       with:
         egress-policy: audit
-    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
     - name: setup golang
       uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -455,7 +455,7 @@ jobs:
           egress-policy: audit
 
       - name: checkout repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
 
       - name: download tests report
         id: download-coverage

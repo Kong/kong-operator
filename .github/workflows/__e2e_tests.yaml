@@ -19,7 +19,7 @@ jobs:
       with:
         egress-policy: audit
     - name: checkout repository
-      uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      uses: actions/checkout@58615f4f28d7f6830d70e0fc3bcb634b43e66385 # v7.0.1
       with:
         fetch-depth: 0
 
