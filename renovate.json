@@ -118,10 +118,11 @@
       ]
     },
     {
-      "description": "Match dependencies in .github/workflows/* that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [extractVersion={}] [versioning={}].` The value may carry a tag prefix (e.g. `ksai/v3.28.0`); only the version part is captured and rewritten.",
+      "description": "Match dependencies in .github/workflows/* and .github/actions/*/action.yml that are properly annotated with `# renovate: datasource={} depName={} [packageName={}] [extractVersion={}] [versioning={}].` The value may carry a tag prefix (e.g. `ksai/v3.28.0`); only the version part is captured and rewritten.",
       "customType": "regex",
       "fileMatch": [
-        "\\.github/workflows/.*\\.yaml$"
+        "\\.github/workflows/.*\\.yaml$",
+        "\\.github/actions/.+/action\\.ya?ml$"
       ],
       "matchStrings": [
         "#\\s+renovate:\\s+datasource=(?<datasource>\\S+)\\s+depName=(?<depName>\\S+)(\\s+packageName=(?<packageName>\\S+))?(\\s+extractVersion=(?<extractVersion>\\S+))?(\\s+versioning=(?<versioning>\\S+))?[^\\n]*\\n[^\\n]*?:\\s*\"?[^\"\\s]*?v?(?<currentValue>[0-9]+\\.[0-9.]+)\"?"
