@@ -1,7 +1,8 @@
 # Minimal sample for the on-prem AIGateway control plane CRD.
 #
-# OnPremAIGateway has no reconciler yet: applying this sample only exercises
-# CRD validation, it has no effect on the cluster.
+# The reconciler (opt in via --enable-controller-onpremaigateway) currently
+# only reports readiness; it does not yet aggregate configuration or push it
+# to data planes.
 apiVersion: aigateway.konghq.com/v1alpha1
 kind: OnPremAIGateway
 metadata:

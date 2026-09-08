@@ -12,11 +12,12 @@ import (
 
 // IsSSAProviderNeeded reports whether cfg requires the shared SSA
 // TypeConverterProvider, i.e. whether any SSA-using controller
-// (EventGatewayDataPlane, AIGatewayDataPlane, MCPServer, or the hybridgateway
-// Gateway API controllers) is enabled.
+// (EventGatewayDataPlane, AIGatewayDataPlane, OnPremAIGateway, MCPServer, or
+// the hybridgateway Gateway API controllers) is enabled.
 func IsSSAProviderNeeded(cfg Config) bool {
 	return cfg.KEGDataPlaneControllerEnabled ||
 		cfg.AIGatewayDataPlaneControllerEnabled ||
+		cfg.OnPremAIGatewayControllerEnabled ||
 		cfg.FeatureGates.Enabled(FeatureGateMCPServer) ||
 		cfg.KonnectControllersEnabled
 }

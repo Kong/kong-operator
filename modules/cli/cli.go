@@ -87,6 +87,7 @@ func New(m metadata.Info) *CLI {
 
 	// controllers for AI Gateway APIs
 	flagSet.BoolVar(&cfg.AIGatewayDataPlaneControllerEnabled, "enable-controller-aigatewaydataplane", false, "Enable the AI Gateway DataPlane controller.")
+	flagSet.BoolVar(&cfg.OnPremAIGatewayControllerEnabled, "enable-controller-onpremaigateway", false, "Enable the on-prem AI Gateway (control plane) controller.")
 
 	// feature gates
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")

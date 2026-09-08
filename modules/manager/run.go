@@ -132,6 +132,7 @@ type Config struct {
 
 	// Controllers for AI Gateway APIs.
 	AIGatewayDataPlaneControllerEnabled bool
+	OnPremAIGatewayControllerEnabled    bool
 
 	// FeatureGates holds the set of feature gates enabled via the --feature-gates flag.
 	FeatureGates FeatureGates

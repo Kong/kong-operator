@@ -79813,6 +79813,7 @@ rules:
   - aigateway.konghq.com
   resources:
   - aigatewaydataplanes
+  - onpremaigateways
   verbs:
   - get
   - list
@@ -79823,6 +79824,7 @@ rules:
   - aigateway.konghq.com
   resources:
   - aigatewaydataplanes/status
+  - onpremaigateways/status
   verbs:
   - patch
   - update
