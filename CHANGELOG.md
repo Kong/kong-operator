@@ -81,7 +81,7 @@
   from a `Secret` was pushed to Konnect without it. The referenced `Secret`s are now
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
-  [FTI-7908](https://konghq.atlassian.net/browse/FTI-7908)
+  [#5600](https://github.com/Kong/kong-operator/pull/5600)
 
 ## [v2.3.0]
 
