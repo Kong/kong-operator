@@ -56,6 +56,14 @@
 
 ## Unreleased
 
+### Fixes
+
+- On-prem gateway: generate a distinct Kong route for each match when its parent
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
+  ** This change will delete the combined Kong routes created for the matches with
+  these filters in their parent rules and create new distinct ones.
+ [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5559](https://github.com/Kong/kong-operator/pull/5559)
 - HybridGateway: merge the current Route reference with existing
   `hybrid-routes` annotations during state enforcement so Routes that share a
   Kong resource no longer overwrite each other's references and continuously
