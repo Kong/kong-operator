@@ -23,10 +23,8 @@ func listUDPRoutesForGateway(ctx context.Context, cl client.Client, gatewayNames
 	requests := make([]reconcile.Request, len(udpRoutes.Items))
 	for i, udpRoute := range udpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: udpRoute.Namespace,
-				Name:      udpRoute.Name,
-			},
+			Namespace: udpRoute.Namespace,
+			Name:      udpRoute.Name,
 		}
 	}
 	return requests, nil
@@ -46,10 +44,8 @@ func listUDPRoutesForService(ctx context.Context, cl client.Client, svcNamespace
 	requests := make([]reconcile.Request, len(udpRoutes.Items))
 	for i, udpRoute := range udpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: udpRoute.Namespace,
-				Name:      udpRoute.Name,
-			},
+			Namespace: udpRoute.Namespace,
+			Name:      udpRoute.Name,
 		}
 	}
 	return requests, nil

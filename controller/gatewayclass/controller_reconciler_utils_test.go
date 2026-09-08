@@ -101,10 +101,8 @@ func TestGetAcceptedCondition(t *testing.T) {
 			},
 			existingObjs: []runtime.Object{
 				&operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "valid-config",
-						Namespace: "default",
-					},
+					Name:      "valid-config",
+					Namespace: "default",
 				},
 			},
 			expectedStatus: metav1.ConditionTrue,
@@ -193,9 +191,7 @@ func TestGetRouterFlavor(t *testing.T) {
 		{
 			name: "KONG_ROUTER_FLAVOR not found",
 			gatewayConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -219,9 +215,7 @@ func TestGetRouterFlavor(t *testing.T) {
 		{
 			name: "KONG_ROUTER_FLAVOR found",
 			gatewayConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{

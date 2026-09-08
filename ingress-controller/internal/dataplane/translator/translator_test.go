@@ -45,14 +45,12 @@ func TestGlobalPlugin(t *testing.T) {
 		store, err := store.NewFakeStore(store.FakeObjects{
 			KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name: "bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -87,37 +85,31 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 	stock := store.FakeObjects{
 		Services: []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		},
 		IngressesV1: []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -129,29 +121,25 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "bar-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "bar-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.net",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -169,10 +157,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects := stock
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:       "foo-plugin",
+					Namespace:  "default",
 					PluginName: "jwt",
 					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
@@ -184,14 +170,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "global-bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -204,14 +188,12 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "global-broken-bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
-						Annotations: map[string]string{
-							// explicitly none, this should not get rendered
-						},
+					Name: "global-broken-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
+					},
+					Annotations: map[string]string{
+						// explicitly none, this should not get rendered
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -224,9 +206,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "bar-plugin",
-					},
+					Name:       "bar-plugin",
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
@@ -240,11 +220,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.Secrets = []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-						Name:      "conf-secret",
-						Namespace: "default",
-					},
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"jwt-config":        []byte(jwtPluginConfig),
 						"basic-auth-config": []byte(basicAuthPluginConfig),
@@ -283,12 +261,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects := stock
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					PluginName: "jwt",
 					ConfigFrom: &configurationv1.ConfigSource{
@@ -299,10 +275,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:       "foo-plugin",
+					Namespace:  "default",
 					PluginName: "jwt",
 					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
@@ -314,11 +288,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "global-bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -331,9 +303,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "bar-plugin",
-					},
+					Name:       "bar-plugin",
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
@@ -347,11 +317,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.Secrets = []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-						Name:      "conf-secret",
-						Namespace: "default",
-					},
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"jwt-config":        []byte(jwtPluginConfig),
 						"basic-auth-config": []byte(basicAuthPluginConfig),
@@ -375,12 +343,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects := stock
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					PluginName: "jwt",
 					Config: apiextensionsv1.JSON{
@@ -394,10 +360,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:       "foo-plugin",
+					Namespace:  "default",
 					PluginName: "jwt",
 					Config: apiextensionsv1.JSON{
 						Raw: []byte(`{"fake": true}`),
@@ -412,11 +376,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "global-bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -432,9 +394,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "bar-plugin",
-					},
+					Name:       "bar-plugin",
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					Config: apiextensionsv1.JSON{
@@ -451,11 +411,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.Secrets = []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-						Name:      "conf-secret",
-						Namespace: "default",
-					},
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"jwt-config":        []byte(jwtPluginConfig),
 						"basic-auth-config": []byte(basicAuthPluginConfig),
@@ -482,11 +440,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 		badBasicAuthPluginConfig := "111111"              // not YAML
 		objects.Secrets = []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "conf-secret",
-					Namespace: "default",
-				},
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "conf-secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"jwt-config":            []byte(jwtPluginConfig),
 					"basic-auth-config":     []byte(basicAuthPluginConfig),
@@ -540,12 +496,10 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			objects := stock
 			objects.KongPlugins = []*configurationv1.KongPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "global-foo-plugin",
-						Namespace: "default",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name:      "global-foo-plugin",
+					Namespace: "default",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					PluginName: "jwt",
 					ConfigFrom: &configurationv1.ConfigSource{
@@ -556,10 +510,8 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-plugin",
-						Namespace: "default",
-					},
+					Name:       "foo-plugin",
+					Namespace:  "default",
 					PluginName: "jwt",
 					ConfigFrom: &configurationv1.ConfigSource{
 						SecretValue: configurationv1.SecretValueFromSource{
@@ -571,11 +523,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.KongClusterPlugins = []*configurationv1.KongClusterPlugin{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "global-bar-plugin",
-						Labels: map[string]string{
-							"global": "true",
-						},
+					Name: "global-bar-plugin",
+					Labels: map[string]string{
+						"global": "true",
 					},
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
@@ -588,9 +538,7 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "bar-plugin",
-					},
+					Name:       "bar-plugin",
 					Protocols:  configurationv1.StringsToKongProtocols([]string{"http"}),
 					PluginName: "basic-auth",
 					ConfigFrom: &configurationv1.NamespacedConfigSource{
@@ -604,11 +552,9 @@ func TestSecretConfigurationPlugin(t *testing.T) {
 			}
 			objects.Secrets = []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-						Name:      "conf-secret",
-						Namespace: "default",
-					},
+					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+					Name:      "conf-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"jwt-config":        []byte(jwtPluginConfig),
 						"basic-auth-config": []byte(basicAuthPluginConfig),
@@ -633,16 +579,14 @@ func TestCACertificate(t *testing.T) {
 	t.Run("valid CACertificate is processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "foo",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -674,16 +618,14 @@ func TestCACertificate(t *testing.T) {
 	t.Run("multiple CACertificates are processed", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "foo",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -691,16 +633,14 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "non-default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "bar",
+				Namespace: "non-default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
@@ -726,16 +666,14 @@ func TestCACertificate(t *testing.T) {
 	t.Run("invalid CACertificates are ignored", func(t *testing.T) {
 		secrets := []*corev1.Secret{
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "valid-cert",
-					Namespace: "default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "valid-cert",
+				Namespace: "default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("8214a145-a328-4c56-ab72-2973a56d4eae"),
@@ -743,16 +681,14 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "missing-cert-key",
-					Namespace: "non-default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "missing-cert-key",
+				Namespace: "non-default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id": []byte("570c28aa-e784-43c1-8ec7-ae7f4ce40189"),
@@ -760,16 +696,14 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "missing-id-key",
-					Namespace: "non-default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "missing-id-key",
+				Namespace: "non-default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					// id is missing
@@ -777,16 +711,14 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "expired-cert",
-					Namespace: "non-default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "expired-cert",
+				Namespace: "non-default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("670c28aa-e784-43c1-8ec7-ae7f4ce40189"),
@@ -794,16 +726,14 @@ func TestCACertificate(t *testing.T) {
 				},
 			},
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "invalid-cert",
-					Namespace: "non-default",
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "invalid-cert",
+				Namespace: "non-default",
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Data: map[string][]byte{
 					"id":   []byte("770c28aa-e784-43c1-8ec7-ae7f4ce40189"),
@@ -836,39 +766,35 @@ func TestServiceClientCertificate(t *testing.T) {
 	t.Run("valid client-cert annotation", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
-										{
-											Path: "/bar",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "bar-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+									},
+									{
+										Path: "/bar",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "bar-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -889,22 +815,18 @@ func TestServiceClientCertificate(t *testing.T) {
 		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret1",
-					Namespace: "default",
-				},
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret1",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("ffaabbcc-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret2",
-					Namespace: "default",
-				},
+				UID:       k8stypes.UID("ffaabbcc-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret2",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
@@ -913,23 +835,19 @@ func TestServiceClientCertificate(t *testing.T) {
 		}
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret1",
-						"konghq.com/protocol":    "https",
-					},
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret1",
+					"konghq.com/protocol":    "https",
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret2",
-						"konghq.com/protocol":    "https",
-					},
+				Name:      "bar-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret2",
+					"konghq.com/protocol":    "https",
 				},
 			},
 		}
@@ -958,28 +876,24 @@ func TestServiceClientCertificate(t *testing.T) {
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1000,14 +914,12 @@ func TestServiceClientCertificate(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret1",
-						"konghq.com/protocol":    "https",
-					},
+				Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret1",
+					"konghq.com/protocol":    "https",
 				},
 			},
 		}
@@ -1030,28 +942,24 @@ func TestServiceClientCertificate(t *testing.T) {
 	t.Run("valid cert+secret but incompatible protocol", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1072,11 +980,9 @@ func TestServiceClientCertificate(t *testing.T) {
 		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret1",
-					Namespace: "default",
-				},
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret1",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
@@ -1085,13 +991,11 @@ func TestServiceClientCertificate(t *testing.T) {
 		}
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret1",
-						"konghq.com/protocol":    "http",
-					},
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret1",
+					"konghq.com/protocol":    "http",
 				},
 			},
 		}
@@ -1123,29 +1027,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("strip-path annotation is correctly processed (true)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/strip-path":     "trUe",
-						annotations.IngressClassKey: "kong",
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/strip-path":     "trUe",
+					annotations.IngressClassKey: "kong",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1160,10 +1060,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1212,29 +1110,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("strip-path annotation is correctly processed (false)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: "kong",
-						"konghq.com/strip-path":     "false",
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: "kong",
+					"konghq.com/strip-path":     "false",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1249,10 +1143,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1301,29 +1193,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("https-redirect-status-code annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey:             "kong",
-						"konghq.com/https-redirect-status-code": "301",
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:             "kong",
+					"konghq.com/https-redirect-status-code": "301",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1338,10 +1226,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1393,29 +1279,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 		func(t *testing.T) {
 			ingresses := []*netv1.Ingress{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "bar",
-						Namespace: "default",
-						Annotations: map[string]string{
-							annotations.IngressClassKey:             "kong",
-							"konghq.com/https-redirect-status-code": "whoops",
-						},
+					Name:      "bar",
+					Namespace: "default",
+					Annotations: map[string]string{
+						annotations.IngressClassKey:             "kong",
+						"konghq.com/https-redirect-status-code": "whoops",
 					},
 					Spec: netv1.IngressSpec{
 						Rules: []netv1.IngressRule{
 							{
 								Host: "example.com",
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Path: "/",
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: "foo-svc",
-														Port: netv1.ServiceBackendPort{
-															Number: 80,
-														},
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Path: "/",
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "foo-svc",
+													Port: netv1.ServiceBackendPort{
+														Number: 80,
 													},
 												},
 											},
@@ -1430,10 +1312,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 			services := []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "foo-svc",
-						Namespace: "default",
-					},
+					Name:      "foo-svc",
+					Namespace: "default",
 				},
 			}
 			store, err := store.NewFakeStore(store.FakeObjects{
@@ -1482,29 +1362,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("preserve-host annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/preserve-host":  "faLsE",
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/preserve-host":  "faLsE",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1519,10 +1395,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1572,29 +1446,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("preserve-host annotation with random string is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-						"konghq.com/preserve-host":  "wiggle ",
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+					"konghq.com/preserve-host":  "wiggle ",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1609,10 +1479,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 
@@ -1663,29 +1531,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("regex-priority annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/regex-priority": "10",
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/regex-priority": "10",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1700,10 +1564,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1753,29 +1615,25 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("non-integer regex-priority annotation is ignored", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/regex-priority": "IAmAString",
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/regex-priority": "IAmAString",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1790,10 +1648,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1843,30 +1699,26 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("route buffering options are processed (true)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-buffering-test",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey:     annotations.DefaultIngressClass,
-						"konghq.com/request-buffering":  "True",
-						"konghq.com/response-buffering": "True",
-					},
+				Name:      "route-buffering-test",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:     annotations.DefaultIngressClass,
+					"konghq.com/request-buffering":  "True",
+					"konghq.com/response-buffering": "True",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1881,10 +1733,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -1933,30 +1783,26 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("route buffering options are processed (false)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-buffering-test",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey:     annotations.DefaultIngressClass,
-						"konghq.com/request-buffering":  "False",
-						"konghq.com/response-buffering": "False",
-					},
+				Name:      "route-buffering-test",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:     annotations.DefaultIngressClass,
+					"konghq.com/request-buffering":  "False",
+					"konghq.com/response-buffering": "False",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -1971,10 +1817,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -2023,30 +1867,26 @@ func TestKongRouteAnnotations(t *testing.T) {
 	t.Run("route buffering options are not processed with bad annotation values", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-buffering-test",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey:     annotations.DefaultIngressClass,
-						"konghq.com/request-buffering":  "invalid-value",
-						"konghq.com/response-buffering": "invalid-value",
-					},
+				Name:      "route-buffering-test",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey:     annotations.DefaultIngressClass,
+					"konghq.com/request-buffering":  "invalid-value",
+					"konghq.com/response-buffering": "invalid-value",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2061,10 +1901,8 @@ func TestKongRouteAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -2091,28 +1929,24 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 	t.Run("Kong classless ingress evaluated (true)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2126,10 +1960,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 
@@ -2149,25 +1981,21 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 	t.Run("Kong classless ingress evaluated (false)", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-				},
+				Name:      "bar",
+				Namespace: "default",
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2181,10 +2009,8 @@ func TestKongProcessClasslessIngress(t *testing.T) {
 		}
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 
@@ -2208,28 +2034,24 @@ func TestKongServiceAnnotations(t *testing.T) {
 	t.Run("path annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2244,12 +2066,10 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/path": "/baz",
-					},
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/path": "/baz",
 				},
 			},
 		}
@@ -2300,28 +2120,24 @@ func TestKongServiceAnnotations(t *testing.T) {
 	t.Run("host-header annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2336,12 +2152,10 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/host-header": "example.com",
-					},
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/host-header": "example.com",
 				},
 			},
 		}
@@ -2400,29 +2214,25 @@ func TestKongServiceAnnotations(t *testing.T) {
 	t.Run("methods annotation is correctly processed", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/methods":        "POST,GET",
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/methods":        "POST,GET",
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2437,10 +2247,8 @@ func TestKongServiceAnnotations(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -2496,14 +2304,12 @@ func TestDefaultBackend(t *testing.T) {
 	t.Run("default backend is processed correctly", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ing-with-default-backend",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "ing-with-default-backend",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
-				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+				Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String(),
 				Spec: netv1.IngressSpec{
 					DefaultBackend: &netv1.IngressBackend{
 						Service: &netv1.IngressServiceBackend{
@@ -2519,11 +2325,9 @@ func TestDefaultBackend(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "default-svc",
-					Namespace: "default",
-				},
-				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
+				Name:      "default-svc",
+				Namespace: "default",
+				Kind:      "Service", APIVersion: corev1.SchemeGroupVersion.String(),
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
@@ -2563,28 +2367,24 @@ func TestDefaultBackend(t *testing.T) {
 	t.Run("client-cert secret doesn't exist", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -2605,13 +2405,11 @@ func TestDefaultBackend(t *testing.T) {
 
 		services := []*corev1.Service{
 			{
-				TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"konghq.com/client-cert": "secret1",
-					},
+				Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:      "foo-svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"konghq.com/client-cert": "secret1",
 				},
 			},
 		}
@@ -2635,11 +2433,9 @@ func TestDefaultBackend(t *testing.T) {
 	t.Run("KongServiceFacade used as a backend", func(t *testing.T) {
 		storer := lo.Must(store.NewFakeStore(store.FakeObjects{
 			IngressesV1: []*netv1.Ingress{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-				},
-				TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+				Name:      "foo",
+				Namespace: "default",
+				Kind:      "Ingress", APIVersion: netv1.SchemeGroupVersion.String(),
 				Spec: netv1.IngressSpec{
 					IngressClassName: new(annotations.DefaultIngressClass),
 					DefaultBackend: &netv1.IngressBackend{
@@ -2652,17 +2448,13 @@ func TestDefaultBackend(t *testing.T) {
 				},
 			}},
 			Services: []*corev1.Service{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			}},
 			KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-facade",
-					Namespace: "default",
-				},
-				TypeMeta: metav1.TypeMeta{Kind: incubatorv1alpha1.KongServiceFacadeKind, APIVersion: incubatorv1alpha1.GroupVersion.String()},
+				Name:      "foo-facade",
+				Namespace: "default",
+				Kind:      incubatorv1alpha1.KongServiceFacadeKind, APIVersion: incubatorv1alpha1.GroupVersion.String(),
 				Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 					Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 						Name: "foo-svc",
@@ -2694,12 +2486,10 @@ func TestTranslatorSecret(t *testing.T) {
 	t.Run("invalid TLS secret", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2711,10 +2501,8 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "default",
-				},
+				Name:      "bar",
+				Namespace: "default",
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
 						{
@@ -2728,10 +2516,8 @@ func TestTranslatorSecret(t *testing.T) {
 
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret1",
-					Namespace: "default",
-				},
+				Name:      "secret1",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": []byte(""),
 					"tls.key": []byte(""),
@@ -2756,12 +2542,10 @@ func TestTranslatorSecret(t *testing.T) {
 	t.Run("duplicate certificates order by time", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2773,12 +2557,10 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2795,13 +2577,11 @@ func TestTranslatorSecret(t *testing.T) {
 		t2, _ := time.Parse(time.RFC3339, "2006-01-02T15:05:05Z")
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "3e8edeca-7d23-4e02-84c9-437d11b746a6",
-					Name:      "secret1",
-					Namespace: "default",
-					CreationTimestamp: metav1.Time{
-						Time: t1,
-					},
+				UID:       "3e8edeca-7d23-4e02-84c9-437d11b746a6",
+				Name:      "secret1",
+				Namespace: "default",
+				CreationTimestamp: metav1.Time{
+					Time: t1,
 				},
 				Data: map[string][]byte{
 					"tls.crt": crt,
@@ -2809,13 +2589,11 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "fc28a22c-41e1-4cd6-9099-fd7756ffe58e",
-					Name:      "secret2",
-					Namespace: "ns1",
-					CreationTimestamp: metav1.Time{
-						Time: t2,
-					},
+				UID:       "fc28a22c-41e1-4cd6-9099-fd7756ffe58e",
+				Name:      "secret2",
+				Namespace: "ns1",
+				CreationTimestamp: metav1.Time{
+					Time: t2,
 				},
 				Data: map[string][]byte{
 					"tls.crt": crt,
@@ -2842,23 +2620,19 @@ func TestTranslatorSecret(t *testing.T) {
 		// Translator tests do not check tags, these are tested independently
 		state.Certificates[0].Tags = nil
 		assert.Equal(kongstate.Certificate{
-			Certificate: kong.Certificate{
-				ID:   new("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
-				Cert: new(strings.TrimSpace(string(crt))),
-				Key:  new(strings.TrimSpace(string(key))),
-				SNIs: kong.StringSlice("foo.com", "bar.com"),
-			},
+			ID:   new("3e8edeca-7d23-4e02-84c9-437d11b746a6"),
+			Cert: new(strings.TrimSpace(string(crt))),
+			Key:  new(strings.TrimSpace(string(key))),
+			SNIs: kong.StringSlice("foo.com", "bar.com"),
 		}, state.Certificates[0])
 	})
 	t.Run("duplicate certificates order by uid", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2870,12 +2644,10 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "bar",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2887,12 +2659,10 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "baz",
-					Namespace: "ns2",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "baz",
+				Namespace: "ns2",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -2910,13 +2680,11 @@ func TestTranslatorSecret(t *testing.T) {
 		t3, _ := time.Parse(time.RFC3339, "2006-01-02T15:06:05Z")
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "3c28a22c-41e1-4cd6-9099-fd7756ffe58e",
-					Name:      "secret1",
-					Namespace: "default",
-					CreationTimestamp: metav1.Time{
-						Time: t1,
-					},
+				UID:       "3c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+				Name:      "secret1",
+				Namespace: "default",
+				CreationTimestamp: metav1.Time{
+					Time: t1,
 				},
 				Data: map[string][]byte{
 					"tls.crt": crt,
@@ -2924,13 +2692,11 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "2c28a22c-41e1-4cd6-9099-fd7756ffe58e",
-					Name:      "secret2",
-					Namespace: "ns1",
-					CreationTimestamp: metav1.Time{
-						Time: t2,
-					},
+				UID:       "2c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+				Name:      "secret2",
+				Namespace: "ns1",
+				CreationTimestamp: metav1.Time{
+					Time: t2,
 				},
 				Data: map[string][]byte{
 					"tls.crt": crt,
@@ -2938,13 +2704,11 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       "1c28a22c-41e1-4cd6-9099-fd7756ffe58e",
-					Name:      "secret3",
-					Namespace: "ns2",
-					CreationTimestamp: metav1.Time{
-						Time: t3,
-					},
+				UID:       "1c28a22c-41e1-4cd6-9099-fd7756ffe58e",
+				Name:      "secret3",
+				Namespace: "ns2",
+				CreationTimestamp: metav1.Time{
+					Time: t3,
 				},
 				Data: map[string][]byte{
 					"tls.crt": crt,
@@ -2972,23 +2736,19 @@ func TestTranslatorSecret(t *testing.T) {
 		// Translator tests do not check tags, these are tested independently
 		state.Certificates[0].Tags = nil
 		assert.Equal(kongstate.Certificate{
-			Certificate: kong.Certificate{
-				ID:   new("2c28a22c-41e1-4cd6-9099-fd7756ffe58e"),
-				Cert: new(strings.TrimSpace(string(crt))),
-				Key:  new(strings.TrimSpace(string(key))),
-				SNIs: kong.StringSlice("foo.com", "baz.com", "bar.com"),
-			},
+			ID:   new("2c28a22c-41e1-4cd6-9099-fd7756ffe58e"),
+			Cert: new(strings.TrimSpace(string(crt))),
+			Key:  new(strings.TrimSpace(string(key))),
+			SNIs: kong.StringSlice("foo.com", "baz.com", "bar.com"),
 		}, state.Certificates[0])
 	})
 	t.Run("duplicate SNIs", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -3000,10 +2760,8 @@ func TestTranslatorSecret(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "bar",
-					Namespace: "ns1",
-				},
+				Name:      "bar",
+				Namespace: "ns1",
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
 						{
@@ -3017,20 +2775,16 @@ func TestTranslatorSecret(t *testing.T) {
 
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret1",
-					Namespace: "default",
-				},
+				Name:      "secret1",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret2",
-					Namespace: "ns1",
-				},
+				Name:      "secret2",
+				Namespace: "ns1",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
@@ -3055,12 +2809,10 @@ func TestTranslatorSNI(t *testing.T) {
 	t.Run("route includes SNI when TLS info present, but not for wildcard hostnames", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -3072,17 +2824,15 @@ func TestTranslatorSNI(t *testing.T) {
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3092,17 +2842,15 @@ func TestTranslatorSNI(t *testing.T) {
 						},
 						{
 							Host: "*.example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3117,10 +2865,8 @@ func TestTranslatorSNI(t *testing.T) {
 		crt, key := certificate.MustGenerateCertPEMFormat()
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret1",
-					Namespace: "default",
-				},
+				Name:      "secret1",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"tls.crt": crt,
 					"tls.key": key,
@@ -3189,28 +2935,24 @@ func TestTranslatorSNI(t *testing.T) {
 	t.Run("route does not include SNI when TLS info absent", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3255,29 +2997,25 @@ func TestTranslatorHostAliases(t *testing.T) {
 	t.Run("route Hosts includes Host-Aliases when Host-Aliases are present", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-						annHostAliasesKey:           "*.example.com,*.sample.com,*.illustration.com",
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+					annHostAliasesKey:           "*.example.com,*.sample.com,*.illustration.com",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3317,28 +3055,24 @@ func TestTranslatorHostAliases(t *testing.T) {
 	t.Run("route Hosts remain unmodified when Host-Aliases are not present", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3378,29 +3112,25 @@ func TestTranslatorHostAliases(t *testing.T) {
 	t.Run("route Hosts will not contain duplicates when Host-Aliases duplicates the host", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-						annHostAliasesKey:           "example.com,*.example.com",
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
+					annHostAliasesKey:           "example.com,*.example.com",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3444,37 +3174,31 @@ func TestPluginAnnotations(t *testing.T) {
 	t.Run("simple association", func(t *testing.T) {
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3488,10 +3212,8 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 		plugins := []*configurationv1.KongPlugin{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
+				Name:       "foo-plugin",
+				Namespace:  "default",
 				PluginName: "key-auth",
 				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
@@ -3543,37 +3265,31 @@ func TestPluginAnnotations(t *testing.T) {
 	t.Run("KongPlugin takes precedence over KongPlugin", func(t *testing.T) {
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3587,10 +3303,8 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 		clusterPlugins := []*configurationv1.KongClusterPlugin{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
+				Name:       "foo-plugin",
+				Namespace:  "default",
 				PluginName: "basic-auth",
 				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
@@ -3600,10 +3314,8 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 		plugins := []*configurationv1.KongPlugin{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
+				Name:       "foo-plugin",
+				Namespace:  "default",
 				PluginName: "key-auth",
 				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
@@ -3632,37 +3344,31 @@ func TestPluginAnnotations(t *testing.T) {
 	t.Run("KongClusterPlugin association", func(t *testing.T) {
 		services := []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-svc",
-					Namespace: "default",
-				},
+				Name:      "foo-svc",
+				Namespace: "default",
 			},
 		}
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "foo-plugin",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3676,10 +3382,8 @@ func TestPluginAnnotations(t *testing.T) {
 		}
 		clusterPlugins := []*configurationv1.KongClusterPlugin{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo-plugin",
-					Namespace: "default",
-				},
+				Name:       "foo-plugin",
+				Namespace:  "default",
 				PluginName: "basic-auth",
 				Protocols:  []configurationv1.KongProtocol{"grpc"},
 				Config: apiextensionsv1.JSON{
@@ -3707,29 +3411,25 @@ func TestPluginAnnotations(t *testing.T) {
 	t.Run("missing plugin", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "default",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "does-not-exist",
-						annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "default",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "does-not-exist",
+					annotations.IngressClassKey:                           annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "foo-svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "foo-svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -3829,12 +3529,10 @@ func TestGetEndpoints(t *testing.T) {
 		{
 			name: "a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "foo",
+				Namespace: "bar",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeClusterIP,
@@ -3866,10 +3564,8 @@ func TestGetEndpoints(t *testing.T) {
 		{
 			name: "a service with configured IngressClassParameters as ServiceUpstream should return one endpoint",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-				},
+				Name:      "foo",
+				Namespace: "bar",
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeClusterIP,
 					Ports: []corev1.ServicePort{
@@ -3901,12 +3597,10 @@ func TestGetEndpoints(t *testing.T) {
 		{
 			name: "a service with ingress.kubernetes.io/service-upstream annotation should return one endpoint properly mapping to provided custom domain",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "bar",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "foo",
+				Namespace: "bar",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeClusterIP,
@@ -4500,12 +4194,10 @@ func TestGetEndpoints(t *testing.T) {
 
 func TestPickPort(t *testing.T) {
 	svc0 := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-0",
-			Namespace: "foo-namespace",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: annotations.DefaultIngressClass,
-			},
+		Name:      "service-0",
+		Namespace: "foo-namespace",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: annotations.DefaultIngressClass,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -4518,12 +4210,10 @@ func TestPickPort(t *testing.T) {
 	}
 
 	svc1 := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-1",
-			Namespace: "foo-namespace",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: annotations.DefaultIngressClass,
-			},
+		Name:      "service-1",
+		Namespace: "foo-namespace",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: annotations.DefaultIngressClass,
 		},
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{
@@ -4533,12 +4223,10 @@ func TestPickPort(t *testing.T) {
 	}
 
 	svc2 := corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-2",
-			Namespace: "foo-namespace",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: annotations.DefaultIngressClass,
-			},
+		Name:      "service-2",
+		Namespace: "foo-namespace",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: annotations.DefaultIngressClass,
 		},
 		Spec: corev1.ServiceSpec{
 			Type:         corev1.ServiceTypeExternalName,
@@ -4548,12 +4236,10 @@ func TestPickPort(t *testing.T) {
 
 	endpointSliceList := []*discoveryv1.EndpointSlice{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service-0-1",
-				Namespace: "foo-namespace",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service-0",
-				},
+			Name:      "service-0-1",
+			Namespace: "foo-namespace",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service-0",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -4567,12 +4253,10 @@ func TestPickPort(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "service-1-1",
-				Namespace: "foo-namespace",
-				Labels: map[string]string{
-					discoveryv1.LabelServiceName: "service-1",
-				},
+			Name:      "service-1-1",
+			Namespace: "foo-namespace",
+			Labels: map[string]string{
+				discoveryv1.LabelServiceName: "service-1",
 			},
 			Endpoints: []discoveryv1.Endpoint{
 				{
@@ -4598,25 +4282,21 @@ func TestPickPort(t *testing.T) {
 
 				IngressesV1: []*netv1.Ingress{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "foo",
-							Namespace:   "foo-namespace",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "foo",
+						Namespace:   "foo-namespace",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						Spec: netv1.IngressSpec{
 							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: netv1.IngressRuleValue{
-										HTTP: &netv1.HTTPIngressRuleValue{
-											Paths: []netv1.HTTPIngressPath{
-												{
-													Path: "/",
-													Backend: netv1.IngressBackend{
-														Service: &netv1.IngressServiceBackend{
-															Name: "service-0",
-															Port: netv1.ServiceBackendPort{Number: 111},
-														},
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "service-0",
+														Port: netv1.ServiceBackendPort{Number: 111},
 													},
 												},
 											},
@@ -4638,25 +4318,21 @@ func TestPickPort(t *testing.T) {
 
 				IngressesV1: []*netv1.Ingress{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "foo",
-							Namespace:   "foo-namespace",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "foo",
+						Namespace:   "foo-namespace",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						Spec: netv1.IngressSpec{
 							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: netv1.IngressRuleValue{
-										HTTP: &netv1.HTTPIngressRuleValue{
-											Paths: []netv1.HTTPIngressPath{
-												{
-													Path: "/externalname",
-													Backend: netv1.IngressBackend{
-														Service: &netv1.IngressServiceBackend{
-															Name: "service-2",
-															Port: netv1.ServiceBackendPort{Number: 222},
-														},
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path: "/externalname",
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "service-2",
+														Port: netv1.ServiceBackendPort{Number: 222},
 													},
 												},
 											},
@@ -4678,25 +4354,21 @@ func TestPickPort(t *testing.T) {
 
 				IngressesV1: []*netv1.Ingress{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "foo",
-							Namespace:   "foo-namespace",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "foo",
+						Namespace:   "foo-namespace",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						Spec: netv1.IngressSpec{
 							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: netv1.IngressRuleValue{
-										HTTP: &netv1.HTTPIngressRuleValue{
-											Paths: []netv1.HTTPIngressPath{
-												{
-													Path: "/",
-													Backend: netv1.IngressBackend{
-														Service: &netv1.IngressServiceBackend{
-															Name: "service-0",
-															Port: netv1.ServiceBackendPort{Name: "port3"},
-														},
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "service-0",
+														Port: netv1.ServiceBackendPort{Name: "port3"},
 													},
 												},
 											},
@@ -4718,24 +4390,20 @@ func TestPickPort(t *testing.T) {
 
 				IngressesV1: []*netv1.Ingress{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "foo",
-							Namespace:   "foo-namespace",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "foo",
+						Namespace:   "foo-namespace",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 						Spec: netv1.IngressSpec{
 							Rules: []netv1.IngressRule{
 								{
 									Host: "example.com",
-									IngressRuleValue: netv1.IngressRuleValue{
-										HTTP: &netv1.HTTPIngressRuleValue{
-											Paths: []netv1.HTTPIngressPath{
-												{
-													Path: "/",
-													Backend: netv1.IngressBackend{
-														Service: &netv1.IngressServiceBackend{
-															Name: "service-1",
-														},
+									HTTP: &netv1.HTTPIngressRuleValue{
+										Paths: []netv1.HTTPIngressPath{
+											{
+												Path: "/",
+												Backend: netv1.IngressBackend{
+													Service: &netv1.IngressServiceBackend{
+														Name: "service-1",
 													},
 												},
 											},
@@ -4772,12 +4440,10 @@ func TestCertificate(t *testing.T) {
 	t.Run("same host with multiple namespace return the first namespace/secret by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "ns3",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "ns3",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4789,12 +4455,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "ns2",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "ns2",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4806,12 +4470,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4826,33 +4488,27 @@ func TestCertificate(t *testing.T) {
 
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret1",
-					Namespace: "ns1",
-				},
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret1",
+				Namespace: "ns1",
 				Data: map[string][]byte{
 					"tls.crt": crt1,
 					"tls.key": key1,
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret1",
-					Namespace: "ns2",
-				},
+				UID:       k8stypes.UID("6392jz73-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret1",
+				Namespace: "ns2",
 				Data: map[string][]byte{
 					"tls.crt": crt2,
 					"tls.key": key2,
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret1",
-					Namespace: "ns3",
-				},
+				UID:       k8stypes.UID("72x2j56k-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret1",
+				Namespace: "ns3",
 				Data: map[string][]byte{
 					"tls.crt": crt3,
 					"tls.key": key3,
@@ -4860,16 +4516,14 @@ func TestCertificate(t *testing.T) {
 			},
 		}
 		fooCertificate := kongstate.Certificate{
-			Certificate: kong.Certificate{
-				ID:   new("7428fb98-180b-4702-a91f-61351a33c6e4"),
-				Cert: new(strings.TrimSpace(string(crt1))),
-				Key:  new(strings.TrimSpace(string(key1))),
-				SNIs: []*string{new("foo.com")},
-				Tags: []*string{
-					new("k8s-name:secret1"),
-					new("k8s-namespace:ns1"),
-					new("k8s-uid:7428fb98-180b-4702-a91f-61351a33c6e4"),
-				},
+			ID:   new("7428fb98-180b-4702-a91f-61351a33c6e4"),
+			Cert: new(strings.TrimSpace(string(crt1))),
+			Key:  new(strings.TrimSpace(string(key1))),
+			SNIs: []*string{new("foo.com")},
+			Tags: []*string{
+				new("k8s-name:secret1"),
+				new("k8s-namespace:ns1"),
+				new("k8s-uid:7428fb98-180b-4702-a91f-61351a33c6e4"),
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -4889,12 +4543,10 @@ func TestCertificate(t *testing.T) {
 	t.Run("SNIs slice with same certificate should be ordered by asc", func(t *testing.T) {
 		ingresses := []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo3",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo3",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4906,12 +4558,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo2",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo2",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4923,12 +4573,10 @@ func TestCertificate(t *testing.T) {
 				},
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "foo1",
-					Namespace: "ns1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "foo1",
+				Namespace: "ns1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					TLS: []netv1.IngressTLS{
@@ -4943,11 +4591,9 @@ func TestCertificate(t *testing.T) {
 
 		secrets := []*corev1.Secret{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
-					Name:      "secret",
-					Namespace: "ns1",
-				},
+				UID:       k8stypes.UID("7428fb98-180b-4702-a91f-61351a33c6e4"),
+				Name:      "secret",
+				Namespace: "ns1",
 				Data: map[string][]byte{
 					"tls.crt": crt1,
 					"tls.key": key1,
@@ -4955,15 +4601,13 @@ func TestCertificate(t *testing.T) {
 			},
 		}
 		fooCertificate := kongstate.Certificate{
-			Certificate: kong.Certificate{
-				ID:   new("7428fb98-180b-4702-a91f-61351a33c6e4"),
-				Cert: new(strings.TrimSpace(string(crt1))),
-				Key:  new(strings.TrimSpace(string(key1))),
-				SNIs: []*string{
-					new("foo1.xxx.com"),
-					new("foo2.xxx.com"),
-					new("foo3.xxx.com"),
-				},
+			ID:   new("7428fb98-180b-4702-a91f-61351a33c6e4"),
+			Cert: new(strings.TrimSpace(string(crt1))),
+			Key:  new(strings.TrimSpace(string(key1))),
+			SNIs: []*string{
+				new("foo1.xxx.com"),
+				new("foo2.xxx.com"),
+				new("foo3.xxx.com"),
 			},
 		}
 		store, err := store.NewFakeStore(store.FakeObjects{
@@ -4987,10 +4631,8 @@ func TestTranslator_FillsEntitiesIDs(t *testing.T) {
 	s, err := store.NewFakeStore(store.FakeObjects{
 		Services: []*corev1.Service{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "svc.foo",
-					Namespace: "ns",
-				},
+				Name:      "svc.foo",
+				Namespace: "ns",
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
 						{
@@ -5003,28 +4645,24 @@ func TestTranslator_FillsEntitiesIDs(t *testing.T) {
 		},
 		IngressesV1: []*netv1.Ingress{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ingress.foo",
-					Namespace: "ns",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "ingress.foo",
+				Namespace: "ns",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "foo.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/foo",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "svc.foo",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/foo",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "svc.foo",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
@@ -5038,12 +4676,10 @@ func TestTranslator_FillsEntitiesIDs(t *testing.T) {
 		},
 		KongConsumers: []*configurationv1.KongConsumer{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "user.foo",
-					Namespace: "ns",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
+				Name:      "user.foo",
+				Namespace: "ns",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
 				Username: "user.foo",
 			},
@@ -5204,20 +4840,16 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 			objectsInStore: store.FakeObjects{
 				KongConsumers: []*configurationv1.KongConsumer{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer1",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						Username: "consumer1",
+						Name:        "consumer1",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						Username:    "consumer1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer2",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						Username: "consumer2",
+						Name:        "consumer2",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						Username:    "consumer2",
 					},
 				},
 			},
@@ -5231,18 +4863,14 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 			objectsInStore: store.FakeObjects{
 				KongConsumerGroups: []*configurationv1beta1.KongConsumerGroup{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer-group1",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "consumer-group1",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "consumer-group2",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
+						Name:        "consumer-group2",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
 					},
 				},
 			},
@@ -5256,31 +4884,25 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 			objectsInStore: store.FakeObjects{
 				KongPlugins: []*configurationv1.KongPlugin{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin1",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						PluginName: "plugin1",
+						Name:        "plugin1",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						PluginName:  "plugin1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin2",
-							Namespace:   "bar",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						PluginName: "plugin2",
+						Name:        "plugin2",
+						Namespace:   "bar",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						PluginName:  "plugin2",
 					},
 				},
 				KongConsumers: []*configurationv1.KongConsumer{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer",
-							Namespace: "bar",
-							Annotations: map[string]string{
-								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
-							},
+						Name:      "consumer",
+						Namespace: "bar",
+						Annotations: map[string]string{
+							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
 						},
 						Username: "foo",
 					},
@@ -5297,29 +4919,23 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 			objectsInStore: store.FakeObjects{
 				KongClusterPlugins: []*configurationv1.KongClusterPlugin{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin1",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						PluginName: "plugin2",
+						Name:        "plugin1",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						PluginName:  "plugin2",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:        "plugin2",
-							Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
-						},
-						PluginName: "plugin2",
+						Name:        "plugin2",
+						Annotations: map[string]string{annotations.IngressClassKey: annotations.DefaultIngressClass},
+						PluginName:  "plugin2",
 					},
 				},
 				KongConsumers: []*configurationv1.KongConsumer{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "consumer",
-							Namespace: "bar",
-							Annotations: map[string]string{
-								annotations.IngressClassKey:                           annotations.DefaultIngressClass,
-								annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
-							},
+						Name:      "consumer",
+						Namespace: "bar",
+						Annotations: map[string]string{
+							annotations.IngressClassKey:                           annotations.DefaultIngressClass,
+							annotations.AnnotationPrefix + annotations.PluginsKey: "plugin1,plugin2",
 						},
 						Username: "foo",
 					},
@@ -5336,20 +4952,16 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 			objectsInStore: store.FakeObjects{
 				KongUpstreamPolicies: []*configurationv1beta1.KongUpstreamPolicy{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "upstream-policy1",
-							Namespace: "bar",
-						},
+						Name:      "upstream-policy1",
+						Namespace: "bar",
 					},
 				},
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "bar",
-							Annotations: map[string]string{
-								configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
-							},
+						Name:      "service1",
+						Namespace: "bar",
+						Annotations: map[string]string{
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
 						},
 						Spec: corev1.ServiceSpec{
 							Ports: []corev1.ServicePort{
@@ -5362,12 +4974,10 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 				},
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service-facade1",
-							Namespace: "bar",
-							Annotations: map[string]string{
-								configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
-							},
+						Name:      "service-facade1",
+						Namespace: "bar",
+						Annotations: map[string]string{
+							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy1",
 						},
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -5381,28 +4991,26 @@ func TestTranslator_ConfiguredKubernetesObjects(t *testing.T) {
 					builder.NewIngress("ingress1", "kong").
 						WithNamespace("bar").
 						WithRules(netv1.IngressRule{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path: "/service",
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "service1",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path: "/service",
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "service1",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
-										{
-											Path: "/service-facade",
-											Backend: netv1.IngressBackend{
-												Resource: &corev1.TypedLocalObjectReference{
-													Name:     "service-facade1",
-													Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												},
+									},
+									{
+										Path: "/service-facade",
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												Name:     "service-facade1",
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
 											},
 										},
 									},
@@ -5606,16 +5214,12 @@ func TestTranslator_UpdateStore(t *testing.T) {
 
 	newStore, err := store.NewCacheStoresFromObjs(
 		&configurationv1.KongConsumer{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongConsumer",
-				APIVersion: configurationv1.GroupVersion.String(),
-			},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "consumer1",
-				Namespace: "bar",
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Kind:       "KongConsumer",
+			APIVersion: configurationv1.GroupVersion.String(),
+			Name:       "consumer1",
+			Namespace:  "bar",
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 			Username: "consumer1",
 		},
@@ -5633,19 +5237,15 @@ func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
 	s, err := store.NewFakeStore(store.FakeObjects{
 		Services: []*corev1.Service{
 			{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Service",
-					APIVersion: corev1.SchemeGroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "svc",
-					Namespace: "ns",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-						annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "2",
-						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca",
-						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
-					},
+				Kind:       "Service",
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:       "svc",
+				Namespace:  "ns",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+					annotations.AnnotationPrefix + annotations.TLSVerifyDepthKey:        "2",
+					annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca",
+					annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
 				},
 				Spec: corev1.ServiceSpec{
 					Ports: []corev1.ServicePort{
@@ -5659,19 +5259,15 @@ func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
 		},
 		Secrets: []*corev1.Secret{
 			{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Secret",
-					APIVersion: corev1.SchemeGroupVersion.String(),
+				Kind:       "Secret",
+				APIVersion: corev1.SchemeGroupVersion.String(),
+				Name:       "ca",
+				Namespace:  "ns",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: annotations.DefaultIngressClass,
 				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ca",
-					Namespace: "ns",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: annotations.DefaultIngressClass,
-					},
-					Labels: map[string]string{
-						"konghq.com/ca-cert": "true",
-					},
+				Labels: map[string]string{
+					"konghq.com/ca-cert": "true",
 				},
 				Data: map[string][]byte{
 					"cert": cert,
@@ -5681,31 +5277,25 @@ func TestTranslator_IngressUpstreamTLSVerification(t *testing.T) {
 		},
 		IngressesV1: []*netv1.Ingress{
 			{
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Ingress",
-					APIVersion: netv1.SchemeGroupVersion.String(),
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "ingress",
-					Namespace: "ns",
-				},
+				Kind:       "Ingress",
+				APIVersion: netv1.SchemeGroupVersion.String(),
+				Name:       "ingress",
+				Namespace:  "ns",
 				Spec: netv1.IngressSpec{
 					IngressClassName: new(annotations.DefaultIngressClass),
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path:     "/path",
-											PathType: new(netv1.PathTypePrefix),
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "svc",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/path",
+										PathType: new(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "svc",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},

@@ -85,37 +85,31 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		{
 			name: "base",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dp-1",
-					Namespace: "default",
-					UID:       types.UID("1234"),
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
 			},
 			expectedSvc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "dataplane-ingress-dp-1-",
-					Namespace:    "default",
-					Labels: map[string]string{
-						"app": "dp-1",
-						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
-						"gateway-operator.konghq.com/managed-by":             "dataplane",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
 					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.konghq.com/v1beta1",
-							Kind:       "DataPlane",
-							Name:       "dp-1",
-							UID:        "1234",
-							Controller: new(true),
-						},
-					},
-					Finalizers: []string{
-						"gateway-operator.konghq.com/wait-for-owner",
-					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -143,24 +137,18 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		{
 			name: "setting ExternalTrafficPolicy to Local",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dp-1",
-					Namespace: "default",
-					UID:       types.UID("1234"),
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
-										Type:                  corev1.ServiceTypeLoadBalancer,
-									},
+									ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeLocal,
+									Type:                  corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -168,26 +156,24 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 				},
 			},
 			expectedSvc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "dataplane-ingress-dp-1-",
-					Namespace:    "default",
-					Labels: map[string]string{
-						"app": "dp-1",
-						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
-						"gateway-operator.konghq.com/managed-by":             "dataplane",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
 					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.konghq.com/v1beta1",
-							Kind:       "DataPlane",
-							Name:       "dp-1",
-							UID:        "1234",
-							Controller: new(true),
-						},
-					},
-					Finalizers: []string{
-						"gateway-operator.konghq.com/wait-for-owner",
-					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -216,24 +202,18 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		{
 			name: "setting ExternalTrafficPolicy to Cluster",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dp-1",
-					Namespace: "default",
-					UID:       types.UID("1234"),
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
-										Type:                  corev1.ServiceTypeLoadBalancer,
-									},
+									ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyTypeCluster,
+									Type:                  corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -241,26 +221,24 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 				},
 			},
 			expectedSvc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "dataplane-ingress-dp-1-",
-					Namespace:    "default",
-					Labels: map[string]string{
-						"app": "dp-1",
-						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
-						"gateway-operator.konghq.com/managed-by":             "dataplane",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
 					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.konghq.com/v1beta1",
-							Kind:       "DataPlane",
-							Name:       "dp-1",
-							UID:        "1234",
-							Controller: new(true),
-						},
-					},
-					Finalizers: []string{
-						"gateway-operator.konghq.com/wait-for-owner",
-					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -289,24 +267,18 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		{
 			name: "setting TrafficDistribution to PreferClose",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dp-1",
-					Namespace: "default",
-					UID:       types.UID("1234"),
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Type:                corev1.ServiceTypeLoadBalancer,
-										TrafficDistribution: new("PreferSameZone"),
-									},
+									Type:                corev1.ServiceTypeLoadBalancer,
+									TrafficDistribution: new("PreferSameZone"),
 								},
 							},
 						},
@@ -314,26 +286,24 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 				},
 			},
 			expectedSvc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "dataplane-ingress-dp-1-",
-					Namespace:    "default",
-					Labels: map[string]string{
-						"app": "dp-1",
-						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
-						"gateway-operator.konghq.com/managed-by":             "dataplane",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
 					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.konghq.com/v1beta1",
-							Kind:       "DataPlane",
-							Name:       "dp-1",
-							UID:        "1234",
-							Controller: new(true),
-						},
-					},
-					Finalizers: []string{
-						"gateway-operator.konghq.com/wait-for-owner",
-					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -362,24 +332,18 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 		{
 			name: "setting InternalTrafficPolicy to Local",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dp-1",
-					Namespace: "default",
-					UID:       types.UID("1234"),
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
+				Name:       "dp-1",
+				Namespace:  "default",
+				UID:        types.UID("1234"),
+				APIVersion: "gateway.konghq.com/v1beta1",
+				Kind:       "DataPlane",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Network: operatorv1beta1.DataPlaneNetworkOptions{
 							Services: &operatorv1beta1.DataPlaneServices{
 								Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-									ServiceOptions: operatorv1beta1.ServiceOptions{
-										Type:                  corev1.ServiceTypeLoadBalancer,
-										InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyLocal),
-									},
+									Type:                  corev1.ServiceTypeLoadBalancer,
+									InternalTrafficPolicy: new(corev1.ServiceInternalTrafficPolicyLocal),
 								},
 							},
 						},
@@ -387,26 +351,24 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 				},
 			},
 			expectedSvc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "dataplane-ingress-dp-1-",
-					Namespace:    "default",
-					Labels: map[string]string{
-						"app": "dp-1",
-						"gateway-operator.konghq.com/dataplane-service-type": "ingress",
-						"gateway-operator.konghq.com/managed-by":             "dataplane",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Namespace:    "default",
+				Labels: map[string]string{
+					"app": "dp-1",
+					"gateway-operator.konghq.com/dataplane-service-type": "ingress",
+					"gateway-operator.konghq.com/managed-by":             "dataplane",
+				},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "gateway.konghq.com/v1beta1",
+						Kind:       "DataPlane",
+						Name:       "dp-1",
+						UID:        "1234",
+						Controller: new(true),
 					},
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "gateway.konghq.com/v1beta1",
-							Kind:       "DataPlane",
-							Name:       "dp-1",
-							UID:        "1234",
-							Controller: new(true),
-						},
-					},
-					Finalizers: []string{
-						"gateway-operator.konghq.com/wait-for-owner",
-					},
+				},
+				Finalizers: []string{
+					"gateway-operator.konghq.com/wait-for-owner",
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -446,7 +408,7 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 func TestServicePortsFromDataPlaneIngressOpt(t *testing.T) {
 	makeDP := func(ports []operatorv1beta1.DataPlaneServicePort) *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: "dp", Namespace: "ns"},
+			Name: "dp", Namespace: "ns",
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Network: operatorv1beta1.DataPlaneNetworkOptions{

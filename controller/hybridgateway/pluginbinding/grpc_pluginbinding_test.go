@@ -26,12 +26,10 @@ func TestBindingForGRPCPluginAndRoute(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-grpcroute",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-grpcroute",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
@@ -67,12 +65,10 @@ func TestBindingForGRPCPluginAndService(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-grpcroute",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-grpcroute",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",

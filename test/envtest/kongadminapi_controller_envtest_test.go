@@ -77,11 +77,9 @@ func startKongAdminAPIServiceReconciler(ctx context.Context, t *testing.T, clien
 	require.NoError(t, err)
 
 	adminService = corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kong-admin",
-			Namespace: ns.Name,
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "kong-admin",
+		Namespace: ns.Name,
+		UID:       k8stypes.UID(uuid.NewString()),
 	}
 
 	n = &notifier{t: t}
@@ -133,20 +131,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{
@@ -212,20 +208,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{
@@ -279,20 +273,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{
@@ -324,20 +316,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		require.NoError(t, client.Create(ctx, &endpoints, &ctrlclient.CreateOptions{}))
 
 		endpoints2 := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{
@@ -415,20 +405,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{
@@ -519,20 +507,18 @@ func TestKongAdminAPIController(t *testing.T) {
 		tlsServerName := getTLSServerName(adminService)
 
 		endpoints := discoveryv1.EndpointSlice{
-			ObjectMeta: metav1.ObjectMeta{
-				OwnerReferences: []metav1.OwnerReference{
-					{
-						Kind:       "Service",
-						Name:       adminService.Name,
-						APIVersion: "v1",
-						UID:        adminService.UID,
-					},
+			OwnerReferences: []metav1.OwnerReference{
+				{
+					Kind:       "Service",
+					Name:       adminService.Name,
+					APIVersion: "v1",
+					UID:        adminService.UID,
 				},
-				GenerateName: "endpointslice-",
-				Namespace:    adminService.Namespace,
-				Labels: map[string]string{
-					"kubernetes.io/service-name": adminService.Name,
-				},
+			},
+			GenerateName: "endpointslice-",
+			Namespace:    adminService.Namespace,
+			Labels: map[string]string{
+				"kubernetes.io/service-name": adminService.Name,
 			},
 			AddressType: discoveryv1.AddressTypeIPv4,
 			Endpoints: []discoveryv1.Endpoint{

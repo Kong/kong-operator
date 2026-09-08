@@ -64,11 +64,9 @@ func Test_MCPServerSignalReconciler_Reconcile(t *testing.T) {
 
 	t.Run("mirror owned by a control plane gets the finalizer added", func(t *testing.T) {
 		mcpServer := &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:       ns,
-				Name:            "mcp-1",
-				OwnerReferences: []metav1.OwnerReference{cpOwnerRef(cpName)},
-			},
+			Namespace:       ns,
+			Name:            "mcp-1",
+			OwnerReferences: []metav1.OwnerReference{cpOwnerRef(cpName)},
 		}
 		cl := newIndexedFakeClient(mcpServer)
 		sm := newTestSignalManager(t)
@@ -84,7 +82,7 @@ func Test_MCPServerSignalReconciler_Reconcile(t *testing.T) {
 
 	t.Run("MCPServer with no control plane owner is left alone", func(t *testing.T) {
 		mcpServer := &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "mcp-orphan"},
+			Namespace: ns, Name: "mcp-orphan",
 		}
 		cl := newIndexedFakeClient(mcpServer)
 		sm := newTestSignalManager(t)
@@ -101,13 +99,11 @@ func Test_MCPServerSignalReconciler_Reconcile(t *testing.T) {
 	t.Run("regression: foreign deletion of the mirror resets the signal offset", func(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		mcpServer := &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:         ns,
-				Name:              "mcp-1",
-				OwnerReferences:   []metav1.OwnerReference{cpOwnerRef(cpName)},
-				Finalizers:        []string{mcpServerFinalizer},
-				DeletionTimestamp: &now,
-			},
+			Namespace:         ns,
+			Name:              "mcp-1",
+			OwnerReferences:   []metav1.OwnerReference{cpOwnerRef(cpName)},
+			Finalizers:        []string{mcpServerFinalizer},
+			DeletionTimestamp: &now,
 		}
 		cl := newIndexedFakeClient(mcpServer)
 		sm := newTestSignalManager(t)
@@ -132,13 +128,11 @@ func Test_MCPServerSignalReconciler_Reconcile(t *testing.T) {
 	t.Run("deleting a mirror whose control plane is not registered still removes the finalizer", func(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		mcpServer := &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:         ns,
-				Name:              "mcp-1",
-				OwnerReferences:   []metav1.OwnerReference{cpOwnerRef("unregistered-cp")},
-				Finalizers:        []string{mcpServerFinalizer},
-				DeletionTimestamp: &now,
-			},
+			Namespace:         ns,
+			Name:              "mcp-1",
+			OwnerReferences:   []metav1.OwnerReference{cpOwnerRef("unregistered-cp")},
+			Finalizers:        []string{mcpServerFinalizer},
+			DeletionTimestamp: &now,
 		}
 		cl := newIndexedFakeClient(mcpServer)
 		sm := newTestSignalManager(t) // no resetCh registered for "unregistered-cp"
@@ -157,18 +151,16 @@ func Test_MCPServerSignalReconciler_Reconcile(t *testing.T) {
 	t.Run("deleting a mirror that never carried the signal finalizer does not reset the offset", func(t *testing.T) {
 		now := metav1.NewTime(time.Now())
 		mcpServer := &konnectv1alpha1.MCPServer{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: ns,
-				Name:      "mcp-1",
-				OwnerReferences: []metav1.OwnerReference{
-					cpOwnerRef(cpName),
-				},
-				// Kept alive by an unrelated finalizer so the fake client accepts a
-				// DeletionTimestamp without mcpServerFinalizer, matching the "someone
-				// else already handled cleanup" case.
-				Finalizers:        []string{"test.example.com/hold"},
-				DeletionTimestamp: &now,
+			Namespace: ns,
+			Name:      "mcp-1",
+			OwnerReferences: []metav1.OwnerReference{
+				cpOwnerRef(cpName),
 			},
+			// Kept alive by an unrelated finalizer so the fake client accepts a
+			// DeletionTimestamp without mcpServerFinalizer, matching the "someone
+			// else already handled cleanup" case.
+			Finalizers:        []string{"test.example.com/hold"},
+			DeletionTimestamp: &now,
 		}
 		cl := newIndexedFakeClient(mcpServer)
 		sm := newTestSignalManager(t)

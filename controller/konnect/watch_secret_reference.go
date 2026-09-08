@@ -52,10 +52,8 @@ func enqueueSecretsFromAPIAuthConfiguration(obj client.Object, q workqueue.Typed
 	}
 
 	req := ctrl.Request{
-		NamespacedName: client.ObjectKey{
-			Namespace: secretNamespace,
-			Name:      apiAuth.Spec.SecretRef.Name,
-		},
+		Namespace: secretNamespace,
+		Name:      apiAuth.Spec.SecretRef.Name,
 	}
 
 	q.Add(req)

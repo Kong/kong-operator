@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -23,9 +22,7 @@ func GatewayConfiguration(
 	t.Helper()
 
 	gwConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gwconfig-",
-		},
+		GenerateName: "gwconfig-",
 	}
 	for _, opt := range opts {
 		opt(gwConfig)
@@ -46,9 +43,7 @@ func GatewayClass(
 	t.Helper()
 
 	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gatewayclass-",
-		},
+		GenerateName: "gatewayclass-",
 	}
 	for _, opt := range opts {
 		opt(gc)
@@ -69,9 +64,7 @@ func Gateway(
 	t.Helper()
 
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "gateway-",
-		},
+		GenerateName: "gateway-",
 	}
 	for _, opt := range opts {
 		opt(gw)

@@ -44,11 +44,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -59,11 +57,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -74,11 +70,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
@@ -89,11 +83,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: false,
@@ -104,11 +96,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route3",
-					Namespace: "ns3",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "route3",
+				Namespace: "ns3",
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
@@ -118,11 +108,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-plugin",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-plugin",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			am := metadata.NewAnnotationManager(logger)
@@ -169,12 +157,10 @@ func TestPluginForFilter(t *testing.T) {
 			},
 			existingPlugin: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					UID:       "test-uid",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "test-gateway",
@@ -210,14 +196,12 @@ func TestPluginForFilter(t *testing.T) {
 			},
 			existingPlugin: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					UID:       "test-uid",
-					Annotations: map[string]string{
-						pkgmetadata.AnnotationKeyTags: "team-b, team-a",
-					},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
+				Annotations: map[string]string{
+					pkgmetadata.AnnotationKeyTags: "team-b, team-a",
 				},
 			},
 			parentRef: &gwtypes.ParentReference{
@@ -318,17 +302,13 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 			},
 			namespace: "default",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 		},
@@ -357,20 +337,16 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 			},
 			namespace: "test-namespace",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
 				},
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
@@ -416,14 +392,12 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "route-tag",
-			},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
 		},
 	}
 	parentRef := &gwtypes.ParentReference{
@@ -431,12 +405,10 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
-			},
+		Name:      "referenced-plugin",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
 		},
 		PluginName: "rate-limiting",
 	}
@@ -471,22 +443,18 @@ func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-		},
+		Name:       "referenced-plugin",
+		Namespace:  "test-namespace",
 		PluginName: "rate-limiting",
 		Tags:       commonv1alpha1.Tags{"team-payments", "env-prod"},
 	}

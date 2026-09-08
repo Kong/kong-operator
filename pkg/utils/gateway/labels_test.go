@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -77,9 +76,7 @@ func TestLabelObjForGateway(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			dataplane := &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Labels: tt.input,
-				},
+				Labels: tt.input,
 			}
 			LabelObjectAsGatewayManaged(dataplane, testGatewayName)
 			assert.Equal(t, tt.expected, dataplane.GetLabels())

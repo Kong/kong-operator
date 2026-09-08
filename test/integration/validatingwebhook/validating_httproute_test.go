@@ -33,10 +33,8 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 
 	t.Log("creating a managed gateway")
 	managedGateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns.Name,
-		},
+		Name:      uuid.NewString(),
+		Namespace: ns.Name,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(managedGatewayClass.Name),
 			Listeners: []gatewayv1.Listener{
@@ -58,9 +56,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 
 	t.Logf("creating an unmanaged gatewayclass")
 	unmanagedGatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: "example.com/unsupported-gateway-controller",
 		},
@@ -74,10 +70,8 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 
 	t.Log("creating an unmanaged gateway")
 	unmanagedGateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: ns.Name,
-		},
+		Name:      uuid.NewString(),
+		Namespace: ns.Name,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(unmanagedGatewayClass.Name),
 			Listeners: []gatewayv1.Listener{
@@ -102,9 +96,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "a valid httproute linked to a managed gateway passes validation",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{{
@@ -118,9 +110,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "a httproute linked to a non-existent gateway passes validation",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					CommonRouteSpec: gatewayv1.CommonRouteSpec{
 						ParentRefs: []gatewayv1.ParentReference{{
@@ -134,9 +124,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "an invalid httproute will pass validation if it's not linked to a managed controller (it's not ours)",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					Rules: []gatewayv1.HTTPRouteRule{{
 						Matches: []gatewayv1.HTTPRouteMatch{
@@ -155,9 +143,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "a httproute with valid regex expressions for a path and a header pass validation",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					Hostnames: []gatewayv1.Hostname{"foo.com"},
 					Rules: []gatewayv1.HTTPRouteRule{
@@ -180,9 +166,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "a httproute with an invalid path regex fails validation",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					Rules: []gatewayv1.HTTPRouteRule{{
 						Matches: []gatewayv1.HTTPRouteMatch{
@@ -202,9 +186,7 @@ func TestAdmissionWebhook_HTTPRoute(t *testing.T) {
 		{
 			Name: "a httproute with an invalid header regex fails validation",
 			Route: &gatewayv1.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayv1.HTTPRouteSpec{
 					Rules: []gatewayv1.HTTPRouteRule{{
 						Matches: []gatewayv1.HTTPRouteMatch{

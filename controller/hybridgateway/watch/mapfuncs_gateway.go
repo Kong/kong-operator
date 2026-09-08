@@ -39,10 +39,8 @@ func MapGatewayForTLSSecret(cl client.Client) handler.MapFunc {
 		requests := make([]reconcile.Request, 0, len(gateways.Items))
 		for _, gw := range gateways.Items {
 			requests = append(requests, reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: gw.Namespace,
-					Name:      gw.Name,
-				},
+				Namespace: gw.Namespace,
+				Name:      gw.Name,
 			})
 		}
 
@@ -84,10 +82,8 @@ func MapGatewayForReferenceGrant(cl client.Client) handler.MapFunc {
 		for _, gw := range gateways.Items {
 			if hasMatchingCrossNamespaceSecretRef(gw, rg) {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{
-						Namespace: gw.Namespace,
-						Name:      gw.Name,
-					},
+					Namespace: gw.Namespace,
+					Name:      gw.Name,
 				})
 			}
 		}

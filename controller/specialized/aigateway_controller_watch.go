@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	"github.com/samber/lo"
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -72,10 +71,8 @@ func (r *AIGatewayReconciler) listAIGatewaysForGatewayClass(ctx context.Context,
 	for _, aigateway := range aigateways.Items {
 		if aigateway.Spec.GatewayClassName == gatewayClass.Name {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: aigateway.Namespace,
-					Name:      aigateway.Name,
-				},
+				Namespace: aigateway.Namespace,
+				Name:      aigateway.Name,
 			})
 		}
 	}
@@ -116,10 +113,8 @@ func (r *AIGatewayReconciler) listAIGatewaysForReferenceGrants(ctx context.Conte
 		}
 		for _, aigateway := range aigateways.Items {
 			reqs = append(reqs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: aigateway.Namespace,
-					Name:      aigateway.Name,
-				},
+				Namespace: aigateway.Namespace,
+				Name:      aigateway.Name,
 			})
 		}
 	}

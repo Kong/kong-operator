@@ -32,17 +32,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway references secret in same namespace",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -68,17 +64,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway references secret in different namespace",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns2",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns2",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -105,17 +97,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "multiple gateways reference same secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -133,10 +121,8 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw2",
-						Namespace: "ns1",
-					},
+					Name:      "gw2",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -163,17 +149,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway references different secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -196,17 +178,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway has no TLS",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -221,17 +199,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway has no certificate refs",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -247,17 +221,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "certificate ref is not a Secret kind",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -280,10 +250,8 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "wrong object type",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways:      []gwtypes.Gateway{},
 			expectedCount: 0,
@@ -291,10 +259,8 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "list error",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways:      []gwtypes.Gateway{},
 			expectedCount: 0,
@@ -303,17 +269,13 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 		{
 			name: "gateway with multiple listeners and cert refs",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "tls-secret",
-					Namespace: "ns1",
-				},
+				Name:      "tls-secret",
+				Namespace: "ns1",
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -371,10 +333,8 @@ func Test_MapGatewayForTLSSecret(t *testing.T) {
 			var obj client.Object
 			if tt.name == "wrong object type" {
 				obj = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "not-a-secret",
-						Namespace: "ns1",
-					},
+					Name:      "not-a-secret",
+					Namespace: "ns1",
 				}
 			} else {
 				obj = tt.secret
@@ -417,10 +377,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "gateway with cross-namespace secret ref matches ReferenceGrant",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -438,10 +396,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -468,10 +424,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "ReferenceGrant does not allow Secrets",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -489,10 +443,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -516,10 +468,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "gateway in same namespace as secret - not cross-namespace",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns1",
-				},
+				Name:      "rg1",
+				Namespace: "ns1",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -537,10 +487,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -563,10 +511,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "gateway references secret in different namespace than ReferenceGrant",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns3",
-				},
+				Name:      "rg1",
+				Namespace: "ns3",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -584,10 +530,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -611,10 +555,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "ReferenceGrant from namespace does not match gateway namespace",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -632,10 +574,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -659,10 +599,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "ReferenceGrant from kind is not Gateway",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -680,10 +618,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -707,10 +643,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "ReferenceGrant from group is wrong",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -728,10 +662,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -755,10 +687,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "ReferenceGrant from group is empty - should match",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -776,10 +706,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -806,10 +734,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "wrong object type",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					To: []gwtypes.ReferenceGrantTo{
 						{
@@ -824,10 +750,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "list error",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					To: []gwtypes.ReferenceGrantTo{
 						{
@@ -843,10 +767,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "gateway with no TLS",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -864,10 +786,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -882,10 +802,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "gateway with no certificate refs",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -903,10 +821,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -922,10 +838,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 		{
 			name: "certificate ref is not Secret kind",
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -943,10 +857,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			},
 			gateways: []gwtypes.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw1",
-						Namespace: "ns1",
-					},
+					Name:      "gw1",
+					Namespace: "ns1",
 					Spec: gatewayv1.GatewaySpec{
 						Listeners: []gatewayv1.Listener{
 							{
@@ -990,10 +902,8 @@ func Test_MapGatewayForReferenceGrant(t *testing.T) {
 			var obj client.Object
 			if tt.name == "wrong object type" {
 				obj = &corev1.ConfigMap{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "not-a-rg",
-						Namespace: "ns1",
-					},
+					Name:      "not-a-rg",
+					Namespace: "ns1",
 				}
 			} else {
 				obj = tt.rg
@@ -1056,10 +966,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1096,10 +1004,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns1",
-				},
+				Name:      "rg1",
+				Namespace: "ns1",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1137,10 +1043,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1169,10 +1073,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1202,10 +1104,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1243,10 +1143,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1284,10 +1182,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1325,10 +1221,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1366,10 +1260,8 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 				},
 			},
 			rg: &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "rg1",
-					Namespace: "ns2",
-				},
+				Name:      "rg1",
+				Namespace: "ns2",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{

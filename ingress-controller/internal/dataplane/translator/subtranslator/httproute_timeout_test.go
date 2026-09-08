@@ -4,9 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -24,11 +22,7 @@ func httpRouteWithBackendTimeout(name string, timeout *gatewayapi.Duration) *gat
 	rule := gatewayapi.HTTPRouteRule{
 		BackendRefs: []gatewayapi.HTTPBackendRef{
 			{
-				BackendRef: gatewayapi.BackendRef{
-					BackendObjectReference: gatewayapi.BackendObjectReference{
-						Name: gatewayapi.ObjectName(testHTTPRouteBackend),
-					},
-				},
+				Name: gatewayapi.ObjectName(testHTTPRouteBackend),
 			},
 		},
 	}
@@ -36,7 +30,7 @@ func httpRouteWithBackendTimeout(name string, timeout *gatewayapi.Duration) *gat
 		rule.Timeouts = &gatewayapi.HTTPRouteTimeouts{BackendRequest: timeout}
 	}
 	return &gatewayapi.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testHTTPRouteNamespace, Name: name},
+		Namespace: testHTTPRouteNamespace, Name: name,
 		Spec: gatewayapi.HTTPRouteSpec{
 			Rules: []gatewayapi.HTTPRouteRule{rule},
 		},
@@ -145,12 +139,12 @@ func TestGroupRulesCombinedSuffixedNameRespectsLengthLimit(t *testing.T) {
 	// so appending ".timeout.<ms>" would push it over the limit unless the final name is trimmed.
 	ns := strings.Repeat("n", 63)
 	backends := []gatewayapi.HTTPBackendRef{
-		{BackendRef: gatewayapi.BackendRef{BackendObjectReference: gatewayapi.BackendObjectReference{Name: gatewayapi.ObjectName(strings.Repeat("a", 200))}}},
-		{BackendRef: gatewayapi.BackendRef{BackendObjectReference: gatewayapi.BackendObjectReference{Name: gatewayapi.ObjectName(strings.Repeat("b", 95))}}},
+		{Name: gatewayapi.ObjectName(strings.Repeat("a", 200))},
+		{Name: gatewayapi.ObjectName(strings.Repeat("b", 95))},
 	}
 	routeWith := func(name string, timeout gatewayapi.Duration) *gatewayapi.HTTPRoute {
 		return &gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+			Namespace: ns, Name: name,
 			Spec: gatewayapi.HTTPRouteSpec{
 				Rules: []gatewayapi.HTTPRouteRule{{
 					BackendRefs: backends,
@@ -191,11 +185,7 @@ func hasServiceNameWithSuffix(groups map[string][]httpRouteRuleMeta, suffix stri
 
 func TestGroupRulesByBackendRefsSeparatesDifferentBackendRequestTimeouts(t *testing.T) {
 	backendRef := gatewayapi.HTTPBackendRef{
-		BackendRef: gatewayapi.BackendRef{
-			BackendObjectReference: gatewayapi.BackendObjectReference{
-				Name: "service-1",
-			},
-		},
+		Name: "service-1",
 	}
 	timeout500ms := gatewayapi.Duration("500ms")
 	timeout0s := gatewayapi.Duration("0s")
@@ -225,11 +215,9 @@ func TestGroupRulesByBackendRefsSeparatesDifferentBackendRequestTimeouts(t *test
 func TestApplyTimeoutToServiceFromHTTPRouteRuleMapsZeroToMaxKongTimeout(t *testing.T) {
 	timeout := gatewayapi.Duration("0s")
 	service := kongstate.Service{
-		Service: kong.Service{
-			ConnectTimeout: new(DefaultServiceTimeout),
-			ReadTimeout:    new(DefaultServiceTimeout),
-			WriteTimeout:   new(DefaultServiceTimeout),
-		},
+		ConnectTimeout: new(DefaultServiceTimeout),
+		ReadTimeout:    new(DefaultServiceTimeout),
+		WriteTimeout:   new(DefaultServiceTimeout),
 	}
 
 	applyTimeoutToServiceFromHTTPRouteRule(&service, gatewayapi.HTTPRouteRule{

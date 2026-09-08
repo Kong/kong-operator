@@ -105,12 +105,10 @@ func GenerateKongRoutesFromGRPCRouteRule(
 	// For no matches it can be a catch-all or route based on hostnames.
 	if len(rule.Matches) == 0 {
 		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, 0),
-				Protocols: grpcProtocols,
-				Tags:      tags,
-			},
+			Ingress:   ingressObjectInfo,
+			Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, 0),
+			Protocols: grpcProtocols,
+			Tags:      tags,
 		}
 		if configuredHostnames := getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute, storer); len(configuredHostnames) > 0 {
 			// Match based on hostnames.
@@ -127,13 +125,11 @@ func GenerateKongRoutesFromGRPCRouteRule(
 	routes := make([]kongstate.Route, 0, len(rule.Matches))
 	for matchNumber, match := range rule.Matches {
 		r := kongstate.Route{
-			Ingress: ingressObjectInfo,
-			Route: kong.Route{
-				Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, matchNumber),
-				Protocols: grpcProtocols,
-				Tags:      tags,
-				Hosts:     getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute, storer),
-			},
+			Ingress:   ingressObjectInfo,
+			Name:      routeName(grpcroute.Namespace, grpcroute.Name, ruleNumber, matchNumber),
+			Protocols: grpcProtocols,
+			Tags:      tags,
+			Hosts:     getGRPCRouteHostnamesAsSliceOfStringPointers(grpcroute, storer),
 		}
 		if match.Method != nil {
 			r.Paths = append(r.Paths, generateKongPathFromGRPCMethodMatch(match.Method))

@@ -14,7 +14,6 @@ import (
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -247,10 +246,8 @@ func (ks *KongState) FillConsumersAndCredentials(
 func (ks *KongState) FillConsumerGroups(_ logr.Logger, s store.Storer) {
 	for _, cg := range s.ListKongConsumerGroups() {
 		ks.ConsumerGroups = append(ks.ConsumerGroups, ConsumerGroup{
-			ConsumerGroup: kong.ConsumerGroup{
-				Name: new(cg.Name),
-				Tags: util.GenerateTagsForObject(cg),
-			},
+			Name:                 new(cg.Name),
+			Tags:                 util.GenerateTagsForObject(cg),
 			K8sKongConsumerGroup: *cg,
 		})
 	}
@@ -472,11 +469,9 @@ func (ks *KongState) getPluginRelations(
 				// REVIEW: we only need an object to carry type meta and object meta here, maybe we should create some other types of virtual object here?
 				virtualIngress := netv1.Ingress{
 					// Fill the actual type of the object for reference checks.
-					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: ingress.Namespace,
-						Name:      ingress.Name,
-					},
+					TypeMeta:  util.TypeMetaFromGVK(ingress.GroupVersionKind),
+					Namespace: ingress.Namespace,
+					Name:      ingress.Name,
 				}
 				addRelation(&virtualIngress, plugin, *ks.Services[i].Routes[j].Name, RouteRelation)
 			}
@@ -824,11 +819,9 @@ func (ks *KongState) getPluginRelatedEntitiesRef(
 				// Pretend we have a full Ingress struct for reference checks.
 				virtualIngress := netv1.Ingress{
 					// Fill the actual type of the object for reference checks.
-					TypeMeta: util.TypeMetaFromGVK(ingress.GroupVersionKind),
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: ingress.Namespace,
-						Name:      ingress.Name,
-					},
+					TypeMeta:  util.TypeMetaFromGVK(ingress.GroupVersionKind),
+					Namespace: ingress.Namespace,
+					Name:      ingress.Name,
 				}
 				addRelation(&virtualIngress, plugin, &ks.Services[i].Routes[j])
 				// For some entities, we need to find the referred service via route

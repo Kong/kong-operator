@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -40,9 +39,7 @@ func TestCreateKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Config: apiextensionsv1.JSON{
 							Raw: []byte(`{}`),
@@ -77,9 +74,7 @@ func TestCreateKongVault(t *testing.T) {
 			name: "failed - no control plane ID in Konnect status",
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-no-cpid",
-					},
+					Name: "vault-no-cpid",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Config: apiextensionsv1.JSON{
 							Raw: []byte(`{}`),
@@ -101,9 +96,7 @@ func TestCreateKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Config: apiextensionsv1.JSON{
 							Raw: []byte(`{}`),
@@ -163,9 +156,7 @@ func TestUpdateKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Config: apiextensionsv1.JSON{
 							Raw: []byte(`{}`),
@@ -176,9 +167,7 @@ func TestUpdateKongVault(t *testing.T) {
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "12345",
-							},
+							ID:             "12345",
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -210,9 +199,7 @@ func TestUpdateKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Config: apiextensionsv1.JSON{
 							Raw: []byte(`{}`),
@@ -223,9 +210,7 @@ func TestUpdateKongVault(t *testing.T) {
 					},
 					Status: configurationv1alpha1.KongVaultStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "12345",
-							},
+							ID:             "12345",
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -276,10 +261,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-override",
-						UID:  k8stypes.UID("uid-override"),
-					},
+					Name: "vault-override",
+					UID:  k8stypes.UID("uid-override"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -325,10 +308,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-match",
-						UID:  k8stypes.UID("uid-match"),
-					},
+					Name: "vault-match",
+					UID:  k8stypes.UID("uid-match"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -371,10 +352,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-mismatch",
-						UID:  k8stypes.UID("uid-mismatch"),
-					},
+					Name: "vault-mismatch",
+					UID:  k8stypes.UID("uid-mismatch"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -416,10 +395,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-fetch-fail",
-						UID:  k8stypes.UID("uid-fetch-fail"),
-					},
+					Name: "vault-fetch-fail",
+					UID:  k8stypes.UID("uid-fetch-fail"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -459,10 +436,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-uid-conflict",
-						UID:  k8stypes.UID("uid-conflict"),
-					},
+					Name: "vault-uid-conflict",
+					UID:  k8stypes.UID("uid-conflict"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -508,10 +483,8 @@ func TestAdoptKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-no-cp",
-						UID:  k8stypes.UID("uid-no-cp"),
-					},
+					Name: "vault-no-cp",
+					UID:  k8stypes.UID("uid-no-cp"),
 					Spec: configurationv1alpha1.KongVaultSpec{
 						Backend: "aws",
 						Prefix:  "aws-vault1",
@@ -560,15 +533,11 @@ func TestDeleteKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "12345",
-							},
+							ID:             "12345",
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -584,15 +553,11 @@ func TestDeleteKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "12345",
-							},
+							ID:             "12345",
 							ControlPlaneID: "123456789",
 						},
 					},
@@ -611,15 +576,11 @@ func TestDeleteKongVault(t *testing.T) {
 			mockVaultPair: func(t *testing.T) (*mocks.MockVaultsSDK, *configurationv1alpha1.KongVault) {
 				sdk := mocks.NewMockVaultsSDK(t)
 				vault := &configurationv1alpha1.KongVault{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "vault-1",
-					},
+					Name: "vault-1",
 					Spec: configurationv1alpha1.KongVaultSpec{},
 					Status: configurationv1alpha1.KongVaultStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "12345",
-							},
+							ID:             "12345",
 							ControlPlaneID: "123456789",
 						},
 					},

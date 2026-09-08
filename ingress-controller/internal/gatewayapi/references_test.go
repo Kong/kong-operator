@@ -6,16 +6,13 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 	grants := []*ReferenceGrant{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: "fitrat",
-			},
+			Name:      uuid.NewString(),
+			Namespace: "fitrat",
 			Spec: ReferenceGrantSpec{
 				From: []ReferenceGrantFrom{
 					{
@@ -43,10 +40,8 @@ func TestGetPermittedForReferenceGrantFrom(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      uuid.NewString(),
-				Namespace: "cholpon",
-			},
+			Name:      uuid.NewString(),
+			Namespace: "cholpon",
 			Spec: ReferenceGrantSpec{
 				From: []ReferenceGrantFrom{
 					{

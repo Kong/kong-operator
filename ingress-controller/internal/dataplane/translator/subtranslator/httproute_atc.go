@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/go-logr/logr"
-	"github.com/kong/go-kong/kong"
 	"github.com/samber/lo"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
@@ -521,14 +520,12 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 		})
 
 	r := &kongstate.Route{
-		Route: kong.Route{
-			Name:         new(routeName),
-			Protocols:    options.Protocols,
-			PreserveHost: new(true),
-			// stripPath needs to be disabled by default to be conformant with the Gateway API
-			StripPath: new(false),
-			Tags:      tags,
-		},
+		Name:         new(routeName),
+		Protocols:    options.Protocols,
+		PreserveHost: new(true),
+		// stripPath needs to be disabled by default to be conformant with the Gateway API
+		StripPath:        new(false),
+		Tags:             tags,
 		Ingress:          util.FromK8sObject(httproute),
 		ExpressionRoutes: true,
 	}

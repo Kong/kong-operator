@@ -133,15 +133,11 @@ func TestUpdateStrategyInMemory(t *testing.T) {
 				sizeOfEmptyCfg,
 				[]failures.ResourceFailure{
 					lo.Must(failures.NewResourceFailure("invalid methods: cannot set 'methods' when 'protocols' is 'grpc' or 'grpcs'", &metav1.PartialObjectMetadata{
-						TypeMeta: metav1.TypeMeta{
-							APIVersion: "networking.k8s.io/v1",
-							Kind:       "Ingress",
-						},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "httpbin",
-							Namespace: "default",
-							UID:       "7b3f3b3b-0b3b-4b3b-8b3b-3b3b3b3b3b3b",
-						},
+						APIVersion: "networking.k8s.io/v1",
+						Kind:       "Ingress",
+						Name:       "httpbin",
+						Namespace:  "default",
+						UID:        "7b3f3b3b-0b3b-4b3b-8b3b-3b3b3b3b3b3b",
 					})),
 				},
 				kong.NewAPIErrorWithRaw(400, "bad request", []byte(validFlattenedErrorsResponse)),

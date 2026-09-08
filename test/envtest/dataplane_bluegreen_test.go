@@ -52,10 +52,8 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 	)
 
 	dp := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "dp-bluegreen-reconcile",
-			Namespace: ns.Name,
-		},
+		Name:      "dp-bluegreen-reconcile",
+		Namespace: ns.Name,
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

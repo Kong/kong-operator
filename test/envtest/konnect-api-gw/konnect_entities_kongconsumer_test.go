@@ -1142,9 +1142,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 		t.Log("Creating a KongCredentialAPIKey to adopt the KeyAuth")
 		createdAPIKey := &configurationv1alpha1.KongCredentialAPIKey{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "api-key-",
-			},
+			GenerateName: "api-key-",
 			Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
 					From: commonv1alpha1.AdoptSourceKonnect,
@@ -1199,9 +1197,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 		t.Log("Creating a KongCredentialBasicAuth to adopt the BasicAuth")
 		createdBasicAuth := &configurationv1alpha1.KongCredentialBasicAuth{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "basic-auth-",
-			},
+			GenerateName: "basic-auth-",
 			Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
 					From: commonv1alpha1.AdoptSourceKonnect,
@@ -1257,9 +1253,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 		t.Log("Creating a KongCredentialACL to adopt the ACL")
 		createdACL := &configurationv1alpha1.KongCredentialACL{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "acl-",
-			},
+			GenerateName: "acl-",
 			Spec: configurationv1alpha1.KongCredentialACLSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
 					From: commonv1alpha1.AdoptSourceKonnect,
@@ -1316,9 +1310,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 		t.Log("Creating a KongCredentialHMACAuth to adopt the existing HMAC auth")
 		createdHMACAuth := &configurationv1alpha1.KongCredentialHMAC{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "hmac-",
-			},
+			GenerateName: "hmac-",
 			Spec: configurationv1alpha1.KongCredentialHMACSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
 					From: commonv1alpha1.AdoptSourceKonnect,
@@ -1377,9 +1369,7 @@ func TestAdoptingConsumerAndCredentials(t *testing.T) {
 
 		t.Log("Creating a KongCredentialJWT for adopting the existing JWT auth")
 		createdJWT := &configurationv1alpha1.KongCredentialJWT{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "jwt-",
-			},
+			GenerateName: "jwt-",
 			Spec: configurationv1alpha1.KongCredentialJWTSpec{
 				Adopt: &commonv1alpha1.AdoptOptions{
 					From: commonv1alpha1.AdoptSourceKonnect,

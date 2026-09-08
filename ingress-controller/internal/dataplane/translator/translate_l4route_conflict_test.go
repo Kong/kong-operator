@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -16,7 +15,7 @@ import (
 
 func mkGateway(ns, name, gatewayClassName string, listeners ...gatewayv1.Listener) *gatewayapi.Gateway {
 	return &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+		Namespace: ns, Name: name,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClassName),
 			Listeners:        listeners,
@@ -26,8 +25,8 @@ func mkGateway(ns, name, gatewayClassName string, listeners ...gatewayv1.Listene
 
 func mkGatewayClass(name string, controllerName gatewayv1.GatewayController) *gatewayapi.GatewayClass {
 	return &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: name},
-		Spec:       gatewayv1.GatewayClassSpec{ControllerName: controllerName},
+		Name: name,
+		Spec: gatewayv1.GatewayClassSpec{ControllerName: controllerName},
 	}
 }
 

@@ -33,10 +33,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant allows reference from KongCertificate to Secret",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -74,10 +72,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant allows reference from KonnectGatewayControlPlane to KonnectAPIAuthConfiguration",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cp-to-auth",
-						Namespace: "auth-ns",
-					},
+					Name:      "allow-cp-to-auth",
+					Namespace: "auth-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -115,10 +111,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant allows reference from GatewayConfiguration to KonnectAPIAuthConfiguration",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-gatewayconfiguration-to-auth",
-						Namespace: "auth-ns",
-					},
+					Name:      "allow-gatewayconfiguration-to-auth",
+					Namespace: "auth-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -156,10 +150,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant allows reference from cluster-scoped KongVault to KonnectGatewayControlPlane",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-vault-to-cp",
-						Namespace: "cp-ns",
-					},
+					Name:      "allow-vault-to-cp",
+					Namespace: "cp-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -214,10 +206,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but from namespace doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -255,10 +245,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but from kind doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cp-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cp-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -296,10 +284,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but from group doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cp-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cp-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -337,10 +323,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but to name doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -378,10 +362,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but to kind doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-auth",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-auth",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -419,10 +401,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant exists but to group doesn't match",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-auth",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-auth",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -460,10 +440,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "multiple grants - first one matches",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -482,10 +460,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-other",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-other",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -523,10 +499,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "multiple grants - second one matches",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-other",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-other",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -545,10 +519,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -586,10 +558,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant with multiple from entries - matches second entry",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-multiple-from",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-multiple-from",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -632,10 +602,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant with multiple to entries - matches second entry",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-multiple-to",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-multiple-to",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -696,10 +664,8 @@ func TestIsXNamespaceRefGranted(t *testing.T) {
 			name: "grant with nil name allows reference to any resource",
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-any-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-any-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{

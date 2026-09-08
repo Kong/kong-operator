@@ -139,29 +139,21 @@ func TestWithKubernetesMetadataLabels(t *testing.T) {
 func TestGenerateTagsForObject(t *testing.T) {
 	namespacedObject := func() testObjectKind {
 		return testObjectKind{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-object",
-				Namespace:  "test-namespace",
-				UID:        "test-uid",
-				Generation: 2,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "TestObjectKind",
-				APIVersion: "test.objects.io/v1",
-			},
+			Name:       "test-object",
+			Namespace:  "test-namespace",
+			UID:        "test-uid",
+			Generation: 2,
+			Kind:       "TestObjectKind",
+			APIVersion: "test.objects.io/v1",
 		}
 	}
 	clusterScopedObject := func() testObjectKind {
 		return testObjectKind{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "test-object",
-				UID:        "test-uid",
-				Generation: 2,
-			},
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "TestObjectKind",
-				APIVersion: "test.objects.io/v1",
-			},
+			Name:       "test-object",
+			UID:        "test-uid",
+			Generation: 2,
+			Kind:       "TestObjectKind",
+			APIVersion: "test.objects.io/v1",
 		}
 	}
 

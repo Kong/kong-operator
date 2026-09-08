@@ -88,7 +88,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 	_, err = cl.CoreV1().Namespaces().Create(
 		ctx,
 		&corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{Name: additionalNamespace},
+			Name: additionalNamespace,
 		},
 		metav1.CreateOptions{},
 	)
@@ -98,7 +98,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 		_, err = gcl.GatewayV1().GatewayClasses().Create(
 			ctx,
 			&gatewayapi.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+				Name: fmt.Sprintf("test-%d", i),
 				Spec: gatewayapi.GatewayClassSpec{
 					ControllerName: "test.com/gateway-controller",
 				},
@@ -110,7 +110,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 		_, err = cl.CoreV1().Nodes().Create(
 			ctx,
 			&corev1.Node{
-				ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+				Name: fmt.Sprintf("test-%d", i),
 			},
 			metav1.CreateOptions{},
 		)
@@ -120,7 +120,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err := cl.CoreV1().Services(namespace).Create(
 				ctx,
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
 							{
@@ -136,7 +136,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = cl.CoreV1().Pods(namespace).Create(
 				ctx,
 				&corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{
 							{Name: "test", Image: "test"},
@@ -150,7 +150,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = cl.NetworkingV1().Ingresses(namespace).Create(
 				ctx,
 				&netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: netv1.IngressSpec{
 						Rules: []netv1.IngressRule{
 							{
@@ -166,7 +166,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().Gateways(namespace).Create(
 				ctx,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayapi.ObjectName("test"),
 						Listeners: []gatewayapi.Listener{
@@ -185,8 +185,8 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().HTTPRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec:       gatewayapi.HTTPRouteSpec{},
+					Name: fmt.Sprintf("test-%d", i),
+					Spec: gatewayapi.HTTPRouteSpec{},
 				},
 				metav1.CreateOptions{},
 			)
@@ -195,8 +195,8 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().GRPCRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
-					Spec:       gatewayapi.GRPCRouteSpec{},
+					Name: fmt.Sprintf("test-%d", i),
+					Spec: gatewayapi.GRPCRouteSpec{},
 				},
 				metav1.CreateOptions{},
 			)
@@ -205,17 +205,15 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().TCPRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: gatewayapi.TCPRouteSpec{
 						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: new(gatewayapi.Kind("Service")),
-											Name: gatewayapi.ObjectName("test"),
-											Port: new(gatewayapi.PortNumber(443)),
-										},
+										Kind: new(gatewayapi.Kind("Service")),
+										Name: gatewayapi.ObjectName("test"),
+										Port: new(gatewayapi.PortNumber(443)),
 									},
 								},
 							},
@@ -229,17 +227,15 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().UDPRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: gatewayapi.UDPRouteSpec{
 						Rules: []gatewayapi.UDPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: new(gatewayapi.Kind("Service")),
-											Name: gatewayapi.ObjectName("test"),
-											Port: new(gatewayapi.PortNumber(443)),
-										},
+										Kind: new(gatewayapi.Kind("Service")),
+										Name: gatewayapi.ObjectName("test"),
+										Port: new(gatewayapi.PortNumber(443)),
 									},
 								},
 							},
@@ -253,7 +249,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().TLSRoutes(namespace).Create(
 				ctx,
 				&gatewayapi.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: gatewayapi.TLSRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
 							gatewayapi.Hostname(fmt.Sprintf("test-%d.tlsroute.example", i)),
@@ -262,11 +258,9 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: new(gatewayapi.Kind("Service")),
-											Name: gatewayapi.ObjectName("test"),
-											Port: new(gatewayapi.PortNumber(443)),
-										},
+										Kind: new(gatewayapi.Kind("Service")),
+										Name: gatewayapi.ObjectName("test"),
+										Port: new(gatewayapi.PortNumber(443)),
 									},
 								},
 							},
@@ -280,7 +274,7 @@ func createK8sObjectsForTelemetryTest(ctx context.Context, t *testing.T, cfg *re
 			_, err = gcl.GatewayV1().ReferenceGrants(namespace).Create(
 				ctx,
 				&gatewayapi.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: fmt.Sprintf("test-%d", i)},
+					Name: fmt.Sprintf("test-%d", i),
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{
 							{

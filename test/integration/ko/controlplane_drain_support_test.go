@@ -84,14 +84,10 @@ func TestControlPlaneDrainSupport(t *testing.T) {
 	}, clients), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	controlplane := &gwtypes.ControlPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gwtypes.ControlPlaneGVR().GroupVersion().String(),
-			Kind:       "ControlPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "cp-drain-",
-		},
+		APIVersion:   gwtypes.ControlPlaneGVR().GroupVersion().String(),
+		Kind:         "ControlPlane",
+		Namespace:    namespace.Name,
+		GenerateName: "cp-drain-",
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				IngressClass: new(ingressClass),
@@ -216,10 +212,8 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 	}
 
 	deployment := &appsv1.Deployment{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace,
-			GenerateName: "drain-backend-",
-		},
+		Namespace:    namespace,
+		GenerateName: "drain-backend-",
 		Spec: appsv1.DeploymentSpec{
 			Replicas: new(int32(2)),
 			Selector: &metav1.LabelSelector{MatchLabels: labels},
@@ -238,10 +232,8 @@ func deployDrainSupportBackend(t *testing.T, ctx context.Context, namespace stri
 	require.NoError(t, err)
 
 	service := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace,
-			GenerateName: "drain-service-",
-		},
+		Namespace:    namespace,
+		GenerateName: "drain-service-",
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{

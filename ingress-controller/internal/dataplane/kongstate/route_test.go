@@ -320,38 +320,26 @@ func TestNormalizeProtocols(t *testing.T) {
 	}{
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
+				Protocols: kong.StringSlice("grpc", "grpcs"),
 			},
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
+				Protocols: kong.StringSlice("grpc", "grpcs"),
 			},
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
+				Protocols: kong.StringSlice("http", "https"),
 			},
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
+				Protocols: kong.StringSlice("http", "https"),
 			},
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "https"),
-				},
+				Protocols: kong.StringSlice("grpc", "https"),
 			},
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
+				Protocols: kong.StringSlice("http", "https"),
 			},
 		},
 	}
@@ -375,9 +363,7 @@ func TestUseSSLProtocol(t *testing.T) {
 	}{
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "grpcs"),
-				},
+				Protocols: kong.StringSlice("grpc", "grpcs"),
 			},
 			kong.Route{
 				Protocols: kong.StringSlice("grpcs"),
@@ -385,9 +371,7 @@ func TestUseSSLProtocol(t *testing.T) {
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("http", "https"),
-				},
+				Protocols: kong.StringSlice("http", "https"),
 			},
 			kong.Route{
 				Protocols: kong.StringSlice("https"),
@@ -395,9 +379,7 @@ func TestUseSSLProtocol(t *testing.T) {
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpcs", "https"),
-				},
+				Protocols: kong.StringSlice("grpcs", "https"),
 			},
 
 			kong.Route{
@@ -406,9 +388,7 @@ func TestUseSSLProtocol(t *testing.T) {
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: kong.StringSlice("grpc", "http"),
-				},
+				Protocols: kong.StringSlice("grpc", "http"),
 			},
 			kong.Route{
 				Protocols: kong.StringSlice("grpcs", "https"),
@@ -416,9 +396,7 @@ func TestUseSSLProtocol(t *testing.T) {
 		},
 		{
 			Route{
-				Route: kong.Route{
-					Protocols: []*string{},
-				},
+				Protocols: []*string{},
 			},
 			kong.Route{
 				Protocols: kong.StringSlice("https"),

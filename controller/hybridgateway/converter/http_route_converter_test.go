@@ -39,16 +39,12 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 	logger := logr.Discard()
 
 	validUpstream := &configurationv1alpha1.KongUpstream{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "upstream-1",
-			Namespace: "default",
-		},
+		Name:      "upstream-1",
+		Namespace: "default",
 	}
 	validService := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-1",
-			Namespace: "default",
-		},
+		Name:      "service-1",
+		Namespace: "default",
 	}
 
 	tests := []struct {
@@ -225,8 +221,8 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway-class"},
-					Spec:       gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
+					Name: "test-gateway-class",
+					Spec: gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
 				}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
@@ -384,7 +380,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				})
 				gateway := baseGateway()
 				objects := append(baseObjects(gateway), &configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "ext-plugin", Namespace: "default"},
+					Name: "ext-plugin", Namespace: "default",
 					PluginName: "rate-limiting",
 				})
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
@@ -663,15 +659,11 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								},
 							}},
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      v2Name,
-										Namespace: new(gwtypes.Namespace("app-backend")),
-										Kind:      &serviceKind,
-										Group:     &serviceGroup,
-										Port:      new(gwtypes.PortNumber(80)),
-									},
-								},
+								Name:      v2Name,
+								Namespace: new(gwtypes.Namespace("app-backend")),
+								Kind:      &serviceKind,
+								Group:     &serviceGroup,
+								Port:      new(gwtypes.PortNumber(80)),
 							}},
 						},
 						{
@@ -682,15 +674,11 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								},
 							}},
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      v1Name,
-										Namespace: new(gwtypes.Namespace("app-backend")),
-										Kind:      &serviceKind,
-										Group:     &serviceGroup,
-										Port:      new(gwtypes.PortNumber(80)),
-									},
-								},
+								Name:      v1Name,
+								Namespace: new(gwtypes.Namespace("app-backend")),
+								Kind:      &serviceKind,
+								Group:     &serviceGroup,
+								Port:      new(gwtypes.PortNumber(80)),
 							}},
 						},
 					},
@@ -701,7 +689,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					newKonnectGatewayStandardObjects(gateway),
 					newNamespace(),
 					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "app-backend"},
+						Name: "app-backend-v1", Namespace: "app-backend",
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "10.0.0.2",
 							Ports: []corev1.ServicePort{{
@@ -713,7 +701,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					},
 					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "app-backend"},
+						Name: "app-backend-v2", Namespace: "app-backend",
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "10.0.0.3",
 							Ports: []corev1.ServicePort{{
@@ -726,7 +714,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					},
 					newEndpointSlice("app-backend-v1", "app-backend", []string{"10.0.1.1"}),
 					&gwtypes.ReferenceGrant{
-						ObjectMeta: metav1.ObjectMeta{Name: "allow-app-backend-v1", Namespace: "app-backend"},
+						Name: "allow-app-backend-v1", Namespace: "app-backend",
 						Spec: gwtypes.ReferenceGrantSpec{
 							From: []gwtypes.ReferenceGrantFrom{{
 								Group:     gwtypes.GroupName,
@@ -1374,26 +1362,18 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					[]string{"api.example.com"},
 					[]gwtypes.HTTPBackendRef{
 						{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  "svc-active",
-									Kind:  &serviceKind,
-									Group: &serviceGroup,
-									Port:  new(gwtypes.PortNumber(80)),
-								},
-								Weight: &w100,
-							},
+							Name:   "svc-active",
+							Kind:   &serviceKind,
+							Group:  &serviceGroup,
+							Port:   new(gwtypes.PortNumber(80)),
+							Weight: &w100,
 						},
 						{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  "svc-preview",
-									Kind:  &serviceKind,
-									Group: &serviceGroup,
-									Port:  new(gwtypes.PortNumber(80)),
-								},
-								Weight: &w0,
-							},
+							Name:   "svc-preview",
+							Kind:   &serviceKind,
+							Group:  &serviceGroup,
+							Port:   new(gwtypes.PortNumber(80)),
+							Weight: &w0,
 						},
 					},
 					nil,
@@ -1401,7 +1381,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				// Both services resolve to the same pod IP — the classic blue-green overlap scenario.
 				svcActive := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-active", Namespace: "default"},
+					Name: "svc-active", Namespace: "default",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "10.0.1.1",
 						Ports: []corev1.ServicePort{
@@ -1410,7 +1390,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					},
 				}
 				svcPreview := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-preview", Namespace: "default"},
+					Name: "svc-preview", Namespace: "default",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "10.0.1.2",
 						Ports: []corev1.ServicePort{
@@ -1631,7 +1611,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				}, nil)
 				gateway := baseGateway()
 				referenceGrant := &gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "allow-backend", Namespace: "backend"},
+					Name: "allow-backend", Namespace: "backend",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gatewayv1.GroupName,
@@ -1765,8 +1745,8 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway-class"},
-					Spec:       gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
+					Name: "test-gateway-class",
+					Spec: gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
 				}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
 				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
@@ -2159,7 +2139,7 @@ func TestHTTPRouteConverter_MetadataAccessors(t *testing.T) {
 			converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
 
 			converter.outputStore = []client.Object{
-				&configurationv1alpha1.KongRoute{ObjectMeta: metav1.ObjectMeta{Name: "route"}},
+				&configurationv1alpha1.KongRoute{Name: "route"},
 			}
 
 			root := converter.GetRootObject()
@@ -2242,14 +2222,10 @@ func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *g
 	}
 
 	return &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "default",
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: gwHostnames,
 			Rules:     rules,
@@ -2283,14 +2259,10 @@ func newBackendRef(namespace string) gwtypes.HTTPBackendRef {
 	serviceKind := gwtypes.Kind("Service")
 	serviceGroup := gwtypes.Group("")
 	ref := gwtypes.HTTPBackendRef{
-		BackendRef: gwtypes.BackendRef{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name:  "backend-service",
-				Kind:  &serviceKind,
-				Group: &serviceGroup,
-				Port:  new(gwtypes.PortNumber(80)),
-			},
-		},
+		Name:  "backend-service",
+		Kind:  &serviceKind,
+		Group: &serviceGroup,
+		Port:  new(gwtypes.PortNumber(80)),
 	}
 
 	if namespace != "" {
@@ -2328,10 +2300,8 @@ func newExtensionRefFilter(name string) gwtypes.HTTPRouteFilter {
 
 func newService(namespace string) *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-service",
-			Namespace: namespace,
-		},
+		Name:      "backend-service",
+		Namespace: namespace,
 		Spec: corev1.ServiceSpec{
 			ClusterIP: "10.0.0.1",
 			Ports: []corev1.ServicePort{
@@ -2349,12 +2319,10 @@ func newService(namespace string) *corev1.Service {
 func newEndpointSlice(serviceName, namespace string, addresses []string) *discoveryv1.EndpointSlice {
 	port := int32(8080)
 	return &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-slice", serviceName),
-			Namespace: namespace,
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: serviceName,
-			},
+		Name:      fmt.Sprintf("%s-slice", serviceName),
+		Namespace: namespace,
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: serviceName,
 		},
 		Ports: []discoveryv1.EndpointPort{
 			{
@@ -2376,9 +2344,7 @@ func newEndpointSlice(serviceName, namespace string, addresses []string) *discov
 
 func newNamespace() *corev1.Namespace {
 	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-		},
+		Name: "default",
 	}
 }
 
@@ -2445,13 +2411,13 @@ func TestHTTPRouteConverter_DesiredResourcesReady(t *testing.T) {
 		}
 		if konnectID != "" {
 			svc.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: konnectID},
+				ID: konnectID,
 			}
 		}
 		return svc
 	}
 
-	baseRoute := &gwtypes.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: ns}}
+	baseRoute := &gwtypes.HTTPRoute{Name: "test-route", Namespace: ns}
 
 	tests := []struct {
 		name            string

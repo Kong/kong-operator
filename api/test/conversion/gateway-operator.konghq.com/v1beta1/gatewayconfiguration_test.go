@@ -92,9 +92,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				},
 			},
 			expectedControlPlane: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					IngressClass: new("kong"),
-				},
+				IngressClass: new("kong"),
 			},
 		},
 		{
@@ -102,9 +100,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 			spec: operatorv1beta1.GatewayConfigurationSpec{
 				Extensions: []commonv1alpha1.ExtensionRef{
 					{
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test-extension",
-						},
+						Name:  "test-extension",
 						Group: "test.group",
 						Kind:  "Konnect",
 					},
@@ -117,9 +113,7 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 					},
 					Extensions: []commonv1alpha1.ExtensionRef{
 						{
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "test-extension",
-							},
+							Name:  "test-extension",
 							Group: "test.group",
 							Kind:  "Konnect",
 						},
@@ -128,16 +122,12 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				ControlPlaneOptions: &operatorv1beta1.ControlPlaneOptions{
 					Extensions: []commonv1alpha1.ExtensionRef{
 						{
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "extension-1",
-							},
+							Name:  "extension-1",
 							Group: "test.group",
 							Kind:  "Test1",
 						},
 						{
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "extension-2",
-							},
+							Name:  "extension-2",
 							Group: "test.group",
 							Kind:  "Test2",
 						},
@@ -178,29 +168,23 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 				},
 			},
 			expectedControlPlane: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-				ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-					FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-						{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
-						{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
-					},
-					Controllers: []operatorv2beta1.ControlPlaneController{
-						{Name: "INGRESS_CLASS_NETWORKINGV1", State: operatorv2beta1.ControllerStateEnabled},
-						{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
-					},
+				FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+					{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+					{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
+				},
+				Controllers: []operatorv2beta1.ControlPlaneController{
+					{Name: "INGRESS_CLASS_NETWORKINGV1", State: operatorv2beta1.ControllerStateEnabled},
+					{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
 				},
 			},
 			expectedExtensions: []commonv1alpha1.ExtensionRef{
 				{
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "extension-1",
-					},
+					Name:  "extension-1",
 					Group: "test.group",
 					Kind:  "Test1",
 				},
 				{
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "extension-2",
-					},
+					Name:  "extension-2",
 					Group: "test.group",
 					Kind:  "Test2",
 				},
@@ -244,11 +228,9 @@ func TestGatewayConfiguration_ConvertTo(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := &operatorv1beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.spec,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.spec,
 				Status: operatorv1beta1.GatewayConfigurationStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -318,19 +300,17 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 			name: "Full fledged case",
 			spec: operatorv2beta1.GatewayConfigurationSpec{
 				ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-					ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-						IngressClass: new("kong"),
-						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-							Type: operatorv2beta1.WatchNamespacesTypeAll,
-						},
-						Controllers: []operatorv2beta1.ControlPlaneController{
-							{Name: "FEATURE_A", State: operatorv2beta1.ControllerStateEnabled},
-							{Name: "FEATURE_B", State: operatorv2beta1.ControllerStateDisabled},
-						},
-						FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-							{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
-							{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
-						},
+					IngressClass: new("kong"),
+					WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+						Type: operatorv2beta1.WatchNamespacesTypeAll,
+					},
+					Controllers: []operatorv2beta1.ControlPlaneController{
+						{Name: "FEATURE_A", State: operatorv2beta1.ControllerStateEnabled},
+						{Name: "FEATURE_B", State: operatorv2beta1.ControllerStateDisabled},
+					},
+					FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+						{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+						{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
 					},
 				},
 				DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
@@ -356,16 +336,12 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 					{
 						Group: "konnect.konghq.com",
 						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "konnect-extension",
-						},
+						Name:  "konnect-extension",
 					},
 					{
 						Group: "gateway-operator.konghq.com",
 						Kind:  "DataPlaneMetricsExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "metrics-extension",
-						},
+						Name:  "metrics-extension",
 					},
 				},
 			},
@@ -417,9 +393,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 					{
 						Group: "gateway-operator.konghq.com",
 						Kind:  "DataPlaneMetricsExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "metrics-extension",
-						},
+						Name:  "metrics-extension",
 					},
 				},
 			},
@@ -427,9 +401,7 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 				{
 					Group: "konnect.konghq.com",
 					Kind:  "KonnectExtension",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: "konnect-extension",
-					},
+					Name:  "konnect-extension",
 				},
 			},
 			expectedListenersOptions: []operatorv2beta1.GatewayConfigurationListenerOptions{
@@ -446,11 +418,9 @@ func TestGatewayConfiguration_ConvertFrom(t *testing.T) {
 			obj := &operatorv1beta1.GatewayConfiguration{}
 
 			src := &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.spec,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.spec,
 				Status: operatorv2beta1.GatewayConfigurationStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -486,51 +456,49 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 			src: operatorv2beta1.GatewayConfiguration{
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-						ControlPlaneOptions: operatorv2beta1.ControlPlaneOptions{
-							IngressClass: new("kong"),
-							WatchNamespaces: &operatorv2beta1.WatchNamespaces{
-								Type: operatorv2beta1.WatchNamespacesTypeAll,
+						IngressClass: new("kong"),
+						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
+							Type: operatorv2beta1.WatchNamespacesTypeAll,
+						},
+						FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
+							{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
+							{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
+						},
+						Controllers: []operatorv2beta1.ControlPlaneController{
+							{Name: "INGRESS_CLASS_NETWORKINGV1", State: operatorv2beta1.ControllerStateEnabled},
+							{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
+						},
+						DataPlaneSync: &operatorv2beta1.ControlPlaneDataPlaneSync{
+							ReverseSync: new(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
+						},
+						GatewayDiscovery: &operatorv2beta1.ControlPlaneGatewayDiscovery{
+							ReadinessCheckInterval: &metav1.Duration{Duration: 30 * time.Second},
+							ReadinessCheckTimeout:  &metav1.Duration{Duration: 5 * time.Second},
+						},
+						Cache: &operatorv2beta1.ControlPlaneK8sCache{
+							InitSyncDuration: &metav1.Duration{Duration: 60 * time.Second},
+						},
+						Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
+							CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
+							FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
+								UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
 							},
-							FeatureGates: []operatorv2beta1.ControlPlaneFeatureGate{
-								{Name: "GatewayAlpha", State: operatorv2beta1.FeatureGateStateEnabled},
-								{Name: "ExperimentalFeature", State: operatorv2beta1.FeatureGateStateDisabled},
+							DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
+						},
+						ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
+							State:         operatorv2beta1.ConfigDumpStateEnabled,
+							DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
+						},
+						Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
+							ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
+							Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
+								State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
+								InitialPollingPeriod: &metav1.Duration{Duration: 10 * time.Second},
+								PollingPeriod:        &metav1.Duration{Duration: 60 * time.Second},
+								StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
 							},
-							Controllers: []operatorv2beta1.ControlPlaneController{
-								{Name: "INGRESS_CLASS_NETWORKINGV1", State: operatorv2beta1.ControllerStateEnabled},
-								{Name: "KONG_PLUGIN", State: operatorv2beta1.ControllerStateDisabled},
-							},
-							DataPlaneSync: &operatorv2beta1.ControlPlaneDataPlaneSync{
-								ReverseSync: new(operatorv2beta1.ControlPlaneReverseSyncStateEnabled),
-							},
-							GatewayDiscovery: &operatorv2beta1.ControlPlaneGatewayDiscovery{
-								ReadinessCheckInterval: &metav1.Duration{Duration: 30 * time.Second},
-								ReadinessCheckTimeout:  &metav1.Duration{Duration: 5 * time.Second},
-							},
-							Cache: &operatorv2beta1.ControlPlaneK8sCache{
-								InitSyncDuration: &metav1.Duration{Duration: 60 * time.Second},
-							},
-							Translation: &operatorv2beta1.ControlPlaneTranslationOptions{
-								CombinedServicesFromDifferentHTTPRoutes: new(operatorv2beta1.ControlPlaneCombinedServicesFromDifferentHTTPRoutesStateEnabled),
-								FallbackConfiguration: &operatorv2beta1.ControlPlaneFallbackConfiguration{
-									UseLastValidConfig: new(operatorv2beta1.ControlPlaneFallbackConfigurationStateDisabled),
-								},
-								DrainSupport: new(operatorv2beta1.ControlPlaneDrainSupportStateEnabled),
-							},
-							ConfigDump: &operatorv2beta1.ControlPlaneConfigDump{
-								State:         operatorv2beta1.ConfigDumpStateEnabled,
-								DumpSensitive: operatorv2beta1.ConfigDumpStateDisabled,
-							},
-							Konnect: &operatorv2beta1.ControlPlaneKonnectOptions{
-								ConsumersSync: new(operatorv2beta1.ControlPlaneKonnectConsumersSyncStateEnabled),
-								Licensing: &operatorv2beta1.ControlPlaneKonnectLicensing{
-									State:                new(operatorv2beta1.ControlPlaneKonnectLicensingStateEnabled),
-									InitialPollingPeriod: &metav1.Duration{Duration: 10 * time.Second},
-									PollingPeriod:        &metav1.Duration{Duration: 60 * time.Second},
-									StorageState:         new(operatorv2beta1.ControlPlaneKonnectLicenseStorageStateDisabled),
-								},
-								NodeRefreshPeriod:  &metav1.Duration{Duration: 30 * time.Second},
-								ConfigUploadPeriod: &metav1.Duration{Duration: 10 * time.Second},
-							},
+							NodeRefreshPeriod:  &metav1.Duration{Duration: 30 * time.Second},
+							ConfigUploadPeriod: &metav1.Duration{Duration: 10 * time.Second},
 						},
 					},
 					DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
@@ -560,16 +528,12 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 						{
 							Group: "konnect.konghq.com",
 							Kind:  "KonnectExtension",
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "konnect-extension",
-							},
+							Name:  "konnect-extension",
 						},
 						{
 							Group: "gateway-operator.konghq.com",
 							Kind:  "DataPlaneMetricsExtension",
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "metrics-extension",
-							},
+							Name:  "metrics-extension",
 						},
 					},
 				},
@@ -589,11 +553,9 @@ func TestGatewayConfiguration_RoundTrip(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			original := &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.src.Spec,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.src.Spec,
 				Status: operatorv2beta1.GatewayConfigurationStatus{
 					Conditions: []metav1.Condition{
 						{

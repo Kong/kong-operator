@@ -6,7 +6,6 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -28,12 +27,10 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 		{
 			name: "no KongUpstreamPolicy in store while services are configured with one gives error",
 			servicesGroup: []*corev1.Service{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "svc",
-					Namespace: "default",
-					Annotations: map[string]string{
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
-					},
+				Name:      "svc",
+				Namespace: "default",
+				Annotations: map[string]string{
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 				},
 			}},
 			expectError: "failed fetching KongUpstreamPolicy",
@@ -42,16 +39,12 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 			name: "all services configured with no KongUpstreamPolicy gives no policy and no error",
 			servicesGroup: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: "default",
-					},
+					Name:      "svc-2",
+					Namespace: "default",
 				},
 			},
 			expectPolicy: false,
@@ -60,21 +53,17 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 			name: "services in group with different KongUpstreamPolicy configurations gives error",
 			servicesGroup: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
-						},
+					Name:      "svc-1",
+					Namespace: "default",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: "default",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
-						},
+					Name:      "svc-2",
+					Namespace: "default",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "other-upstream-policy",
 					},
 				},
 			},
@@ -84,19 +73,15 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 			name: "one service with and one without KongUpstreamPolicy configuration gives error",
 			servicesGroup: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
-						},
+					Name:      "svc-1",
+					Namespace: "default",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: "default",
-					},
+					Name:      "svc-2",
+					Namespace: "default",
 				},
 			},
 			expectError: "inconsistent KongUpstreamPolicy configuration for services",
@@ -105,30 +90,24 @@ func TestGetKongUpstreamPolicyForServices(t *testing.T) {
 			name: "all the services configured with the same KongUpstreamPolicy gives the policy",
 			servicesGroup: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
-						},
+					Name:      "svc-1",
+					Namespace: "default",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-2",
-						Namespace: "default",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
-						},
+					Name:      "svc-2",
+					Namespace: "default",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy",
 					},
 				},
 			},
 			policies: []*configurationv1beta1.KongUpstreamPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "upstream-policy",
-						Namespace: "default",
-					},
+					Name:      "upstream-policy",
+					Namespace: "default",
 				},
 			},
 			expectPolicy: true,

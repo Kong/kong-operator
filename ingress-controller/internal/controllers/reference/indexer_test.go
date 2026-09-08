@@ -7,36 +7,27 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
 var testRefService1 = &corev1.Service{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: "ns",
-		Name:      "service1",
-	},
+	Namespace: "ns",
+	Name:      "service1",
 }
 
 var testRefService2 = &corev1.Service{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: "ns",
-		Name:      "service2",
-	},
+	Namespace: "ns",
+	Name:      "service2",
 }
 
 var testRefSecret1 = &corev1.Secret{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: "ns",
-		Name:      "secret1",
-	},
+	Namespace: "ns",
+	Name:      "secret1",
 }
 
 var testRefSecret2 = &corev1.Secret{
-	ObjectMeta: metav1.ObjectMeta{
-		Namespace: "ns",
-		Name:      "secret2",
-	},
+	Namespace: "ns",
+	Name:      "secret2",
 }
 
 func TestSetObjectReference(t *testing.T) {

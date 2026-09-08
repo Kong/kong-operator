@@ -35,10 +35,8 @@ func TestGetFromParametersRef(t *testing.T) {
 			parametersRef: nil,
 			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-config-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-config-1",
+					Namespace: "default",
 				},
 			},
 			expectedGatewayConfig: new(operatorv2beta1.GatewayConfiguration),
@@ -54,19 +52,15 @@ func TestGetFromParametersRef(t *testing.T) {
 			},
 			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "gateway-config-1",
-						Namespace:       "default",
-						ResourceVersion: "123",
-					},
-				},
-			},
-			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
 					Name:            "gateway-config-1",
 					Namespace:       "default",
 					ResourceVersion: "123",
 				},
+			},
+			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
+				Name:            "gateway-config-1",
+				Namespace:       "default",
+				ResourceVersion: "123",
 			},
 			expectedError: nil,
 		},
@@ -107,11 +101,9 @@ func TestGetFromParametersRef(t *testing.T) {
 			},
 			existingGatewayConfigs: []client.Object{
 				&operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "gateway-config-1",
-						Namespace:       "default",
-						ResourceVersion: "123",
-					},
+					Name:            "gateway-config-1",
+					Namespace:       "default",
+					ResourceVersion: "123",
 				},
 			},
 			expectedGatewayConfig: nil,
@@ -215,10 +207,8 @@ func TestIsGatewayHybrid(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			gatewayConfig := &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway-config",
-					Namespace: "test-ns",
-				},
+				Name:      "test-gateway-config",
+				Namespace: "test-ns",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					Konnect: tc.konnect,
 				},

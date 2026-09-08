@@ -23,10 +23,8 @@ func TestDeleteAll(t *testing.T) {
 
 	newCM := func(name string) corev1.ConfigMap {
 		return corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "default",
-			},
+			Name:      name,
+			Namespace: "default",
 		}
 	}
 	deletingCM := func(name string) corev1.ConfigMap {

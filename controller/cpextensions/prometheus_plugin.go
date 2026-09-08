@@ -6,7 +6,6 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -29,15 +28,13 @@ func prometheusPluginForSvc(svc *corev1.Service, cp *gwtypes.ControlPlane, ext *
 	}
 
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      prometheusPluginNameForSvc(svc),
-			Namespace: svc.Namespace,
-			Labels: map[string]string{
-				consts.GatewayOperatorManagedByLabel:          "controlplane",
-				consts.GatewayOperatorManagedByNameLabel:      cp.GetName(),
-				consts.GatewayOperatorManagedByNamespaceLabel: cp.GetNamespace(),
-				consts.GatewayOperatorKongPluginTypeLabel:     consts.KongPluginNamePrometheus,
-			},
+		Name:      prometheusPluginNameForSvc(svc),
+		Namespace: svc.Namespace,
+		Labels: map[string]string{
+			consts.GatewayOperatorManagedByLabel:          "controlplane",
+			consts.GatewayOperatorManagedByNameLabel:      cp.GetName(),
+			consts.GatewayOperatorManagedByNamespaceLabel: cp.GetNamespace(),
+			consts.GatewayOperatorKongPluginTypeLabel:     consts.KongPluginNamePrometheus,
 		},
 		PluginName: consts.KongPluginNamePrometheus,
 		Config: apiextensionsv1.JSON{

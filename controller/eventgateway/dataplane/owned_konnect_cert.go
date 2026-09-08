@@ -47,14 +47,10 @@ func (r *Reconciler) ensureKonnectCertificate(
 	certSecret *corev1.Secret,
 ) (programmed bool, err error) {
 	desired := &configurationv1alpha1.EventGatewayDataPlaneCertificate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayDataPlaneCertificate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      egdp.Name,
-			Namespace: egdp.Namespace,
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayDataPlaneCertificate",
+		Name:       egdp.Name,
+		Namespace:  egdp.Namespace,
 		Spec: configurationv1alpha1.EventGatewayDataPlaneCertificateSpec{
 			GatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

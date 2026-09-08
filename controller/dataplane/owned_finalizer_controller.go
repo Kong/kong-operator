@@ -233,10 +233,8 @@ func objectsListToRequests[T metav1.Object](objs []T) []ctrl.Request {
 	reqs := make([]ctrl.Request, 0, len(objs))
 	for _, obj := range objs {
 		reqs = append(reqs, ctrl.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: obj.GetNamespace(),
-				Name:      obj.GetName(),
-			},
+			Namespace: obj.GetNamespace(),
+			Name:      obj.GetName(),
 		})
 	}
 	return reqs

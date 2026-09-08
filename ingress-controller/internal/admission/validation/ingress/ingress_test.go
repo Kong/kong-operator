@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator"
@@ -33,12 +32,10 @@ func TestValidateIngress(t *testing.T) {
 		{
 			msg: "invalid protocols",
 			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
-					},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
 				},
 			},
 			valid:         false,
@@ -47,28 +44,24 @@ func TestValidateIngress(t *testing.T) {
 		{
 			msg: "invalid protocol combination: mutally exclusive protocols",
 			ingress: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.ProtocolsKey: "http, tcp",
-					},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.ProtocolsKey: "http, tcp",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{
 						{
 							Host: "example.com",
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path:     "/",
-											PathType: new(netv1.PathTypePrefix),
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "httpbin",
-													Port: netv1.ServiceBackendPort{Number: int32(80)},
-												},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/",
+										PathType: new(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "httpbin",
+												Port: netv1.ServiceBackendPort{Number: int32(80)},
 											},
 										},
 									},

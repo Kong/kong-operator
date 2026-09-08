@@ -63,24 +63,20 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 
 		validConsumer = func() *configurationv1.KongConsumer {
 			return &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "consumer-",
-					Namespace:    ns.Name,
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClassName,
-					},
+				GenerateName: "consumer-",
+				Namespace:    ns.Name,
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClassName,
 				},
 				Username: uuid.New().String(),
 			}
 		}
 		validConsumerGroup = func() *configurationv1beta1.KongConsumerGroup {
 			return &configurationv1beta1.KongConsumerGroup{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "consumer-group-",
-					Namespace:    ns.Name,
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClassName,
-					},
+				GenerateName: "consumer-group-",
+				Namespace:    ns.Name,
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClassName,
 				},
 				Spec: configurationv1beta1.KongConsumerGroupSpec{
 					Name: "consumer-group-" + lo.RandomString(8, lo.LowerCaseLettersCharset),
@@ -89,12 +85,10 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		}
 		validVault = func() *configurationv1alpha1.KongVault {
 			return &configurationv1alpha1.KongVault{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "vault-",
-					Namespace:    ns.Name,
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClassName,
-					},
+				GenerateName: "vault-",
+				Namespace:    ns.Name,
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClassName,
 				},
 				Spec: configurationv1alpha1.KongVaultSpec{
 					Backend: "env",

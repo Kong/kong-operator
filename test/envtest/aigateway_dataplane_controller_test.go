@@ -164,7 +164,7 @@ func TestAIGatewayDataPlaneReconciler_NoControlPlaneRef(t *testing.T) {
 	cl := mgr.GetClient()
 
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "aigwdp-no-cp", Namespace: ns.Name},
+		Name: "aigwdp-no-cp", Namespace: ns.Name,
 	}
 	require.NoError(t, cl.Create(ctx, aigwdp))
 
@@ -196,7 +196,7 @@ func setupProgrammedAIGWDP(
 	t.Helper()
 
 	aigwcp := &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{Name: aigwcpName, Namespace: ns},
+		Name: aigwcpName, Namespace: ns,
 		Spec: konnectv1alpha1.KonnectAIGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{Name: "unused-auth"},
@@ -215,8 +215,8 @@ func setupProgrammedAIGWDP(
 		KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpName},
 	}
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: aigwdpName, Namespace: ns},
-		Spec:       spec,
+		Name: aigwdpName, Namespace: ns,
+		Spec: spec,
 	}
 	require.NoError(t, cl.Create(ctx, aigwdp))
 

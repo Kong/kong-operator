@@ -43,9 +43,7 @@ func TestKongLicense(t *testing.T) {
 			require.NoError(t, err)
 
 			kongLicenseResource := &configurationv1alpha1.KongLicense{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-license",
-				},
+				Name:             "test-license",
 				RawLicenseString: licenseString,
 				Enabled:          true,
 			}

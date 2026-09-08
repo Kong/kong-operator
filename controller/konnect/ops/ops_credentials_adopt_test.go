@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -30,11 +29,9 @@ func TestAdoptKongCredentialAPIKey(t *testing.T) {
 
 	newCredential := func(mode commonv1alpha1.AdoptMode) *configurationv1alpha1.KongCredentialAPIKey {
 		return &configurationv1alpha1.KongCredentialAPIKey{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "apikey",
-				Namespace: "default",
-				UID:       types.UID("uid-1"),
-			},
+			Name:      "apikey",
+			Namespace: "default",
+			UID:       types.UID("uid-1"),
 			Spec: configurationv1alpha1.KongCredentialAPIKeySpec{
 				ConsumerRef: corev1.LocalObjectReference{Name: "consumer"},
 				Adopt: &commonv1alpha1.AdoptOptions{
@@ -97,11 +94,9 @@ func TestAdoptKongCredentialBasicAuth(t *testing.T) {
 
 	newCredential := func(mode commonv1alpha1.AdoptMode) *configurationv1alpha1.KongCredentialBasicAuth {
 		return &configurationv1alpha1.KongCredentialBasicAuth{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "basicauth",
-				Namespace: "default",
-				UID:       types.UID("uid-2"),
-			},
+			Name:      "basicauth",
+			Namespace: "default",
+			UID:       types.UID("uid-2"),
 			Spec: configurationv1alpha1.KongCredentialBasicAuthSpec{
 				ConsumerRef: corev1.LocalObjectReference{Name: "consumer"},
 				Adopt: &commonv1alpha1.AdoptOptions{
@@ -163,11 +158,9 @@ func TestAdoptKongCredentialACL(t *testing.T) {
 
 	newCredential := func(mode commonv1alpha1.AdoptMode) *configurationv1alpha1.KongCredentialACL {
 		return &configurationv1alpha1.KongCredentialACL{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "acl",
-				Namespace: "default",
-				UID:       types.UID("uid-3"),
-			},
+			Name:      "acl",
+			Namespace: "default",
+			UID:       types.UID("uid-3"),
 			Spec: configurationv1alpha1.KongCredentialACLSpec{
 				ConsumerRef: corev1.LocalObjectReference{Name: "consumer"},
 				Adopt: &commonv1alpha1.AdoptOptions{
@@ -210,11 +203,9 @@ func TestAdoptKongCredentialHMAC(t *testing.T) {
 
 	newCredential := func(mode commonv1alpha1.AdoptMode) *configurationv1alpha1.KongCredentialHMAC {
 		return &configurationv1alpha1.KongCredentialHMAC{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "hmac",
-				Namespace: "default",
-				UID:       types.UID("uid-4"),
-			},
+			Name:      "hmac",
+			Namespace: "default",
+			UID:       types.UID("uid-4"),
 			Spec: configurationv1alpha1.KongCredentialHMACSpec{
 				ConsumerRef: corev1.LocalObjectReference{Name: "consumer"},
 				Adopt: &commonv1alpha1.AdoptOptions{
@@ -261,11 +252,9 @@ func TestAdoptKongCredentialJWT(t *testing.T) {
 
 	newCredential := func(mode commonv1alpha1.AdoptMode) *configurationv1alpha1.KongCredentialJWT {
 		return &configurationv1alpha1.KongCredentialJWT{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "jwt",
-				Namespace: "default",
-				UID:       types.UID("uid-5"),
-			},
+			Name:      "jwt",
+			Namespace: "default",
+			UID:       types.UID("uid-5"),
 			Spec: configurationv1alpha1.KongCredentialJWTSpec{
 				ConsumerRef: corev1.LocalObjectReference{Name: "consumer"},
 				Adopt: &commonv1alpha1.AdoptOptions{

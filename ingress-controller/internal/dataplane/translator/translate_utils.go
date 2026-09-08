@@ -56,18 +56,16 @@ func generateKongServiceFromBackendRefWithName(
 	service, ok := rules.ServiceNameToServices[serviceName]
 	if !ok {
 		service = kongstate.Service{
-			Service: kong.Service{
-				Name:           new(serviceName),
-				Host:           new(serviceHost),
-				Protocol:       new(protocol),
-				ConnectTimeout: new(DefaultServiceTimeout),
-				ReadTimeout:    new(DefaultServiceTimeout),
-				WriteTimeout:   new(DefaultServiceTimeout),
-				Retries:        new(DefaultRetries),
-			},
-			Namespace: route.GetNamespace(),
-			Backends:  backends,
-			Parent:    route,
+			Name:           new(serviceName),
+			Host:           new(serviceHost),
+			Protocol:       new(protocol),
+			ConnectTimeout: new(DefaultServiceTimeout),
+			ReadTimeout:    new(DefaultServiceTimeout),
+			WriteTimeout:   new(DefaultServiceTimeout),
+			Retries:        new(DefaultRetries),
+			Namespace:      route.GetNamespace(),
+			Backends:       backends,
+			Parent:         route,
 		}
 	}
 	service.Host = new(serviceHost)

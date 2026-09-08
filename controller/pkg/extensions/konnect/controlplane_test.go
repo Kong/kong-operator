@@ -162,9 +162,7 @@ func TestApplyFeatureGatesToControlPlane(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cp := &gwtypes.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-cp",
-				},
+				Name: "test-cp",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						FeatureGates: tt.initialFeatureGates,
@@ -243,11 +241,9 @@ func TestGetTLSClientCertAndKey(t *testing.T) {
 
 			if tt.secretExists {
 				secret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "test-namespace",
-					},
-					Data: tt.secretData,
+					Name:      "test-secret",
+					Namespace: "test-namespace",
+					Data:      tt.secretData,
 				}
 				builder = builder.WithObjects(secret)
 			}
@@ -320,10 +316,8 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Helper function to create a valid KonnectExtension.
 	createValidKonnectExtension := func() *konnectv1alpha2.KonnectExtension {
 		return &konnectv1alpha2.KonnectExtension{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      extensionName,
-				Namespace: testNamespace,
-			},
+			Name:      extensionName,
+			Namespace: testNamespace,
 			Status: konnectv1alpha2.KonnectExtensionStatus{
 				Konnect: &konnectv1alpha2.KonnectExtensionControlPlaneStatus{
 					ControlPlaneID: controlPlaneID,
@@ -351,18 +345,14 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Helper function to create a valid ControlPlane.
 	createValidControlPlane := func() *gwtypes.ControlPlane {
 		return &gwtypes.ControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-control-plane",
-				Namespace: testNamespace,
-			},
+			Name:      "test-control-plane",
+			Namespace: testNamespace,
 			Spec: gwtypes.ControlPlaneSpec{
 				Extensions: []commonv1alpha1.ExtensionRef{
 					{
 						Group: konnectv1alpha1.SchemeGroupVersion.Group,
 						Kind:  konnectv1alpha2.KonnectExtensionKind,
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: extensionName,
-						},
+						Name:  extensionName,
 					},
 				},
 				ControlPlaneOptions: gwtypes.ControlPlaneOptions{},
@@ -373,10 +363,8 @@ func TestControlPlaneKonnectExtensionProcessor_Process(t *testing.T) {
 	// Helper function to create a valid TLS secret.
 	createValidTLSSecret := func() *corev1.Secret {
 		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      secretName,
-				Namespace: testNamespace,
-			},
+			Name:      secretName,
+			Namespace: testNamespace,
 			Data: map[string][]byte{
 				"tls.crt": []byte("test-certificate"),
 				"tls.key": []byte("test-private-key"),

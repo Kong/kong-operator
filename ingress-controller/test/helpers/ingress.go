@@ -14,9 +14,7 @@ import (
 
 func CreateIngressClass(ctx context.Context, ingressClassName string, client *kubernetes.Clientset) error {
 	ingressClass := &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: ingressClassName,
-		},
+		Name: ingressClassName,
 		Spec: netv1.IngressClassSpec{
 			Controller: store.IngressClassKongController,
 		},

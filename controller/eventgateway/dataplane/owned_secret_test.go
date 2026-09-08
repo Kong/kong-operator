@@ -29,11 +29,9 @@ const (
 // can match OwnerReferences by UID.
 func makeEGDP() *eventgatewayv1alpha1.KegDataPlane {
 	return &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: testCASecretNamespace,
-			Name:      testDPName,
-			UID:       types.UID("egdp-uid"),
-		},
+		Namespace: testCASecretNamespace,
+		Name:      testDPName,
+		UID:       types.UID("egdp-uid"),
 	}
 }
 
@@ -44,7 +42,7 @@ func caSecret() *corev1.Secret {
 		certificate.WithCATrue(),
 	)
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: testCASecretName},
+		Namespace: testCASecretNamespace, Name: testCASecretName,
 		Data: map[string][]byte{
 			"tls.crt": cert,
 			"tls.key": key,

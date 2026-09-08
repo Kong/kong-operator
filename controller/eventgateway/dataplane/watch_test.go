@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -31,11 +30,11 @@ func Test_enqueueForKonnectEventGatewayRef(t *testing.T) {
 	)
 
 	keg := &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: kegName},
+		Namespace: ns, Name: kegName,
 	}
 
 	egdpMatching := &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-match"},
+		Namespace: ns, Name: "dp-match",
 		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 			ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: kegName},
@@ -44,7 +43,7 @@ func Test_enqueueForKonnectEventGatewayRef(t *testing.T) {
 	}
 
 	egdpOther := &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-other"},
+		Namespace: ns, Name: "dp-other",
 		Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 			ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: "other-keg"},

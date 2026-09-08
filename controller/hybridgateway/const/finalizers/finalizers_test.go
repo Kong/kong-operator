@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/converter"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -62,10 +61,8 @@ func TestFinalizerConstants(t *testing.T) {
 func TestGetFinalizerForType(t *testing.T) {
 	t.Run("HTTPRoute returns HTTPRouteFinalizer", func(t *testing.T) {
 		route := gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridHTTPRouteFinalizer, finalizer)
@@ -74,10 +71,8 @@ func TestGetFinalizerForType(t *testing.T) {
 
 	t.Run("GRPCRoute returns GRPCRouteFinalizer", func(t *testing.T) {
 		route := gwtypes.GRPCRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridGRPCRouteFinalizer, finalizer)
@@ -86,10 +81,8 @@ func TestGetFinalizerForType(t *testing.T) {
 
 	t.Run("Gateway returns GatewayFinalizer", func(t *testing.T) {
 		gateway := gwtypes.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-gateway",
-				Namespace: "default",
-			},
+			Name:      "test-gateway",
+			Namespace: "default",
 		}
 		finalizer := GetFinalizerForType(gateway)
 		assert.Equal(t, HybridGatewayFinalizer, finalizer)
@@ -98,10 +91,8 @@ func TestGetFinalizerForType(t *testing.T) {
 
 	t.Run("TCPRoute returns TCPRouteFinalizer", func(t *testing.T) {
 		route := gwtypes.TCPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridTCPRouteFinalizer, finalizer)
@@ -134,10 +125,8 @@ func TestGetFinalizerForType(t *testing.T) {
 
 	t.Run("UDPRoute returns UDPRouteFinalizer", func(t *testing.T) {
 		route := gwtypes.UDPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 		finalizer := GetFinalizerForType(route)
 		assert.Equal(t, HybridUDPRouteFinalizer, finalizer)

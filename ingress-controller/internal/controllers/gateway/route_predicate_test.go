@@ -7,7 +7,6 @@ import (
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,38 +26,30 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 	}
 
 	kongGWClass := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "kong",
-		},
+		Name: "kong",
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: "konghq.com/kic-gateway-controller",
 		},
 	}
 
 	anotherGWClass := &gatewayapi.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "another",
-		},
+		Name: "another",
 		Spec: gatewayapi.GatewayClassSpec{
 			ControllerName: "another",
 		},
 	}
 
 	kongGW := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "kong",
-			Namespace: "default",
-		},
+		Name:      "kong",
+		Namespace: "default",
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: "kong",
 		},
 	}
 
 	anotherGW := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "another",
-			Namespace: "default",
-		},
+		Name:      "another",
+		Namespace: "default",
 		Spec: gatewayapi.GatewaySpec{
 			GatewayClassName: "another",
 		},
@@ -72,10 +63,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				kongGWClass,
 			},
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kong-httproute",
-					Namespace: "default",
-				},
+				Name:      "kong-httproute",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -98,10 +87,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				anotherGWClass,
 			},
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kong-httproute",
-					Namespace: "default",
-				},
+				Name:      "kong-httproute",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -130,10 +117,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				},
 			)),
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kong-httproute",
-					Namespace: "default",
-				},
+				Name:      "kong-httproute",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -155,10 +140,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 				kongGWClass,
 			},
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kong-httproute",
-					Namespace: "default",
-				},
+				Name:      "kong-httproute",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -180,10 +163,8 @@ func TestIsRouteAttachedToReconciledGateway(t *testing.T) {
 		{
 			name: "parent ref pointing to non-exist gateway",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "kong-httproute",
-					Namespace: "default",
-				},
+				Name:      "kong-httproute",
+				Namespace: "default",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -224,10 +205,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "no gatewayNN set, route has our controller status - returns true",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -247,10 +226,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "no gatewayNN set, route has another controller status - returns false",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -270,10 +247,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "gatewayNN set, route has matching gateway status - returns true",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -297,10 +272,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "gatewayNN set, route has status for different gateway - returns false",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -324,10 +297,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "gatewayNN set, route has status for matching and non-matching gateways - returns true",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{
@@ -358,10 +329,8 @@ func TestRouteHasKongParentStatus(t *testing.T) {
 		{
 			name: "gatewayNN set, parentRef namespace nil defaults to route namespace - returns true",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Status: gatewayapi.HTTPRouteStatus{
 					RouteStatus: gatewayapi.RouteStatus{
 						Parents: []gatewayapi.RouteParentStatus{

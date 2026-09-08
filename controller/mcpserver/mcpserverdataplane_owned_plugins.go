@@ -6,7 +6,6 @@ import (
 
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -99,10 +98,8 @@ func (r *MCPServerDataPlaneReconciler) ensureKongPlugin(
 
 func generateKongPlugin(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane, plg builtinPlugin) *configurationv1.KongPlugin {
 	return &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      kongPluginName(mcpDataPlane, plg),
-			Namespace: mcpDataPlane.Namespace,
-		},
+		Name:       kongPluginName(mcpDataPlane, plg),
+		Namespace:  mcpDataPlane.Namespace,
 		PluginName: plg.name,
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(plg.config),
@@ -177,10 +174,8 @@ func generateKongPluginBinding(
 	cpRef commonv1alpha1.ControlPlaneRef,
 ) *configurationv1alpha1.KongPluginBinding {
 	return &configurationv1alpha1.KongPluginBinding{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-%s", pluginName, serviceName),
-			Namespace: mcpDataPlane.Namespace,
-		},
+		Name:      fmt.Sprintf("%s-%s", pluginName, serviceName),
+		Namespace: mcpDataPlane.Namespace,
 		Spec: configurationv1alpha1.KongPluginBindingSpec{
 			PluginReference: configurationv1alpha1.PluginRef{
 				Name: pluginName,

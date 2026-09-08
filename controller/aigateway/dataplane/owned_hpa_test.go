@@ -113,18 +113,14 @@ func TestEnsureHPA(t *testing.T) {
 		ownerRef := metav1.OwnerReference{UID: aigwdp.UID, Name: aigwdp.Name}
 
 		hpa1 := &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: aigwdp.Name + "-1", Namespace: reconcileTestNS,
-				Labels:          labels,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
+			Name: aigwdp.Name + "-1", Namespace: reconcileTestNS,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
 		}
 		hpa2 := &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: aigwdp.Name + "-2", Namespace: reconcileTestNS,
-				Labels:          labels,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
+			Name: aigwdp.Name + "-2", Namespace: reconcileTestNS,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
 		}
 		r, cl := newReconcilerForHPATest(t, aigwdp, hpa1, hpa2)
 

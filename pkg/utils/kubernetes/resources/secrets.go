@@ -4,7 +4,6 @@ import (
 	"fmt"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -102,11 +101,9 @@ func GenerateNewTLSSecret[
 	var (
 		ownerPrefix = getPrefixForOwner(owner)
 		s           = &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace:    owner.GetNamespace(),
-				GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", ownerPrefix, owner.GetName())),
-			},
-			Type: corev1.SecretTypeTLS,
+			Namespace:    owner.GetNamespace(),
+			GenerateName: k8sutils.TrimGenerateName(fmt.Sprintf("%s-%s-", ownerPrefix, owner.GetName())),
+			Type:         corev1.SecretTypeTLS,
 		}
 	)
 	k8sutils.SetOwnerForObject(s, owner)

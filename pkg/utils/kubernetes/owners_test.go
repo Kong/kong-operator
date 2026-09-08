@@ -4,8 +4,6 @@ import (
 	"reflect"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
@@ -19,10 +17,8 @@ func TestGetManagedByLabelSet(t *testing.T) {
 		{
 			name: "Complete set of labels for a ControlPlane object",
 			object: &gwtypes.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "test-namespace",
-				},
+				Name:      "test",
+				Namespace: "test-namespace",
 			},
 			expected: map[string]string{
 				consts.GatewayOperatorManagedByLabel:          consts.ControlPlaneManagedLabelValue,

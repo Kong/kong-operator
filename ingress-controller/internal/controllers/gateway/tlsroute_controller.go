@@ -202,10 +202,8 @@ func (r *TLSRouteReconciler) listTLSRoutesForGatewayClass(ctx context.Context, o
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: tlsroute.Namespace,
-							Name:      tlsroute.Name,
-						},
+						Namespace: tlsroute.Namespace,
+						Name:      tlsroute.Name,
 					})
 				}
 			}
@@ -264,10 +262,8 @@ func (r *TLSRouteReconciler) listTLSRoutesForGateway(ctx context.Context, obj cl
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: tlsroute.Namespace,
-						Name:      tlsroute.Name,
-					},
+					Namespace: tlsroute.Namespace,
+					Name:      tlsroute.Name,
 				})
 			}
 		}
@@ -300,10 +296,8 @@ func (r *TLSRouteReconciler) listTLSRoutesForReferenceGrant(ctx context.Context,
 				from.Kind == "TLSRoute" &&
 				from.Group == "gateway.networking.k8s.io" {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: tlsroute.Namespace,
-						Name:      tlsroute.Name,
-					},
+					Namespace: tlsroute.Namespace,
+					Name:      tlsroute.Name,
 				})
 			}
 		}

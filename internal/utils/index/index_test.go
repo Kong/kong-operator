@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -18,14 +17,10 @@ import (
 
 func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectGatewayControlPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "cp-1",
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "KonnectGatewayControlPlane",
+		Namespace:  "default",
+		Name:       "cp-1",
 	}
 	cl := fakeclient.NewClientBuilder().
 		WithScheme(scheme.Get()).
@@ -41,10 +36,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "not specifying namespace is supported",
 				ent: &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -59,10 +52,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "specifying the same namespace is supported",
 				ent: &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -78,10 +69,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "cross namespace ref is indexed as given, independent of the pointed-to CP's existence",
 				ent: &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -108,10 +97,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "not specifying namespace is supported",
 				ent: &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -126,10 +113,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "specifying the same namespace is supported",
 				ent: &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -145,10 +130,8 @@ func TestIndexKonnectGatewayControlPlaneRef(t *testing.T) {
 			{
 				name: "cross namespace ref is indexed as given, independent of the pointed-to CP's existence",
 				ent: &configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "obj1",
-					},
+					Namespace: "default",
+					Name:      "obj1",
 					Spec: configurationv1alpha1.KongRouteSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

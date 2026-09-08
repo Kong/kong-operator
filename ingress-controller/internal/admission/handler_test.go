@@ -95,24 +95,18 @@ func TestHandleService(t *testing.T) {
 					require.NoError(t, configurationv1.AddToScheme(scheme))
 					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 						&configurationv1.KongPlugin{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "plugin1",
-								Namespace: "default",
-							},
+							Name:       "plugin1",
+							Namespace:  "default",
 							PluginName: "foo",
 						},
 						&configurationv1.KongPlugin{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "plugin2",
-								Namespace: "default",
-							},
+							Name:       "plugin2",
+							Namespace:  "default",
 							PluginName: "bar",
 						},
 						&configurationv1.KongPlugin{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "plugin3",
-								Namespace: "default",
-							},
+							Name:       "plugin3",
+							Namespace:  "default",
 							PluginName: "foo",
 						},
 					).Build()
@@ -139,17 +133,13 @@ func TestHandleService(t *testing.T) {
 					require.NoError(t, configurationv1.AddToScheme(scheme))
 					fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
 						&configurationv1.KongPlugin{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "plugin1",
-								Namespace: "default",
-							},
+							Name:       "plugin1",
+							Namespace:  "default",
 							PluginName: "foo",
 						},
 						&configurationv1.KongPlugin{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "plugin2",
-								Namespace: "default",
-							},
+							Name:       "plugin2",
+							Namespace:  "default",
 							PluginName: "bar",
 						},
 					).Build()
@@ -206,13 +196,11 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret used as a credential and passes the validation of credential",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "credential-0",
-					Labels: map[string]string{
-						"konghq.com/credential": "basic-auth",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "credential-0",
+				Labels: map[string]string{
+					"konghq.com/credential": "basic-auth",
 				},
 				Data: map[string][]byte{
 					"username": []byte("user"),
@@ -225,13 +213,11 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret used as credential and fails the validation of credential",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "credential-1",
-					Labels: map[string]string{
-						"konghq.com/credential": "basic-auth",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "credential-1",
+				Labels: map[string]string{
+					"konghq.com/credential": "basic-auth",
 				},
 				Data: map[string][]byte{
 					"username": []byte("user"),
@@ -247,13 +233,11 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret with not supported type of credential is ignored",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "credential-0",
-					Labels: map[string]string{
-						"konghq.com/credential": "whatever-credential",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "credential-0",
+				Labels: map[string]string{
+					"konghq.com/credential": "whatever-credential",
 				},
 				Data: map[string][]byte{
 					"username": []byte("user"),
@@ -266,31 +250,25 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret used as KongPlugin config and KongClusterPlugin and passes validation of both CRDs",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "plugin-conf",
-					Labels: map[string]string{
-						labels.ValidateLabel: "plugin",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "plugin-conf",
+				Labels: map[string]string{
+					labels.ValidateLabel: "plugin",
 				},
 			},
 			referrers: []client.Object{
 				&configurationv1.KongPlugin{
-					TypeMeta: kongPluginTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "plugin-0",
-					},
+					TypeMeta:   kongPluginTypeMeta,
+					Namespace:  "default",
+					Name:       "plugin-0",
 					PluginName: "test-plugin",
 				},
 				&configurationv1.KongClusterPlugin{
 					TypeMeta: kongClusterPluginTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster-plugin-0",
-						Labels: map[string]string{
-							labels.ValidateLabel: "plugin",
-						},
+					Name:     "cluster-plugin-0",
+					Labels: map[string]string{
+						labels.ValidateLabel: "plugin",
 					},
 					PluginName: "test-plugin",
 				},
@@ -301,22 +279,18 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret used as KongPlugin config and fails validation of KongPlugin",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "plugin-conf",
-					Labels: map[string]string{
-						labels.ValidateLabel: "plugin",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "plugin-conf",
+				Labels: map[string]string{
+					labels.ValidateLabel: "plugin",
 				},
 			},
 			referrers: []client.Object{
 				&configurationv1.KongPlugin{
-					TypeMeta: kongPluginTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "plugin-0",
-					},
+					TypeMeta:   kongPluginTypeMeta,
+					Namespace:  "default",
+					Name:       "plugin-0",
 					PluginName: "test-plugin",
 				},
 			},
@@ -329,21 +303,17 @@ func TestHandleSecret(t *testing.T) {
 		{
 			name: "secret used as KongClusterPlugin config and fails validation of KongClusterPlugin",
 			secret: &corev1.Secret{
-				TypeMeta: secretTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "plugin-conf",
-					Labels: map[string]string{
-						labels.ValidateLabel: "plugin",
-					},
+				TypeMeta:  secretTypeMeta,
+				Namespace: "default",
+				Name:      "plugin-conf",
+				Labels: map[string]string{
+					labels.ValidateLabel: "plugin",
 				},
 			},
 			referrers: []client.Object{
 				&configurationv1.KongClusterPlugin{
-					TypeMeta: kongClusterPluginTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "cluster-plugin-0",
-					},
+					TypeMeta:   kongClusterPluginTypeMeta,
+					Name:       "cluster-plugin-0",
 					PluginName: "test-plugin",
 				},
 			},

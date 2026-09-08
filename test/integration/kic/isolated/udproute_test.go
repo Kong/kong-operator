@@ -134,9 +134,7 @@ func TestUDPRouteEssentials(t *testing.T) {
 
 			t.Logf("creating a UDPRoute to access deployment %s via kong", deployment1.Name)
 			udpRoute := &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-				},
+				Name: uuid.NewString(),
 				Spec: gatewayapi.UDPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -146,10 +144,8 @@ func TestUDPRouteEssentials(t *testing.T) {
 					},
 					Rules: []gatewayapi.UDPRouteRule{{
 						BackendRefs: []gatewayapi.BackendRef{{
-							BackendObjectReference: gatewayapi.BackendObjectReference{
-								Name: gatewayapi.ObjectName(service1.Name),
-								Port: new(gatewayapi.PortNumber(service1Port)),
-							},
+							Name: gatewayapi.ObjectName(service1.Name),
+							Port: new(gatewayapi.PortNumber(service1Port)),
 						}},
 					}},
 				},
@@ -330,16 +326,12 @@ func TestUDPRouteEssentials(t *testing.T) {
 				assert.NoError(t, err)
 				udpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.BackendRef{
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service1Name),
-							Port: new(gatewayapi.PortNumber(service1Port)),
-						},
+						Name: gatewayapi.ObjectName(service1Name),
+						Port: new(gatewayapi.PortNumber(service1Port)),
 					},
 					{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Name: gatewayapi.ObjectName(service2Name),
-							Port: new(gatewayapi.PortNumber(service2Port)),
-						},
+						Name: gatewayapi.ObjectName(service2Name),
+						Port: new(gatewayapi.PortNumber(service2Port)),
 					},
 				}
 

@@ -32,17 +32,15 @@ func TestGetCACerts(t *testing.T) {
 		return &corev1.Secret{
 			// TypeMeta must be set so causing objects have a non-empty GVK; otherwise the
 			// failures collector silently drops the registered translation failures.
-			TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: "v1"},
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              name,
-				Namespace:         namespace,
-				CreationTimestamp: metav1.NewTime(creationTime),
-				Labels: map[string]string{
-					"konghq.com/ca-cert": "true",
-				},
-				Annotations: map[string]string{
-					annotations.IngressClassKey: annotations.DefaultIngressClass,
-				},
+			Kind: "Secret", APIVersion: "v1",
+			Name:              name,
+			Namespace:         namespace,
+			CreationTimestamp: metav1.NewTime(creationTime),
+			Labels: map[string]string{
+				"konghq.com/ca-cert": "true",
+			},
+			Annotations: map[string]string{
+				annotations.IngressClassKey: annotations.DefaultIngressClass,
 			},
 			Data: data,
 		}

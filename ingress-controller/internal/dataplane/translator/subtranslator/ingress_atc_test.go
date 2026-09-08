@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
@@ -31,30 +30,26 @@ func TestTranslateIngressATC(t *testing.T) {
 		{
 			name: "a basic ingress resource with a single rule and prefix path type",
 			ingress: &netv1.Ingress{
-				TypeMeta: ingressTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: corev1.NamespaceDefault,
-				},
+				TypeMeta:  ingressTypeMeta,
+				Name:      "test-ingress",
+				Namespace: corev1.NamespaceDefault,
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path:     "/api",
-									PathType: &pathTypePrefix,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: "test-service",
-											Port: netv1.ServiceBackendPort{
-												Name:   "http",
-												Number: 80,
-											},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Path:     "/api",
+								PathType: &pathTypePrefix,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: "test-service",
+										Port: netv1.ServiceBackendPort{
+											Name:   "http",
+											Number: 80,
 										},
 									},
-								}},
-							},
+								},
+							}},
 						},
 					}},
 				},
@@ -79,23 +74,21 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace:        corev1.NamespaceDefault,
 							GroupVersionKind: ingressGVK,
 						},
-						Route: kong.Route{
-							Name:       new("default.test-ingress.test-service.konghq.com.80"),
-							Protocols:  nil,
-							Expression: new(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
-							Priority: new(IngressRoutePriorityTraits{
-								MatchFields:   2,
-								PlainHostOnly: true,
-								MaxPathLength: 5,
-								HasRegexPath:  true,
-							}.EncodeToPriority()),
-							PreserveHost:      new(true),
-							StripPath:         new(false),
-							ResponseBuffering: new(true),
-							RequestBuffering:  new(true),
-							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
-						},
-						ExpressionRoutes: true,
+						Name:       new("default.test-ingress.test-service.konghq.com.80"),
+						Protocols:  nil,
+						Expression: new(`(http.host == "konghq.com") && ((http.path == "/api") || (http.path ^= "/api/"))`),
+						Priority: new(IngressRoutePriorityTraits{
+							MatchFields:   2,
+							PlainHostOnly: true,
+							MaxPathLength: 5,
+							HasRegexPath:  true,
+						}.EncodeToPriority()),
+						PreserveHost:      new(true),
+						StripPath:         new(false),
+						ResponseBuffering: new(true),
+						RequestBuffering:  new(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						ExpressionRoutes:  true,
 					}},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
@@ -109,29 +102,25 @@ func TestTranslateIngressATC(t *testing.T) {
 		{
 			name: "a basic ingress resource with a single rule, and only one path results in a single kong service and route",
 			ingress: &netv1.Ingress{
-				TypeMeta: ingressTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: corev1.NamespaceDefault,
-				},
+				TypeMeta:  ingressTypeMeta,
+				Name:      "test-ingress",
+				Namespace: corev1.NamespaceDefault,
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path: "/api/",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: "test-service",
-											Port: netv1.ServiceBackendPort{
-												Name:   "http",
-												Number: 80,
-											},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Path: "/api/",
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: "test-service",
+										Port: netv1.ServiceBackendPort{
+											Name:   "http",
+											Number: 80,
 										},
 									},
-								}},
-							},
+								},
+							}},
 						},
 					}},
 				},
@@ -156,23 +145,21 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace:        corev1.NamespaceDefault,
 							GroupVersionKind: ingressGVK,
 						},
-						Route: kong.Route{
-							Name:       new("default.test-ingress.test-service.konghq.com.80"),
-							Protocols:  nil,
-							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: new(IngressRoutePriorityTraits{
-								MatchFields:   2,
-								PlainHostOnly: true,
-								MaxPathLength: 5,
-								HasRegexPath:  false,
-							}.EncodeToPriority()),
-							PreserveHost:      new(true),
-							StripPath:         new(false),
-							ResponseBuffering: new(true),
-							RequestBuffering:  new(true),
-							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
-						},
-						ExpressionRoutes: true,
+						Name:       new("default.test-ingress.test-service.konghq.com.80"),
+						Protocols:  nil,
+						Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+						Priority: new(IngressRoutePriorityTraits{
+							MatchFields:   2,
+							PlainHostOnly: true,
+							MaxPathLength: 5,
+							HasRegexPath:  false,
+						}.EncodeToPriority()),
+						PreserveHost:      new(true),
+						StripPath:         new(false),
+						ResponseBuffering: new(true),
+						RequestBuffering:  new(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						ExpressionRoutes:  true,
 					}},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
@@ -186,34 +173,30 @@ func TestTranslateIngressATC(t *testing.T) {
 		{
 			name: "an ingress with method, protocol, and header annotations",
 			ingress: &netv1.Ingress{
-				TypeMeta: ingressTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress-annotations",
-					Namespace: corev1.NamespaceDefault,
-					Annotations: map[string]string{
-						"konghq.com/methods":     "GET",
-						"konghq.com/protocols":   "http",
-						"konghq.com/headers.foo": "bar",
-					},
+				TypeMeta:  ingressTypeMeta,
+				Name:      "test-ingress-annotations",
+				Namespace: corev1.NamespaceDefault,
+				Annotations: map[string]string{
+					"konghq.com/methods":     "GET",
+					"konghq.com/protocols":   "http",
+					"konghq.com/headers.foo": "bar",
 				},
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path: "/api/",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: "test-service",
-											Port: netv1.ServiceBackendPort{
-												Name:   "http",
-												Number: 80,
-											},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Path: "/api/",
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: "test-service",
+										Port: netv1.ServiceBackendPort{
+											Name:   "http",
+											Number: 80,
 										},
 									},
-								}},
-							},
+								},
+							}},
 						},
 					}},
 				},
@@ -243,24 +226,22 @@ func TestTranslateIngressATC(t *testing.T) {
 							},
 							GroupVersionKind: ingressGVK,
 						},
-						Route: kong.Route{
-							Name:       new("default.test-ingress-annotations.test-service.konghq.com.80"),
-							Protocols:  kong.StringSlice("http"),
-							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
-							Priority: new(IngressRoutePriorityTraits{
-								MatchFields:   4,
-								PlainHostOnly: true,
-								MaxPathLength: 5,
-								HasRegexPath:  false,
-								HeaderCount:   1,
-							}.EncodeToPriority()),
-							PreserveHost:      new(true),
-							StripPath:         new(false),
-							ResponseBuffering: new(true),
-							RequestBuffering:  new(true),
-							Tags:              kong.StringSlice("k8s-name:test-ingress-annotations", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
-						},
-						ExpressionRoutes: true,
+						Name:       new("default.test-ingress-annotations.test-service.konghq.com.80"),
+						Protocols:  kong.StringSlice("http"),
+						Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/") && (http.headers.foo == "bar") && (http.method == "GET")`),
+						Priority: new(IngressRoutePriorityTraits{
+							MatchFields:   4,
+							PlainHostOnly: true,
+							MaxPathLength: 5,
+							HasRegexPath:  false,
+							HeaderCount:   1,
+						}.EncodeToPriority()),
+						PreserveHost:      new(true),
+						StripPath:         new(false),
+						ResponseBuffering: new(true),
+						RequestBuffering:  new(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress-annotations", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						ExpressionRoutes:  true,
 					}},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("test-service").
@@ -268,15 +249,13 @@ func TestTranslateIngressATC(t *testing.T) {
 							WithPortNumber(80).MustBuild(),
 					},
 					Parent: &netv1.Ingress{
-						TypeMeta: metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-ingress-annotations",
-							Namespace: corev1.NamespaceDefault,
-							Annotations: map[string]string{
-								"konghq.com/methods":     "GET",
-								"konghq.com/protocols":   "http",
-								"konghq.com/headers.foo": "bar",
-							},
+						Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String(),
+						Name:      "test-ingress-annotations",
+						Namespace: corev1.NamespaceDefault,
+						Annotations: map[string]string{
+							"konghq.com/methods":     "GET",
+							"konghq.com/protocols":   "http",
+							"konghq.com/headers.foo": "bar",
 						},
 					},
 				},
@@ -285,41 +264,33 @@ func TestTranslateIngressATC(t *testing.T) {
 		{
 			name: "KongServiceFacade used as a backend",
 			ingress: &netv1.Ingress{
-				TypeMeta: ingressTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "default",
-				},
+				TypeMeta:  ingressTypeMeta,
+				Name:      "test-ingress",
+				Namespace: "default",
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path: "/api/",
-									Backend: netv1.IngressBackend{
-										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
-											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-											Name:     "svc-facade",
-										},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Path: "/api/",
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     "svc-facade",
 									},
-								}},
-							},
+								},
+							}},
 						},
 					}},
 				},
 			},
 			kongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-facade",
-						Namespace: "default",
-					},
-					TypeMeta: metav1.TypeMeta{
-						Kind:       incubatorv1alpha1.KongServiceFacadeKind,
-						APIVersion: incubatorv1alpha1.GroupVersion.String(),
-					},
+					Name:       "svc-facade",
+					Namespace:  "default",
+					Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+					APIVersion: incubatorv1alpha1.GroupVersion.String(),
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
 							Name: "svc",
@@ -348,23 +319,21 @@ func TestTranslateIngressATC(t *testing.T) {
 							Namespace:        corev1.NamespaceDefault,
 							GroupVersionKind: ingressGVK,
 						},
-						Route: kong.Route{
-							Name:       new("default.test-ingress.konghq.com.svc-facade.svc.facade"),
-							Protocols:  nil,
-							Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
-							Priority: new(IngressRoutePriorityTraits{
-								MatchFields:   2,
-								PlainHostOnly: true,
-								MaxPathLength: 5,
-								HasRegexPath:  false,
-							}.EncodeToPriority()),
-							PreserveHost:      new(true),
-							StripPath:         new(false),
-							ResponseBuffering: new(true),
-							RequestBuffering:  new(true),
-							Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
-						},
-						ExpressionRoutes: true,
+						Name:       new("default.test-ingress.konghq.com.svc-facade.svc.facade"),
+						Protocols:  nil,
+						Expression: new(`(http.host == "konghq.com") && (http.path ^= "/api/")`),
+						Priority: new(IngressRoutePriorityTraits{
+							MatchFields:   2,
+							PlainHostOnly: true,
+							MaxPathLength: 5,
+							HasRegexPath:  false,
+						}.EncodeToPriority()),
+						PreserveHost:      new(true),
+						StripPath:         new(false),
+						ResponseBuffering: new(true),
+						RequestBuffering:  new(true),
+						Tags:              kong.StringSlice("k8s-name:test-ingress", "k8s-namespace:default", "k8s-kind:Ingress", "k8s-group:networking.k8s.io", "k8s-version:v1"),
+						ExpressionRoutes:  true,
 					}},
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("svc-facade").
@@ -374,14 +343,10 @@ func TestTranslateIngressATC(t *testing.T) {
 							MustBuild(),
 					},
 					Parent: &incubatorv1alpha1.KongServiceFacade{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "svc-facade",
-							Namespace: corev1.NamespaceDefault,
-						},
-						TypeMeta: metav1.TypeMeta{
-							Kind:       incubatorv1alpha1.KongServiceFacadeKind,
-							APIVersion: incubatorv1alpha1.GroupVersion.String(),
-						},
+						Name:       "svc-facade",
+						Namespace:  corev1.NamespaceDefault,
+						Kind:       incubatorv1alpha1.KongServiceFacadeKind,
+						APIVersion: incubatorv1alpha1.GroupVersion.String(),
 					},
 				},
 			},
@@ -389,27 +354,23 @@ func TestTranslateIngressATC(t *testing.T) {
 		{
 			name: "not existing KongServiceFacade used as a backend",
 			ingress: &netv1.Ingress{
-				TypeMeta: ingressTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-ingress",
-					Namespace: "default",
-				},
+				TypeMeta:  ingressTypeMeta,
+				Name:      "test-ingress",
+				Namespace: "default",
 				Spec: netv1.IngressSpec{
 					Rules: []netv1.IngressRule{{
 						Host: "konghq.com",
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{{
-									Path: "/api/",
-									Backend: netv1.IngressBackend{
-										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
-											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-											Name:     "svc-facade",
-										},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{{
+								Path: "/api/",
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     "svc-facade",
 									},
-								}},
-							},
+								},
+							}},
 						},
 					}},
 				},

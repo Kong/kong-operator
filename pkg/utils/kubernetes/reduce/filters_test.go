@@ -26,36 +26,26 @@ func TestFilterSecrets(t *testing.T) {
 			name: "the older secret must be filtered out",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "6/30/1990",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "6/30/1990",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -63,25 +53,19 @@ func TestFilterSecrets(t *testing.T) {
 			name: "secret with in-use finalizer is kept over older secret without finalizer",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-with-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
-					},
+					Name:              "newer-with-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-without-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "older-without-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-without-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "older-without-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -89,25 +73,19 @@ func TestFilterSecrets(t *testing.T) {
 			name: "secret with konnect in-use finalizer is kept over older secret without finalizer",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-with-konnect-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
-					},
+					Name:              "newer-with-konnect-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-without-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "older-without-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-without-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "older-without-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -115,27 +93,21 @@ func TestFilterSecrets(t *testing.T) {
 			name: "among secrets with finalizers the older one is kept",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-with-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
-					},
+					Name:              "newer-with-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older-with-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
-					},
+					Name:              "older-with-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.June, 30, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use-by-konnect-resource"},
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-with-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
-					},
+					Name:              "newer-with-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
 				},
 			},
 		},
@@ -143,37 +115,27 @@ func TestFilterSecrets(t *testing.T) {
 			name: "secrets without finalizers are deleted first, finalized secret kept even if newer",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "oldest-no-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "oldest-no-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "middle-with-finalizer",
-						CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
-					},
+					Name:              "middle-with-finalizer",
+					CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newest-no-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "newest-no-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "oldest-no-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "oldest-no-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newest-no-finalizer",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "newest-no-finalizer",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -181,27 +143,21 @@ func TestFilterSecrets(t *testing.T) {
 			name: "secrets with other finalizers are deleted first before those with gateway.konghq.com/secret-in-use finalizer",
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "middle-with-finalizer",
-						CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
-					},
+					Name:              "middle-with-finalizer",
+					CreationTimestamp: metav1.Date(1995, time.June, 15, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/secret-in-use"},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "x-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
-					},
+					Name:              "x-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
 				},
 			},
 			filteredSecrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "x-finalizer",
-						CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
-						Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
-					},
+					Name:              "x-finalizer",
+					CreationTimestamp: metav1.Date(1990, time.January, 1, 0, 0, 0, 0, time.UTC),
+					Finalizers:        []string{"gateway.konghq.com/x-finalizer"},
 				},
 			},
 		},
@@ -225,24 +181,18 @@ func TestFilterDeployments(t *testing.T) {
 			name: "the older deployment must be filtered out",
 			deployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredDeployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -250,19 +200,15 @@ func TestFilterDeployments(t *testing.T) {
 			name: "the deployment with more AvailableReplicas must be filtered out",
 			deployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1-available-replicas",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1-available-replicas",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 1,
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "0-available-replicas",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "0-available-replicas",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 0,
 					},
@@ -270,10 +216,8 @@ func TestFilterDeployments(t *testing.T) {
 			},
 			filteredDeployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "0-available-replicas",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "0-available-replicas",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 0,
 					},
@@ -284,20 +228,16 @@ func TestFilterDeployments(t *testing.T) {
 			name: "the deployment with more ReadyReplicas must be filtered out",
 			deployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1-ready-replicas",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1-ready-replicas",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 0,
 						ReadyReplicas:     1,
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "0-ready-replicas",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "0-ready-replicas",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 0,
 						ReadyReplicas:     0,
@@ -306,10 +246,8 @@ func TestFilterDeployments(t *testing.T) {
 			},
 			filteredDeployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "0-ready-replicas",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "0-ready-replicas",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					Status: appsv1.DeploymentStatus{
 						AvailableReplicas: 0,
 						ReadyReplicas:     0,
@@ -338,9 +276,7 @@ func TestFilterServices(t *testing.T) {
 			name: "service1 has more Loadbalancer addresses allocated than service 2",
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service1",
-					},
+					Name: "service1",
 					Status: corev1.ServiceStatus{
 						LoadBalancer: corev1.LoadBalancerStatus{
 							Ingress: []corev1.LoadBalancerIngress{
@@ -352,16 +288,12 @@ func TestFilterServices(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service2",
-					},
+					Name: "service2",
 				},
 			},
 			filteredServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service2",
-					},
+					Name: "service2",
 				},
 			},
 		},
@@ -369,42 +301,30 @@ func TestFilterServices(t *testing.T) {
 			name: "service2 has more endpointSlices than service1",
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service1",
-					},
+					Name: "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service2",
-					},
+					Name: "service2",
 				},
 			},
 			endpointSlices: map[string][]discoveryv1.EndpointSlice{
 				"service1": {
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "endpointSlice1",
-						},
+						Name: "endpointSlice1",
 					},
 				},
 				"service2": {
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "endpointSlice1",
-						},
+						Name: "endpointSlice1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "endpointSlice2",
-						},
+						Name: "endpointSlice2",
 					},
 				},
 			},
 			filteredServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service1",
-					},
+					Name: "service1",
 				},
 			},
 		},
@@ -412,27 +332,19 @@ func TestFilterServices(t *testing.T) {
 			name: "service1 has more ready endpoints than service0 and service2",
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service0",
-					},
+					Name: "service0",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service1",
-					},
+					Name: "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service2",
-					},
+					Name: "service2",
 				},
 			},
 			endpointSlices: map[string][]discoveryv1.EndpointSlice{
 				"service1": {
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "endpointSlice1",
-						},
+						Name: "endpointSlice1",
 						Endpoints: []discoveryv1.Endpoint{
 							{
 								Conditions: discoveryv1.EndpointConditions{
@@ -444,22 +356,16 @@ func TestFilterServices(t *testing.T) {
 				},
 				"service2": {
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name: "endpointSlice1",
-						},
+						Name: "endpointSlice1",
 					},
 				},
 			},
 			filteredServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service0",
-					},
+					Name: "service0",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "service2",
-					},
+					Name: "service2",
 				},
 			},
 		},
@@ -467,24 +373,18 @@ func TestFilterServices(t *testing.T) {
 			name: "service1 is older than service2",
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "service1",
-						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)),
-					},
+					Name:              "service1",
+					CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 1, 0, 0, 0, 0, time.UTC)),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "service2",
-						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
-					},
+					Name:              "service2",
+					CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
 				},
 			},
 			filteredServices: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "service2",
-						CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
-					},
+					Name:              "service2",
+					CreationTimestamp: metav1.NewTime(time.Date(2024, time.January, 2, 0, 0, 0, 0, time.UTC)),
 				},
 			},
 		},
@@ -509,22 +409,16 @@ func TestFilterHPA(t *testing.T) {
 			name: "the newer ones must be returned to be deleted",
 			hpas: []autoscalingv2.HorizontalPodAutoscaler{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
-					},
+					Name:              "older",
+					CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer",
-						CreationTimestamp: metav1.NewTime(now),
-					},
+					Name:              "newer",
+					CreationTimestamp: metav1.NewTime(now),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-2",
-						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
-					},
+					Name:              "newer-2",
+					CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
 				},
 			},
 			expectedNames: []string{"newer", "newer-2"},
@@ -553,22 +447,16 @@ func TestFilterPodDisruptionBudgets(t *testing.T) {
 			name: "the newer ones must be returned to be deleted",
 			pdbs: []policyv1.PodDisruptionBudget{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "older",
-						CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
-					},
+					Name:              "older",
+					CreationTimestamp: metav1.NewTime(now.Add(-time.Second)),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer",
-						CreationTimestamp: metav1.NewTime(now),
-					},
+					Name:              "newer",
+					CreationTimestamp: metav1.NewTime(now),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "newer-2",
-						CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
-					},
+					Name:              "newer-2",
+					CreationTimestamp: metav1.NewTime(now.Add(time.Second)),
 				},
 			},
 			expectedNames: []string{"newer", "newer-2"},
@@ -596,10 +484,8 @@ func TestFilterKongPluginBindings(t *testing.T) {
 			name: "the Programmed binding must be filtered out regardless of the creation timestamp",
 			kpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					Status: configurationv1alpha1.KongPluginBindingStatus{
 						Conditions: []metav1.Condition{
 							{
@@ -610,18 +496,14 @@ func TestFilterKongPluginBindings(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -629,16 +511,12 @@ func TestFilterKongPluginBindings(t *testing.T) {
 			name: "the Programmed binding must be filtered out",
 			kpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					Status: configurationv1alpha1.KongPluginBindingStatus{
 						Conditions: []metav1.Condition{
 							{
@@ -651,10 +529,8 @@ func TestFilterKongPluginBindings(t *testing.T) {
 			},
 			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -662,24 +538,18 @@ func TestFilterKongPluginBindings(t *testing.T) {
 			name: "the oldest binding must be filtered out if it's not Programmed",
 			kpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "12/31/1995",
-						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "12/31/1995",
+					CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 				},
 			},
 			filteredKpbs: []configurationv1alpha1.KongPluginBinding{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "1/1/2000",
-						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-					},
+					Name:              "1/1/2000",
+					CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 				},
 			},
 		},
@@ -704,10 +574,8 @@ func TestFilterKongCredentials(t *testing.T) {
 				name: "the Programmed credential must be filtered out regardless of the creation timestamp",
 				creds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "1/1/2000",
-							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 						Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -718,18 +586,14 @@ func TestFilterKongCredentials(t *testing.T) {
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "12/31/1995",
-							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					},
 				},
 				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "12/31/1995",
-							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					},
 				},
 			},
@@ -737,16 +601,12 @@ func TestFilterKongCredentials(t *testing.T) {
 				name: "the Programmed credential must be filtered out",
 				creds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "1/1/2000",
-							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "12/31/1995",
-							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 						Status: configurationv1alpha1.KongCredentialBasicAuthStatus{
 							Conditions: []metav1.Condition{
 								{
@@ -759,10 +619,8 @@ func TestFilterKongCredentials(t *testing.T) {
 				},
 				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "1/1/2000",
-							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 			},
@@ -770,24 +628,18 @@ func TestFilterKongCredentials(t *testing.T) {
 				name: "the oldest credential must be filtered out if it's not Programmed",
 				creds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "1/1/2000",
-							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "12/31/1995",
-							CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "12/31/1995",
+						CreationTimestamp: metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC),
 					},
 				},
 				expectedCreds: []configurationv1alpha1.KongCredentialBasicAuth{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:              "1/1/2000",
-							CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
-						},
+						Name:              "1/1/2000",
+						CreationTimestamp: metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC),
 					},
 				},
 			},

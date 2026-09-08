@@ -28,18 +28,14 @@ import (
 
 func TestKongConsumerToSDKConsumerInput_Tags(t *testing.T) {
 	cg := &configurationv1.KongConsumer{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongConsumer",
-			APIVersion: "configuration.konghq.com/v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "cg-1",
-			Namespace:  "default",
-			Generation: 2,
-			UID:        k8stypes.UID(uuid.NewString()),
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2",
-			},
+		Kind:       "KongConsumer",
+		APIVersion: "configuration.konghq.com/v1beta1",
+		Name:       "cg-1",
+		Namespace:  "default",
+		Generation: 2,
+		UID:        k8stypes.UID(uuid.NewString()),
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2",
 		},
 	}
 	output := kongConsumerToSDKConsumerInput(cg)
@@ -65,11 +61,9 @@ func TestAdoptKongConsumerOverride(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "consumer-override",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "consumer-override",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Status: configurationv1.KongConsumerStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: "cp-1",
@@ -113,15 +107,11 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 	cgSDK := mocks.NewMockConsumerGroupsSDK(t)
 
 	cg1 := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-a",
-			Namespace: "default",
-		},
+		Name:      "group-a",
+		Namespace: "default",
 		Status: configurationv1beta1.KongConsumerGroupStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-					ID: "cg-id-a",
-				},
+				ID: "cg-id-a",
 			},
 		},
 	}
@@ -135,11 +125,9 @@ func TestAdoptKongConsumerMatch(t *testing.T) {
 		Build()
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "consumer-match",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:           "consumer-match",
+		Namespace:      "default",
+		UID:            k8stypes.UID(uuid.NewString()),
 		Username:       "user-1",
 		CustomID:       "custom-1",
 		ConsumerGroups: []string{"group-a", "group-b"},
@@ -197,12 +185,10 @@ func TestAdoptKongConsumerMatchNotMatching(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "consumer-mismatch",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
-		Username: "desired",
+		Name:      "consumer-mismatch",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
+		Username:  "desired",
 		Status: configurationv1.KongConsumerStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: "cp-1",
@@ -237,11 +223,9 @@ func TestAdoptKongConsumerFetchError(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "consumer-fetch",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "consumer-fetch",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Status: configurationv1.KongConsumerStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 				ControlPlaneID: "cp-1",

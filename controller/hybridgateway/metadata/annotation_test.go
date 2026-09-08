@@ -193,11 +193,9 @@ func TestBuildAnnotations(t *testing.T) {
 		{
 			name: "with explicit parent namespace",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name:      "test-gateway",
@@ -212,11 +210,9 @@ func TestBuildAnnotations(t *testing.T) {
 		{
 			name: "with nil parent namespace",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name:      "test-gateway",
@@ -231,11 +227,9 @@ func TestBuildAnnotations(t *testing.T) {
 		{
 			name: "with empty parent namespace",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name:      "test-gateway",
@@ -250,11 +244,9 @@ func TestBuildAnnotations(t *testing.T) {
 		{
 			name: "with different route and gateway namespaces",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-route",
-					Namespace: "apps",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "my-route",
+				Namespace: "apps",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name:      "my-gateway",
@@ -278,11 +270,9 @@ func TestBuildAnnotations(t *testing.T) {
 
 func TestBuildAnnotationsGRPCRoute(t *testing.T) {
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
@@ -302,11 +292,9 @@ func TestBuildAnnotationsGRPCRoute(t *testing.T) {
 
 func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	t.Run("creates correct ObjectKey for gateway", func(t *testing.T) {
@@ -340,11 +328,9 @@ func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {
 
 	t.Run("creates correct ObjectKey for TCPRoute", func(t *testing.T) {
 		tcpRoute := &gwtypes.TCPRoute{
-			TypeMeta: tcpRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "test-namespace",
-			},
+			TypeMeta:  tcpRouteTypeMeta,
+			Name:      "test-route",
+			Namespace: "test-namespace",
 		}
 		parentRef := &gwtypes.ParentReference{
 			Name:      "test-gateway",
@@ -360,11 +346,9 @@ func TestBuildAnnotationsObjectKeyCreation(t *testing.T) {
 
 	t.Run("creates correct ObjectKey for UDPRoute", func(t *testing.T) {
 		udpRoute := &gwtypes.UDPRoute{
-			TypeMeta: udpRouteTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "test-namespace",
-			},
+			TypeMeta:  udpRouteTypeMeta,
+			Name:      "test-route",
+			Namespace: "test-namespace",
 		}
 		parentRef := &gwtypes.ParentReference{
 			Name:      "test-gateway",
@@ -394,11 +378,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -409,11 +391,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -424,11 +404,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
@@ -439,11 +417,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: false,
@@ -454,11 +430,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route3",
-					Namespace: "ns3",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "route3",
+				Namespace: "ns3",
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
@@ -469,11 +443,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -483,11 +455,9 @@ func TestAppendRouteToAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: make(map[string]string),
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: make(map[string]string),
 			}
 
 			// Copy existing annotations
@@ -520,11 +490,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 			name:                "no annotations",
 			existingAnnotations: nil,
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "",
 			expectModification: false,
@@ -535,11 +503,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route",
 			expectModification: false,
@@ -550,11 +516,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation:      "",
 			expectModification:      true,
@@ -566,11 +530,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route,ns2/route2",
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "ns2/route2",
 			expectModification: true,
@@ -581,11 +543,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
 			},
 			route: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "ns1/route1,ns3/route3",
 			expectModification: true,
@@ -597,11 +557,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation:  "other-namespace/other-route",
 			},
 			route: &gwtypes.TLSRoute{
-				TypeMeta: tlsRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  tlsRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route",
 			expectModification: false,
@@ -612,11 +570,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesTLSRouteAnnotation: "ns1/route1,test-namespace/test-route,ns3/route3",
 			},
 			route: &gwtypes.TLSRoute{
-				TypeMeta: tlsRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  tlsRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "ns1/route1,ns3/route3",
 			expectModification: true,
@@ -626,11 +582,9 @@ func TestRemoveRouteFromAnnotation(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: make(map[string]string),
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: make(map[string]string),
 			}
 
 			// Copy existing annotations
@@ -660,19 +614,15 @@ func TestContainsRoute(t *testing.T) {
 	am := NewAnnotationManager(logger)
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	tlsRoute := &gwtypes.TLSRoute{
-		TypeMeta: tlsRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  tlsRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	testsHTTPRoute := []struct {
@@ -765,11 +715,9 @@ func TestContainsRoute(t *testing.T) {
 	for _, tt := range testsHTTPRoute {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			result := am.ContainsRoute(obj, httpRoute)
@@ -780,11 +728,9 @@ func TestContainsRoute(t *testing.T) {
 	for _, tt := range testsTLSRoute {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			result := am.ContainsRoute(obj, tlsRoute)
@@ -902,11 +848,9 @@ func TestGetRoutesWithKind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			routes := am.GetRoutesWithKind(obj, tt.routeKind)
@@ -1043,11 +987,9 @@ func TestSetRoutesWithKind(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			obj := &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-object",
-					Namespace:   "test-namespace",
-					Annotations: make(map[string]string),
-				},
+				Name:        "test-object",
+				Namespace:   "test-namespace",
+				Annotations: make(map[string]string),
 			}
 
 			// Copy existing annotations
@@ -1430,26 +1372,24 @@ func TestGenericObjectTypes(t *testing.T) {
 	am := NewAnnotationManager(logger)
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	// Test with different Kubernetes object types
 	objects := []metav1.Object{
 		&configurationv1alpha1.KongUpstream{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-upstream", Namespace: "test-namespace"},
+			Name: "test-upstream", Namespace: "test-namespace",
 		},
 		&configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-service", Namespace: "test-namespace"},
+			Name: "test-service", Namespace: "test-namespace",
 		},
 		&configurationv1alpha1.KongRoute{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-route-obj", Namespace: "test-namespace"},
+			Name: "test-route-obj", Namespace: "test-namespace",
 		},
 		&configurationv1alpha1.KongTarget{
-			ObjectMeta: metav1.ObjectMeta{Name: "test-target", Namespace: "test-namespace"},
+			Name: "test-target", Namespace: "test-namespace",
 		},
 	}
 
@@ -1667,19 +1607,15 @@ func TestISServiceUpstream(t *testing.T) {
 		{
 			name: "empty annotations",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{},
-				},
+				Annotations: map[string]string{},
 			},
 			expected: false,
 		},
 		{
 			name: "service-upstream true",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 			},
 			expected: true,
@@ -1687,10 +1623,8 @@ func TestISServiceUpstream(t *testing.T) {
 		{
 			name: "service-upstream false",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "false",
-					},
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "false",
 				},
 			},
 			expected: false,
@@ -1698,10 +1632,8 @@ func TestISServiceUpstream(t *testing.T) {
 		{
 			name: "service-upstream invalid value",
 			svc: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "42",
-					},
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "42",
 				},
 			},
 			expected: false,

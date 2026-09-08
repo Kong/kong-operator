@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -31,11 +30,11 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	)
 
 	aigwcp := &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: aigwcpNM},
+		Namespace: ns, Name: aigwcpNM,
 	}
 
 	aigwdpMatching := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-match"},
+		Namespace: ns, Name: "dp-match",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
@@ -44,7 +43,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	}
 
 	aigwdpOther := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-other"},
+		Namespace: ns, Name: "dp-other",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: "other-aigwcp"},

@@ -24,13 +24,13 @@ func TestHandleDataPlaneValidation(t *testing.T) {
 	b := fakeclient.NewClientBuilder()
 	b.WithObjects(
 		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm"},
+			Namespace: "default", Name: "test-cm",
 			Data: map[string]string{
 				"off": "off",
 			},
 		},
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret"},
+			Namespace: "default", Name: "test-secret",
 			// fake client does not encode fields in StringData to Data,
 			// so here we should usebase64 encoded value in Data.
 			Data: map[string][]byte{
@@ -38,7 +38,7 @@ func TestHandleDataPlaneValidation(t *testing.T) {
 			},
 		},
 		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm-2"},
+			Namespace: "default", Name: "test-cm-2",
 			// fake client does not encode fields in StringData to Data,
 			// so here we should usebase64 encoded value in Data.
 			Data: map[string]string{
@@ -46,7 +46,7 @@ func TestHandleDataPlaneValidation(t *testing.T) {
 			},
 		},
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret-2"},
+			Namespace: "default", Name: "test-secret-2",
 			// fake client does not encode fields in StringData to Data,
 			// so here we should usebase64 encoded value in Data.
 			Data: map[string][]byte{

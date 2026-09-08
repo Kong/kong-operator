@@ -341,10 +341,8 @@ func TestDataPlaneValidatingAdmissionPolicy(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Annotations: map[string]string{
-												"a": "b",
-											},
+										Annotations: map[string]string{
+											"a": "b",
 										},
 									},
 								},

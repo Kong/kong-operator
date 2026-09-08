@@ -149,10 +149,8 @@ func enqueueSecretsForKongConsumer(ctx context.Context, obj client.Object) []rec
 	ret := make([]ctrl.Request, 0, len(consumer.Credentials))
 	for _, secretName := range consumer.Credentials {
 		ret = append(ret, ctrl.Request{
-			NamespacedName: types.NamespacedName{
-				Name:      secretName,
-				Namespace: consumer.Namespace,
-			},
+			Name:      secretName,
+			Namespace: consumer.Namespace,
 		})
 	}
 	return ret

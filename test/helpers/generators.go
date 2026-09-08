@@ -6,7 +6,6 @@ import (
 	"github.com/google/uuid"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -29,9 +28,7 @@ func MustGenerateGatewayClass(t *testing.T, parametersRefs ...gatewayv1.Paramete
 		parametersRef = &parametersRefs[0]
 	}
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 			ParametersRef:  parametersRef,
@@ -43,10 +40,8 @@ func MustGenerateGatewayClass(t *testing.T, parametersRefs ...gatewayv1.Paramete
 // GenerateGateway generates a Gateway to be used in tests.
 func GenerateGateway(gatewayNSN types.NamespacedName, gatewayClass *gatewayv1.GatewayClass, opts ...func(gateway *gatewayv1.Gateway)) *gwtypes.Gateway {
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gatewayNSN.Namespace,
-			Name:      gatewayNSN.Name,
-		},
+		Namespace: gatewayNSN.Namespace,
+		Name:      gatewayNSN.Name,
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{
@@ -69,10 +64,8 @@ type gatewayConfigurationOption func(*operatorv2beta1.GatewayConfiguration)
 // GenerateGatewayConfiguration generates a GatewayConfiguration to be used in tests.
 func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfigurationOption) *operatorv2beta1.GatewayConfiguration {
 	gwc := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace,
+		Name:      uuid.NewString(),
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -89,12 +82,10 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 											PeriodSeconds:       1,
 											SuccessThreshold:    1,
 											TimeoutSeconds:      1,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/status/ready",
-													Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/status/ready",
+												Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -115,12 +106,10 @@ func GenerateGatewayConfiguration(namespace string, opts ...gatewayConfiguration
 // GenerateHTTPRoute generates an HTTPRoute to be used in tests.
 func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts ...func(*gatewayv1.HTTPRoute)) *gatewayv1.HTTPRoute {
 	httpRoute := &gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      uuid.NewString(),
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Namespace: namespace,
+		Name:      uuid.NewString(),
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
@@ -140,13 +129,9 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 					},
 					BackendRefs: []gatewayv1.HTTPBackendRef{
 						{
-							BackendRef: gatewayv1.BackendRef{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name: gatewayv1.ObjectName(serviceName),
-									Port: new(gatewayv1.PortNumber(80)),
-									Kind: new(gatewayv1.Kind("Service")),
-								},
-							},
+							Name: gatewayv1.ObjectName(serviceName),
+							Port: new(gatewayv1.PortNumber(80)),
+							Kind: new(gatewayv1.Kind("Service")),
 						},
 					},
 				},
@@ -164,10 +149,8 @@ func GenerateHTTPRoute(namespace string, gatewayName, serviceName string, opts .
 // GenerateTCPRoute generates a TCPRoute to be used in tests.
 func GenerateTCPRoute(namespace string, gatewayName, serviceName string, portNumber int, opts ...func(*gatewayv1.TCPRoute)) *gatewayv1.TCPRoute {
 	tcpRoute := &gatewayv1.TCPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: namespace,
-		},
+		Name:      uuid.NewString(),
+		Namespace: namespace,
 		Spec: gatewayv1.TCPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -180,11 +163,9 @@ func GenerateTCPRoute(namespace string, gatewayName, serviceName string, portNum
 				{
 					BackendRefs: []gatewayv1.BackendRef{
 						{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: gatewayv1.ObjectName(serviceName),
-								Port: new(gatewayv1.PortNumber(portNumber)),
-								Kind: new(gatewayv1.Kind("Service")),
-							},
+							Name: gatewayv1.ObjectName(serviceName),
+							Port: new(gatewayv1.PortNumber(portNumber)),
+							Kind: new(gatewayv1.Kind("Service")),
 						},
 					},
 				},
@@ -201,10 +182,8 @@ func GenerateTCPRoute(namespace string, gatewayName, serviceName string, portNum
 // GenerateTLSRoute generates a TLSRoute to be used in tests.
 func GenerateTLSRoute(namespace string, gatewayName, serviceName string, portNumber int, opts ...func(*gatewayv1.TLSRoute)) *gatewayv1.TLSRoute {
 	tlsRoute := &gatewayv1.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      uuid.NewString(),
-			Namespace: namespace,
-		},
+		Name:      uuid.NewString(),
+		Namespace: namespace,
 		Spec: gatewayv1.TLSRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -217,11 +196,9 @@ func GenerateTLSRoute(namespace string, gatewayName, serviceName string, portNum
 				{
 					BackendRefs: []gatewayv1.BackendRef{
 						{
-							BackendObjectReference: gatewayv1.BackendObjectReference{
-								Name: gatewayv1.ObjectName(serviceName),
-								Port: new(gatewayv1.PortNumber(portNumber)),
-								Kind: new(gatewayv1.Kind("Service")),
-							},
+							Name: gatewayv1.ObjectName(serviceName),
+							Port: new(gatewayv1.PortNumber(portNumber)),
+							Kind: new(gatewayv1.Kind("Service")),
 						},
 					},
 				},

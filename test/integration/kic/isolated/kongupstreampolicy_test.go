@@ -59,17 +59,13 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			t.Log("creating KongUpstreamPolicies")
 			upstreamPolicies := []*configurationv1beta1.KongUpstreamPolicy{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream-policy-1",
-					},
+					Name: "upstream-policy-1",
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: new("round-robin"),
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream-policy-2",
-					},
+					Name: "upstream-policy-2",
 					Spec: configurationv1beta1.KongUpstreamPolicySpec{
 						Algorithm: new("consistent-hashing"),
 					},
@@ -108,12 +104,10 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			}
 
 			serviceFacade := &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "service-facade",
-					Annotations: map[string]string{
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
-						annotations.IngressClassKey:                          ingressClass,
-					},
+				Name: "service-facade",
+				Annotations: map[string]string{
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey: "upstream-policy-1",
+					annotations.IngressClassKey:                          ingressClass,
 				},
 				Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 					Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -128,49 +122,45 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			t.Log("creating Ingress")
 			ingress := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "ingress",
-				},
+				Name: "ingress",
 				Spec: netv1.IngressSpec{
 					IngressClassName: &ingressClass,
 					Rules: []netv1.IngressRule{
 						{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{
-										{
-											Path:     "/s1",
-											PathType: new(netv1.PathTypePrefix),
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "service-1",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{
+									{
+										Path:     "/s1",
+										PathType: new(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "service-1",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
-										{
-											Path:     "/s2",
-											PathType: new(netv1.PathTypePrefix),
-											Backend: netv1.IngressBackend{
-												Service: &netv1.IngressServiceBackend{
-													Name: "service-2",
-													Port: netv1.ServiceBackendPort{
-														Number: 80,
-													},
+									},
+									{
+										Path:     "/s2",
+										PathType: new(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Service: &netv1.IngressServiceBackend{
+												Name: "service-2",
+												Port: netv1.ServiceBackendPort{
+													Number: 80,
 												},
 											},
 										},
-										{
-											Path:     "/sf",
-											PathType: new(netv1.PathTypePrefix),
-											Backend: netv1.IngressBackend{
-												Resource: &corev1.TypedLocalObjectReference{
-													APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-													Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-													Name:     "service-facade",
-												},
+									},
+									{
+										Path:     "/sf",
+										PathType: new(netv1.PathTypePrefix),
+										Backend: netv1.IngressBackend{
+											Resource: &corev1.TypedLocalObjectReference{
+												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
+												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+												Name:     "service-facade",
 											},
 										},
 									},
@@ -197,21 +187,15 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 
 			t.Log("creating HTTPRoute")
 			httpRoute := &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "http-route",
-				},
+				Name: "http-route",
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{
 						{
 							BackendRefs: []gatewayapi.HTTPBackendRef{
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Kind: new(gatewayapi.Kind("Service")),
-											Name: "service-1",
-											Port: new(gatewayapi.PortNumber(80)),
-										},
-									},
+									Kind: new(gatewayapi.Kind("Service")),
+									Name: "service-1",
+									Port: new(gatewayapi.PortNumber(80)),
 								},
 							},
 						},
@@ -284,22 +268,14 @@ func TestKongUpstreamPolicyStatus(t *testing.T) {
 			t.Log("updating HTTPRoute to use Services with different KongUpstreamPolicies in a single rule")
 			httpRoute.Spec.Rules[0].BackendRefs = []gatewayapi.HTTPBackendRef{
 				{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Kind: new(gatewayapi.Kind("Service")),
-							Name: "service-1",
-							Port: new(gatewayapi.PortNumber(80)),
-						},
-					},
+					Kind: new(gatewayapi.Kind("Service")),
+					Name: "service-1",
+					Port: new(gatewayapi.PortNumber(80)),
 				},
 				{
-					BackendRef: gatewayapi.BackendRef{
-						BackendObjectReference: gatewayapi.BackendObjectReference{
-							Kind: new(gatewayapi.Kind("Service")),
-							Name: "service-2",
-							Port: new(gatewayapi.PortNumber(80)),
-						},
-					},
+					Kind: new(gatewayapi.Kind("Service")),
+					Name: "service-2",
+					Port: new(gatewayapi.PortNumber(80)),
 				},
 			}
 			_, err = gatewayClient.GatewayV1().HTTPRoutes(namespace).Update(ctx, httpRoute, metav1.UpdateOptions{})

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/intstr"
@@ -29,7 +28,7 @@ import (
 
 func minimalEGDP(ns, name string) *eventgatewayv1alpha1.KegDataPlane {
 	return &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: name},
+		Namespace: ns, Name: name,
 	}
 }
 
@@ -79,7 +78,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "type LoadBalancer propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -97,7 +96,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "labels and annotations propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -117,7 +116,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "custom ports mapped correctly",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -147,7 +146,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "externalTrafficPolicy propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -165,7 +164,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "trafficDistribution propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -184,7 +183,7 @@ func Test_generateKafkaServiceOverlay(t *testing.T) {
 		{
 			name: "internalTrafficPolicy propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -234,7 +233,7 @@ func Test_buildKafkaService(t *testing.T) {
 		{
 			name: "network set but kafka nil: returns base service",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{Services: nil},
 				},
@@ -249,7 +248,7 @@ func Test_buildKafkaService(t *testing.T) {
 			// Service with two ports that share the same name.
 			name: "user port with same name as base port replaces it (no duplicate names)",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -281,7 +280,7 @@ func Test_buildKafkaService(t *testing.T) {
 		{
 			name: "kafka service options merged: type propagated",
 			egdp: &eventgatewayv1alpha1.KegDataPlane{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "ns", Name: "dp"},
+				Namespace: "ns", Name: "dp",
 				Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 					Network: &eventgatewayv1alpha1.NetworkOptions{
 						Services: &eventgatewayv1alpha1.Services{
@@ -327,7 +326,7 @@ func Test_ensureKafkaService(t *testing.T) {
 	scheme := managerscheme.Get()
 
 	egdp := &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: dpName},
+		Namespace: ns, Name: dpName,
 	}
 
 	tests := []struct {

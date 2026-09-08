@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -105,16 +104,12 @@ func TestGetEventGatewayVirtualClusterForUID(t *testing.T) {
 
 func testEventGatewayVirtualCluster() *configurationv1alpha1.EventGatewayVirtualCluster {
 	return &configurationv1alpha1.EventGatewayVirtualCluster{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayVirtualCluster",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "event-virtual-cluster",
-			Namespace:  "default",
-			UID:        "event-virtual-cluster-uid",
-			Generation: 2,
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayVirtualCluster",
+		Name:       "event-virtual-cluster",
+		Namespace:  "default",
+		UID:        "event-virtual-cluster-uid",
+		Generation: 2,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterSpec{
 			EventGatewayBackendClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

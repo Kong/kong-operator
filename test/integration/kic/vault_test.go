@@ -83,11 +83,9 @@ func TestCustomVault(t *testing.T) {
 	require.NoError(t, err)
 
 	_, err = c.ConfigurationV1alpha1().KongVaults().Create(ctx, &configurationv1alpha1.KongVault{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "test-env-vault",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: consts.IngressClass,
-			},
+		Name: "test-env-vault",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: consts.IngressClass,
 		},
 		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:     "env",
@@ -102,10 +100,8 @@ func TestCustomVault(t *testing.T) {
 
 	t.Logf("create a request-transformer-advanced plugin referencing the value from the vault")
 	_, err = c.ConfigurationV1().KongPlugins(ns.Name).Create(ctx, &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "request-transformer-advanced",
-		},
+		Namespace:  ns.Name,
+		Name:       "request-transformer-advanced",
 		PluginName: "request-transformer-advanced",
 		Config: apiextensionsv1.JSON{
 			Raw: []byte(`{"add":{"headers":["{vault://test-env/add-header-1}"]}}`),

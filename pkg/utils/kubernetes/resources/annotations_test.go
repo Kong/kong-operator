@@ -84,14 +84,10 @@ func TestSpecHashIgnoresServiceOnlyTrafficFields(t *testing.T) {
 	// hashed fields are actually reached (a nil Network.Services short-circuits
 	// before ServiceOptions is visited).
 	base := operatorv1beta1.DataPlaneSpec{
-		DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-			Network: operatorv1beta1.DataPlaneNetworkOptions{
-				Services: &operatorv1beta1.DataPlaneServices{
-					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-						ServiceOptions: operatorv1beta1.ServiceOptions{
-							Type: corev1.ServiceTypeLoadBalancer,
-						},
-					},
+		Network: operatorv1beta1.DataPlaneNetworkOptions{
+			Services: &operatorv1beta1.DataPlaneServices{
+				Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+					Type: corev1.ServiceTypeLoadBalancer,
 				},
 			},
 		},

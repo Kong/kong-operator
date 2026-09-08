@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -27,11 +26,7 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 			{
 				BackendRefs: []gwtypes.HTTPBackendRef{
 					{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name: gwtypes.ObjectName(svcName),
-							},
-						},
+						Name: gwtypes.ObjectName(svcName),
 					},
 				},
 			},
@@ -59,11 +54,11 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with no referencing services returns nil",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 			},
 			wantNil: true,
@@ -71,18 +66,16 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with service referencing it but no HTTPRoute returns nil",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 			},
@@ -91,26 +84,22 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with service referencing it with HTTPRoute returns requests",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "route1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-routes": "ns1/route1",
-						},
+					Name: "route1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-routes": "ns1/route1",
 					},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
@@ -122,12 +111,10 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
-							"gateway-operator.konghq.com/hybrid-routes":   "ns1/route1",
-						},
+					Name: "upstream1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
+						"gateway-operator.konghq.com/hybrid-routes":   "ns1/route1",
 					},
 				},
 			},
@@ -137,34 +124,28 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with multiple services referencing it returns multiple route requests",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc2", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc2", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "route1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-routes": "ns1/route1",
-						},
+					Name: "route1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-routes": "ns1/route1",
 					},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
@@ -176,11 +157,9 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "route2", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-routes": "ns1/route2",
-						},
+					Name: "route2", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-routes": "ns1/route2",
 					},
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
@@ -192,21 +171,17 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
-							"gateway-operator.konghq.com/hybrid-routes":   "ns1/route1",
-						},
+					Name: "upstream1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
+						"gateway-operator.konghq.com/hybrid-routes":   "ns1/route1",
 					},
 				},
 				&configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream2", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
-							"gateway-operator.konghq.com/hybrid-routes":   "ns1/route2",
-						},
+					Name: "upstream2", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-gateways": "ns1/gw1",
+						"gateway-operator.konghq.com/hybrid-routes":   "ns1/route2",
 					},
 				},
 			},
@@ -216,18 +191,16 @@ func TestMapHTTPRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy in different namespace than service",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns2",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns2",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 			},
@@ -288,11 +261,7 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 			{
 				BackendRefs: []gwtypes.GRPCBackendRef{
 					{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name: gwtypes.ObjectName(svcName),
-							},
-						},
+						Name: gwtypes.ObjectName(svcName),
 					},
 				},
 			},
@@ -320,11 +289,11 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with no referencing services returns nil",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 			},
 			wantNil: true,
@@ -332,18 +301,16 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with service referencing it but no GRPCRoute returns nil",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 			},
@@ -352,26 +319,22 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy with service referencing it with GRPCRoute returns requests",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns1",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns1",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "route1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
-						},
+					Name: "route1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
 					},
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
@@ -383,12 +346,10 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongUpstream{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "upstream1", Namespace: "ns1",
-						Annotations: map[string]string{
-							"gateway-operator.konghq.com/hybrid-gateways":         "ns1/gw1",
-							"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
-						},
+					Name: "upstream1", Namespace: "ns1",
+					Annotations: map[string]string{
+						"gateway-operator.konghq.com/hybrid-gateways":         "ns1/gw1",
+						"gateway-operator.konghq.com/hybrid-routes-GRPCRoute": "ns1/route1",
 					},
 				},
 			},
@@ -398,18 +359,16 @@ func TestMapGRPCRouteForKongUpstreamPolicy(t *testing.T) {
 		{
 			name: "policy in different namespace than service",
 			input: &configurationv1beta1.KongUpstreamPolicy{
-				ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+				Name: "my-policy", Namespace: "ns1",
 			},
 			setup: []client.Object{
 				&configurationv1beta1.KongUpstreamPolicy{
-					ObjectMeta: metav1.ObjectMeta{Name: "my-policy", Namespace: "ns1"},
+					Name: "my-policy", Namespace: "ns1",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "svc1", Namespace: "ns2",
-						Annotations: map[string]string{
-							configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
-						},
+					Name: "svc1", Namespace: "ns2",
+					Annotations: map[string]string{
+						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "my-policy",
 					},
 				},
 			},

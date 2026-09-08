@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -17,26 +16,25 @@ import (
 
 // tagsSvc builds a Service in the "ns" namespace used throughout this test.
 func tagsSvc(name string, anns map[string]string) *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns", Annotations: anns}}
+	return &corev1.Service{Name: name, Namespace: "ns", Annotations: anns}
 }
 
 // tagsSvcIn builds a Service in an arbitrary namespace, for cases exercising
 // the per-ref namespace override.
 func tagsSvcIn(namespace, name string, anns map[string]string) *corev1.Service {
-	return &corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace, Annotations: anns}}
+	return &corev1.Service{Name: name, Namespace: namespace, Annotations: anns}
 }
 
 func backendRef(name string) gwtypes.BackendRef {
-	return gwtypes.BackendRef{BackendObjectReference: gwtypes.BackendObjectReference{Name: gwtypes.ObjectName(name)}}
+	return gwtypes.BackendRef{Name: gwtypes.ObjectName(name)}
 }
 
 // backendRefIn builds a BackendRef with an explicit namespace override.
 func backendRefIn(name, namespace string) gwtypes.BackendRef {
 	ns := gwtypes.Namespace(namespace)
-	return gwtypes.BackendRef{BackendObjectReference: gwtypes.BackendObjectReference{
+	return gwtypes.BackendRef{
 		Name:      gwtypes.ObjectName(name),
-		Namespace: &ns,
-	}}
+		Namespace: &ns}
 }
 
 func TestTagsFromBackendRefs(t *testing.T) {

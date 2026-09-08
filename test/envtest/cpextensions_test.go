@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	admissionregistrationv1 "k8s.io/api/admissionregistration/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -74,9 +73,7 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	// the same outcome CI hit when the (unrelated) real admission webhook
 	// returned an error.
 	webhook := &admissionregistrationv1.ValidatingWebhookConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "cpext-test-block-kongplugins",
-		},
+		Name: "cpext-test-block-kongplugins",
 		Webhooks: []admissionregistrationv1.ValidatingWebhook{
 			{
 				Name:                    "block.kongplugins.cpext-test.konghq.com",
@@ -89,13 +86,11 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 				},
 				Rules: []admissionregistrationv1.RuleWithOperations{
 					{
-						Operations: []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
-						Rule: admissionregistrationv1.Rule{
-							APIGroups:   []string{configurationv1.SchemeGroupVersion.Group},
-							APIVersions: []string{configurationv1.SchemeGroupVersion.Version},
-							Resources:   []string{"kongplugins"},
-							Scope:       new(admissionregistrationv1.AllScopes),
-						},
+						Operations:  []admissionregistrationv1.OperationType{admissionregistrationv1.Create},
+						APIGroups:   []string{configurationv1.SchemeGroupVersion.Group},
+						APIVersions: []string{configurationv1.SchemeGroupVersion.Version},
+						Resources:   []string{"kongplugins"},
+						Scope:       new(admissionregistrationv1.AllScopes),
 					},
 				},
 			},
@@ -107,10 +102,8 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	})
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "httpbin",
-			Namespace: ns.Name,
-		},
+		Name:      "httpbin",
+		Namespace: ns.Name,
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{{Port: 80}},
 		},
@@ -118,10 +111,8 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	require.NoError(t, cl.Create(ctx, svc))
 
 	ext := &operatorv1alpha1.DataPlaneMetricsExtension{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "metrics-ext-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "metrics-ext-",
+		Namespace:    ns.Name,
 		Spec: operatorv1alpha1.DataPlaneMetricsExtensionSpec{
 			ServiceSelector: operatorv1alpha1.ServiceSelector{
 				MatchNames: []operatorv1alpha1.ServiceSelectorEntry{{Name: svc.Name}},
@@ -132,10 +123,8 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	require.NoError(t, cl.Create(ctx, ext))
 
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "cp-",
-			Namespace:    ns.Name,
-		},
+		GenerateName: "cp-",
+		Namespace:    ns.Name,
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: operatorv2beta1.ControlPlaneDataPlaneTarget{
 				Type: operatorv2beta1.ControlPlaneDataPlaneTargetManagedByType,
@@ -144,9 +133,7 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 				{
 					Group: operatorv1alpha1.SchemeGroupVersion.Group,
 					Kind:  operatorv1alpha1.DataPlaneMetricsExtensionKind,
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: ext.Name,
-					},
+					Name:  ext.Name,
 				},
 			},
 		},

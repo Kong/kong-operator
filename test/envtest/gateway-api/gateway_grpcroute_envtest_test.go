@@ -7,7 +7,6 @@ import (
 	"github.com/samber/lo"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -44,7 +43,7 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 	c := mgr.GetClient()
 
 	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "gc-grpcroute"},
+		Name: "gc-grpcroute",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -54,10 +53,8 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), waitTime, tickTime)
 
 	backendService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "grpcbin",
-			Namespace: ns.Name,
-		},
+		Name:      "grpcbin",
+		Namespace: ns.Name,
 		Spec: corev1.ServiceSpec{
 			Ports: []corev1.ServicePort{{
 				Name:     "grpc",
@@ -69,10 +66,8 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 	require.NoError(t, c.Create(ctx, backendService))
 
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "gw-grpcroute",
-		},
+		Namespace: ns.Name,
+		Name:      "gw-grpcroute",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gc.Name),
 			Listeners: []gatewayv1.Listener{{
@@ -121,10 +116,8 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 
 	servicePort := gatewayv1.PortNumber(80)
 	grpcRoute := &gatewayv1.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "grpc-route",
-		},
+		Namespace: ns.Name,
+		Name:      "grpc-route",
 		Spec: gatewayv1.GRPCRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{
@@ -139,12 +132,8 @@ func TestGatewayGRPCRouteAttachedRoutes(t *testing.T) {
 					},
 				}},
 				BackendRefs: []gatewayv1.GRPCBackendRef{{
-					BackendRef: gatewayv1.BackendRef{
-						BackendObjectReference: gatewayv1.BackendObjectReference{
-							Name: gatewayv1.ObjectName(backendService.Name),
-							Port: &servicePort,
-						},
-					},
+					Name: gatewayv1.ObjectName(backendService.Name),
+					Port: &servicePort,
 				}},
 			}},
 		},
