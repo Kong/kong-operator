@@ -48,7 +48,7 @@ func TestControlPlaneReferenceHandling(t *testing.T) {
 		WithProxySyncInterval(100*time.Millisecond),
 		WithKongAdminURLs(kongContainer.AdminURL(ctx, t)),
 	)
-	WaitForManagerStart(t, logs)
+	WaitForControllersStart(t, logs, "KongConsumer", "KongConsumerGroup", "KongVault")
 
 	var (
 		kicCPRef = &commonv1alpha1.ControlPlaneRef{
