@@ -130,19 +130,17 @@ global:
         # Enable cert-manager integration.
         # This requires to have cert-manager installed in the cluster.
         # Setting this to true will generate cert-manager's Certificate and Issuer
-        # objects for the conversion webhook Service.
-        # If disabled, this chart will generate a self-signed certificate and inject
-        # it into CRDs' conversion webhook caBundle.
+        # objects for the validating webhook Service.
+        # If disabled, this chart will generate a self-signed certificate for it instead.
         # It is recommended to enable cert-manager integration for production use.
         enabled: false
-    # Enable conversion webhook for CRDs.
-    # See note at https://github.com/Kong/kong-operator/blob/main/charts/kong-operator/CHANGELOG.md#%EF%B8%8F-important-notice-about-migration-webhooks
-    # for more.
+    # Deprecated, no longer has any effect: the conversion webhook has been
+    # removed and CRDs no longer declare a conversion strategy. This value is
+    # kept only so that existing overrides do not fail; setting it to `true`
+    # prints a deprecation warning after install/upgrade.
+    # See charts/kong-operator/CHANGELOG.md for details.
     conversion:
-      # Some old CRDs pre KO 2.0.0 are deprecated now, conversion webhook ensures
-      # compatibility for those old ones - conversion is handled automatically.
-      # If it's disabled, deprecated CRDs won't be installed and can't be applied.
-      enabled: true
+      enabled: false
     # Enable validating admission webhook for ControlPlane resources.
     validating:
       # Enable the creation of ValidatingWebhookConfiguration for resources

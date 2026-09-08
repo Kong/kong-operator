@@ -3,8 +3,6 @@ global:
     options:
       certManager:
         enabled: true
-    conversion:
-      enabled: true
     validating:
       enabled: true
   certificateAuthority:

@@ -6,3 +6,10 @@ For more details, please refer to the following documents:
 
 * https://developer.konghq.com/operator/dataplanes/get-started/kic/create-gateway/
 * https://developer.konghq.com/operator/dataplanes/konnectextension/
+{{- if .Values.global.webhooks.conversion.enabled }}
+
+WARNING: global.webhooks.conversion.enabled is deprecated and no longer has any
+effect. The conversion webhook has been removed: CRDs no longer declare a
+conversion strategy, and deprecated CRD versions are now always installed.
+See charts/kong-operator/CHANGELOG.md for details.
+{{- end }}

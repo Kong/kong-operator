@@ -104,7 +104,7 @@ func New(m metadata.Info) *CLI {
 	flagSet.BoolVar(&deferCfg.Version, "version", false, "Print version information.")
 
 	// webhook and validation options
-	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", true, "Enable the conversion webhook.")
+	flagSet.BoolVar(&cfg.ConversionWebhookEnabled, "enable-conversion-webhook", false, "Enable the conversion webhook.")
 	flagSet.BoolVar(&cfg.ValidatingWebhookEnabled, "enable-validating-webhook", true, "Enable the validating webhook.")
 
 	// Deprecated flags retained for printing warning messages.

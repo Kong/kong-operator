@@ -60,3 +60,18 @@ kustomize build github.com/kubernetes-sigs/gateway-api/config/crd\?ref=v1.5.1 | 
 ```
 
 [gwapi]: https://github.com/kubernetes-sigs/gateway-api/
+
+## 1.5.0: conversion webhook removed from CRDs
+
+`ControlPlane`, `GatewayConfiguration` and `KonnectGatewayControlPlane` CRDs no
+longer declare a conversion webhook. `global.webhooks.conversion.enabled` is kept
+in the chart values for backward compatibility, but no longer has any effect;
+setting it to `true` prints a deprecation warning after install/upgrade instead of
+enabling anything.
+
+Their deprecated versions (`ControlPlane`/`GatewayConfiguration` v1beta1,
+`KonnectGatewayControlPlane` v1alpha1) are now always installed, but are served
+with `strategy: None`: reading a resource stored as the current version
+(`v2beta1`/`v1alpha2`) through the deprecated version returns the stored object
+unchanged, without field translation. If you read or write these resources
+through the deprecated version, migrate to the storage version.

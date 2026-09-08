@@ -314,8 +314,10 @@ func waitForOperatorWebhookEventually(
 	t.Helper()
 	webhookServiceName := fmt.Sprintf("%s-kong-operator-webhook", installationName)
 	return func() bool {
+		// 5443 is the validating admission webhook port; the chart no longer
+		// exposes a conversion webhook port (443) on this Service.
 		if err := networking.WaitForConnectionOnServicePort(
-			ctx, k8sClient, installationNamespace, webhookServiceName, 443, 10*time.Second,
+			ctx, k8sClient, installationNamespace, webhookServiceName, 5443, 10*time.Second,
 		); err != nil {
 			return false
 		}

@@ -402,7 +402,7 @@ func expectedDefaultCfg() manager.Config {
 		MaxConcurrentReconcilesGateway:           consts.DefaultMaxConcurrentReconcilesGateway,
 		ClusterDomain:                            ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                     true,
-		ConversionWebhookEnabled:                 true,
+		ConversionWebhookEnabled:                 false,
 		ValidatingWebhookEnabled:                 true,
 		FQDNModeEnabled:                          false,
 		CertTTL:                                  consts.DefaultCertTTL,

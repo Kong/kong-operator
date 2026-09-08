@@ -71,9 +71,8 @@ Create a list of env vars based on the values of the `env` and `customEnv` maps.
 {{- define "kong.env" -}}
 
 {{- $defaultEnv := dict -}}
-{{- if not .Values.global.webhooks.conversion.enabled }}
+{{- /* The chart no longer provisions a conversion webhook serving cert, so keep it off by default. */ -}}
 {{- $_ := set $defaultEnv "KONG_OPERATOR_ENABLE_CONVERSION_WEBHOOK" "false" -}}
-{{- end }}
 {{- if not .Values.global.webhooks.validating.enabled }}
 {{- $_ := set $defaultEnv "KONG_OPERATOR_ENABLE_VALIDATING_WEBHOOK" "false" -}}
 {{- end }}
@@ -139,10 +138,6 @@ The dict maps raw env variable key to the suggested variable path.
 {{- printf "%s%s" $base $suffix | trunc 63 | trimSuffix "-" -}}
 {{- end -}}
 
-{{- define "kong.webhookCertSecretName" -}}
-{{ template "kong.webhookServiceName" . }}-server-cert
-{{- end -}}
-
 {{- define "kong.webhookValidatingCertSecretName" -}}
 {{ template "kong.webhookServiceName" . }}-validating-server-cert
 {{- end -}}
@@ -165,15 +160,6 @@ The dict maps raw env variable key to the suggested variable path.
 
 
 {{- define "kong.volumes" -}}
-{{ if .Values.global.webhooks.conversion.enabled }}
-{{- /* Depending on the global.webhooks.options.certManager.enabled being true or false */ -}}
-{{- /* certificate below will either be sourced from chart generated Secret */ -}}
-{{- /* or from cert-manager generated Secret */ -}}
-- name: webhook-certs
-  secret:
-    defaultMode: 420
-    secretName: {{ template "kong.webhookCertSecretName" . }}
-{{ end }}
 {{ if .Values.global.webhooks.validating.enabled }}
 - name: validating-webhook-certs
   secret:
@@ -189,14 +175,6 @@ The dict maps raw env variable key to the suggested variable path.
 {{- end }}
 
 {{- define "kong.volumeMounts" -}}
-{{ if .Values.global.webhooks.conversion.enabled }}
-{{- /* Depending on the global.webhooks.options.certManager.enabled being true or false */ -}}
-{{- /* certificate below will either be sourced from chart generated Secret */ -}}
-{{- /* or from cert-manager generated Secret */ -}}
-- name: webhook-certs
-  mountPath: /tmp/k8s-webhook-server/serving-certs
-  readOnly: true
-{{ end }}
 {{ if .Values.global.webhooks.validating.enabled }}
 - name: validating-webhook-certs
   mountPath: /tmp/k8s-webhook-server/serving-certs/validating-admission-webhook

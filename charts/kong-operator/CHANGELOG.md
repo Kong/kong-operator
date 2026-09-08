@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.5.0
+
+### Deprecated
+
+- Removed the conversion webhook wiring from generated CRDs. `ControlPlane`,
+  `GatewayConfiguration` and `KonnectGatewayControlPlane` CRDs no longer carry a
+  `spec.conversion` block or a `cert-manager.io/inject-ca-from` annotation. The chart
+  no longer creates a conversion webhook Service port, Certificate, or Secret, and
+  `KONG_OPERATOR_ENABLE_CONVERSION_WEBHOOK` now always defaults to `false`.
+  `global.webhooks.conversion.enabled` is kept in the values for backward
+  compatibility but no longer has any effect; setting it to `true` now only prints a
+  deprecation warning after install/upgrade. This makes the ⚠️ "IMPORTANT NOTICE
+  ABOUT CONVERSION WEBHOOKS" note below obsolete.
+
+### Changed
+
+- Deprecated CRD versions (`ControlPlane` v1beta1, `GatewayConfiguration` v1beta1,
+  `KonnectGatewayControlPlane` v1alpha1) are now always installed, no longer gated
+  behind `global.webhooks.conversion.enabled`. Without the conversion webhook, they
+  are served with `strategy: None`: reading an object stored in the newer version
+  through the deprecated version returns the stored object as-is, without field
+  translation. Migrate to the storage version (`v2beta1` / `v1alpha2`) if you
+  currently read or write these resources through the deprecated version.
+
 ## 1.4.0
 
 ### Added

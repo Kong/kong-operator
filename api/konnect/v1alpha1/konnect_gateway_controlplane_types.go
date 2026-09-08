@@ -24,6 +24,7 @@ import (
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity is already Programmed", rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
 // +kubebuilder:validation:XValidation:message="spec.konnect.authRef is immutable when an entity refers to a Valid API Auth Configuration", rule="(!has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'APIAuthValid' && c.status == 'True')) ? true : self.spec.konnect.authRef == oldSelf.spec.konnect.authRef"
 // +kong:channels=kong-operator
+// +kubebuilder:unservedversion
 type KonnectGatewayControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
