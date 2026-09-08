@@ -1,149 +1,136 @@
 name: KSAI
 
-# Federated code review driven by the shared kreview skills in Kong/ksai. Triggered by a
-# `/ksai <ask>` comment on a pull request.
-#
-# Only protected-branch contexts can authenticate (the federation rule requires
-# ref_protected). An issue_comment workflow always executes from the default branch, so
-# this file has to be on master before `/ksai` does anything.
-#
-# kong-operator is public and Kong/ksai is internal, so ksai actions are checked out locally
-# via sparse-checkout and referenced by path rather than by a remote `uses:`, which GitHub
-# won't resolve from a public repo into a private one. codeowners-authz and ai-reviewer-federated
-# version independently in Kong/ksai, so each is pinned to its own release tag, bumped by
-# Renovate. The kreview plugin and the trusted scripts are read from the reviewer's own tag.
+permissions: {}
 
 on:
   issue_comment:
     types: [created]
-
-env:
-  # renovate: datasource=github-tags depName=Kong/ksai extractVersion=^ksai/v(?<version>.+)$
-  KSAI_REF: ksai/v3.40.5
+  pull_request_review_comment:
+    types: [created]
+  pull_request:
+    types: [review_requested, opened, synchronize, reopened, ready_for_review, edited]
+  pull_request_review:
+    types: [submitted, dismissed]
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: Pull request number to review
+        required: false
+      actor:
+        description: GitHub username to authorize against CODEOWNERS, matching comment authorization
+        required: false
+      issue_number:
+        description: Issue number for plan continuation; empty when work_ref names the work
+        required: false
+      work_ref:
+        description: The work to do when there is no GitHub issue, as jira/<KEY>
+        required: false
+      attempt:
+        description: Runs already spent by this continuation chain
+        required: false
+      stall:
+        description: Consecutive runs that completed no step
+        required: false
+      prev_remaining:
+        description: Unchecked boxes seen by the predecessor, with empty distinct from zero
+        required: false
 
 jobs:
-  # Authorization runs in its own job, before the review job's concurrency group, so an
-  # unauthorized commenter cannot trigger a run that cancels an in-progress review and is
-  # only rejected later. The @Kong/k8s-maintainers check needs org Members:read, which the repo
-  # GITHUB_TOKEN lacks, so it uses the KONG_READONLY app.
-  gate:
+  ksai:
+    name: run
     if: >-
+      (github.event_name == 'workflow_dispatch' &&
+      (inputs.pr != '' || inputs.issue_number != '' || inputs.work_ref != '')) ||
+      ((github.event_name == 'issue_comment' ||
+      github.event_name == 'pull_request_review_comment') &&
+      github.event.comment.user.type != 'Bot' &&
+      (contains(github.event.comment.body, '/ksai') ||
+      (vars.KSAI_TRIGGER_PHRASE != '' &&
+      contains(github.event.comment.body, vars.KSAI_TRIGGER_PHRASE)))) ||
+      (github.event_name == 'issue_comment' &&
+      github.event.comment.user.type != 'Bot' &&
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, '/ksai')
-    runs-on: ubuntu-latest
-    outputs:
-      authorized: ${{ steps.authz.outputs.authorized }}
-    steps:
-      - name: Mint org-read token
-        id: token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          owner: Kong
-          repositories: |
-            ksai
-            ${{ github.event.repository.name }}
-          client-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
-          private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
-
-      # This authorization action must come from trusted Kong/ksai code, not from any
-      # PR-controlled content.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        name: checkout trusted authz action
-        with:
-          token: ${{ steps.token.outputs.token }}
-          path: _ksai-authz
-          repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
-          sparse-checkout: |
-            .github/actions/codeowners-authz
-          persist-credentials: false
-
-      - name: Authorize commenter against CODEOWNERS
-        id: authz
-        uses: ./_ksai-authz/.github/actions/codeowners-authz
-        with:
-          github-token: ${{ steps.token.outputs.token }}
-          username: ${{ github.event.comment.user.login }}
-
-  review:
-    needs: gate
-    if: ${{ needs.gate.outputs.authorized == 'true' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 60
+      github.event.issue.user.type == 'Bot') ||
+      (github.event_name == 'pull_request_review' &&
+      github.event.action == 'submitted' &&
+      github.event.review.user.type != 'Bot' &&
+      github.event.pull_request.draft == true &&
+      github.event.pull_request.user.type == 'Bot' &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    uses: Kong/ksai-public/.github/workflows/ksai.yml@v3.40.7
     permissions:
-      contents: read
-      pull-requests: write # the action posts the review comment
-      issues: write # the action reacts 👀 to the triggering comment
-      id-token: write # mint the GitHub OIDC token for federation
-    # Only authorized runs reach this job, so only they contend for the group.
-    concurrency:
-      group: ksai-${{ github.event.issue.number }}
-      cancel-in-progress: true
-    steps:
-      # One KONG_READONLY token covers both cross-repo reads the action needs: the kreview
-      # plugin checkout from the internal ksai repo, and the CODEOWNERS/team authorization
-      # (this repo's contents + Kong org Members:read). Posting stays on GITHUB_TOKEN.
-      - name: Mint Kong read token
-        id: kong-token
-        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
-        with:
-          owner: Kong
-          repositories: |
-            ksai
-            ${{ github.event.repository.name }}
-          client-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
-          private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+      contents: write      # checked out by every command, and pushed by one that changes code
+      issues: write        # every command answers with a comment, and reacts to the one that asked
+      pull-requests: write # post reviews and maintain draft pull request plans
+      id-token: write      # mint the GitHub OIDC token for federation
+      checks: read         # read what CI said about the head
+      statuses: read       # the older API a build may report through
+      actions: write       # old caller review dispatch, successor plan runs and test publication
+    with:
+      trigger_phrase: ${{ vars.KSAI_TRIGGER_PHRASE }}
+      runs_on: ubuntu-latest
+      federation_rule_id: fdrl_01S796tfBkuJ9jFRwSeNbZxw
+      organization_id: 4ce7a6d3-9549-4842-bd51-1def5eba611b
+      service_account_id: svac_01RRiHX67AjG5bKDHhFHbwkF
+      workspace_id: wrkspc_01G7dX83HGYMZDwLuJNPnA5T
+      continuation_workflow: ksai.yaml
+      clear_request: true
+      pr: ${{ inputs.pr }}
+      actor: ${{ inputs.actor }}
+      issue_number: ${{ inputs.issue_number }}
+      work_ref: ${{ inputs.work_ref }}
+      attempt: ${{ inputs.attempt }}
+      stall: ${{ inputs.stall }}
+      prev_remaining: ${{ inputs.prev_remaining }}
+      allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
+      client_id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+    secrets:
+      ksai_private_key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
 
-      # kong-operator is public and Kong/ksai is internal, so the action can't be resolved
-      # via a remote `uses:` (unlike the gate job's authz check, which hits the same wall and
-      # is worked around the same way): check it out locally via sparse-checkout instead.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        name: checkout trusted reviewer action
-        with:
-          token: ${{ steps.kong-token.outputs.token }}
-          path: _ksai-review
-          repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
-          sparse-checkout: |
-            .github/actions/ai-reviewer-federated
-          persist-credentials: false
+  # Requests a review on every pull request these filters admit, and each one spends your team's
+  # Anthropic budget. Tune them with `skip_label`, `require_label`, `review_drafts` and
+  # `review_bots` rather than by editing the condition.
+  #
+  # The head-repository term stays a condition because a fork run is handed no secrets, so the call
+  # could not mint its token anyway.
+  request:
+    if: >-
+      (github.event_name == 'pull_request' &&
+      github.event.action == 'review_requested' &&
+      github.event.requested_team.slug == (vars.KSAI_REVIEW_TEAM || 'ksai') &&
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.sender.type != 'Bot') ||
+      (github.event_name == 'pull_request' &&
+      contains(fromJSON('["opened", "ready_for_review"]'), github.event.action) &&
+      github.event.pull_request.head.repo.full_name == github.repository)
+    uses: Kong/ksai-public/.github/workflows/ksai-request.yml@v3.40.7
+    permissions:
+      actions: write # dispatch this workflow onto the default branch
+      contents: read # download the actions this call runs, which live in a private repository
+    with:
+      runs_on: ubuntu-latest
+      client_id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+    secrets:
+      ksai_private_key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
 
-      # A local-path action has no github.action_ref, so it cannot default its plugin and
-      # trusted-scripts checkout to its own ref: ksai_ref has to name that ref explicitly.
-      # Left unset the action resolves an empty ref, which actions/checkout reads as Kong/ksai's
-      # default branch - so the action stays pinned while the scripts it loads track main, and
-      # any change there breaks this workflow with no change here.
-      - uses: ./_ksai-review/.github/actions/ai-reviewer-federated
-        with:
-          allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
-          ksai_ref: ${{ env.KSAI_REF }}
-          trigger_phrase: "/ksai"
-          # GITHUB_TOKEN checks out the PR head, reacts, and posts the review comment.
-          source_org_github_token: ${{ github.token }}
-          # KONG_READONLY (has org Members:read) for the CODEOWNERS/team check and the ksai
-          # plugin checkout.
-          authorization_github_token: ${{ steps.kong-token.outputs.token }}
-          kong_org_github_token: ${{ steps.kong-token.outputs.token }}
-          # Non-secret identifiers, shared with claude.yaml; they route this run to the
-          # k8s team's Anthropic workspace, which is the billing boundary.
-          federation_rule_id: ${{ secrets.CLAUDE_FEDERATION_RULE_ID }}
-          organization_id: ${{ secrets.CLAUDE_ORGANIZATION_ID }}
-          service_account_id: ${{ secrets.CLAUDE_SERVICE_ACCOUNT_ID }}
-          workspace_id: ${{ secrets.CLAUDE_WORKSPACE_ID }}
-
-      # The action's own "checkout source repo" step wipes the whole workspace root
-      # (including _ksai-review), so its post stage can no longer find action.yml there.
-      # Main steps all finish before any post step runs, so re-checking-out here restores
-      # it on disk before the runner loads it for the action's post stage. always() because
-      # the wipe happens regardless of whether the action itself later fails.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        name: restore reviewer action for post stage
-        if: always()
-        with:
-          token: ${{ steps.kong-token.outputs.token }}
-          path: _ksai-review
-          repository: Kong/ksai
-          ref: ${{ env.KSAI_REF }}
-          sparse-checkout: |
-            .github/actions/ai-reviewer-federated
-          persist-credentials: false
+  # Holds a pull request until an approval arrives from somebody who did not contribute to it.
+  # GitHub refuses an approval only from the author, and on everything KSAI opens that is the App -
+  # so without this the person who asked for the work approves it.
+  #
+  # It posts the commit status `KSAI / independent approval` whatever this job is named, and only a
+  # default branch ruleset carrying all three settings enforces it. The job skips fork pull
+  # requests, whose read-only token cannot write a status.
+  approval:
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      ((github.event_name == 'pull_request' &&
+      contains(fromJSON('["opened", "synchronize", "reopened", "edited"]'), github.event.action) &&
+      (github.event.action != 'edited' || github.event.changes.base.ref.from != '')) ||
+      (github.event_name == 'pull_request_review' &&
+      github.event.sender.type != 'Bot' &&
+      github.event.review.state != 'commented'))
+    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@v3.40.7
+    permissions:
+      contents: read       # download the action this call runs, which lives in a private repository
+      pull-requests: write # dismiss an approval from somebody who contributed to the pull request
+      statuses: write      # report the check the ruleset makes required
