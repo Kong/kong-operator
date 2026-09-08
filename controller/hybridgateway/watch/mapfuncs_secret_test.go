@@ -380,7 +380,7 @@ func TestMapTLSRouteForClientCertSecret(t *testing.T) {
 // the first through spec.configFrom, the remaining ones through spec.configPatches.
 func pluginConfigSecretPlugin(name, namespace string, secretNames ...string) *configurationv1.KongPlugin {
 	plugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 		PluginName: "openid-connect",
 	}
 	for i, secretName := range secretNames {
@@ -404,7 +404,7 @@ func pluginConfigSecretPlugin(name, namespace string, secretNames ...string) *co
 // "ns1/oidc" in an ExtensionRef filter.
 func extensionRefHTTPRoute(name string) *gwtypes.HTTPRoute {
 	return &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns1"},
+		Name: name, Namespace: "ns1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				Filters: []gwtypes.HTTPRouteFilter{{
@@ -424,7 +424,7 @@ func extensionRefHTTPRoute(name string) *gwtypes.HTTPRoute {
 // "ns1/oidc" in an ExtensionRef filter.
 func extensionRefGRPCRoute(name string) *gwtypes.GRPCRoute {
 	return &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: "ns1"},
+		Name: name, Namespace: "ns1",
 		Spec: gwtypes.GRPCRouteSpec{
 			Rules: []gwtypes.GRPCRouteRule{{
 				Filters: []gatewayv1.GRPCRouteFilter{{
@@ -452,12 +452,12 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 	}{
 		{
 			name:      "non Secret input is ignored",
-			input:     &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: "ns1"}},
+			input:     &corev1.ConfigMap{Name: "cm", Namespace: "ns1"},
 			wantNames: nil,
 		},
 		{
 			name:  "secret referenced through configFrom",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefHTTPRoute("route1"),
@@ -466,7 +466,7 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "secret referenced through configPatches",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "patch", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "patch", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg", "patch"),
 				extensionRefHTTPRoute("route1"),
@@ -475,7 +475,7 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "secret not referenced by any plugin",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "unrelated", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "unrelated", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefHTTPRoute("route1"),
@@ -484,7 +484,7 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "plugin in another namespace is not matched",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns2"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns2"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefHTTPRoute("route1"),
@@ -493,7 +493,7 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "several routes referencing the same plugin",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefHTTPRoute("route1"),
@@ -503,7 +503,7 @@ func TestMapHTTPRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "a route referencing two plugins backed by the same secret is enqueued once",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				pluginConfigSecretPlugin("other", "ns1", "cfg"),
@@ -555,12 +555,12 @@ func TestMapGRPCRouteForPluginConfigSecret(t *testing.T) {
 	}{
 		{
 			name:      "non Secret input is ignored",
-			input:     &corev1.ConfigMap{ObjectMeta: metav1.ObjectMeta{Name: "cm", Namespace: "ns1"}},
+			input:     &corev1.ConfigMap{Name: "cm", Namespace: "ns1"},
 			wantNames: nil,
 		},
 		{
 			name:  "secret referenced through configFrom",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefGRPCRoute("route1"),
@@ -569,7 +569,7 @@ func TestMapGRPCRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "secret referenced through configPatches",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "patch", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "patch", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg", "patch"),
 				extensionRefGRPCRoute("route1"),
@@ -578,7 +578,7 @@ func TestMapGRPCRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "secret not referenced by any plugin",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "unrelated", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "unrelated", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefGRPCRoute("route1"),
@@ -587,7 +587,7 @@ func TestMapGRPCRouteForPluginConfigSecret(t *testing.T) {
 		},
 		{
 			name:  "several routes referencing the same plugin",
-			input: &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: "cfg", Namespace: "ns1"}},
+			input: &corev1.Secret{Name: "cfg", Namespace: "ns1"},
 			objects: []client.Object{
 				pluginConfigSecretPlugin("oidc", "ns1", "cfg"),
 				extensionRefGRPCRoute("route1"),

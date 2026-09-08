@@ -138,7 +138,7 @@ func MapHTTPRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 			}
 			for _, route := range routes.Items {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{Namespace: route.Namespace, Name: route.Name},
+					Namespace: route.Namespace, Name: route.Name,
 				})
 			}
 		}
@@ -167,7 +167,7 @@ func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 			}
 			for _, route := range routes.Items {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{Namespace: route.Namespace, Name: route.Name},
+					Namespace: route.Namespace, Name: route.Name,
 				})
 			}
 		}
