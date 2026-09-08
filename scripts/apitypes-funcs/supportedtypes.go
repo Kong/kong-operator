@@ -316,6 +316,19 @@ var supportedKonnectPackageTypesWithList = func() []supportedTypesT {
 
 var supportedGatewayOperatorPackageTypesWithList = supportedGatewayOperatorTypes
 
+var supportedAIGatewayTypes = []supportedTypesT{
+	{
+		PackageVersion: "v1alpha1",
+		Types: []templateDataT{
+			{
+				Type: "OnPremAIGateway",
+			},
+		},
+	},
+}
+
+var supportedAIGatewayPackageTypesWithList = supportedAIGatewayTypes
+
 var supportedConfigurationPackageTypesWithAdopt = []supportedTypesT{
 	{
 		PackageVersion: "v1",

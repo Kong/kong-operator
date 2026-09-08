@@ -9,6 +9,7 @@
 Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1alpha1 API group.
 
 - [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
 
 ### AIGatewayDataPlane
 
@@ -28,6 +29,24 @@ manually (e.g. via Deployment.PodTemplateSpec env vars).
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)_ | Spec defines the desired state of AIGatewayDataPlane. |
 | `status` _[AIGatewayDataPlaneStatus](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanestatus)_ | Status defines the observed state of AIGatewayDataPlane. |
+
+### OnPremAIGateway
+
+
+OnPremAIGateway is the Schema for the on-prem AI Gateway control planes API.
+It acts as the non-Konnect control plane for AIGatewayDataPlane: it does not
+own any Deployment or Pod itself, it aggregates configuration targeting it
+and pushes it to the data planes that reference it.
+
+<!-- on_prem_ai_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aigateway.konghq.com/v1alpha1`
+| `kind` _string_ | `OnPremAIGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)_ | Spec defines the desired state of OnPremAIGateway. |
+| `status` _[OnPremAIGatewayStatus](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaystatus)_ | Status defines the observed state of OnPremAIGateway. |
 
 ### Types
 
@@ -256,6 +275,35 @@ NetworkOptions defines network-related options for an AIGatewayDataPlane.
 _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
+
+#### OnPremAIGatewaySpec
+
+
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
+logic that consumes them.
+
+
+
+
+_Appears in:_
+
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
+
+#### OnPremAIGatewayStatus
+
+
+OnPremAIGatewayStatus defines the observed state of OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremAIGateway. |
+| `configHash` _string_ | ConfigHash is the hash of the configuration that was last pushed to the data planes referencing this OnPremAIGateway. |
+
+_Appears in:_
+
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
 
 #### Scaling
 

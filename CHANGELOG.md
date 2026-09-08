@@ -66,6 +66,9 @@
 - `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
   via `spec.deployment.scaling.horizontal`.
   [#5556](https://github.com/Kong/kong-operator/pull/5556)
+- Added `OnPremAIGateway` CRD: the on-prem (non-Konnect) control plane for
+  `AIGatewayDataPlane`. This change only adds the CRD; it is not reconciled yet.
+  [#5567](https://github.com/Kong/kong-operator/issues/5567)
 
 ### Fixes
 
