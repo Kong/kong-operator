@@ -1125,7 +1125,7 @@ spec:
     - name: Assert-response-transformer-plugin-for-configfrom
       description: Assert the mirrored KongPlugin config was resolved from the Secret referenced by spec.configFrom.
       use:
-        template: ../../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
       bindings:
         - name: namespace
           value: ($namespace)
@@ -1136,7 +1136,7 @@ spec:
         - name: plugin_type
           value: response-transformer
         - name: plugin_config
-          value: '{"add":{"headers":["X-Config-From: from-secret"]}}'
+          value: '{"add":{"headers":["X-Config-From:from-secret"]}}'
 
     # Step 60: Verify GET /get works from the host (configFrom).
     - name: Verify-GET-traffic-from-host-configfrom
@@ -1181,7 +1181,7 @@ spec:
     - name: Assert-response-transformer-plugin-for-rotated-configfrom
       description: Assert the mirrored KongPlugin config was re-resolved after the Secret changed.
       use:
-        template: ../../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
       bindings:
         - name: namespace
           value: ($namespace)
@@ -1192,7 +1192,7 @@ spec:
         - name: plugin_type
           value: response-transformer
         - name: plugin_config
-          value: '{"add":{"headers":["X-Config-From: rotated-secret"]}}'
+          value: '{"add":{"headers":["X-Config-From:rotated-secret"]}}'
 
     # Step 63: Verify the rotated value reached the data plane.
     - name: Verify-response-transformer-rotated-configfrom
@@ -1222,7 +1222,7 @@ spec:
     - name: Assert-response-transformer-plugin-for-configpatches
       description: Assert the mirrored KongPlugin config has the Secret value patched in.
       use:
-        template: ../../common/_step_templates/assert-kongPlugin.yaml
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
       bindings:
         - name: namespace
           value: ($namespace)
@@ -1233,7 +1233,7 @@ spec:
         - name: plugin_type
           value: response-transformer
         - name: plugin_config
-          value: '{"add":{"headers":["X-Config-Patch: from-patch"]}}'
+          value: '{"add":{"headers":["X-Config-Patch:from-patch"]}}'
 
     # Step 66: Verify GET /get works from the host (configPatches).
     - name: Verify-GET-traffic-from-host-configpatches

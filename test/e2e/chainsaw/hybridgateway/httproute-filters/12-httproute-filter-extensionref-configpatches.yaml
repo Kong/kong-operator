@@ -27,7 +27,7 @@ metadata:
     chainsaw/test: ($test_name)
     konghq.com/secret: "true"
 stringData:
-  header: '"X-Config-Patch: from-patch"'
+  header: '"X-Config-Patch:from-patch"'
 ---
 # The KongPlugin declares the header list in spec.config and patches its first element in.
 apiVersion: configuration.konghq.com/v1
@@ -70,7 +70,6 @@ spec:
         - path:
             type: PathPrefix
             value: /get
-          method: GET
       filters:
         - type: ExtensionRef
           extensionRef:
