@@ -1,0 +1,79 @@
+##
+# KongPlugin whose whole configuration is sourced from a Secret via spec.configFrom, attached to an
+# HTTPRoute through an ExtensionRef filter.
+#
+# Required bindings:
+#   - test_name: The test name label to match (used for labels)
+#   - config_from_secret_name: Name of the Secret holding the plugin configuration
+#   - config_from_plugin_name: Name of the KongPlugin reading its config from that Secret
+#   - http_route_config_from_name: Name of the HTTPRoute resource
+#   - http_route_config_from_namespace: Namespace of the HTTPRoute resource
+#   - config_from_fqdn: Hostname of the HTTPRoute
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_deployment_name: Name of the httpbin backend service
+#   - httpbin_deployment_namespace: Namespace of the httpbin backend service
+
+---
+# The Secret carrying the full response-transformer configuration, as YAML.
+# The konghq.com/secret label is required for the operator to watch it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($config_from_secret_name)
+  namespace: ($http_route_config_from_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+    konghq.com/secret: "true"
+stringData:
+  config: |
+    add:
+      headers:
+      - "X-Config-From: from-secret"
+---
+# The KongPlugin reads its whole configuration from the Secret above: spec.config is left unset.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ($config_from_plugin_name)
+  namespace: ($http_route_config_from_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+plugin: response-transformer
+configFrom:
+  secretKeyRef:
+    name: ($config_from_secret_name)
+    key: config
+---
+# The HTTPRoute attaching the KongPlugin through an ExtensionRef filter.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($http_route_config_from_name)
+  namespace: ($http_route_config_from_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  hostnames:
+    - ($config_from_fqdn)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+          method: GET
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: configuration.konghq.com
+            kind: KongPlugin
+            name: ($config_from_plugin_name)
+      backendRefs:
+        - name: ($httpbin_deployment_name)
+          port: 80
+          namespace: ($httpbin_deployment_namespace)
