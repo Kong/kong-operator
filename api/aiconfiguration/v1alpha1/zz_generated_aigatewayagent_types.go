@@ -55,9 +55,6 @@ type AIGatewayAgentSpec struct {
 
 // AIGatewayAgentAPISpec defines the API spec fields for AIGatewayAgent.
 type AIGatewayAgentAPISpec struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// Access control configuration for an agent.
 	//
 	// +optional
@@ -106,9 +103,6 @@ type AIGatewayAgentAPISpec struct {
 	// +kubebuilder:validation:MaxProperties=5
 	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// A user-defined unique identifier for this agent, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -164,9 +158,6 @@ type AIGatewayAgentStatus struct {
 // AIGatewayAgentConfig Configuration for the agent.
 // The structure varies depending on the agent type.
 type AIGatewayAgentConfig struct {
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// Configuration for AI Gateway logging.
 	//
 	// +optional
@@ -182,16 +173,10 @@ type AIGatewayAgentConfig struct {
 	//
 	// +optional
 	Proxy AIGatewayProxyConfig `json:"proxy,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// Configuration for an AI Gateway route.
 	//
 	// +optional
 	Route AIGatewayRouteConfig `json:"route,omitzero"`
-	// **Pre-release Feature**
-	// This feature is currently in beta and is subject to change.
-	//
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
 	//
@@ -209,10 +194,7 @@ type AIGatewayAgentConfig struct {
 	URL string `json:"url,omitzero"`
 }
 
-// AIGatewayAgentConfigLogging **Pre-release Feature**
-// This feature is currently in beta and is subject to change.
-//
-// Configuration for AI Gateway logging.
+// AIGatewayAgentConfigLogging Configuration for AI Gateway logging.
 type AIGatewayAgentConfigLogging struct {
 	// Maximum size in bytes for logged request/response payloads.
 	// Payloads exceeding this size will be truncated.

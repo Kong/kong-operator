@@ -123,18 +123,11 @@ spec:
                   spec fields.
                 properties:
                   access:
-                    description: |-
-                      **Pre-release Feature**
-                      This feature is currently in beta and is subject to change.
-
-                      Access control configuration for an agent.
+                    description: Access control configuration for an agent.
                     properties:
                       acls:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Access control rules. Configure exactly one of `allow` or `deny`.
+                        description: Access control rules. Configure exactly one of
+                          `allow` or `deny`.
                         properties:
                           allow:
                             description: Allow configuration.
@@ -267,11 +260,7 @@ spec:
                       The structure varies depending on the agent type.
                     properties:
                       logging:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Configuration for AI Gateway logging.
+                        description: Configuration for AI Gateway logging.
                         properties:
                           maxPayloadSize:
                             description: |-
@@ -362,11 +351,7 @@ spec:
                             type: string
                         type: object
                       route:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Configuration for an AI Gateway route.
+                        description: Configuration for an AI Gateway route.
                         properties:
                           headers:
                             description: |-
@@ -473,18 +458,12 @@ spec:
                         type: object
                       upstream:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           Configuration applied when proxying to the upstream service, including
                           authentication.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Authentication to use when proxying to the upstream service.
+                            description: Authentication to use when proxying to the
+                              upstream service.
                             properties:
                               aws:
                                 description: AIGatewayUpstreamAuthAWS configuration.
@@ -602,9 +581,6 @@ spec:
                     type: object
                   name:
                     description: |-
-                      **Pre-release Feature**
-                      This feature is currently in beta and is subject to change.
-
                       A user-defined unique identifier for this agent, used as a stable
                       human-readable reference.
                       This value is immutable after creation.
