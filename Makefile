@@ -1075,6 +1075,7 @@ _run:
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-aigatewaydataplane \
+		-enable-controller-onpremaigateway \
 		-enable-controller-konnect \
 		-enable-controller-controlplaneextensions \
 		-enable-conversion-webhook=false \

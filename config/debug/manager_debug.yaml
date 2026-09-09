@@ -32,8 +32,12 @@ spec:
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
             - -enable-controller-kongplugininstallation
+            - -enable-controller-aigateway
+            - -enable-controller-aigatewaydataplane
+            - -enable-controller-onpremaigateway
             - -enable-controller-konnect
             - -enable-controller-controlplaneextensions
+            - -feature-gates=mcp-server
           name: manager
           env:
             - name: KONG_OPERATOR_ANONYMOUS_REPORTS
