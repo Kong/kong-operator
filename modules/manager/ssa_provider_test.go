@@ -52,6 +52,11 @@ func TestIsSSAProviderNeeded(t *testing.T) {
 			},
 			want: true,
 		},
+		{
+			name: "OnPremAIGateway controller enabled",
+			cfg:  Config{OnPremAIGatewayControllerEnabled: true},
+			want: true,
+		},
 	}
 
 	for _, tc := range tests {
