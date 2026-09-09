@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.1.11](#v2111)
 - [v2.1.10](#v2110)
 - [v2.1.9](#v219)
 - [v2.1.8](#v218)
@@ -50,7 +51,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.1.11]
+
+> Release date: 2026-09-09
 
 ### Fixes
 
@@ -59,7 +62,7 @@
  `requestRedirect` filter.
   ** This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
- [#5521](https://github.com/Kong/kong-operator/pull/5521)
+ [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5562](https://github.com/Kong/kong-operator/pull/5562)
 
 ## [v2.1.10]
 
@@ -2030,6 +2033,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.1.11]: https://github.com/Kong/kong-operator/compare/v2.1.10..v2.1.11
 [v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
 [v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
