@@ -63,8 +63,8 @@ func ResolveConfig(ctx context.Context, cl client.Client, plugin *configurationv
 }
 
 // configFromSecret reads the plugin configuration from the key of the Secret referenced by the
-// given source, in the given namespace. The stored value may be either JSON or YAML; it is always
-// returned as JSON.
+// given source, in the given namespace. The stored value may be either a JSON or a YAML object, and
+// is always returned as JSON. Anything that is not an object is rejected.
 func configFromSecret(
 	ctx context.Context,
 	cl client.Client,
@@ -79,7 +79,7 @@ func configFromSecret(
 	var config map[string]any
 	if jsonErr := json.Unmarshal(value, &config); jsonErr != nil {
 		if yamlErr := yaml.Unmarshal(value, &config); yamlErr != nil {
-			return nil, fmt.Errorf("key %s in secret %s/%s contains neither valid JSON nor valid YAML", ref.Key, namespace, ref.Secret)
+			return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object", ref.Key, namespace, ref.Secret)
 		}
 	}
 

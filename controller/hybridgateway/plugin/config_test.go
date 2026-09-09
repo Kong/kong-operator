@@ -161,13 +161,13 @@ func TestConfigFromSecret(t *testing.T) {
 			name:        "value that is neither JSON nor YAML",
 			ref:         configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
 			objects:     []client.Object{newSecret(map[string]string{"config": "\tnot: [valid"})},
-			expectedErr: "contains neither valid JSON nor valid YAML",
+			expectedErr: "does not hold a JSON or YAML object",
 		},
 		{
 			name:        "scalar value is not a config object",
 			ref:         configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
 			objects:     []client.Object{newSecret(map[string]string{"config": "42"})},
-			expectedErr: "contains neither valid JSON nor valid YAML",
+			expectedErr: "does not hold a JSON or YAML object",
 		},
 		{
 			name:        "missing key",

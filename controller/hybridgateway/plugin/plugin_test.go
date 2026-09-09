@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -482,4 +483,132 @@ func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugins[0].Tags)
+}
+
+// resolvedConfigCase describes a KongPlugin referenced by an ExtensionRef filter together with the
+// Secret it sources its configuration from, and the configuration the mirrored copy must carry.
+// The cases are shared by the HTTPRoute and GRPCRoute ExtensionRef paths, which resolve the
+// configuration the same way.
+type resolvedConfigCase struct {
+	name        string
+	plugin      *configurationv1.KongPlugin
+	secret      *corev1.Secret
+	expected    string
+	expectedErr string
+}
+
+// objects returns the cluster state the case needs, for seeding a fake client.
+func (c resolvedConfigCase) objects() []client.Object {
+	objects := []client.Object{c.plugin}
+	if c.secret != nil {
+		objects = append(objects, c.secret)
+	}
+	return objects
+}
+
+// resolvedConfigCases returns the shared ExtensionRef configuration resolution cases.
+func resolvedConfigCases() []resolvedConfigCase {
+	referencedPlugin := func(mutate func(*configurationv1.KongPlugin)) *configurationv1.KongPlugin {
+		plugin := &configurationv1.KongPlugin{
+			Name:       "referenced-plugin",
+			Namespace:  "test-namespace",
+			PluginName: "rate-limiting",
+		}
+		mutate(plugin)
+		return plugin
+	}
+	configSecret := func(data map[string][]byte) *corev1.Secret {
+		return &corev1.Secret{
+			Name: "plugin-config", Namespace: "test-namespace",
+			Data: data,
+		}
+	}
+
+	return []resolvedConfigCase{
+		{
+			name: "spec.config is mirrored as-is",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.Config = apiextensionsv1.JSON{Raw: []byte(`{"minute":10}`)}
+			}),
+			expected: `{"minute":10}`,
+		},
+		{
+			name: "spec.configFrom is resolved from the Secret",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.ConfigFrom = &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{Secret: "plugin-config", Key: "config"},
+				}
+			}),
+			secret:   configSecret(map[string][]byte{"config": []byte("minute: 10\npolicy: local\n")}),
+			expected: `{"minute":10,"policy":"local"}`,
+		},
+		{
+			name: "spec.configPatches are applied on top of spec.config",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.Config = apiextensionsv1.JSON{Raw: []byte(`{"minute":10,"secret":""}`)}
+				p.ConfigPatches = []configurationv1.ConfigPatch{{
+					Path: "/secret",
+					ValueFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{Secret: "plugin-config", Key: "secret"},
+					},
+				}}
+			}),
+			secret:   configSecret(map[string][]byte{"secret": []byte(`"shhh"`)}),
+			expected: `{"minute":10,"secret":"shhh"}`,
+		},
+		{
+			name: "a missing Secret surfaces as an error",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.ConfigFrom = &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{Secret: "absent", Key: "config"},
+				}
+			}),
+			expectedErr: "failed to fetch plugin configuration secret test-namespace/absent",
+		},
+	}
+}
+
+func TestPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	for _, tc := range resolvedConfigCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.objects()...).
+				Build()
+
+			plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, plugins, 1)
+			assert.JSONEq(t, tc.expected, string(plugins[0].Config.Raw))
+		})
+	}
 }

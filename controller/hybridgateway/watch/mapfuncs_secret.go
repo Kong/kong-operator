@@ -8,11 +8,13 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
+	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
@@ -134,6 +136,9 @@ func MapHTTPRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 			if err := cl.List(ctx, routes, client.MatchingFields{
 				index.KongPluginsOnHTTPRouteIndex: pluginKey,
 			}); err != nil {
+				// Map functions cannot return an error, so log the dropped reconcile instead of
+				// letting the mirrored KongPlugin keep a stale config with no trace of why.
+				log.Error(ctrllog.FromContext(ctx), err, "Failed to list HTTPRoutes for KongPlugin", "kongplugin", pluginKey)
 				continue
 			}
 			for _, route := range routes.Items {
@@ -163,6 +168,9 @@ func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 			if err := cl.List(ctx, routes, client.MatchingFields{
 				index.KongPluginsOnGRPCRouteIndex: pluginKey,
 			}); err != nil {
+				// Map functions cannot return an error, so log the dropped reconcile instead of
+				// letting the mirrored KongPlugin keep a stale config with no trace of why.
+				log.Error(ctrllog.FromContext(ctx), err, "Failed to list GRPCRoutes for KongPlugin", "kongplugin", pluginKey)
 				continue
 			}
 			for _, route := range routes.Items {
@@ -181,6 +189,10 @@ func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 func kongPluginsForConfigSecret(ctx context.Context, cl client.Client, secretNamespace, secretName string) []string {
 	plugins := &configurationv1.KongPluginList{}
 	if err := cl.List(ctx, plugins, client.InNamespace(secretNamespace)); err != nil {
+		// Map functions cannot return an error, so log the dropped reconcile instead of
+		// letting the mirrored KongPlugin keep a stale config with no trace of why.
+		log.Error(ctrllog.FromContext(ctx), err, "Failed to list KongPlugins for config Secret",
+			"secret", secretNamespace+"/"+secretName)
 		return nil
 	}
 
