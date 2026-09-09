@@ -152,10 +152,16 @@ func TestConfigFromSecret(t *testing.T) {
 			expected: `{"minute":10,"policy":"local"}`,
 		},
 		{
-			name:     "empty YAML value yields a null config",
-			ref:      configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
-			objects:  []client.Object{newSecret(map[string]string{"config": ""})},
-			expected: `null`,
+			name:        "empty value is rejected",
+			ref:         configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
+			objects:     []client.Object{newSecret(map[string]string{"config": ""})},
+			expectedErr: "does not hold a JSON or YAML object",
+		},
+		{
+			name:        "literal null is rejected",
+			ref:         configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
+			objects:     []client.Object{newSecret(map[string]string{"config": "null"})},
+			expectedErr: "does not hold a JSON or YAML object",
 		},
 		{
 			name:        "value that is neither JSON nor YAML",

@@ -79,8 +79,14 @@ func configFromSecret(
 	var config map[string]any
 	if jsonErr := json.Unmarshal(value, &config); jsonErr != nil {
 		if yamlErr := yaml.Unmarshal(value, &config); yamlErr != nil {
-			return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object", ref.Key, namespace, ref.Secret)
+			return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object: %w", ref.Key, namespace, ref.Secret, yamlErr)
 		}
+	}
+	// An empty value and a literal null both parse cleanly into a nil map. Reject them instead of
+	// mirroring a null configuration, which would be the silent misconfiguration this resolution
+	// exists to prevent.
+	if config == nil {
+		return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object", ref.Key, namespace, ref.Secret)
 	}
 
 	raw, err := json.Marshal(config)
