@@ -243,6 +243,17 @@ func (c *Oauth2Credential) SanitizedCopy() *Oauth2Credential {
 	}
 }
 
+// SanitizedCopy returns a shallow copy with sensitive values redacted best-effort.
+func (c *MTLSAuth) SanitizedCopy() *MTLSAuth {
+	return &MTLSAuth{
+		// Consumer and CACertificate fields omitted.
+		CreatedAt:   c.CreatedAt,
+		ID:          c.ID,
+		SubjectName: c.SubjectName,
+		Tags:        c.Tags,
+	}
+}
+
 func decodeCredential(credConfig any,
 	credStructPointer any,
 ) error {

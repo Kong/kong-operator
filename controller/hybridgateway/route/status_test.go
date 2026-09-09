@@ -200,8 +200,9 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "Group nil vs set",
 			a: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Group = groupPtr("g")
+				r := gwtypes.ParentReference{
+					Name:  name,
+					Group: groupPtr("g")}
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -211,8 +212,8 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "Group set vs nil",
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Group = groupPtr("g")
+				r := gwtypes.ParentReference{Name: name,
+					Group: groupPtr("g")}
 				return r
 			}(),
 			want: false,
@@ -220,8 +221,8 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "Kind nil vs set",
 			a: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Kind = kindPtr("k")
+				r := gwtypes.ParentReference{Name: name,
+					Kind: kindPtr("k")}
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -231,8 +232,8 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "Kind set vs nil",
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Kind = kindPtr("k")
+				r := gwtypes.ParentReference{Name: name,
+					Kind: kindPtr("k")}
 				return r
 			}(),
 			want: false,
@@ -240,8 +241,8 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "Namespace nil vs set",
 			a: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Namespace = nsPtr("ns")
+				r := gwtypes.ParentReference{Name: name,
+					Namespace: nsPtr("ns")}
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -251,8 +252,8 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "Namespace set vs nil",
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Namespace = nsPtr("ns")
+				r := gwtypes.ParentReference{Name: name,
+					Namespace: nsPtr("ns")}
 				return r
 			}(),
 			want: false,
@@ -260,8 +261,8 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "SectionName nil vs set",
 			a: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.SectionName = sectionPtr("sec")
+				r := gwtypes.ParentReference{Name: name,
+					SectionName: sectionPtr("sec")}
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -271,8 +272,8 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "SectionName set vs nil",
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.SectionName = sectionPtr("sec")
+				r := gwtypes.ParentReference{Name: name,
+					SectionName: sectionPtr("sec")}
 				return r
 			}(),
 			want: false,
@@ -280,8 +281,8 @@ func Test_isParentRefEqual(t *testing.T) {
 		{
 			name: "Port nil vs set",
 			a: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Port = new(int32(1))
+				r := gwtypes.ParentReference{Name: name,
+					Port: new(int32(1))}
 				return r
 			}(),
 			b:    gwtypes.ParentReference{Name: name},
@@ -291,8 +292,8 @@ func Test_isParentRefEqual(t *testing.T) {
 			name: "Port set vs nil",
 			a:    gwtypes.ParentReference{Name: name},
 			b: func() gwtypes.ParentReference {
-				r := gwtypes.ParentReference{Name: name}
-				r.Port = new(int32(1))
+				r := gwtypes.ParentReference{Name: name,
+					Port: new(int32(1))}
 				return r
 			}(),
 			want: false,
