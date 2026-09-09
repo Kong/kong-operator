@@ -26,12 +26,11 @@ import (
 )
 
 const (
-
-	// ManagerStartupWaitTime is the time to wait for the manager to start.
-	ManagerStartupWaitTime = 5 * time.Second
-
-	// ManagerStartupWaitInterval is the interval to wait for the manager to start.
-	ManagerStartupWaitInterval = time.Millisecond
+	// ControllersStartupWaitTime is the time to wait for the manager's controllers to start.
+	// It is deliberately generous: under contended CI (`-race -parallel 4`) informer cache
+	// sync has been observed to take 15s+. Exceeding it means a genuine failure, and a
+	// generous budget costs nothing when the manager starts normally.
+	ControllersStartupWaitTime = time.Minute
 )
 
 // WithDefaultEnvTestsConfig modifies a managercfg.Config for use in envtests.
@@ -280,17 +279,31 @@ func RunManager(
 	return logs
 }
 
-// WaitForManagerStart waits for the manager to start. The indication of the manager starting is
-// the "Starting manager" log entry that is emitted just before the manager starts.
-// Note: We cannot rely here on the manager's readiness probe because it returns 200 OK as soon as it
-// starts listening which happens before the manager actually starts.
-func WaitForManagerStart(t *testing.T, logsObserver LogsObserver) {
+// WaitForControllersStart waits until each of the named controllers has started its
+// workers, which controller-runtime only does after that controller's informer caches
+// have synced. This is the real readiness barrier for envtests that assert on
+// reconciler output: the "Starting manager" log line is emitted before cache sync and,
+// under CI load, up to ~15s before any controller reconciles anything.
+//
+// Names are controller-runtime controller names as they appear in the logs without the
+// "controllers." prefix, e.g. "KongConsumer", "Ingress.netv1", "Dynamic/TLSRoute".
+func WaitForControllersStart(t *testing.T, logsObserver LogsObserver, controllers ...string) {
 	t.Helper()
-	t.Log("Waiting for manager to start...")
+	require.NotEmpty(t, controllers, "no controllers to wait for")
+	t.Logf("Waiting for controllers to start: %v", controllers)
 	require.Eventually(t, func() bool {
-		const expectedLog = "Starting manager"
-		return lo.ContainsBy(logsObserver.All(), func(item observer.LoggedEntry) bool {
-			return strings.Contains(item.Message, expectedLog)
-		})
-	}, ManagerStartupWaitTime, ManagerStartupWaitInterval)
+		entries := logsObserver.All()
+		for _, c := range controllers {
+			name := "controllers." + c
+			if !lo.ContainsBy(entries, func(e observer.LoggedEntry) bool {
+				// NOTE: exact LoggerName match, so that e.g. "Ingress" does not match
+				// "IngressClass" or "IngressClassParameters".
+				return e.LoggerName == name && e.Message == "Starting workers"
+			}) {
+				t.Logf("controller %s has not started its workers yet", name)
+				return false
+			}
+		}
+		return true
+	}, ControllersStartupWaitTime, tickTime)
 }
