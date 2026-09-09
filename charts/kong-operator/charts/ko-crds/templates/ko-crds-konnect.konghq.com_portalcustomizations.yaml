@@ -207,7 +207,7 @@ spec:
                     maxLength: 253
                     type: string
                   specRenderer:
-                    description: SpecRenderer is a type alias.
+                    description: The spec renderer settings of this portal
                     properties:
                       allowCustomServerUrls:
                         description: |-
@@ -263,6 +263,24 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      tryItUiAudience:
+                        description: |-
+                          The audience for the Try It UI feature.
+
+                          `all` means that the Try It UI will be available to all users, including
+                          unauthenticated users.
+
+                          `authenticated` means that the Try It UI will only be available to
+                          authenticated users.
+
+                          `registered` means that the Try It UI will only be available to users who
+                          have registered for the API.
+                        enum:
+                        - all
+                        - authenticated
+                        - registered
+                        maxLength: 253
                         type: string
                     type: object
                   theme:

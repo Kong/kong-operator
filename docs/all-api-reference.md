@@ -214,13 +214,13 @@ AIGatewayAgentAPISpec defines the API spec fields for AIGatewayAgent.
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control configuration for an agent. |
+| `access` _[AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)_ | Access control configuration for an agent. |
 | `config` _[AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)_ | Configuration for the agent. The structure varies depending on the agent type. |
 | `displayName` _string_ | The display name for this agent. |
 | `enabled` _string_ | Whether the Agent is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this agent, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this agent, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `type` _string_ | The type of the agent. |
 
@@ -231,14 +231,13 @@ _Appears in:_
 #### AIGatewayAgentAccess
 
 
-AIGatewayAgentAccess **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Access control configuration for an agent.
+AIGatewayAgentAccess Access control configuration for an agent.
 
 
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayAgentAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the agent. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the agent. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -294,11 +293,11 @@ The structure varies depending on the agent type.
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayAgentConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
-| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
+| `route` _[AIGatewayRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrouteconfig)_ | Configuration for an AI Gateway route. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream A2A Agent using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -308,8 +307,7 @@ _Appears in:_
 #### AIGatewayAgentConfigLogging
 
 
-AIGatewayAgentConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayAgentConfigLogging Configuration for AI Gateway logging.
 
 
 
@@ -360,8 +358,7 @@ _Appears in:_
 #### AIGatewayAllowACL
 
 
-AIGatewayAllowACL **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayAllowACL is a type alias.
 
 
 
@@ -427,8 +424,7 @@ Allowed values:
 #### AIGatewayAuthStrategyKeyAuth
 
 
-AIGatewayAuthStrategyKeyAuth **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an auth strategy.
+AIGatewayAuthStrategyKeyAuth Configuration for an auth strategy.
 
 
 
@@ -438,7 +434,7 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -491,8 +487,7 @@ _Appears in:_
 #### AIGatewayAuthStrategyOpenIDConnect
 
 
-AIGatewayAuthStrategyOpenIDConnect **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an auth strategy.
+AIGatewayAuthStrategyOpenIDConnect Configuration for an auth strategy.
 
 
 
@@ -502,7 +497,7 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `displayName` _string_ | The display name for this auth strategy instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this auth strategy instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -670,8 +665,9 @@ _Appears in:_
 #### AIGatewayAzureEmbeddingsModelConfig
 
 
-AIGatewayAzureEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Azure OpenAI-specific configuration for an embeddings model. Azure AI Foundry
+AIGatewayAzureEmbeddingsModelConfig Azure OpenAI-specific configuration for
+an embeddings model.
+Azure AI Foundry
 embeddings are not supported.
 
 
@@ -690,8 +686,8 @@ _Appears in:_
 #### AIGatewayBedrockEmbeddingsModelConfig
 
 
-AIGatewayBedrockEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />AWS Bedrock-specific configuration for a model.
+AIGatewayBedrockEmbeddingsModelConfig AWS Bedrock-specific configuration for
+a model.
 
 
 
@@ -712,8 +708,7 @@ _Appears in:_
 #### AIGatewayCacheWriteCost
 
 
-AIGatewayCacheWriteCost **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayCacheWriteCost is a type alias.
 
 
 
@@ -757,7 +752,7 @@ AIGatewayConsumerAPISpec defines the API spec fields for AIGatewayConsumer.
 | `displayName` _string_ | The display name for this consumer instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this consumer, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this consumer, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `type` _string_ | The type of the consumer. |
 
@@ -778,7 +773,7 @@ AIGatewayConsumerCredentialAPISpec defines the API spec fields for AIGatewayCons
 | `displayName` _string_ | The display name for this credential instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this credential, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this credential, used as a stable human-readable reference. This value is immutable after creation. |
 | `ttl` _int_ | The API Key's time-to-live in seconds. A value of 0 means the API Key never expires. |
 | `type` _string_ |  |
 
@@ -832,7 +827,7 @@ AIGatewayConsumerGroupAPISpec defines the API spec fields for AIGatewayConsumerG
 | `displayName` _string_ | The display name for this consumer group instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this consumer group, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this consumer group, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 
 _Appears in:_
@@ -924,8 +919,7 @@ _Appears in:_
 #### AIGatewayContextWindowFactor
 
 
-AIGatewayContextWindowFactor **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayContextWindowFactor is a type alias.
 
 
 
@@ -1010,8 +1004,7 @@ _Appears in:_
 #### AIGatewayDenyACL
 
 
-AIGatewayDenyACL **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayDenyACL is a type alias.
 
 
 
@@ -1100,14 +1093,14 @@ _Appears in:_
 #### AIGatewayGeminiEmbeddingsModelConfig
 
 
-AIGatewayGeminiEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Google Gemini-specific configuration for a model.
+AIGatewayGeminiEmbeddingsModelConfig Google Gemini-specific configuration for
+a model.
 
 
 
 | Field | Description |
 | --- | --- |
-| `gcpEnvironment` _[GCPModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-gcpmodelconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
+| `gcpEnvironment` _[GCPModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-gcpmodelconfig)_ | Configuration for a model hosted on Google Cloud Project. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 
 _Appears in:_
@@ -1118,8 +1111,8 @@ _Appears in:_
 #### AIGatewayHuggingfaceEmbeddingsModelConfig
 
 
-AIGatewayHuggingfaceEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Hugging Face-specific configuration for a model.
+AIGatewayHuggingfaceEmbeddingsModelConfig Hugging Face-specific configuration
+for a model.
 
 
 
@@ -1154,8 +1147,7 @@ _Appears in:_
 #### AIGatewayLoggingConfig
 
 
-AIGatewayLoggingConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayLoggingConfig Configuration for AI Gateway logging.
 
 
 
@@ -1171,8 +1163,8 @@ _Appears in:_
 #### AIGatewayMCPACLs
 
 
-AIGatewayMCPACLs **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Access control rules for MCP resources. Configure `allow`, `deny`, or both.
+AIGatewayMCPACLs Access control rules for MCP resources.
+Configure `allow`, `deny`, or both.
 
 
 
@@ -1197,18 +1189,18 @@ AIGatewayMCPConversionTool A tool exposed by an MCP Server in
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
-| `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | Access-control rules for a tool. |
+| `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ |  |
 | `description` _string_ | A description of what the tool does. |
-| `headers` _[AIGatewayMCPToolHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
+| `headers` _[AIGatewayMCPToolHeaders](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolheaders)_ | The headers of the exported API. By default, Kong will extract the headers from API configuration. If the configured headers are not exactly matched, this field is required. |
 | `host` _string_ | The host used when forwarding the request to the upstream API. By default, Kong will extract the host from API configuration. If the configured host is wildcard, this field is required. |
 | `method` _string_ | The HTTP method used when forwarding the request to the upstream API. |
 | `name` _string_ | The MCP tool name. In upstream-server mode, it also matches the remote MCP Server tool whose metadata this entry overrides. |
-| `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `parameters` _[][AIGatewayMCPToolParameter](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolparameter)_ |  |
 | `path` _string_ | The path of the exported API. Always treated as relative to the path component of `config.url` and simply concatenated onto it — a leading `/` has no special "absolute path" meaning. If this tool's `host` or `scheme` overrides the source's URL, `path` is instead relative to the root of that overridden host, since there is no URL path from a different host to append to. By default, Kong will extract the path from API configuration. |
-| `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
-| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
-| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
+| `query` _[AIGatewayMCPToolQuery](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolquery)_ | The query arguments of the exported API. If the generated query arguments are not exactly matched, this field is required. |
+| `requestBody` _[AIGatewayMCPToolRequestBody](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolrequestbody)_ | The API requestBody specification defined in OpenAPI JSON format. For example, '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-request-body/describing-request-body/ for more details. Note that `$ref` is not supported. |
+| `responses` _[AIGatewayMCPToolResponses](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolresponses)_ | The API responses specification defined in OpenAPI JSON format. This specification will be used to validate the upstream response and map it back to the structuredOutput. For example, '{"200":{"content":{"application/json":{"schema":{"type":"object","properties":{"result":{"type":"string"}}}}}}}}'. See https://swagger.io/docs/specification/v3_0/describing-responses/ for more details. Only one non-error (status code < 400) response is supported. Note that `$ref` is not supported. |
 | `scheme` _string_ | The scheme of the exported API. By default, Kong will extract the scheme from API configuration. If the configured scheme is not expected, this field can be used to override it. |
 
 _Appears in:_
@@ -1219,14 +1211,14 @@ _Appears in:_
 #### AIGatewayMCPPassthroughTool
 
 
-AIGatewayMCPPassthroughTool **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />A tool exposed by an MCP Server in `passthrough-listener` mode.
+AIGatewayMCPPassthroughTool A tool exposed by an MCP Server in
+`passthrough-listener` mode.
 
 
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | Access-control rules for a tool. |
 | `name` _string_ | Tool identifier used to match remote MCP Server tools for ACL enforcement. |
 
 _Appears in:_
@@ -1292,20 +1284,19 @@ Allowed values:
 #### AIGatewayMCPServerConversionListener
 
 
-AIGatewayMCPServerConversionListener **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerConversionListener is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server. |
+| `access` _[AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)_ | Routing, logging, and server configuration for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. Each tool's `path`, `method`, and `host` describe the backend HTTP operation on the upstream selected by `config.url` — they do not need to match the public MCP Route configured in `config.route`. |
 
@@ -1354,19 +1345,18 @@ Allowed values:
 #### AIGatewayMCPServerConversionOnly
 
 
-AIGatewayMCPServerConversionOnly **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerConversionOnly is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and request body size limits for the MCP Server. |
+| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)_ | Routing, logging, and request body size limits for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `tools` _[][AIGatewayMCPConversionTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpconversiontool)_ | List of tools exposed by this MCP Server. |
 
@@ -1377,20 +1367,19 @@ _Appears in:_
 #### AIGatewayMCPServerListener
 
 
-AIGatewayMCPServerListener **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerListener is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `config` _[AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server. |
+| `access` _[AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `sources` _[][AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
 
@@ -1439,17 +1428,17 @@ Allowed values:
 #### AIGatewayMCPServerListenerConsumer
 
 
-AIGatewayMCPServerListenerConsumer **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
+AIGatewayMCPServerListenerConsumer Auth strategy and OAuth 2.0 Protected
+Resource Metadata configuration
 for granting access to an MCP server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
@@ -1462,8 +1451,8 @@ _Appears in:_
 #### AIGatewayMCPServerListenerOauth
 
 
-AIGatewayMCPServerListenerOauth **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Auth strategy and OAuth 2.0 Protected Resource Metadata configuration
+AIGatewayMCPServerListenerOauth Auth strategy and OAuth 2.0 Protected
+Resource Metadata configuration
 for granting access to an MCP server.
 
 
@@ -1471,9 +1460,9 @@ for granting access to an MCP server.
 | Field | Description |
 | --- | --- |
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
 | `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
-| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
+| `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 
@@ -1486,17 +1475,17 @@ _Appears in:_
 #### AIGatewayMCPServerNoUpstreamConfig
 
 
-AIGatewayMCPServerNoUpstreamConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server.
+AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
+for the MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayMCPServerNoUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayMCPServerNoUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
 
 _Appears in:_
 
@@ -1505,8 +1494,8 @@ _Appears in:_
 #### AIGatewayMCPServerNoUpstreamConfigLogging
 
 
-AIGatewayMCPServerNoUpstreamConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
+logging.
 
 
 
@@ -1522,20 +1511,19 @@ _Appears in:_
 #### AIGatewayMCPServerPassthroughListener
 
 
-AIGatewayMCPServerPassthroughListener **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerPassthroughListener is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
-| `config` _[AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server. |
+| `access` _[AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)_ |  |
+| `config` _[AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `tools` _[][AIGatewayMCPPassthroughTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcppassthroughtool)_ | Per-tool access-control overrides for tools advertised by the remote MCP Server. Each entry is matched to a remote tool by `name`; only its access-control rules are applied. |
 
@@ -1584,8 +1572,8 @@ Allowed values:
 #### AIGatewayMCPServerProtectedResourceMetadata
 
 
-AIGatewayMCPServerProtectedResourceMetadata **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />OAuth 2.0 Protected Resource Metadata (RFC 9728) advertised for this MCP
+AIGatewayMCPServerProtectedResourceMetadata OAuth 2.0 Protected Resource
+Metadata (RFC 9728) advertised for this MCP
 server, allowing clients to discover the authorization servers that
 protect it.
 
@@ -1608,8 +1596,8 @@ _Appears in:_
 
 _Underlying type:_ `object`
 
-AIGatewayMCPServerRouteWithMatcher **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener.
+AIGatewayMCPServerRouteWithMatcher Route configuration for an MCP Server that
+terminates its own listener.
 At least one
 of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
 match
@@ -1631,8 +1619,8 @@ _Appears in:_
 #### AIGatewayMCPServerServerConfigBase
 
 
-AIGatewayMCPServerServerConfigBase **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server.
+AIGatewayMCPServerServerConfigBase Server-side configuration for the MCP
+Server.
 
 
 
@@ -1663,7 +1651,7 @@ is maintained by the upstream MCP servers.
 | --- | --- |
 | `client` _[AIGatewayMCPServerServerConfigBaseSessionClient](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesessionclient)_ | The configuration for client-side session storage. |
 | `managed` _string_ | If enabled, Kong will maintain managed sessions with the MCP server. |
-| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Config for connecting to a Cloud Provider's Redis instance. |
+| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
 | `sessionTtl` _int_ | The time-to-live (TTL) for each session in seconds. |
 | `strategy` _string_ | The strategy for the session. If the value is 'client', the session is encrypted into MCP session id assigned to the client. If the value is not 'client', the session is stored in the configured database. |
 
@@ -1723,19 +1711,18 @@ _Appears in:_
 #### AIGatewayMCPServerUpstreamServer
 
 
-AIGatewayMCPServerUpstreamServer **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerUpstreamServer is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `config` _[AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server. |
+| `config` _[AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)_ | Routing, logging, and server configuration for the MCP Server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `tools` _[][AIGatewayMCPUpstreamTool](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpupstreamtool)_ | List of tools exposed by this MCP Server. |
 
@@ -1746,19 +1733,19 @@ _Appears in:_
 #### AIGatewayMCPServerUpstreamServerConfig
 
 
-AIGatewayMCPServerUpstreamServerConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server.
+AIGatewayMCPServerUpstreamServerConfig Routing, logging, and server
+configuration for the MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayMCPServerUpstreamServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
 | `server` _[AIGatewayMCPServerUpstreamServerServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfig)_ | Server-side configuration specific to `upstream-server` mode. |
 | `toolsCacheTtlSeconds` _int_ | The time-to-live (TTL) for the upstream tools cache in seconds. Set to `0` to refresh on every client call. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -1768,8 +1755,8 @@ _Appears in:_
 #### AIGatewayMCPServerUpstreamServerConfigLogging
 
 
-AIGatewayMCPServerUpstreamServerConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayMCPServerUpstreamServerConfigLogging Configuration for AI Gateway
+logging.
 
 
 
@@ -1796,7 +1783,7 @@ specific to `upstream-server` mode.
 | `preserveUpstreamToolNames` _string_ | If enabled, the original upstream tool names are preserved as-is when Kong acts as an MCP server. If disabled (`false`), the service name will be prepended to the MCP tool names to avoid name collisions when multiple services are used. |
 | `session` _[AIGatewayMCPServerUpstreamServerServerConfigSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
 | `timeout` _int_ | The timeout for calling the tools in milliseconds. |
-| `toolsListAuth` _[AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an Upstream Server's MCP Server Tools' Authentication. |
+| `toolsListAuth` _[AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigtoolslistauth)_ | Configuration for an Upstream Server's MCP Server Tools' Authentication. |
 
 _Appears in:_
 
@@ -1817,7 +1804,7 @@ is maintained by the upstream MCP servers.
 | --- | --- |
 | `client` _[AIGatewayMCPServerUpstreamServerServerConfigSessionClient](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsessionclient)_ | The configuration for client-side session storage. |
 | `managed` _string_ | If enabled, Kong will maintain managed sessions with the MCP server. |
-| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Config for connecting to a Cloud Provider's Redis instance. |
+| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
 | `sessionTtl` _int_ | The time-to-live (TTL) for each session in seconds. |
 | `strategy` _string_ | The strategy for the session. If the value is 'client', the session is encrypted into MCP session id assigned to the client. If the value is not 'client', the session is stored in the configured database. |
 
@@ -1904,9 +1891,7 @@ Allowed values:
 #### AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials
 
 
-AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials **Pre-release
-Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerUpstreamServerToolOauth2ConfigCredentials is a type alias.
 
 
 
@@ -1927,8 +1912,7 @@ _Appears in:_
 #### AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt
 
 
-AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPServerUpstreamServerToolOauth2ConfigJwt is a type alias.
 
 
 
@@ -1946,19 +1930,19 @@ _Appears in:_
 #### AIGatewayMCPServerWithUpstreamConfig
 
 
-AIGatewayMCPServerWithUpstreamConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server.
+AIGatewayMCPServerWithUpstreamConfig Routing, logging, and server
+configuration for the MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayMCPServerWithUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -1968,8 +1952,8 @@ _Appears in:_
 #### AIGatewayMCPServerWithUpstreamConfigLogging
 
 
-AIGatewayMCPServerWithUpstreamConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayMCPServerWithUpstreamConfigLogging Configuration for AI Gateway
+logging.
 
 
 
@@ -1985,18 +1969,18 @@ _Appears in:_
 #### AIGatewayMCPServerWithUpstreamNoProxyConfig
 
 
-AIGatewayMCPServerWithUpstreamNoProxyConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and server configuration for the MCP Server.
+AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
+configuration for the MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Server-side configuration for the MCP Server. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -2006,8 +1990,8 @@ _Appears in:_
 #### AIGatewayMCPServerWithUpstreamNoProxyConfigLogging
 
 
-AIGatewayMCPServerWithUpstreamNoProxyConfigLogging **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
+Gateway logging.
 
 
 
@@ -2023,18 +2007,17 @@ _Appears in:_
 #### AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig
 
 
-AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig **Pre-release
-Feature**
-This feature is currently in beta and is subject to change.<br /><br />Routing, logging, and request body size limits for the MCP Server.
+AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
+and request body size limits for the MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfiglogging)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including authentication. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
 _Appears in:_
@@ -2045,8 +2028,7 @@ _Appears in:_
 
 
 AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfigLogging
-**Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging.
+Configuration for AI Gateway logging.
 
 
 
@@ -2062,14 +2044,13 @@ _Appears in:_
 #### AIGatewayMCPToolAccess
 
 
-AIGatewayMCPToolAccess **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool.
+AIGatewayMCPToolAccess Access-control rules for a tool.
 
 
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
+| `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Access control rules for allowing or denying consumer groups access to this tool. When configured, these will override the default access control rules defined on the MCP Server. |
 
 _Appears in:_
 
@@ -2080,8 +2061,7 @@ _Appears in:_
 #### AIGatewayMCPToolAnnotations
 
 
-AIGatewayMCPToolAnnotations **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMCPToolAnnotations is a type alias.
 
 
 
@@ -2102,8 +2082,7 @@ _Appears in:_
 
 _Underlying type:_ `object`
 
-AIGatewayMCPToolHeaders **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />The headers of the exported API.
+AIGatewayMCPToolHeaders The headers of the exported API.
 By default, Kong will extract the headers from API configuration.
 If the configured headers are not exactly matched, this field is required.
 
@@ -2143,8 +2122,7 @@ _Appears in:_
 
 _Underlying type:_ `object`
 
-AIGatewayMCPToolQuery **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />The query arguments of the exported API.
+AIGatewayMCPToolQuery The query arguments of the exported API.
 If the generated query arguments are not exactly matched, this field is
 required.
 
@@ -2159,8 +2137,8 @@ _Appears in:_
 
 _Underlying type:_ `object`
 
-AIGatewayMCPToolRequestBody **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />The API requestBody specification defined in OpenAPI JSON format.
+AIGatewayMCPToolRequestBody The API requestBody specification defined in
+OpenAPI JSON format.
 For example,
 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
 See
@@ -2179,8 +2157,8 @@ _Appears in:_
 
 _Underlying type:_ `object`
 
-AIGatewayMCPToolResponses **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />The API responses specification defined in OpenAPI JSON format.
+AIGatewayMCPToolResponses The API responses specification defined in OpenAPI
+JSON format.
 This specification will be used to validate the upstream response and map it
 back to the structuredOutput.
 For example,
@@ -2213,8 +2191,8 @@ falls back to the remote tool's own definition.
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access-control rules for a tool. |
-| `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `access` _[AIGatewayMCPToolAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolaccess)_ | Access-control rules for a tool. |
+| `annotations` _[AIGatewayMCPToolAnnotations](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcptoolannotations)_ |  |
 | `description` _string_ | A description of what the tool does. |
 | `inputSchema` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | The entire `inputSchema` section for the tool. Overrides the upstream server's `inputSchema` for the same tool name, if present. |
 | `name` _string_ | The MCP tool name. In upstream-server mode, it also matches the remote MCP Server tool whose metadata this entry overrides. |
@@ -2227,8 +2205,7 @@ _Appears in:_
 #### AIGatewayMistralEmbeddingsModelConfig
 
 
-AIGatewayMistralEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayMistralEmbeddingsModelConfig is a type alias.
 
 
 
@@ -2251,7 +2228,7 @@ to/from an AI Gateway model using the files and batches APIs.
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control configuration for a model. |
+| `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
 | `capabilities` _[]string_ | List of AI capabilities enabled for this API model. |
 | `config` _[AIGatewayModelAPIConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)_ | Routing, logging, and load balancing configuration for the model. |
 | `displayName` _string_ | The display name for this model instance. |
@@ -2259,7 +2236,7 @@ to/from an AI Gateway model using the files and batches APIs.
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `targets` _[][AIGatewayTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
 
@@ -2277,12 +2254,12 @@ for the model.
 
 | Field | Description |
 | --- | --- |
-| `balancer` _[AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model's load balancer when multiple target models are configured. |
-| `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `balancer` _[AIGatewayModelAPIConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
+| `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
-| `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | Configuration for an AI Gateway route. |
 
 _Appears in:_
 
@@ -2351,14 +2328,13 @@ _Appears in:_
 #### AIGatewayModelAccess
 
 
-AIGatewayModelAccess **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Access control configuration for a model.
+AIGatewayModelAccess Access control configuration for a model.
 
 
 
 | Field | Description |
 | --- | --- |
-| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control rules. Configure exactly one of `allow` or `deny`. |
+| `acls` _[AIGatewayModelAccessAcls](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccessacls)_ | Access control rules. Configure exactly one of `allow` or `deny`. |
 | `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the model. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the model. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 
@@ -2435,8 +2411,7 @@ Allowed values:
 #### AIGatewayModelBalancerConsistentHashingConfig
 
 
-AIGatewayModelBalancerConsistentHashingConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerConsistentHashingConfig is a type alias.
 
 
 
@@ -2461,8 +2436,7 @@ _Appears in:_
 #### AIGatewayModelBalancerLeastConnectionsConfig
 
 
-AIGatewayModelBalancerLeastConnectionsConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerLeastConnectionsConfig is a type alias.
 
 
 
@@ -2486,8 +2460,7 @@ _Appears in:_
 #### AIGatewayModelBalancerLowestLatencyConfig
 
 
-AIGatewayModelBalancerLowestLatencyConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerLowestLatencyConfig is a type alias.
 
 
 
@@ -2512,8 +2485,7 @@ _Appears in:_
 #### AIGatewayModelBalancerLowestUsageConfig
 
 
-AIGatewayModelBalancerLowestUsageConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerLowestUsageConfig is a type alias.
 
 
 
@@ -2538,8 +2510,7 @@ _Appears in:_
 #### AIGatewayModelBalancerPriorityConfig
 
 
-AIGatewayModelBalancerPriorityConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerPriorityConfig is a type alias.
 
 
 
@@ -2563,8 +2534,7 @@ _Appears in:_
 #### AIGatewayModelBalancerRoundRobinConfig
 
 
-AIGatewayModelBalancerRoundRobinConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerRoundRobinConfig is a type alias.
 
 
 
@@ -2588,8 +2558,7 @@ _Appears in:_
 #### AIGatewayModelBalancerSemanticConfig
 
 
-AIGatewayModelBalancerSemanticConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelBalancerSemanticConfig is a type alias.
 
 
 
@@ -2603,7 +2572,7 @@ This feature is currently in beta and is subject to change.
 | `readTimeout` _int_ |  |
 | `retries` _int_ | The number of retries to execute upon failure to proxy. |
 | `slots` _int_ | The number of slots in the load balancer algorithm. |
-| `vectordb` _[AIGatewayModelBalancerSemanticConfigVectordb](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for the vector database used by the model. |
+| `vectordb` _[AIGatewayModelBalancerSemanticConfigVectordb](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigvectordb)_ | Configuration for the vector database used by the model. |
 | `writeTimeout` _int_ |  |
 
 _Appears in:_
@@ -2623,7 +2592,7 @@ for this model.
 | Field | Description |
 | --- | --- |
 | `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
-| `config` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an embeddings model. |
+| `config` _[AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)_ | Configuration for an embeddings model. |
 | `name` _string_ | The name of the embeddings model. |
 | `provider` _[AIGatewayModelProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderreference)_ | Reference to a model provider instance by name. |
 
@@ -2781,7 +2750,7 @@ to/from an AI Gateway model using generative APIs.
 
 | Field | Description |
 | --- | --- |
-| `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Access control configuration for a model. |
+| `access` _[AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)_ | Access control configuration for a model. |
 | `capabilities` _[]string_ | List of AI capabilities enabled for this model. |
 | `config` _[AIGatewayModelModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)_ | Routing, logging, and load balancing configuration for the model. |
 | `displayName` _string_ | The display name for this model instance. |
@@ -2789,7 +2758,7 @@ to/from an AI Gateway model using generative APIs.
 | `formats` _[][AIGatewayModelFormat](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelformat)_ | List of request/response formats supported by this model. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
 | `targets` _[][AIGatewayTarget](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytarget)_ | One or more backend models that this model entry routes to. |
 
@@ -2807,13 +2776,13 @@ for the model.
 
 | Field | Description |
 | --- | --- |
-| `balancer` _[AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model's load balancer when multiple target models are configured. |
-| `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for AI Gateway logging. |
+| `balancer` _[AIGatewayModelModelConfigBalancer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigbalancer)_ | Configuration for a model's load balancer when multiple target models are configured. |
+| `logging` _[AIGatewayLoggingConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayloggingconfig)_ | Configuration for AI Gateway logging. |
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `model` _[AIGatewayModelModelConfigModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `model` _[AIGatewayModelModelConfigModel](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfigmodel)_ |  |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `responseStreaming` _string_ |  |
-| `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route. |
+| `route` _[AIGatewayModelRouteConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelrouteconfig)_ | Configuration for an AI Gateway route. |
 
 _Appears in:_
 
@@ -2870,14 +2839,13 @@ Allowed values:
 #### AIGatewayModelModelConfigModel
 
 
-AIGatewayModelModelConfigModel **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelModelConfigModel is a type alias.
 
 
 
 | Field | Description |
 | --- | --- |
-| `nameHeader` _string_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Display the model name selected in the X-Kong-LLM-Model response header |
+| `nameHeader` _string_ | Display the model name selected in the X-Kong-LLM-Model response header |
 
 _Appears in:_
 
@@ -2898,8 +2866,7 @@ _Appears in:_
 #### AIGatewayModelProviderAnthropic
 
 
-AIGatewayModelProviderAnthropic **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderAnthropic Configuration for an upstream model provider.
 
 
 
@@ -2909,7 +2876,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -2924,7 +2891,7 @@ AIGatewayModelProviderAnthropicConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -2933,8 +2900,7 @@ _Appears in:_
 #### AIGatewayModelProviderAzure
 
 
-AIGatewayModelProviderAzure **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for Azure model provider.
+AIGatewayModelProviderAzure Config for Azure model provider.
 
 
 
@@ -2944,7 +2910,7 @@ This feature is currently in beta and is subject to change.<br /><br />Config fo
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3028,8 +2994,7 @@ _Appears in:_
 #### AIGatewayModelProviderBedrock
 
 
-AIGatewayModelProviderBedrock **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for AWS model provider.
+AIGatewayModelProviderBedrock Config for AWS model provider.
 
 
 
@@ -3039,7 +3004,7 @@ This feature is currently in beta and is subject to change.<br /><br />Config fo
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3101,8 +3066,7 @@ Allowed values:
 #### AIGatewayModelProviderCerebras
 
 
-AIGatewayModelProviderCerebras **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderCerebras Configuration for an upstream model provider.
 
 
 
@@ -3112,7 +3076,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3127,7 +3091,7 @@ AIGatewayModelProviderCerebrasConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3136,8 +3100,7 @@ _Appears in:_
 #### AIGatewayModelProviderCohere
 
 
-AIGatewayModelProviderCohere **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderCohere Configuration for an upstream model provider.
 
 
 
@@ -3147,7 +3110,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3162,7 +3125,7 @@ AIGatewayModelProviderCohereConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3206,8 +3169,7 @@ _Appears in:_
 #### AIGatewayModelProviderConfigAuthAWS
 
 
-AIGatewayModelProviderConfigAuthAWS **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for AWS model provider.
+AIGatewayModelProviderConfigAuthAWS Configuration for AWS model provider.
 
 
 
@@ -3228,8 +3190,7 @@ _Appears in:_
 #### AIGatewayModelProviderConfigAuthAzure
 
 
-AIGatewayModelProviderConfigAuthAzure **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for Azure model provider.
+AIGatewayModelProviderConfigAuthAzure Configuration for Azure model provider.
 
 
 
@@ -3247,8 +3208,8 @@ _Appears in:_
 #### AIGatewayModelProviderConfigAuthBasic
 
 
-AIGatewayModelProviderConfigAuthBasic **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider.
+AIGatewayModelProviderConfigAuthBasic Basic auth config for an upstream model
+provider.
 
 
 
@@ -3315,8 +3276,7 @@ _Appears in:_
 #### AIGatewayModelProviderConfigAuthGCP
 
 
-AIGatewayModelProviderConfigAuthGCP **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for GCP model provider.
+AIGatewayModelProviderConfigAuthGCP Configuration for GCP model provider.
 
 
 
@@ -3326,16 +3286,53 @@ This feature is currently in beta and is subject to change.<br /><br />Configura
 | `oauthTokenURL` _string_ | Custom OAuth token URL for GCP authentication. Useful for restricted network environments or custom GCP endpoints. If not set, Kong will use the default Google OAuth token endpoint. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `serviceAccountJSON` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | Full JSON string of the GCP service account to authenticate. If not set (and gcp_use_service_account is true), the service account JSON will be from the environment variable GCP_SERVICE_ACCOUNT. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
 | `useGcpServiceAccount` _string_ | Use service account auth for GCP-based providers and models. |
+| `workloadIdentityFederation` _[AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcpworkloadidentityfederation)_ | Config for GCP Workload Identity Federation. |
 
 _Appears in:_
 
 - [AIGatewayModelProviderGeminiConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidergeminiconfigauth)
 
+#### AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation
+
+
+AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation represents a union type for workload_identity_federation.
+Only one of the fields should be set based on the Source.
+
+
+
+| Field | Description |
+| --- | --- |
+| `source` _[AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcpworkloadidentityfederationtype)_ | Source designates the type of configuration. |
+| `awsIam` _[AuthGCPWorkloadIdentityFederationAwsIam](#aiconfiguration-konghq-com-v1alpha1-types-authgcpworkloadidentityfederationawsiam)_ | AuthGCPWorkloadIdentityFederationAwsIam configuration. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfigAuthGCP](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcp)
+
+#### AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationType
+
+_Underlying type:_ `string`
+
+AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationType represents the type of workload_identity_federation.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcpworkloadidentityfederation)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `awsIam` |  |
+
 #### AIGatewayModelProviderConfigAuthSagemaker
 
 
-AIGatewayModelProviderConfigAuthSagemaker **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Auth configuration for Sagemaker model provider.
+AIGatewayModelProviderConfigAuthSagemaker Auth configuration for Sagemaker
+model provider.
 
 
 
@@ -3404,8 +3401,7 @@ Allowed values:
 #### AIGatewayModelProviderDashscope
 
 
-AIGatewayModelProviderDashscope **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderDashscope Configuration for an upstream model provider.
 
 
 
@@ -3415,7 +3411,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3430,7 +3426,7 @@ AIGatewayModelProviderDashscopeConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3439,8 +3435,8 @@ _Appears in:_
 #### AIGatewayModelProviderDatabricks
 
 
-AIGatewayModelProviderDatabricks **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderDatabricks Configuration for an upstream model
+provider.
 
 
 
@@ -3450,7 +3446,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3465,7 +3461,7 @@ AIGatewayModelProviderDatabricksConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3474,8 +3470,7 @@ _Appears in:_
 #### AIGatewayModelProviderDeepseek
 
 
-AIGatewayModelProviderDeepseek **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderDeepseek Configuration for an upstream model provider.
 
 
 
@@ -3485,7 +3480,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3500,7 +3495,7 @@ AIGatewayModelProviderDeepseekConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3509,8 +3504,7 @@ _Appears in:_
 #### AIGatewayModelProviderGemini
 
 
-AIGatewayModelProviderGemini **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for GCP model provider.
+AIGatewayModelProviderGemini Config for GCP model provider.
 
 
 
@@ -3520,7 +3514,7 @@ This feature is currently in beta and is subject to change.<br /><br />Config fo
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3582,8 +3576,8 @@ Allowed values:
 #### AIGatewayModelProviderHuggingface
 
 
-AIGatewayModelProviderHuggingface **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderHuggingface Configuration for an upstream model
+provider.
 
 
 
@@ -3593,7 +3587,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3608,7 +3602,7 @@ AIGatewayModelProviderHuggingfaceConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3617,8 +3611,7 @@ _Appears in:_
 #### AIGatewayModelProviderKimi
 
 
-AIGatewayModelProviderKimi **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderKimi Configuration for an upstream model provider.
 
 
 
@@ -3628,7 +3621,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3643,7 +3636,7 @@ AIGatewayModelProviderKimiConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3652,8 +3645,7 @@ _Appears in:_
 #### AIGatewayModelProviderLlama2
 
 
-AIGatewayModelProviderLlama2 **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderLlama2 Configuration for an upstream model provider.
 
 
 
@@ -3663,7 +3655,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3678,7 +3670,7 @@ AIGatewayModelProviderLlama2Config Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3687,8 +3679,7 @@ _Appears in:_
 #### AIGatewayModelProviderMistral
 
 
-AIGatewayModelProviderMistral **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderMistral Configuration for an upstream model provider.
 
 
 
@@ -3698,7 +3689,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3713,7 +3704,7 @@ AIGatewayModelProviderMistralConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3722,8 +3713,7 @@ _Appears in:_
 #### AIGatewayModelProviderOllama
 
 
-AIGatewayModelProviderOllama **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderOllama Configuration for an upstream model provider.
 
 
 
@@ -3733,7 +3723,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3748,7 +3738,7 @@ AIGatewayModelProviderOllamaConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3757,8 +3747,7 @@ _Appears in:_
 #### AIGatewayModelProviderOpenai
 
 
-AIGatewayModelProviderOpenai **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderOpenai Configuration for an upstream model provider.
 
 
 
@@ -3768,7 +3757,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3783,7 +3772,7 @@ AIGatewayModelProviderOpenaiConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3824,18 +3813,17 @@ _Appears in:_
 #### AIGatewayModelProviderSagemaker
 
 
-AIGatewayModelProviderSagemaker **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for Sagemaker model provider.
+AIGatewayModelProviderSagemaker Config for Sagemaker model provider.
 
 
 
 | Field | Description |
 | --- | --- |
-| `config` _[AIGatewayModelProviderSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `config` _[AIGatewayModelProviderSagemakerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidersagemakerconfig)_ |  |
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3844,8 +3832,7 @@ _Appears in:_
 #### AIGatewayModelProviderSagemakerConfig
 
 
-AIGatewayModelProviderSagemakerConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderSagemakerConfig is a type alias.
 
 
 
@@ -3931,8 +3918,7 @@ _Appears in:_
 #### AIGatewayModelProviderVercel
 
 
-AIGatewayModelProviderVercel **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderVercel Configuration for an upstream model provider.
 
 
 
@@ -3942,7 +3928,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3957,7 +3943,7 @@ AIGatewayModelProviderVercelConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -3966,8 +3952,7 @@ _Appears in:_
 #### AIGatewayModelProviderVllm
 
 
-AIGatewayModelProviderVllm **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderVllm Configuration for an upstream model provider.
 
 
 
@@ -3977,7 +3962,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -3992,7 +3977,7 @@ AIGatewayModelProviderVllmConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -4001,8 +3986,7 @@ _Appears in:_
 #### AIGatewayModelProviderXai
 
 
-AIGatewayModelProviderXai **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelProviderXai Configuration for an upstream model provider.
 
 
 
@@ -4012,7 +3996,7 @@ This feature is currently in beta and is subject to change.
 | `displayName` _string_ | The display name for this model provider instance. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this model provider instance, used as a stable human-readable reference. This value is immutable after creation. |
 
 _Appears in:_
 
@@ -4027,7 +4011,7 @@ AIGatewayModelProviderXaiConfig Configuration for the model provider.
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Basic auth config for an upstream model provider. |
+| `auth` _[AIGatewayModelProviderConfigAuthBasic](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthbasic)_ | Basic auth config for an upstream model provider. |
 
 _Appears in:_
 
@@ -4036,8 +4020,7 @@ _Appears in:_
 #### AIGatewayModelRouteConfig
 
 
-AIGatewayModelRouteConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route.
+AIGatewayModelRouteConfig Configuration for an AI Gateway route.
 
 
 
@@ -4123,8 +4106,7 @@ _Appears in:_
 #### AIGatewayModelVectorDBConfigPgVector
 
 
-AIGatewayModelVectorDBConfigPgVector **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayModelVectorDBConfigPgVector is a type alias.
 
 
 
@@ -4169,8 +4151,8 @@ _Appears in:_
 #### AIGatewayModelVectorDBConfigRedis
 
 
-AIGatewayModelVectorDBConfigRedis **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for connecting to a Cloud Provider's Redis instance.
+AIGatewayModelVectorDBConfigRedis Config for connecting to a Cloud Provider's
+Redis instance.
 
 
 
@@ -4419,8 +4401,8 @@ Allowed values:
 #### AIGatewayOllamaEmbeddingsModelConfig
 
 
-AIGatewayOllamaEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Ollama-specific configuration for a model.
+AIGatewayOllamaEmbeddingsModelConfig Ollama-specific configuration for a
+model.
 
 
 
@@ -4436,8 +4418,8 @@ _Appears in:_
 #### AIGatewayOpenaiEmbeddingsModelConfig
 
 
-AIGatewayOpenaiEmbeddingsModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Openai-specific configuration for a model.
+AIGatewayOpenaiEmbeddingsModelConfig Openai-specific configuration for a
+model.
 
 
 
@@ -4465,7 +4447,7 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | `global` _string_ | Whether the policy is globally applied to all resources. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
-| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />A user-defined unique identifier for this policy instance, used as a stable human-readable reference. This value is immutable after creation. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this policy instance, used as a stable human-readable reference. This value is immutable after creation. |
 | `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'rate-limiting'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
 
 _Appears in:_
@@ -4629,8 +4611,8 @@ _Appears in:_
 #### AIGatewayRedisAWSAuthentication
 
 
-AIGatewayRedisAWSAuthentication **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />AWS specific configs for connecting to a Cloud Provider's redis instance.
+AIGatewayRedisAWSAuthentication AWS specific configs for connecting to a
+Cloud Provider's redis instance.
 
 
 
@@ -4652,8 +4634,8 @@ _Appears in:_
 #### AIGatewayRedisAzureAuthentication
 
 
-AIGatewayRedisAzureAuthentication **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Azure specific configs for connecting to a Cloud Provider's redis instance.
+AIGatewayRedisAzureAuthentication Azure specific configs for connecting to a
+Cloud Provider's redis instance.
 
 
 
@@ -4671,8 +4653,8 @@ _Appears in:_
 #### AIGatewayRedisCloudConfiguration
 
 
-AIGatewayRedisCloudConfiguration **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Config for connecting to a Cloud Provider's Redis instance.
+AIGatewayRedisCloudConfiguration Config for connecting to a Cloud Provider's
+Redis instance.
 
 
 
@@ -4898,8 +4880,8 @@ _Appears in:_
 #### AIGatewayRedisGCPAuthentication
 
 
-AIGatewayRedisGCPAuthentication **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />GCP specific configs for connecting to a Cloud Provider's redis instance.
+AIGatewayRedisGCPAuthentication GCP specific configs for connecting to a
+Cloud Provider's redis instance.
 
 
 
@@ -4915,8 +4897,7 @@ _Appears in:_
 #### AIGatewayRouteConfig
 
 
-AIGatewayRouteConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for an AI Gateway route.
+AIGatewayRouteConfig Configuration for an AI Gateway route.
 
 
 
@@ -4942,8 +4923,7 @@ _Appears in:_
 #### AIGatewayServiceTierFactor
 
 
-AIGatewayServiceTierFactor **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayServiceTierFactor is a type alias.
 
 
 
@@ -4984,7 +4964,7 @@ AIGatewayTarget A target instance a model entry routes requests to.
 | Field | Description |
 | --- | --- |
 | `allowAuthOverride` _string_ | When enabled, request-level auth parameters (such as API keys or bearer tokens) will override the static values defined for the provider. |
-| `config` _[AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a target model. |
+| `config` _[AIGatewayTargetConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetconfig)_ | Configuration for a target model. |
 | `name` _string_ | The name of the model defined in the upstream provider that will be executed. |
 | `provider` _[AIGatewayModelProviderRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderref)_ | Reference to a model provider instance by name. |
 | `semanticDescription` _string_ | The semantic description of the target, required if using semantic load balancing. Specially, setting this to 'CATCHALL' will indicate such target to be used when no other targets match the semantic threshold. |
@@ -4998,8 +4978,7 @@ _Appears in:_
 #### AIGatewayTargetAnthropicConfig
 
 
-AIGatewayTargetAnthropicConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Anthropic-specific configuration for a model.
+AIGatewayTargetAnthropicConfig Anthropic-specific configuration for a model.
 
 
 
@@ -5027,8 +5006,7 @@ _Appears in:_
 #### AIGatewayTargetAzureConfig
 
 
-AIGatewayTargetAzureConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Azure-specific configuration for a model.
+AIGatewayTargetAzureConfig Azure-specific configuration for a model.
 
 
 
@@ -5058,8 +5036,7 @@ _Appears in:_
 #### AIGatewayTargetBedrockConfig
 
 
-AIGatewayTargetBedrockConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />AWS Bedrock-specific configuration for a model.
+AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 
 
 
@@ -5091,8 +5068,7 @@ _Appears in:_
 #### AIGatewayTargetCerebrasConfig
 
 
-AIGatewayTargetCerebrasConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Cerebras-specific configuration for a model.
+AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
 
 
 
@@ -5119,8 +5095,7 @@ _Appears in:_
 #### AIGatewayTargetCohereConfig
 
 
-AIGatewayTargetCohereConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Cohere-specific configuration for a model.
+AIGatewayTargetCohereConfig Cohere-specific configuration for a model.
 
 
 
@@ -5222,8 +5197,8 @@ Allowed values:
 #### AIGatewayTargetDashscopeConfig
 
 
-AIGatewayTargetDashscopeConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Alibaba DashScope-specific configuration for a model.
+AIGatewayTargetDashscopeConfig Alibaba DashScope-specific configuration for a
+model.
 
 
 
@@ -5251,8 +5226,8 @@ _Appears in:_
 #### AIGatewayTargetDatabricksConfig
 
 
-AIGatewayTargetDatabricksConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Databricks-specific configuration for a model.
+AIGatewayTargetDatabricksConfig Databricks-specific configuration for a
+model.
 
 
 
@@ -5280,8 +5255,7 @@ _Appears in:_
 #### AIGatewayTargetDeepseekConfig
 
 
-AIGatewayTargetDeepseekConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Deepseek-specific configuration for a model.
+AIGatewayTargetDeepseekConfig Deepseek-specific configuration for a model.
 
 
 
@@ -5308,8 +5282,7 @@ _Appears in:_
 #### AIGatewayTargetGeminiConfig
 
 
-AIGatewayTargetGeminiConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Google Gemini-specific configuration for a model.
+AIGatewayTargetGeminiConfig Google Gemini-specific configuration for a model.
 
 
 
@@ -5320,7 +5293,7 @@ This feature is currently in beta and is subject to change.<br /><br />Google Ge
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
 | `contextWindowFactor` _[][AIGatewayContextWindowFactor](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycontextwindowfactor)_ | Above an input-token threshold, scale input and output pricing by the corresponding factor. |
 | `embeddingsDimensions` _int_ | The number of dimensions for embedding outputs. |
-| `gcpEnvironment` _[GCPModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-gcpmodelconfig)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project. |
+| `gcpEnvironment` _[GCPModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-gcpmodelconfig)_ | Configuration for a model hosted on Google Cloud Project. |
 | `inputCost` _float64_ | Cost per 1M input tokens for billing and cost tracking. |
 | `maxTokens` _int_ | The maximum number of tokens to generate in the response. |
 | `outputCost` _float64_ | Cost per 1M output tokens for billing and cost tracking. |
@@ -5337,8 +5310,8 @@ _Appears in:_
 #### AIGatewayTargetHuggingfaceConfig
 
 
-AIGatewayTargetHuggingfaceConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Hugging Face-specific configuration for a model.
+AIGatewayTargetHuggingfaceConfig Hugging Face-specific configuration for a
+model.
 
 
 
@@ -5367,8 +5340,8 @@ _Appears in:_
 #### AIGatewayTargetKimiConfig
 
 
-AIGatewayTargetKimiConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Kimi (Moonshot AI)-specific configuration for a model.
+AIGatewayTargetKimiConfig Kimi (Moonshot AI)-specific configuration for a
+model.
 
 
 
@@ -5396,8 +5369,7 @@ _Appears in:_
 #### AIGatewayTargetLlama2Config
 
 
-AIGatewayTargetLlama2Config **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Llama2-specific configuration for a model.
+AIGatewayTargetLlama2Config Llama2-specific configuration for a model.
 
 
 
@@ -5425,8 +5397,7 @@ _Appears in:_
 #### AIGatewayTargetMistralConfig
 
 
-AIGatewayTargetMistralConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Mistral-specific configuration for a model.
+AIGatewayTargetMistralConfig Mistral-specific configuration for a model.
 
 
 
@@ -5454,8 +5425,7 @@ _Appears in:_
 #### AIGatewayTargetOllamaConfig
 
 
-AIGatewayTargetOllamaConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Ollama-specific configuration for a model.
+AIGatewayTargetOllamaConfig Ollama-specific configuration for a model.
 
 
 
@@ -5482,8 +5452,7 @@ _Appears in:_
 #### AIGatewayTargetOpenaiConfig
 
 
-AIGatewayTargetOpenaiConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Openai-specific configuration for a model.
+AIGatewayTargetOpenaiConfig Openai-specific configuration for a model.
 
 
 
@@ -5510,14 +5479,14 @@ _Appears in:_
 #### AIGatewayTargetSagemakerConfig
 
 
-AIGatewayTargetSagemakerConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />AWS SageMaker-specific configuration for a model.
+AIGatewayTargetSagemakerConfig AWS SageMaker-specific configuration for a
+model.
 
 
 
 | Field | Description |
 | --- | --- |
-| `aws` _[AIGatewayTargetSagemakerConfigAws](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigaws)_ | **Pre-release Feature** This feature is currently in beta and is subject to change. |
+| `aws` _[AIGatewayTargetSagemakerConfigAws](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaytargetsagemakerconfigaws)_ |  |
 | `cacheReadCost` _float64_ | Cost per 1M cache-read (cached) prompt tokens for billing and cost tracking. |
 | `cacheWriteCost` _float64_ | Cost per 1M cache-write prompt tokens for billing and cost tracking. |
 | `cacheWriteCostList` _[][AIGatewayCacheWriteCost](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycachewritecost)_ | Per-cache-TTL cache-write pricing; overrides cache_write_cost per TTL. Configure this when the upstream provider charges differently for different cache TTLs. |
@@ -5540,8 +5509,7 @@ _Appears in:_
 #### AIGatewayTargetSagemakerConfigAws
 
 
-AIGatewayTargetSagemakerConfigAws **Pre-release Feature**
-This feature is currently in beta and is subject to change.
+AIGatewayTargetSagemakerConfigAws is a type alias.
 
 
 
@@ -5576,8 +5544,8 @@ _Appears in:_
 #### AIGatewayTargetVercelConfig
 
 
-AIGatewayTargetVercelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Vercel AI Gateway-specific configuration for a model.
+AIGatewayTargetVercelConfig Vercel AI Gateway-specific configuration for a
+model.
 
 
 
@@ -5604,8 +5572,7 @@ _Appears in:_
 #### AIGatewayTargetVllmConfig
 
 
-AIGatewayTargetVllmConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Vllm-specific configuration for a model.
+AIGatewayTargetVllmConfig Vllm-specific configuration for a model.
 
 
 
@@ -5632,8 +5599,7 @@ _Appears in:_
 #### AIGatewayTargetXaiConfig
 
 
-AIGatewayTargetXaiConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Xai-specific configuration for a model.
+AIGatewayTargetXaiConfig Xai-specific configuration for a model.
 
 
 
@@ -5660,8 +5626,8 @@ _Appears in:_
 #### AIGatewayUpstreamAuthAWS
 
 
-AIGatewayUpstreamAuthAWS **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />AWS IAM (SigV4) authentication for the upstream service.
+AIGatewayUpstreamAuthAWS AWS IAM (SigV4) authentication for the upstream
+service.
 
 
 
@@ -5678,19 +5644,19 @@ This feature is currently in beta and is subject to change.<br /><br />AWS IAM (
 _Appears in:_
 
 - [AIGatewayUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)
+- [AuthGCPWorkloadIdentityFederationAwsIam](#aiconfiguration-konghq-com-v1alpha1-types-authgcpworkloadidentityfederationawsiam)
 
 #### AIGatewayUpstreamConfig
 
 
-AIGatewayUpstreamConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration applied when proxying to the upstream service, including
-authentication.
+AIGatewayUpstreamConfig Configuration applied when proxying to the upstream
+service, including authentication.
 
 
 
 | Field | Description |
 | --- | --- |
-| `auth` _[AIGatewayUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)_ | **Pre-release Feature** This feature is currently in beta and is subject to change.<br /><br />Authentication to use when proxying to the upstream service. |
+| `auth` _[AIGatewayUpstreamConfigAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfigauth)_ | Authentication to use when proxying to the upstream service. |
 
 _Appears in:_
 
@@ -5738,13 +5704,52 @@ Allowed values:
 
 
 
+#### AuthGCPWorkloadIdentityFederationAwsIam
+
+
+AuthGCPWorkloadIdentityFederationAwsIam Enables authenticating with GCP via
+Workload Identity Federation, obtaining temporary
+GCP credentials instead of using a static service account key.
+
+
+
+| Field | Description |
+| --- | --- |
+| `authJSON` _string_ | JSON configuration for the Workload Identity Federation token exchange (Google's `external_account` credential config: audience, token URL, credential source, and optional service account impersonation URL). If not set, Kong falls back to the file path in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable. This field is [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault). |
+| `aws` _[AIGatewayUpstreamAuthAWS](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamauthaws)_ | AWS IAM (SigV4) authentication for the upstream service. |
+
+_Appears in:_
+
+- [AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthgcpworkloadidentityfederation)
+- [AuthGCPWorkloadIdentityFederation](#aiconfiguration-konghq-com-v1alpha1-types-authgcpworkloadidentityfederation)
+
+#### AuthGCPWorkloadIdentityFederationType
+
+_Underlying type:_ `string`
+
+AuthGCPWorkloadIdentityFederationType represents the type of AuthGCPWorkloadIdentityFederation.
+
+
+
+
+_Appears in:_
+
+- [AuthGCPWorkloadIdentityFederation](#aiconfiguration-konghq-com-v1alpha1-types-authgcpworkloadidentityfederation)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `awsIam` |  |
+
+
+
 
 
 #### GCPModelConfig
 
 
-GCPModelConfig **Pre-release Feature**
-This feature is currently in beta and is subject to change.<br /><br />Configuration for a model hosted on Google Cloud Project.
+GCPModelConfig Configuration for a model hosted on Google Cloud Project.
 
 
 
@@ -16831,7 +16836,7 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | `layout` _string_ |  |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
 | `robots` _*string_ |  |
-| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
+| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
 
 _Appears in:_
@@ -17340,7 +17345,7 @@ _Appears in:_
 #### SpecRenderer
 
 
-SpecRenderer is a type alias.
+SpecRenderer The spec renderer settings of this portal
 
 
 
@@ -17353,6 +17358,7 @@ SpecRenderer is a type alias.
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 

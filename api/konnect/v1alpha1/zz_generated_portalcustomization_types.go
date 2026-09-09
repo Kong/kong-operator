@@ -77,7 +77,7 @@ type PortalCustomizationAPISpec struct {
 	// +kubebuilder:validation:MaxLength=253
 	Robots *string `json:"robots,omitempty"`
 
-	//
+	// The spec renderer settings of this portal
 	//
 	// +optional
 	SpecRenderer SpecRenderer `json:"specRenderer,omitzero"`
@@ -132,7 +132,7 @@ type Menu struct {
 	Main []PortalMenuItem `json:"main,omitempty"`
 }
 
-// SpecRenderer is a type alias.
+// SpecRenderer The spec renderer settings of this portal
 type SpecRenderer struct {
 	// Let users define a custom server URL for endpoints.
 	// This will be used to generate code snippets and to test the API.
@@ -176,6 +176,22 @@ type SpecRenderer struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	TryItUi string `json:"tryItUi,omitzero"`
+	// The audience for the Try It UI feature.
+	//
+	// `all` means that the Try It UI will be available to all users, including
+	// unauthenticated users.
+	//
+	// `authenticated` means that the Try It UI will only be available to
+	// authenticated users.
+	//
+	// `registered` means that the Try It UI will only be available to users who
+	// have registered for the API.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=all;authenticated;registered
+	TryItUiAudience string `json:"tryItUiAudience,omitzero"`
 }
 
 // Theme is a type alias.
