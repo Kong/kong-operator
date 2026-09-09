@@ -83,6 +83,11 @@
   certificate instead of relying on operator auto-provisioning, with support
   for switching between `Manual` and `Automatic` provisioning.
   [#5548](https://github.com/Kong/kong-operator/pull/5548)
+- `OnPremAIGateway`: the reconciler now runs an in-process control plane instance
+  per resource, restarting it when its configuration changes and tearing it down
+  when the resource is deleted. The instance itself is still a no-op;
+  configuration assembly and pushing to data planes land in a later change.
+  [#5402](https://github.com/Kong/kong-operator/issues/5402)
 
 ### Breaking changes
 

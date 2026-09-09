@@ -106508,6 +106508,12 @@ rules:
   - patch
   - update
 - apiGroups:
+  - aigateway.konghq.com
+  resources:
+  - onpremaigateways/finalizers
+  verbs:
+  - update
+- apiGroups:
   - apiextensions.k8s.io
   resources:
   - customresourcedefinitions
