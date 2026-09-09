@@ -72,6 +72,12 @@
 - Added `OnPremAIGateway` CRD: the on-prem (non-Konnect) control plane for
   `AIGatewayDataPlane`. This change only adds the CRD; it is not reconciled yet.
   [#5567](https://github.com/Kong/kong-operator/issues/5567)
+- Added a reconciler for `OnPremAIGateway`, gated behind the new
+  `--enable-controller-onpremaigateway` flag (env
+  `KONG_OPERATOR_ENABLE_CONTROLLER_ONPREMAIGATEWAY`, default `false`). For now it
+  only reports readiness; configuration aggregation and pushing to data planes
+  land in a later change.
+  [#5567](https://github.com/Kong/kong-operator/issues/5567)
 
 ### Fixes
 

@@ -32,6 +32,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
+	aigwonprem "github.com/kong/kong-operator/v2/controller/aigateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
@@ -405,6 +406,16 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    konnectv1alpha1.SchemeGroupVersion.Group,
 					Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 					Resource: "konnectaigateways",
+				},
+			},
+		},
+		{
+			condition: c.OnPremAIGatewayControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    aigatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  aigatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "onpremaigateways",
 				},
 			},
 		},
@@ -818,6 +829,15 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 				TypeConverter:            ssaProvider,
+			},
+		},
+		// On-prem AIGateway (control plane) controller
+		{
+			Enabled: c.OnPremAIGatewayControllerEnabled,
+			Controller: &aigwonprem.Reconciler{
+				Client:        mgr.GetClient(),
+				LoggingMode:   c.LoggingMode,
+				TypeConverter: ssaProvider,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when

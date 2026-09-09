@@ -1,10 +1,10 @@
 package main
 
 const (
-	konnectFuncOutputFileName             = "zz_generated_funcs.go"
+	statusFuncOutputFileName              = "zz_generated_funcs.go"
 	konnectFuncOutputCloudGatewayFilename = "zz_generated_funcs_cloud_gateway.go"
 	konnectFuncOutputStandaloneFileName   = "zz_generated_funcs_standalone.go"
-	konnectFuncTemplate                   = `package {{ .PackageVersion }}
+	statusFuncTemplate                    = `package {{ .PackageVersion }}
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"

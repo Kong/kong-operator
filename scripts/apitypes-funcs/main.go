@@ -75,8 +75,8 @@ func main() {
 			packagename: configurationPackageName,
 			renders: []render{
 				{
-					templateContent: konnectFuncTemplate,
-					outputFile:      konnectFuncOutputFileName,
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
 					supportedTypes:  supportedKonnectTypesWithControlPlaneConfig,
 				},
 				{
@@ -95,8 +95,8 @@ func main() {
 			packagename: konnectPackageName,
 			renders: []render{
 				{
-					templateContent: konnectFuncTemplate,
-					outputFile:      konnectFuncOutputFileName,
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
 					supportedTypes:  supportedKonnectTypesWithControlPlaneRef,
 				},
 				{
@@ -135,8 +135,8 @@ func main() {
 			packagename: aigatewayPackageName,
 			renders: []render{
 				{
-					templateContent: konnectFuncTemplate,
-					outputFile:      konnectFuncOutputFileName,
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
 					supportedTypes:  supportedAIGatewayTypes,
 				},
 				{
