@@ -37,10 +37,6 @@ import (
 const ControllerName = "onprem-aigateway"
 
 // Reconciler reconciles an OnPremAIGateway object.
-//
-// This is a skeleton: it only reports readiness. Child-entity aggregation,
-// ai-deck-converter rendering and the admin-API push land in later phases of
-// docs/internal/onprem-aigateway/engineering-brief.md.
 type Reconciler struct {
 	client.Client
 
