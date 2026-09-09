@@ -27,6 +27,6 @@ runs:
     - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       with:
         # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
-        version: 2026.9.2
+        version: 2026.9.3
         install: ${{ inputs.install }}
         install_args: ${{ inputs.install_args }}
