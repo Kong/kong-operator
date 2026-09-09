@@ -81,6 +81,10 @@
   This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
+- Konnect reconciler: release the cleanup finalizer with a non-optimistic merge
+  patch instead of an optimistic-locked update. A stale cached `resourceVersion`
+  could previously make that write conflict, which silently requeued the
+  reconcile and deleted the same entity from Konnect a second time.
 
 ## [v2.3.1]
 
