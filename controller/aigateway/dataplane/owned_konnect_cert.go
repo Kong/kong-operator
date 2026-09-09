@@ -50,7 +50,13 @@ func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum s
 	if len(suffix) > checksumPrefixLen {
 		suffix = suffix[:checksumPrefixLen]
 	}
-	return fmt.Sprintf("%s-%s", aigwdp.Name, suffix)
+	// Truncate the name portion so the derived name never exceeds Kubernetes'
+	// 253-character object name limit.
+	name := aigwdp.Name
+	if maxNameLen := 253 - 1 - checksumPrefixLen; len(name) > maxNameLen {
+		name = name[:maxNameLen]
+	}
+	return fmt.Sprintf("%s-%s", name, suffix)
 }
 
 // ensureKonnectCertificate ensures an AIGatewayDataPlaneCertificate resource

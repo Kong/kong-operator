@@ -17,6 +17,8 @@ spec:
     the operator adds none of them on its own with no ControlPlaneRef configured. Verifies the
     AIGatewayDataPlane still reaches Ready=True with no
     KonnectAIGatewayResolved/KonnectCertificateRegistered/CertificateProvisioned conditions set.
+    Also verifies that a stale operator-provisioned Automatic certificate Secret owned by such a
+    controlPlaneRef-less AIGatewayDataPlane is cleaned up on reconcile.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -50,6 +52,8 @@ spec:
       value: ($namespace)
     - name: dp_cert_name
       value: (join('-', [($test_name), 'dp-cert']))
+    - name: stale_automatic_cert_secret_name
+      value: (join('-', [($test_name), 'stale-automatic-cert']))
   steps:
     - name: 1-Create-auth-secret
       use:
@@ -278,6 +282,60 @@ spec:
                 (readyReplicas > `0`): true
                 (addresses[0].value != null): true
                 (addresses[0].value != ''): true
+    - name: 9-Stale-automatic-certificate-secret-is-cleaned-up
+      description: |
+        Simulates an operator-provisioned Automatic certificate Secret left over (e.g. from an
+        upgrade, or a prior controlPlaneRef removal) on an AIGatewayDataPlane that currently has
+        no controlPlaneRef: cleanupStaleAutomaticCertificateSecret must remove it on the next
+        reconcile even with no KonnectAIGateway resolved, rather than only running when
+        aigatewaycp is non-nil.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_NAME
+                value: ($aigw_dp_name)
+            content: |
+              kubectl get aigatewaydataplane "$DP_NAME" -n "$NAMESPACE" -o jsonpath='{.metadata.uid}'
+            outputs:
+              - name: aigw_dp_uid
+                value: ($stdout)
+        - apply:
+            resource:
+              apiVersion: v1
+              kind: Secret
+              metadata:
+                name: ($stale_automatic_cert_secret_name)
+                namespace: ($namespace)
+                labels:
+                  konghq.com/secret: "true"
+                  gateway-operator.konghq.com/managed-by: aigateway-dataplane
+                  gateway.konghq.com/secret-provisioning: automatic
+                  konghq.com/aigw-dp-cert: "true"
+                ownerReferences:
+                  - apiVersion: aigateway.konghq.com/v1alpha1
+                    kind: AIGatewayDataPlane
+                    name: ($aigw_dp_name)
+                    uid: ($aigw_dp_uid)
+                    controller: true
+                    blockOwnerDeletion: true
+              type: kubernetes.io/tls
+              stringData:
+                tls.crt: stale
+                tls.key: stale
+        # Creating this owned Secret triggers a reconcile (Owns(&corev1.Secret{})); the operator
+        # must delete it even though this AIGatewayDataPlane has no controlPlaneRef.
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: secrets
+              - name: RESOURCE_NAME
+                value: ($stale_automatic_cert_secret_name)
+              - name: NAMESPACE
+                value: ($namespace)
+            content: |
+              bash ../../common/scripts/wait_for_resource_deleted.sh
   catch:
     - description: Capture debug snapshot on test failure.
       script:

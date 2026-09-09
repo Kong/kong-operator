@@ -170,23 +170,31 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 	// rotation. Until then they're deliberately left registered so replicas
 	// still running the old certificate keep a Konnect-trusted identity. The
 	// same rollout-complete gate applies to removing an operator-provisioned
-	// Secret left behind by a switch away from Automatic provisioning.
-	if aigatewaycp != nil {
-		deployment := &appsv1.Deployment{}
-		if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
-			if !apierrors.IsNotFound(err) {
-				return ctrl.Result{}, err
-			}
-		} else if k8sutils.DeploymentRolloutComplete(deployment) &&
-			deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] == certChecksum {
+	// Secret left behind by a switch away from Automatic provisioning. This
+	// must run regardless of aigatewaycp: a controlPlaneRef-less
+	// AIGatewayDataPlane can still have an orphaned operator-provisioned
+	// Secret left behind by an upgrade or a switch to Manual provisioning,
+	// and for it both the Pod annotation and certChecksum are "", so the
+	// rollout-complete gate below already passes trivially.
+	deployment := &appsv1.Deployment{}
+	if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return ctrl.Result{}, err
+		}
+	} else if k8sutils.DeploymentRolloutComplete(deployment) &&
+		deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] == certChecksum {
+		if aigatewaycp != nil {
 			if err := r.cleanupStaleKonnectCertificates(ctx, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
 				return ctrl.Result{}, err
 			}
-			cs := aigwdp.Spec.CertificateSecret
-			if cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning {
-				if err := r.cleanupStaleAutomaticCertificateSecret(ctx, logger, aigwdp); err != nil {
-					return ctrl.Result{}, err
-				}
+		}
+		// No controlPlaneRef at all means no Automatic Secret is ever
+		// provisioned (see getCertificateSecret), so any that still exists is
+		// stale regardless of spec.certificateSecret.
+		cs := aigwdp.Spec.CertificateSecret
+		if aigatewaycp == nil || (cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning) {
+			if err := r.cleanupStaleAutomaticCertificateSecret(ctx, logger, aigwdp); err != nil {
+				return ctrl.Result{}, err
 			}
 		}
 	}
