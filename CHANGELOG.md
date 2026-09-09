@@ -75,7 +75,7 @@
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
-  ** This change will delete the combined Kong routes created for the matches with
+  This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
 
@@ -88,7 +88,7 @@
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
-  ** This change will delete the combined Kong routes created for the matches with
+  This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5542](https://github.com/Kong/kong-operator/pull/5542)
 
@@ -602,7 +602,7 @@
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
-  ** This change will delete the combined Kong routes created for the matches with
+  This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5559](https://github.com/Kong/kong-operator/pull/5559)
 - HybridGateway: merge the current Route reference with existing
@@ -1043,7 +1043,7 @@
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
-  ** This change will delete the combined Kong routes created for the matches with
+  This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5562](https://github.com/Kong/kong-operator/pull/5562)
 
@@ -3059,12 +3059,15 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.3.1]: https://github.com/Kong/kong-operator/compare/v2.3.0..v2.3.1
 [v2.3.0]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.3.0
+[v2.2.5]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.2.5
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
+[v2.1.11]: https://github.com/Kong/kong-operator/compare/v2.1.10..v2.1.11
 [v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
 [v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8
