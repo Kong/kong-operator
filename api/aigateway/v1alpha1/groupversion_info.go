@@ -50,6 +50,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 	scheme.AddKnownTypes(GroupVersion,
 		&AIGatewayDataPlane{},
 		&AIGatewayDataPlaneList{},
+		&OnPremAIGateway{},
+		&OnPremAIGatewayList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)
