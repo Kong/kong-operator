@@ -29,6 +29,14 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 MANAGED_BY_LABEL="gateway-operator.konghq.com/managed-by"
 ROUTES_ANNOTATION="gateway-operator.konghq.com/hybrid-routes"
 
+# EXPECTED_CONFIG is interpolated into jq with --argjson below, which aborts the script on malformed
+# input. Report it as a normal failure so the chainsaw check shows what is wrong.
+if ! jq -e . >/dev/null 2>&1 <<<"$EXPECTED_CONFIG"; then
+  jq -n --arg expected_config "$EXPECTED_CONFIG" \
+    '{success: false, error: "EXPECTED_CONFIG is not valid JSON", expected_config: $expected_config}'
+  exit 0
+fi
+
 ATTEMPT=0
 LAST_ERROR=""
 LAST_CONFIG="null"
@@ -43,6 +51,9 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
     continue
   }
 
+  # The annotation is a bare comma-separated list of "namespace/name" (see
+  # metadata.AppendRouteToAnnotation), so match a whole element: a substring match would also accept
+  # a route whose name merely starts with this one.
   LAST_CONFIG=$(echo "$PLUGINS_JSON" | jq -c \
     --arg route "$ROUTE_REF" \
     --arg ptype "$PLUGIN_TYPE" \
@@ -50,7 +61,7 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
       [
         .items[]
         | select(.plugin == $ptype)
-        | select((.metadata.annotations[$ann] // "") | contains($route))
+        | select((.metadata.annotations[$ann] // "") | split(",") | index($route))
       ][0].config // null')
 
   if [[ "$LAST_CONFIG" == "null" ]]; then
@@ -60,16 +71,13 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
   fi
 
   if echo "$LAST_CONFIG" | jq -e --argjson expected "$EXPECTED_CONFIG" '. == $expected' >/dev/null; then
-    cat <<EOF
-{
-  "success": true,
-  "namespace": "$NAMESPACE",
-  "route_ref": "$ROUTE_REF",
-  "plugin_type": "$PLUGIN_TYPE",
-  "config": $LAST_CONFIG,
-  "retry_attempt": $ATTEMPT
-}
-EOF
+    jq -n \
+      --arg namespace "$NAMESPACE" \
+      --arg route_ref "$ROUTE_REF" \
+      --arg plugin_type "$PLUGIN_TYPE" \
+      --argjson config "$LAST_CONFIG" \
+      --argjson retry_attempt "$ATTEMPT" \
+      '{success: true, namespace: $namespace, route_ref: $route_ref, plugin_type: $plugin_type, config: $config, retry_attempt: $retry_attempt}'
     exit 0
   fi
 
@@ -77,16 +85,15 @@ EOF
   sleep "$RETRY_DELAY"
 done
 
-cat <<EOF
-{
-  "success": false,
-  "error": "$LAST_ERROR",
-  "namespace": "$NAMESPACE",
-  "route_ref": "$ROUTE_REF",
-  "plugin_type": "$PLUGIN_TYPE",
-  "expected_config": $EXPECTED_CONFIG,
-  "last_config": $LAST_CONFIG,
-  "retry_count": $RETRY_COUNT
-}
-EOF
+# LAST_ERROR embeds quotes and, on a kubectl failure, raw stderr, so let jq do the escaping:
+# interpolating it into a heredoc emits invalid JSON exactly when the diagnostics are needed.
+jq -n \
+  --arg error "$LAST_ERROR" \
+  --arg namespace "$NAMESPACE" \
+  --arg route_ref "$ROUTE_REF" \
+  --arg plugin_type "$PLUGIN_TYPE" \
+  --argjson expected_config "$EXPECTED_CONFIG" \
+  --argjson last_config "$LAST_CONFIG" \
+  --argjson retry_count "$RETRY_COUNT" \
+  '{success: false, error: $error, namespace: $namespace, route_ref: $route_ref, plugin_type: $plugin_type, expected_config: $expected_config, last_config: $last_config, retry_count: $retry_count}'
 exit 0
