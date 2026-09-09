@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.2.5](#v225)
 - [v2.2.4](#v224)
 - [v2.2.3](#v223)
 - [v2.2.2](#v222)
@@ -54,7 +55,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.2.5]
+
+> Release date: 2026-09-09
 
 ### Fixes
 
@@ -68,15 +71,15 @@
   `hybrid-routes` annotations during state enforcement so Routes that share a
   Kong resource no longer overwrite each other's references and continuously
   reapply the resource.
-  [#4944](https://github.com/Kong/kong-operator/pull/4944)
+  [#4944](https://github.com/Kong/kong-operator/pull/4944) [#5441](https://github.com/Kong/kong-operator/pull/5441)
 - HybridGateway: fix KongRoute created without updating KongService's
   `hybrid-routes` annotation.
-  [#5136](https://github.com/Kong/kong-operator/pull/5136)
+  [#5136](https://github.com/Kong/kong-operator/pull/5136) [#5442](https://github.com/Kong/kong-operator/pull/5442)
 - HybridGateway: shared Kong resources now converge when referenced by Routes
   attached to multiple Gateways, and SSA no-op detection correctly handles
   preserve-unknown fields. This prevents repeated apply loops from blocking
   stale resource cleanup after workload rollouts.
-  [#5410](https://github.com/Kong/kong-operator/pull/5410)
+  [#5410](https://github.com/Kong/kong-operator/pull/5410) [#5429](https://github.com/Kong/kong-operator/pull/5429)
 
 ## [v2.2.4]
 
@@ -2448,6 +2451,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.5]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.2.5
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
