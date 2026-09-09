@@ -215,9 +215,9 @@ func TestAIGatewayDataPlaneReconciler_ManualCertificateSecret(t *testing.T) {
 
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("user-owned cert"))
 	userSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "user-owned-cert", Namespace: ns.Name},
-		Type:       corev1.SecretTypeTLS,
-		Data:       map[string][]byte{"tls.crt": cert, "tls.key": key},
+		Name: "user-owned-cert", Namespace: ns.Name,
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{"tls.crt": cert, "tls.key": key},
 	}
 	require.NoError(t, cl.Create(ctx, userSecret))
 
@@ -288,9 +288,9 @@ func TestAIGatewayDataPlaneReconciler_KonnectCertificateBlueGreenRotation(t *tes
 
 	certV1, keyV1 := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName("rotation cert v1"))
 	userSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Name: "rotating-cert", Namespace: ns.Name},
-		Type:       corev1.SecretTypeTLS,
-		Data:       map[string][]byte{"tls.crt": certV1, "tls.key": keyV1},
+		Name: "rotating-cert", Namespace: ns.Name,
+		Type: corev1.SecretTypeTLS,
+		Data: map[string][]byte{"tls.crt": certV1, "tls.key": keyV1},
 	}
 	require.NoError(t, cl.Create(ctx, userSecret))
 

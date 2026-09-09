@@ -76,15 +76,11 @@ func (r *Reconciler) ensureKonnectCertificate(
 	// (Programmed=True) while Konnect keeps serving the old certificate forever.
 	certName := certEntityName(aigwdp, certChecksum)
 	desired := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-			Kind:       "AIGatewayDataPlaneCertificate",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      certName,
-			Namespace: aigwdp.Namespace,
-			Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
-		},
+		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+		Kind:       "AIGatewayDataPlaneCertificate",
+		Name:       certName,
+		Namespace:  aigwdp.Namespace,
+		Labels:     selectorLabelsForAIGatewayDataPlane(aigwdp),
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

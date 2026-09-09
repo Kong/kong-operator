@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	unstructured "k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -443,7 +442,7 @@ func Test_generateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 // an empty checksum results in no such annotation.
 func Test_generateBaseDeployment_CertificateChecksum(t *testing.T) {
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+		Name: "my-aigw", Namespace: "test-ns",
 	}
 	aigwcp := testKonnectAIGateway("cp.example.com", "tp.example.com")
 
@@ -462,7 +461,7 @@ func Test_generateBaseDeployment_CertificateChecksum(t *testing.T) {
 // omitted together: a Pod can't mount a volume that doesn't exist.
 func Test_generateBaseDeployment_NoCertSecret(t *testing.T) {
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: "my-aigw", Namespace: "test-ns"},
+		Name: "my-aigw", Namespace: "test-ns",
 	}
 
 	d, err := generateBaseDeployment(logr.Discard(), aigwdp, nil, "kong/aigw:test", "", "")
@@ -613,10 +612,8 @@ func Test_buildDeployment_ChecksumSurvivesUserAnnotationOverlay(t *testing.T) {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			Deployment: &aigatewayv1alpha1.DeploymentOptions{
 				PodTemplateSpec: &corev1.PodTemplateSpec{
-					ObjectMeta: metav1.ObjectMeta{
-						Annotations: map[string]string{
-							consts.AIGatewayDataPlaneCertificateChecksumAnnotation: "user-pinned-value",
-						},
+					Annotations: map[string]string{
+						consts.AIGatewayDataPlaneCertificateChecksumAnnotation: "user-pinned-value",
 					},
 					Spec: corev1.PodSpec{
 						Containers: []corev1.Container{

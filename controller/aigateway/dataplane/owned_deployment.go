@@ -211,10 +211,8 @@ func generateBaseDeployment(
 			volumes,
 			corev1.Volume{
 				Name: KonnectCertVolumeName,
-				VolumeSource: corev1.VolumeSource{
-					Secret: &corev1.SecretVolumeSource{
-						SecretName: certSecretName,
-					},
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: certSecretName,
 				},
 			})
 	}

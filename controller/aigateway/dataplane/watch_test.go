@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -124,11 +123,11 @@ func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 	)
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: secretName},
+		Namespace: ns, Name: secretName,
 	}
 
 	aigwdpMatching := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-match"},
+		Namespace: ns, Name: "dp-match",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			CertificateSecret: &aigatewayv1alpha1.CertificateSecret{
 				Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
@@ -138,7 +137,7 @@ func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 	}
 
 	aigwdpOther := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-other"},
+		Namespace: ns, Name: "dp-other",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			CertificateSecret: &aigatewayv1alpha1.CertificateSecret{
 				Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),

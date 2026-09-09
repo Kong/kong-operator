@@ -229,7 +229,7 @@ func markGeneratedCertProgrammed(t *testing.T, cl client.Client) {
 	}
 
 	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: certName},
+		Namespace: reconcileTestNS, Name: certName,
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 			AIGatewayRef: commonv1alpha1.ObjectRef{
 				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -272,7 +272,7 @@ func markManualCertProgrammed(t *testing.T, cl client.Client) {
 	if err := cl.Get(t.Context(), types.NamespacedName{Namespace: reconcileTestNS, Name: certName}, cert); err != nil {
 		require.True(t, apierrors.IsNotFound(err))
 		cert = &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-			ObjectMeta: metav1.ObjectMeta{Namespace: reconcileTestNS, Name: certName},
+			Namespace: reconcileTestNS, Name: certName,
 			Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

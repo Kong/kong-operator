@@ -165,7 +165,7 @@ const manualCertSecretName = "user-provided-cert"
 // manualCertSecret builds a valid or invalid manually-referenced TLS Secret.
 func manualCertSecret(valid bool) *corev1.Secret {
 	s := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testCASecretNamespace, Name: manualCertSecretName},
+		Namespace: testCASecretNamespace, Name: manualCertSecretName,
 	}
 	if !valid {
 		s.Data = map[string][]byte{"tls.crt": []byte("not-a-cert")}

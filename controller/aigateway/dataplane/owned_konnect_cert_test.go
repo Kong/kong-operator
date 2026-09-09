@@ -140,11 +140,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "cert already programmed by Konnect sets KonnectCertificateRegistered=True",
 			extraObjs: []client.Object{
 				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-						Kind:       "AIGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: certName, Namespace: "default"},
+					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+					Kind:       "AIGatewayDataPlaneCertificate",
+					Name:       certName, Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -190,11 +188,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			name: "cert exists with Programmed=False: returns not-programmed condition",
 			extraObjs: []client.Object{
 				&aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
-						Kind:       "AIGatewayDataPlaneCertificate",
-					},
-					ObjectMeta: metav1.ObjectMeta{Name: certName, Namespace: "default"},
+					APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
+					Kind:       "AIGatewayDataPlaneCertificate",
+					Name:       certName, Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
 						AIGatewayRef: commonv1alpha1.ObjectRef{
 							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -297,11 +293,9 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 // may not).
 func managedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: aigwdp.Namespace,
-			Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
-		},
+		Name:      name,
+		Namespace: aigwdp.Namespace,
+		Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
 	}
 	k8sutils.SetOwnerForObject(cert, aigwdp)
 	return cert
@@ -312,10 +306,8 @@ func managedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aic
 // before those labels existed.
 func unlabeledManagedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: aigwdp.Namespace,
-		},
+		Name:      name,
+		Namespace: aigwdp.Namespace,
 	}
 	k8sutils.SetOwnerForObject(cert, aigwdp)
 	return cert
@@ -330,7 +322,7 @@ func Test_cleanupStaleKonnectCertificates(t *testing.T) {
 		stale2 := managedCert("test-dp-stale2", aigwdp)
 		// A cert belonging to a different AIGatewayDataPlane must never be touched.
 		otherDPCert := managedCert("other-dp-current", &aigatewayv1alpha1.AIGatewayDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: "other-dp", Namespace: "default", UID: types.UID("other-dp-uid-456")},
+			Name: "other-dp", Namespace: "default", UID: types.UID("other-dp-uid-456"),
 		})
 
 		cl := fake.NewClientBuilder().
