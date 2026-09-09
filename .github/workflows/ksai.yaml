@@ -57,7 +57,7 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
-    uses: Kong/ksai-public/.github/workflows/ksai.yml@f9e5df32042138033cb569f630417b07bc952f18 # v3.40.10
+    uses: Kong/ksai-public/.github/workflows/ksai.yml@636df2e813cc067db029c857e410270943977e65 # v3.41.4
     permissions:
       contents: write      # checked out by every command, and pushed by one that changes code
       issues: write        # every command answers with a comment, and reacts to the one that asked
@@ -107,8 +107,12 @@ jobs:
       (github.event_name == 'pull_request_review' &&
       github.event.sender.type != 'Bot' &&
       github.event.review.state != 'commented'))
-    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@f9e5df32042138033cb569f630417b07bc952f18 # v3.40.10
+    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@636df2e813cc067db029c857e410270943977e65 # v3.41.4
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request
       statuses: write      # report the check the ruleset makes required
+    with:
+      # The login `push_as_app: false` above makes KSAI commit under. A pull request carrying no
+      # commit of its own is reported green rather than held.
+      app_login: github-actions

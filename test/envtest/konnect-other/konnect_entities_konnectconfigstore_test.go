@@ -90,6 +90,9 @@ func TestKonnectConfigStore(t *testing.T) {
 
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)
 
+		// No .Once() here: Konnect deletes are at-least-once (e.g. an operator
+		// restart between the Konnect call and the finalizer patch would repeat
+		// it), so the test only asserts what is sent, not how many times.
 		t.Log("Setting up SDK expectations on KonnectConfigStore deletion")
 		sdk.ConfigStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteConfigStoreRequest) bool {
@@ -97,8 +100,7 @@ func TestKonnectConfigStore(t *testing.T) {
 					req.ConfigStoreID == configStoreID &&
 					req.Force != nil && *req.Force == sdkkonnectops.ForceTrue
 			})).
-			Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil).
-			Once()
+			Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil)
 
 		t.Log("Deleting KonnectConfigStore")
 		require.NoError(t, clientNamespaced.Delete(ctx, configStore))
@@ -136,6 +138,7 @@ func TestKonnectConfigStore(t *testing.T) {
 
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)
 
+		// No .Once() here either, for the same at-least-once reason as above.
 		t.Log("Setting up SDK expectations on KonnectConfigStore deletion returning 404")
 		sdk.ConfigStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteConfigStoreRequest) bool {
@@ -144,8 +147,7 @@ func TestKonnectConfigStore(t *testing.T) {
 			Return(nil, &sdkkonnecterrs.SDKError{
 				StatusCode: 404,
 				Message:    "not found",
-			}).
-			Once()
+			})
 
 		t.Log("Deleting KonnectConfigStore")
 		require.NoError(t, clientNamespaced.Delete(ctx, configStore))

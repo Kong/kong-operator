@@ -88,14 +88,7 @@ func (ks *KongState) SanitizedCopy(uuidGenerator util.UUIDGenerator) *KongState 
 				return c.SanitizedCopy(uuidGenerator)
 			})
 		}(),
-		Licenses: func() []License {
-			if ks.Licenses == nil {
-				return nil
-			}
-			return lo.Map(ks.Licenses, func(l License, _ int) License {
-				return l.SanitizedCopy()
-			})
-		}(),
+		Licenses:       sanitize(ks.Licenses),
 		ConsumerGroups: ks.ConsumerGroups,
 		Vaults:         ks.Vaults,
 		CustomEntities: ks.CustomEntities,

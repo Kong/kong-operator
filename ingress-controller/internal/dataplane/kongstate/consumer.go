@@ -43,42 +43,23 @@ func (c *Consumer) SanitizedCopy(uuidGenerator util.UUIDGenerator) Consumer {
 				return c.SanitizedCopy(uuidGenerator)
 			})
 		}(),
-		HMACAuths: func() []*HMACAuth {
-			if c.HMACAuths == nil {
-				return nil
-			}
-			return lo.Map(c.HMACAuths, func(c *HMACAuth, _ int) *HMACAuth {
-				return c.SanitizedCopy()
-			})
-		}(),
-		JWTAuths: func() []*JWTAuth {
-			if c.JWTAuths == nil {
-				return nil
-			}
-			return lo.Map(c.JWTAuths, func(c *JWTAuth, _ int) *JWTAuth {
-				return c.SanitizedCopy()
-			})
-		}(),
-		BasicAuths: func() []*BasicAuth {
-			if c.BasicAuths == nil {
-				return nil
-			}
-			return lo.Map(c.BasicAuths, func(c *BasicAuth, _ int) *BasicAuth {
-				return c.SanitizedCopy()
-			})
-		}(),
-		Oauth2Creds: func() []*Oauth2Credential {
-			if c.Oauth2Creds == nil {
-				return nil
-			}
-			return lo.Map(c.Oauth2Creds, func(c *Oauth2Credential, _ int) *Oauth2Credential {
-				return c.SanitizedCopy()
-			})
-		}(),
+		HMACAuths:       sanitize(c.HMACAuths),
+		JWTAuths:        sanitize(c.JWTAuths),
+		BasicAuths:      sanitize(c.BasicAuths),
+		Oauth2Creds:     sanitize(c.Oauth2Creds),
+		MTLSAuths:       sanitize(c.MTLSAuths),
 		ACLGroups:       c.ACLGroups,
-		MTLSAuths:       c.MTLSAuths,
 		K8sKongConsumer: c.K8sKongConsumer,
 	}
+}
+
+func sanitize[T interface{ SanitizedCopy() T }](items []T) []T {
+	if items == nil {
+		return nil
+	}
+	return lo.Map(items, func(item T, _ int) T {
+		return item.SanitizedCopy()
+	})
 }
 
 func (c *Consumer) SetCredential(credType string, credConfig any, tags []*string) (any, error) {

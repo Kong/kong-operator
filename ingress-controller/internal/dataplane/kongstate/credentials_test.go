@@ -222,3 +222,38 @@ func TestOauth2Credential_SanitizedCopy(t *testing.T) {
 		})
 	}
 }
+
+func TestMTLSAuth_SanitizedCopy(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   MTLSAuth
+		want MTLSAuth
+	}{
+		{
+			name: "omits Consumer and CACertificate, keeps the rest",
+			in: MTLSAuth{
+				MTLSAuth: kong.MTLSAuth{
+					Consumer:      &kong.Consumer{Username: new("foo")},
+					CreatedAt:     new(1),
+					ID:            new("2"),
+					SubjectName:   new("foo@example.com"),
+					CACertificate: &kong.CACertificate{Cert: new("ca-cert-data")},
+					Tags:          []*string{new("3.1"), new("3.2")},
+				},
+			},
+			want: MTLSAuth{
+				MTLSAuth: kong.MTLSAuth{
+					CreatedAt:   new(1),
+					ID:          new("2"),
+					SubjectName: new("foo@example.com"),
+					Tags:        []*string{new("3.1"), new("3.2")},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := *tt.in.SanitizedCopy()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}

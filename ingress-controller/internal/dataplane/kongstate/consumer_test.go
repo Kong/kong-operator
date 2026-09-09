@@ -32,22 +32,26 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 				Plugins: []kong.Plugin{{ID: new("1")}},
 				KeyAuths: []*KeyAuth{
 					{
-						ID: new("1"), Key: new("secret"),
+						ID:  new("1"),
+						Key: new("secret"),
 					},
 				},
 				HMACAuths: []*HMACAuth{
 					{
-						ID: new("1"), Secret: new("secret"),
+						ID:     new("1"),
+						Secret: new("secret"),
 					},
 				},
 				JWTAuths: []*JWTAuth{
 					{
-						ID: new("1"), Secret: new("secret"),
+						ID:     new("1"),
+						Secret: new("secret"),
 					},
 				},
 				BasicAuths: []*BasicAuth{
 					{
-						ID: new("1"), Password: new("secret"),
+						ID:       new("1"),
+						Password: new("secret"),
 					},
 				},
 				ACLGroups: []*ACLGroup{
@@ -57,12 +61,17 @@ func TestConsumer_SanitizedCopy(t *testing.T) {
 				},
 				Oauth2Creds: []*Oauth2Credential{
 					{
-						ID: new("1"), ClientSecret: new("secret"),
+						ID:           new("1"),
+						ClientSecret: new("secret"),
 					},
 				},
 				MTLSAuths: []*MTLSAuth{
 					{
-						ID: new("1"), SubjectName: new("foo@example.com"),
+
+						ID:            new("1"),
+						SubjectName:   new("foo@example.com"),
+						Consumer:      &kong.Consumer{Username: new("foo")},
+						CACertificate: &kong.CACertificate{Cert: new("ca-cert-data")},
 					},
 				},
 				K8sKongConsumer: configurationv1.KongConsumer{Username: "foo"},

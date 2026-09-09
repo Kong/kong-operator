@@ -88,6 +88,10 @@
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
   [#5600](https://github.com/Kong/kong-operator/pull/5600)
+- Konnect reconciler: release the cleanup finalizer with a non-optimistic merge
+  patch instead of an optimistic-locked update. A stale cached `resourceVersion`
+  could previously make that write conflict, which silently requeued the
+  reconcile and deleted the same entity from Konnect a second time.
 
 ## [v2.3.1]
 

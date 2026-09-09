@@ -126,18 +126,11 @@ spec:
                     description: API configuration.
                     properties:
                       access:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Access control configuration for a model.
+                        description: Access control configuration for a model.
                         properties:
                           acls:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Access control rules. Configure exactly one of `allow` or `deny`.
+                            description: Access control rules. Configure exactly one
+                              of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
@@ -276,9 +269,6 @@ spec:
                         properties:
                           balancer:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -692,11 +682,8 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: |-
-                                          **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-
-                                          Configuration for an embeddings model.
+                                        description: Configuration for an embeddings
+                                          model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -761,11 +748,8 @@ spec:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: |-
-                                                  **Pre-release Feature**
-                                                  This feature is currently in beta and is subject to change.
-
-                                                  Configuration for a model hosted on Google Cloud Project.
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -925,11 +909,8 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Configuration for the vector database used by the model.
+                                    description: Configuration for the vector database
+                                      used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -1433,11 +1414,7 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               payloads:
                                 enum:
@@ -1528,11 +1505,7 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for an AI Gateway route.
+                            description: Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -1739,9 +1712,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1790,11 +1760,7 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Configuration for a target model.
+                              description: Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -1813,9 +1779,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -1839,9 +1804,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -1892,9 +1856,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -1965,9 +1928,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -1991,9 +1953,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2063,9 +2024,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2132,9 +2092,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2158,9 +2117,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2229,9 +2187,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2298,9 +2255,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2324,9 +2280,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2377,9 +2332,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2450,9 +2404,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2476,9 +2429,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2540,9 +2492,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2611,9 +2562,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2637,9 +2587,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2697,9 +2646,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2761,9 +2709,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2787,9 +2734,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2840,9 +2786,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -2912,9 +2857,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -2938,9 +2882,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -2991,9 +2934,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3055,9 +2997,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3081,9 +3022,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3116,11 +3056,8 @@ spec:
                                       minimum: 0
                                       type: integer
                                     gcpEnvironment:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
-
-                                        Configuration for a model hosted on Google Cloud Project.
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -3164,9 +3101,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3228,9 +3164,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3254,9 +3189,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3307,9 +3241,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3385,9 +3318,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3411,9 +3343,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3472,9 +3403,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3536,9 +3466,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3562,9 +3491,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3625,9 +3553,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3693,9 +3620,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3719,9 +3645,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3781,9 +3706,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3847,9 +3771,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -3873,9 +3796,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -3926,9 +3848,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -3990,9 +3911,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -4016,9 +3936,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -4069,9 +3988,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -4120,9 +4038,8 @@ spec:
                                   description: Sagemaker configuration.
                                   properties:
                                     aws:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
+                                      description: AIGatewayTargetSagemakerConfigAws
+                                        is a type alias.
                                       properties:
                                         assumeRoleArn:
                                           description: |-
@@ -4161,9 +4078,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -4187,9 +4103,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -4240,9 +4155,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -4349,9 +4263,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -4375,9 +4288,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -4428,9 +4340,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -4492,9 +4403,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -4518,9 +4428,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -4571,9 +4480,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -4638,9 +4546,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -4664,9 +4571,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -4717,9 +4623,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -4829,18 +4734,11 @@ spec:
                     description: Model configuration.
                     properties:
                       access:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Access control configuration for a model.
+                        description: Access control configuration for a model.
                         properties:
                           acls:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Access control rules. Configure exactly one of `allow` or `deny`.
+                            description: Access control rules. Configure exactly one
+                              of `allow` or `deny`.
                             properties:
                               allow:
                                 description: Allow configuration.
@@ -4978,9 +4876,6 @@ spec:
                         properties:
                           balancer:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration for a model's load balancer when multiple target models are
                               configured.
                             properties:
@@ -5394,11 +5289,8 @@ spec:
                                         - Disabled
                                         type: string
                                       config:
-                                        description: |-
-                                          **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
-
-                                          Configuration for an embeddings model.
+                                        description: Configuration for an embeddings
+                                          model.
                                         properties:
                                           azure:
                                             description: Azure configuration.
@@ -5463,11 +5355,8 @@ spec:
                                             description: Gemini configuration.
                                             properties:
                                               gcpEnvironment:
-                                                description: |-
-                                                  **Pre-release Feature**
-                                                  This feature is currently in beta and is subject to change.
-
-                                                  Configuration for a model hosted on Google Cloud Project.
+                                                description: Configuration for a model
+                                                  hosted on Google Cloud Project.
                                                 properties:
                                                   apiEndpoint:
                                                     description: The custom API endpoint
@@ -5627,11 +5516,8 @@ spec:
                                     minimum: 10
                                     type: integer
                                   vectordb:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Configuration for the vector database used by the model.
+                                    description: Configuration for the vector database
+                                      used by the model.
                                     properties:
                                       pgvector:
                                         description: PgVector configuration.
@@ -6135,11 +6021,7 @@ spec:
                             - algorithm
                             type: object
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               payloads:
                                 enum:
@@ -6154,16 +6036,12 @@ spec:
                             minimum: 0
                             type: integer
                           model:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
+                            description: AIGatewayModelModelConfigModel is a type
+                              alias.
                             properties:
                               nameHeader:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Display the model name selected in the X-Kong-LLM-Model response header
+                                description: Display the model name selected in the
+                                  X-Kong-LLM-Model response header
                                 enum:
                                 - Enabled
                                 - Disabled
@@ -6246,11 +6124,7 @@ spec:
                             maxLength: 253
                             type: string
                           route:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for an AI Gateway route.
+                            description: Configuration for an AI Gateway route.
                             properties:
                               headers:
                                 description: |-
@@ -6457,9 +6331,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -6508,11 +6379,7 @@ spec:
                               - Disabled
                               type: string
                             config:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Configuration for a target model.
+                              description: Configuration for a target model.
                               properties:
                                 anthropic:
                                   description: Anthropic configuration.
@@ -6531,9 +6398,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -6557,9 +6423,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -6610,9 +6475,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -6683,9 +6547,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -6709,9 +6572,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -6781,9 +6643,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -6850,9 +6711,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -6876,9 +6736,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -6947,9 +6806,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7016,9 +6874,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7042,9 +6899,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7095,9 +6951,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7168,9 +7023,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7194,9 +7048,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7258,9 +7111,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7329,9 +7181,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7355,9 +7206,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7415,9 +7265,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7479,9 +7328,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7505,9 +7353,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7558,9 +7405,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7630,9 +7476,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7656,9 +7501,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7709,9 +7553,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7773,9 +7616,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7799,9 +7641,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -7834,11 +7675,8 @@ spec:
                                       minimum: 0
                                       type: integer
                                     gcpEnvironment:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
-
-                                        Configuration for a model hosted on Google Cloud Project.
+                                      description: Configuration for a model hosted
+                                        on Google Cloud Project.
                                       properties:
                                         apiEndpoint:
                                           description: The custom API endpoint for
@@ -7882,9 +7720,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -7946,9 +7783,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -7972,9 +7808,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8025,9 +7860,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8103,9 +7937,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8129,9 +7962,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8190,9 +8022,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8254,9 +8085,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8280,9 +8110,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8343,9 +8172,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8411,9 +8239,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8437,9 +8264,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8499,9 +8325,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8565,9 +8390,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8591,9 +8415,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8644,9 +8467,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8708,9 +8530,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8734,9 +8555,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8787,9 +8607,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -8838,9 +8657,8 @@ spec:
                                   description: Sagemaker configuration.
                                   properties:
                                     aws:
-                                      description: |-
-                                        **Pre-release Feature**
-                                        This feature is currently in beta and is subject to change.
+                                      description: AIGatewayTargetSagemakerConfigAws
+                                        is a type alias.
                                       properties:
                                         assumeRoleArn:
                                           description: |-
@@ -8879,9 +8697,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -8905,9 +8722,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -8958,9 +8774,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -9067,9 +8882,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -9093,9 +8907,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -9146,9 +8959,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -9210,9 +9022,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -9236,9 +9047,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -9289,9 +9099,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the
@@ -9356,9 +9165,8 @@ spec:
                                         Configure this when the upstream provider charges differently for different
                                         cache TTLs.
                                       items:
-                                        description: |-
-                                          AIGatewayCacheWriteCost **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayCacheWriteCost is a
+                                          type alias.
                                         properties:
                                           cost:
                                             description: Cost per 1M cache-write prompt
@@ -9382,9 +9190,8 @@ spec:
                                         Above an input-token threshold, scale input and output pricing by the
                                         corresponding factor.
                                       items:
-                                        description: |-
-                                          AIGatewayContextWindowFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayContextWindowFactor
+                                          is a type alias.
                                         properties:
                                           above:
                                             description: Input-token threshold above
@@ -9435,9 +9242,8 @@ spec:
                                         Multiplier applied to the whole request for a service tier.
                                         The default factor is 1.0 when no tier matches.
                                       items:
-                                        description: |-
-                                          AIGatewayServiceTierFactor **Pre-release Feature**
-                                          This feature is currently in beta and is subject to change.
+                                        description: AIGatewayServiceTierFactor is
+                                          a type alias.
                                         properties:
                                           factor:
                                             description: Multiplier applied to the

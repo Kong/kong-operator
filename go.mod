@@ -5,7 +5,7 @@ go 1.27.1
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
-	github.com/Kong/sdk-konnect-go v0.64.0
+	github.com/Kong/sdk-konnect-go v0.65.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.1
@@ -20,7 +20,7 @@ require (
 	github.com/gohugoio/hashstructure v1.1.0
 	github.com/google/go-cmp v0.7.0
 	github.com/google/go-containerregistry v0.22.1
-	github.com/google/pprof v0.0.0-20260802141513-ef3492d7dac3
+	github.com/google/pprof v0.0.0-20260906184651-6331bc6350fe
 	github.com/google/uuid v1.6.0
 	github.com/gruntwork-io/terratest v1.0.1
 	github.com/hashicorp/go-cleanhttp v0.5.2
