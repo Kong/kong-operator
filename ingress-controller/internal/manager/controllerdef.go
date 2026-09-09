@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -19,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -65,14 +67,29 @@ func setupControllers(
 	featureGates managercfg.FeatureGates,
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
-) []ControllerDef {
+) ([]ControllerDef, error) {
 	// Resolve which ReferenceGrant API version (v1 or v1beta1) is served by the
 	// cluster, so the ReferenceGrant DynamicCRDController waits on the version
 	// that's actually installed. Default to v1 (the GA version) as the
 	// wait-target if the CRD isn't installed yet at all.
-	referenceGrantGV, referenceGrantFound := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	referenceGrantGV, referenceGrantFound, err := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	if err != nil {
+		return nil, fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
+	}
 	if !referenceGrantFound {
 		referenceGrantGV = schema.GroupVersion(gatewayv1.GroupVersion)
+	}
+
+	// HTTPRoute presence is resolved once here: the KongUpstreamPolicy controller
+	// watches HTTPRoutes to set ancestor status, and cannot pick that up later at
+	// runtime.
+	httpRouteExists, err := k8sutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
+		Group:    gatewayv1.GroupVersion.Group,
+		Version:  gatewayv1.GroupVersion.Version,
+		Resource: "httproutes",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to check whether the HTTPRoute CRD is installed: %w", err)
 	}
 
 	controllers := []ControllerDef{
@@ -246,18 +263,14 @@ func setupControllers(
 		{
 			Enabled: c.KongUpstreamPolicyEnabled,
 			Controller: &configuration.KongUpstreamPolicyReconciler{
-				Client:                   mgr.GetClient(),
-				Log:                      ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
-				Scheme:                   mgr.GetScheme(),
-				DataplaneClient:          dataplaneClient,
-				CacheSyncTimeout:         c.CacheSyncTimeout,
-				KongServiceFacadeEnabled: featureGates.Enabled(managercfg.KongServiceFacadeFeature) && c.KongServiceFacadeEnabled,
-				StatusQueue:              kubernetesStatusQueue,
-				HTTPRouteEnabled: utils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
-					Group:    gatewayv1.GroupVersion.Group,
-					Version:  gatewayv1.GroupVersion.Version,
-					Resource: "httproutes",
-				}),
+				Client:                     mgr.GetClient(),
+				Log:                        ctrl.LoggerFrom(ctx).WithName("controllers").WithName("KongUpstreamPolicy"),
+				Scheme:                     mgr.GetScheme(),
+				DataplaneClient:            dataplaneClient,
+				CacheSyncTimeout:           c.CacheSyncTimeout,
+				KongServiceFacadeEnabled:   featureGates.Enabled(managercfg.KongServiceFacadeFeature) && c.KongServiceFacadeEnabled,
+				StatusQueue:                kubernetesStatusQueue,
+				HTTPRouteEnabled:           httpRouteExists,
 				IngressClassName:           c.IngressClassName,
 				DisableIngressClassLookups: !c.IngressClassNetV1Enabled,
 			},
@@ -492,7 +505,7 @@ func setupControllers(
 		},
 	}
 
-	return controllers
+	return controllers, nil
 }
 
 // baseGatewayCRDs returns a slice of base CRDs required for running all the Gateway API controllers.

@@ -318,7 +318,7 @@ func New(
 	)
 
 	setupLog.Info("Starting enabled Controllers")
-	controllers := setupControllers(
+	controllers, err := setupControllers(
 		ctx,
 		mgr,
 		dataplaneClient,
@@ -330,6 +330,9 @@ func New(
 		clientsManager,
 		adminAPIsDiscoverer,
 	)
+	if err != nil {
+		return nil, fmt.Errorf("unable to set up controllers: %w", err)
+	}
 	for _, c := range controllers {
 		if err := c.MaybeSetupWithManager(mgr); err != nil {
 			return nil, fmt.Errorf("unable to create controller %q: %w", c.Name(), err)

@@ -97,9 +97,10 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	var indexOptions []index.Option
 
-	crdChecker := k8sutils.CRDChecker{
-		Client: mgr.GetClient(),
+	crdChecker := func(gvr schema.GroupVersionResource) (bool, error) {
+		return k8sutils.CRDExists(mgr.GetClient().RESTMapper(), gvr)
 	}
+
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
 		Version:  gatewayv1.GroupVersion.Version,
@@ -138,28 +139,28 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
 		)
-		hasTLSRoute, err := crdChecker.CRDExists(tlsRouteGVR)
+		hasTLSRoute, err := crdChecker(tlsRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTLSRoute())
 		}
-		hasTCPRoute, err := crdChecker.CRDExists(tcpRouteGVR)
+		hasTCPRoute, err := crdChecker(tcpRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTCPRoute())
 		}
-		hasUDPRoute, err := crdChecker.CRDExists(udpRouteGVR)
+		hasUDPRoute, err := crdChecker(udpRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
 		}
 		if hasUDPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForUDPRoute())
 		}
-		hasGRPCRoute, err := crdChecker.CRDExists(grpcRouteGVR)
+		hasGRPCRoute, err := crdChecker(grpcRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
 		}
@@ -568,9 +569,10 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 	}
 }
 
-type crdExistenceChecker interface {
-	CRDExists(schema.GroupVersionResource) (bool, error)
-}
+// crdExistenceChecker reports whether a resource is served by the apiserver. It
+// is a parameter of ensureRequiredCRDs so that tests can substitute a fixed set
+// of installed CRDs for real discovery.
+type crdExistenceChecker func(schema.GroupVersionResource) (bool, error)
 
 func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 	for _, check := range requiredCRDChecks(c) {
@@ -579,7 +581,7 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 		}
 
 		for _, gvr := range check.gvrs {
-			if ok, err := checker.CRDExists(gvr); err != nil {
+			if ok, err := checker(gvr); err != nil {
 				return err
 			} else if !ok {
 				return fmt.Errorf("missing a required CRD: %v", gvr)
@@ -589,7 +591,7 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 		for _, gvrGroup := range check.anyOfGVRs {
 			found := false
 			for _, gvr := range gvrGroup {
-				ok, err := checker.CRDExists(gvr)
+				ok, err := checker(gvr)
 				if err != nil {
 					return err
 				}
@@ -612,8 +614,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
-	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
-	if err := ensureRequiredCRDs(c, checker); err != nil {
+	crdExists := func(gvr schema.GroupVersionResource) (bool, error) {
+		return k8sutils.CRDExists(mgr.GetClient().RESTMapper(), gvr)
+	}
+	if err := ensureRequiredCRDs(c, crdExists); err != nil {
 		return nil, err
 	}
 
@@ -1008,28 +1012,28 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "grpcroutes",
 		}
-		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
+		hasTLSRoute, err := crdExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
-		hasTCPRoute, err := checker.CRDExists(tcpRouteGVR)
+		hasTCPRoute, err := crdExists(tcpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
-		hasGRPCRoute, err := checker.CRDExists(grpcRouteGVR)
+		hasGRPCRoute, err := crdExists(grpcRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
 		}
 		if hasGRPCRoute {
 			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
 		}
-		hasUDPRoute, err := checker.CRDExists(udpRouteGVR)
+		hasUDPRoute, err := crdExists(udpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
 		}

@@ -12,6 +12,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
@@ -77,35 +78,23 @@ func IsIngressClassEmpty(obj client.Object) bool {
 	}
 }
 
-// CRDExists returns false if CRD does not exist.
-func CRDExists(restMapper meta.RESTMapper, gvr schema.GroupVersionResource) bool {
-	if _, err := restMapper.KindsFor(gvr); err == nil {
-		return true
-	} else if meta.IsNoMatchError(err) {
-		// The RESTMapper may have stale cached discovery data. Reset() forces it to
-		// re-discover resources, allowing it to find CRDs installed after initialization.
-		// meta.RESTMapper doesn't include Reset(), but some implementations (e.g. DynamicRESTMapper) do.
-		if resettable, ok := restMapper.(interface{ Reset() }); ok {
-			resettable.Reset()
-			_, err = restMapper.KindsFor(gvr)
-			return err == nil
-		}
-	}
-	return false
-}
-
 // DetectReferenceGrantVersion returns the GroupVersion of whichever ReferenceGrant
 // API version is served by the cluster, preferring v1 and falling back to v1beta1
 // (ReferenceGrant was promoted from v1beta1 to v1 in gateway-api v1.5.0; older
-// clusters only serve v1beta1). ok is false if neither is installed.
-func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (gv schema.GroupVersion, ok bool) {
-	v1GV := schema.GroupVersion(gatewayv1.GroupVersion)
-	if CRDExists(restMapper, v1GV.WithResource("referencegrants")) {
-		return v1GV, true
+// clusters only serve v1beta1). ok is false if neither is installed. An error is
+// returned when the lookup itself failed.
+func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (gv schema.GroupVersion, ok bool, err error) {
+	for _, gv := range []schema.GroupVersion{
+		schema.GroupVersion(gatewayv1.GroupVersion),
+		schema.GroupVersion(gatewayv1beta1.GroupVersion),
+	} {
+		exists, err := k8sutils.CRDExists(restMapper, gv.WithResource("referencegrants"))
+		if err != nil {
+			return schema.GroupVersion{}, false, err
+		}
+		if exists {
+			return gv, true, nil
+		}
 	}
-	v1beta1GV := schema.GroupVersion(gatewayv1beta1.GroupVersion)
-	if CRDExists(restMapper, v1beta1GV.WithResource("referencegrants")) {
-		return v1beta1GV, true
-	}
-	return schema.GroupVersion{}, false
+	return schema.GroupVersion{}, false, nil
 }
