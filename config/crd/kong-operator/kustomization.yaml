@@ -13,6 +13,7 @@ resources:
   - aiconfiguration.konghq.com_aigatewaymodels.yaml
   - aiconfiguration.konghq.com_aigatewaypolicies.yaml
   - aigateway.konghq.com_aigatewaydataplanes.yaml
+  - aigateway.konghq.com_onpremaigateways.yaml
   - configuration.konghq.com_eventgatewaybackendclusters.yaml
   - configuration.konghq.com_eventgatewaydataplanecertificates.yaml
   - configuration.konghq.com_eventgatewaylistenerpolicies.yaml

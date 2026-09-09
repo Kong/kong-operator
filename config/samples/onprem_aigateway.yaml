@@ -1,0 +1,10 @@
+# Minimal sample for the on-prem AIGateway control plane CRD.
+#
+# OnPremAIGateway has no reconciler yet: applying this sample only exercises
+# CRD validation, it has no effect on the cluster.
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}

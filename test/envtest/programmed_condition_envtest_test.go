@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +14,6 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
@@ -40,7 +38,11 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithKongServiceFacadeFeatureEnabled(),
 	)
-	WaitForManagerStart(t, logs)
+	// Wait for the controllers owning the asserted types, and for the two that feed the
+	// store for the KongServiceFacade cases, to actually be running before asserting.
+	WaitForControllersStart(t, logs,
+		"KongConsumer", "KongConsumerGroup", "KongServiceFacade", "Ingress.netv1", "Service",
+	)
 
 	testCases := []struct {
 		name                        string
@@ -435,7 +437,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					return false
 				}
 				return true
-			}, test.RequestTimeout, 50*time.Millisecond)
+			}, waitTime, tickTime)
 		})
 	}
 }
