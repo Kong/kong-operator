@@ -75,6 +75,15 @@
   ** This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
+- Gateway: When using `gateway-operator.konghq.com/static-naming: "true"`, the name of
+  the Control Plane created in Konnect is now qualified with the Gateway's namespace
+  (`<namespace>-<gateway-name>`), preventing HTTP 409 conflicts between Gateways sharing
+  a name across namespaces in the same Konnect organization. The Kubernetes
+  `KonnectGatewayControlPlane` resource name is unchanged and still matches the Gateway's
+  name. Control Planes already created in Konnect are not renamed.
+  Note: Gateways with the same namespace and name deployed to multiple clusters sharing a
+  Konnect organization still conflict; use `spec.konnect.mirror` for that scenario.
+  [#4079](https://github.com/Kong/kong-operator/issues/4079)
 
 ## [v2.3.0]
 

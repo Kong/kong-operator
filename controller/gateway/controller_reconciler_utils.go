@@ -136,7 +136,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
-			Name: kgcpName,
+			Name: konnectControlPlaneName(gateway, kgcpName),
 		}
 	} else {
 		kgcp.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
@@ -1861,18 +1861,38 @@ func areConditionsEqual(cond1, cond2 metav1.Condition) bool {
 // For the name, there are two behaviors:
 //   - If the Gateway has the GatewayStaticNamingAnnotation set to "true", the object's
 //     name is set to exactly match the Gateway's name (static naming).
-//   - Otherwise, the object's generateName is set to "<gateway-name>-", where
-//     a random suffix is appended in the same manner as by Kubernetes for
-//     the GenerateName field (dynamic naming).
+//   - Otherwise, the object's name is set to "<gateway-name>-<suffix>", where the
+//     random suffix is generated client side in the same manner as by Kubernetes
+//     for the GenerateName field (dynamic naming).
 //
 // This function is typically used to ensure that objects created for a Gateway follow
 // the appropriate naming convention based on the Gateway's annotations.
 func setObjectNamespaceName(gateway *gwtypes.Gateway, obj client.Object) (generatedName string) {
 	obj.SetNamespace(gateway.Namespace)
-	if gateway.Annotations != nil && gateway.Annotations[consts.GatewayStaticNamingAnnotation] == "true" {
+	if hasStaticNaming(gateway) {
 		obj.SetName(gateway.Name)
 	} else {
 		obj.SetName(k8sutils.GenerateName(fmt.Sprintf("%s-", gateway.Name)))
 	}
 	return obj.GetName()
+}
+
+// hasStaticNaming reports whether the Gateway opts into static naming of its owned resources.
+func hasStaticNaming(gateway *gwtypes.Gateway) bool {
+	return gateway.Annotations != nil &&
+		gateway.Annotations[consts.GatewayStaticNamingAnnotation] == "true"
+}
+
+// konnectControlPlaneName returns the name to use for the Control Plane created in Konnect.
+//
+// The Kubernetes name and the Konnect name have different uniqueness scopes:
+// (namespace, kind, name) versus (org_id, name). Under static naming the Kubernetes name is
+// the unqualified Gateway name, which is not unique within a Konnect organization, so the
+// namespace is prepended. Under dynamic naming the Kubernetes name already carries a random
+// suffix and is used as is, preserving the behavior introduced in #3357.
+func konnectControlPlaneName(gateway *gwtypes.Gateway, kgcpName string) string {
+	if hasStaticNaming(gateway) {
+		return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)
+	}
+	return kgcpName
 }
