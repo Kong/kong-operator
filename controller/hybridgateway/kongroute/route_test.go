@@ -1023,6 +1023,51 @@ func TestHTTPRouteMatchPrioritiesForDefaultPathMethodMatching(t *testing.T) {
 	assert.Greater(t, patchOnly, headerOnly)
 }
 
+// TestHTTPRouteMatchPrioritiesTreatDefaultPathAsRootPrefix ensures a match with an
+// explicit root path prefix (Path: "/") and a method-less default-path match share
+// the same priority class, so that method-only matches always rank above them. Without
+// normalizing the default path to the root prefix, a method-only match would be ordered
+// below an explicit root prefix match, and precedence variant generation would augment
+// the wrong side.
+func TestHTTPRouteMatchPrioritiesTreatDefaultPathAsRootPrefix(t *testing.T) {
+	httpRoute := &gwtypes.HTTPRoute{
+		Spec: gatewayv1.HTTPRouteSpec{
+			Rules: []gatewayv1.HTTPRouteRule{
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{{
+						Path:    defaultRootPathMatch(),
+						Headers: []gatewayv1.HTTPHeaderMatch{{Name: "version", Value: "one"}},
+					}},
+				},
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{{
+						Method: new(gatewayv1.HTTPMethodPatch),
+					}},
+				},
+				{
+					Matches: []gatewayv1.HTTPRouteMatch{{
+						Headers: []gatewayv1.HTTPHeaderMatch{{Name: "version", Value: "four"}},
+					}},
+				},
+			},
+		},
+	}
+
+	priorities := httpRouteMatchPriorities(httpRoute)
+
+	explicitRootWithHeader := priorityForHTTPRouteMatch(priorities, 0, 0)
+	methodOnly := priorityForHTTPRouteMatch(priorities, 1, 0)
+	headerOnly := priorityForHTTPRouteMatch(priorities, 2, 0)
+
+	// Method matches rank above header matches, and an explicit root prefix path must not
+	// outrank a default (implicit root) path.
+	assert.Greater(t, methodOnly, explicitRootWithHeader)
+	assert.Greater(t, methodOnly, headerOnly)
+	// The explicit root prefix and the default path are the same path, so both matches
+	// share the path class and the header count breaks the tie.
+	assert.Greater(t, explicitRootWithHeader, headerOnly)
+}
+
 func defaultRootPathMatch() *gatewayv1.HTTPPathMatch {
 	return &gatewayv1.HTTPPathMatch{
 		Type:  new(gatewayv1.PathMatchPathPrefix),
