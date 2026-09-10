@@ -98,7 +98,11 @@ func (m *Manager) ScheduleInstance(in ManagerInstance) error {
 	if m.admissionReqHandler != nil {
 		m.admissionReqHandler.RegisterValidator(in.ID(), in.KongValidator())
 	}
+
 	if err := m.Registry.ScheduleInstance(in); err != nil {
+		if m.admissionReqHandler != nil {
+			m.admissionReqHandler.UnregisterValidator(in.ID())
+		}
 		return err
 	}
 	return nil
