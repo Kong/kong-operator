@@ -207,6 +207,8 @@ func (r *MCPServerDataPlaneReconciler) Reconcile(ctx context.Context, mcpDataPla
 		Version:            remoteMCPServer.Version,
 		ControlPlaneID:     cpID,
 		MCPServerID:        mcpServerID,
+		SignalOffset:       mcpServer.Annotations[mcpSignalOffsetAnnotationKey],
+		SignalVersion:      mcpServer.Annotations[mcpSignalVersionAnnotationKey],
 	}
 
 	secret, err := r.ensureTokenSecret(ctx, logger, mcpDataPlane, apiAuth)

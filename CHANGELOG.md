@@ -91,6 +91,16 @@
   patch instead of an optimistic-locked update. A stale cached `resourceVersion`
   could previously make that write conflict, which silently requeued the
   reconcile and deleted the same entity from Konnect a second time.
+- MCP server: an advanced-mode `MCPServer` (user-created, not mirrored by the
+  operator) was deleted on the first sync after creation, because the control
+  plane sync withheld its Konnect ID from the set of servers considered still
+  present. It is now kept, and it is annotated with the latest Konnect MCP
+  signal and reconciled like a mirrored `MCPServer`.
+- MCP server: a new Konnect MCP signal now redeploys the `MCPServerDataPlane`'s
+  `Deployment` so its init container re-fetches the updated server code.
+  Previously, only a change in the remote MCP server's own version triggered a
+  redeploy, so config changes surfaced through the signal API alone were never
+  picked up.
 
 ## [v2.3.1]
 

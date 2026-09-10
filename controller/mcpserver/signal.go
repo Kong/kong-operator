@@ -159,7 +159,7 @@ func (s *SignalManager) registerControlPlane(ev CPEvent) {
 
 	go func() {
 		defer cancel()
-		s.mcpCPSignalRoutine(ctx, cp, konnectClientForPolling, fetchEventCh, resetCh)
+		s.mcpCPSignalRoutine(ctx, cp, konnectClientForPolling, fetcher, resetCh)
 	}()
 }
 
@@ -185,7 +185,7 @@ func (s *SignalManager) deregisterControlPlane(cp *konnectv1alpha2.KonnectGatewa
 	delete(s.resetChs, key)
 }
 
-func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha2.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, fetchEventCh chan<- struct{}, resetCh <-chan struct{}) {
+func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alpha2.KonnectGatewayControlPlane, konnectClient sdkops.SDKWrapper, fetcher *MCPServersFetcher, resetCh <-chan struct{}) {
 	logger := log.GetLogger(ctx, "mcpserver-signal", s.loggingMode)
 	offset := new(initialOffset)
 
@@ -230,17 +230,24 @@ func (s *SignalManager) mcpCPSignalRoutine(ctx context.Context, cp *konnectv1alp
 		b.Reset()
 
 		if resp.StatusCode == http.StatusOK && resp.MCPServerSignals != nil {
+			var sig *mcpSignal
 			for _, signal := range resp.MCPServerSignals.Signals {
 				log.Debug(logger, "MCP server signal received", "name", cp.Name, "namespace", cp.Namespace, "signal", signal)
 				if signal.MCPServerSignalV1 != nil {
 					off := signal.MCPServerSignalV1.Offset
 					offset = &off
+					sig = &mcpSignal{
+						Offset:  signal.MCPServerSignalV1.Offset,
+						Version: signal.MCPServerSignalV1.Version,
+					}
 				}
 			}
-			// Wake up the fetcher to refresh all MCP servers for this control plane.
-			select {
-			case fetchEventCh <- struct{}{}:
-			default:
+			// Wake up the fetcher to refresh all MCP servers for this control
+			// plane, carrying the latest signal seen in this batch (if any).
+			if sig != nil {
+				fetcher.NotifySignal(*sig)
+			} else {
+				fetcher.wake()
 			}
 		}
 	}

@@ -548,6 +548,73 @@ func Test_generateDeployment_PodTemplateLabelsAndAnnotations(t *testing.T) {
 	assert.NotContains(t, deploy.Annotations, "team-contact")
 }
 
+func Test_generateDeployment_SignalAnnotations(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	apiAuth := minimalAPIAuth()
+	tokenSecret := tokenSecret(mcpDataPlane)
+
+	t.Run("no signal seen yet: no signal annotations on Deployment or pod template", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.NotContains(t, deploy.Annotations, mcpSignalOffsetAnnotationKey)
+		assert.NotContains(t, deploy.Annotations, mcpSignalVersionAnnotationKey)
+		assert.NotContains(t, deploy.Spec.Template.Annotations, mcpSignalOffsetAnnotationKey)
+		assert.NotContains(t, deploy.Spec.Template.Annotations, mcpSignalVersionAnnotationKey)
+	})
+
+	t.Run("signal is stamped on Deployment and pod template", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		metadata.SignalOffset = "off-1"
+		metadata.SignalVersion = "sig-v1"
+		deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.Equal(t, "off-1", deploy.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Annotations[mcpSignalVersionAnnotationKey])
+		assert.Equal(t, "off-1", deploy.Spec.Template.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Spec.Template.Annotations[mcpSignalVersionAnnotationKey])
+	})
+
+	t.Run("a changed signal changes the pod template, triggering a rollout", func(t *testing.T) {
+		before := mcpServerMetadataWithContainers()
+		before.SignalOffset, before.SignalVersion = "off-1", "sig-v1"
+		after := mcpServerMetadataWithContainers()
+		after.SignalOffset, after.SignalVersion = "off-2", "sig-v1"
+
+		deployBefore := generateDeployment(logr.Discard(), mcpDataPlane, before, tokenSecret, apiAuth.Spec.ServerURL)
+		deployAfter := generateDeployment(logr.Discard(), mcpDataPlane, after, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.NotEqual(t, deployBefore.Spec.Template.Annotations, deployAfter.Spec.Template.Annotations)
+	})
+
+	t.Run("user cannot override signal annotations via spec.deployment or podTemplateSpec", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		metadata.SignalOffset, metadata.SignalVersion = "off-1", "sig-v1"
+
+		dp := minimalMCPServerDataPlane()
+		dp.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+			Annotations: map[string]string{
+				mcpSignalOffsetAnnotationKey:  "user-supplied",
+				mcpSignalVersionAnnotationKey: "user-supplied",
+			},
+			PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+				Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+					Annotations: map[string]string{
+						mcpSignalOffsetAnnotationKey:  "user-supplied",
+						mcpSignalVersionAnnotationKey: "user-supplied",
+					},
+				},
+			},
+		}
+		deploy := generateDeployment(logr.Discard(), dp, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.Equal(t, "off-1", deploy.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Annotations[mcpSignalVersionAnnotationKey])
+		assert.Equal(t, "off-1", deploy.Spec.Template.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Spec.Template.Annotations[mcpSignalVersionAnnotationKey])
+	})
+}
+
 // infoCountSink is a minimal logr.LogSink that counts Info() calls.
 type infoCountSink struct{ count *int }
 

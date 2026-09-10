@@ -5,13 +5,13 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"sync/atomic"
 	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/go-logr/logr"
 	"github.com/jpillora/backoff"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +45,19 @@ type MCPServersFetcher struct {
 
 	fetchEventCh     chan struct{}
 	reconcileEventCh chan<- event.GenericEvent
+
+	// lastSignal holds the most recent Konnect MCP signal notified via
+	// NotifySignal, or nil if none has arrived yet. It is consumed and
+	// propagated to mirrored MCPServers on the next fetch/sync pass.
+	lastSignal atomic.Pointer[mcpSignal]
+}
+
+// mcpSignal carries the last-seen offset/version pair from a Konnect MCP
+// signal (see signal.go), to be stamped onto mirrored MCPServer objects so
+// that MCPServerDataPlaneReconciler can trigger a redeploy on change.
+type mcpSignal struct {
+	Offset  string
+	Version string
 }
 
 // NewMCPServersFetcher creates a new MCPServersFetcher.
@@ -65,6 +78,22 @@ func NewMCPServersFetcher(
 		reconcileEventCh: reconcileEventCh,
 		controlPlane:     controlPlane,
 		scheme:           scheme,
+	}
+}
+
+// NotifySignal records sig as the latest Konnect MCP signal seen and wakes the
+// fetch loop. The last signal wins: an older pending one is simply overwritten.
+func (f *MCPServersFetcher) NotifySignal(sig mcpSignal) {
+	f.lastSignal.Store(&sig)
+	f.wake()
+}
+
+// wake sends a non-blocking wakeup on fetchEventCh: if a fetch is already
+// pending, the extra notification is safely dropped.
+func (f *MCPServersFetcher) wake() {
+	select {
+	case f.fetchEventCh <- struct{}{}:
+	default:
 	}
 }
 
@@ -96,14 +125,10 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 					continue
 				}
 				log.Debug(logger, "fetched MCP servers", "controlPlaneID", cpID, "count", len(servers))
-				if err := f.syncMCPServers(ctx, servers); err != nil {
+				sig := f.lastSignal.Load()
+				if err := f.syncMCPServers(ctx, servers, sig); err != nil {
 					log.Error(logger, err, "failed to sync MCP servers", "controlPlaneID", cpID)
-					time.AfterFunc(b.Duration(), func() {
-						select {
-						case f.fetchEventCh <- struct{}{}:
-						default:
-						}
-					})
+					time.AfterFunc(b.Duration(), f.wake)
 				} else {
 					b.Reset()
 				}
@@ -112,11 +137,21 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 	}()
 }
 
-// syncMCPServers creates a mirrored MCPServer Kubernetes object for each server
-// returned by Konnect. Already-existing objects are skipped silently.
-// Objects that exist in Kubernetes but are no longer present in Konnect are deleted.
+// syncMCPServers reconciles the mirrored/user-owned MCPServer Kubernetes
+// objects for the control plane against the list of servers returned by
+// Konnect:
+//   - For a server with no matching in-cluster MCPServer, a mirror is created
+//     if the server is in basic mode. Advanced-mode servers with no in-cluster
+//     counterpart are left alone: users are expected to create and manage
+//     their own MCPServer for advanced mode.
+//   - For a server with a matching in-cluster MCPServer (whatever its mode,
+//     whether operator-created or user-created), the latest signal (if any) is
+//     stamped on it and a reconciliation is triggered.
+//   - In-cluster MCPServers for this control plane whose Konnect counterpart
+//     is no longer reported are deleted.
+//
 // All errors are collected and returned as a single joined error.
-func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkonnectcomp.MCPServerCPInfo) error {
+func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkonnectcomp.MCPServerCPInfo, sig *mcpSignal) error {
 	var (
 		errs        []error
 		cpName      = f.controlPlane.Name
@@ -129,19 +164,34 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 		konnectIDs = make(map[string]struct{}, len(servers))
 	)
 
+	var existing konnectv1alpha1.MCPServerList
+	if err := f.client.List(ctx, &existing,
+		client.InNamespace(nnCP.Namespace),
+		client.MatchingFields{
+			index.IndexFieldMCPServerOnKonnectGatewayControlPlane: nnCP.String(),
+		},
+	); err != nil {
+		return fmt.Errorf("failed to list MCPServers for control plane %s: %w", nnCP, err)
+	}
+
+	byID := make(map[string]*konnectv1alpha1.MCPServer, len(existing.Items))
+	for i := range existing.Items {
+		byID[string(existing.Items[i].Spec.Mirror.Konnect.ID)] = &existing.Items[i]
+	}
+
 	for _, server := range servers {
-		ok, err := f.syncMCPServer(ctx, logger, server, nnCP, konnectIDs)
-		if err != nil {
+		// Presence in Konnect is what keeps an in-cluster MCPServer alive,
+		// whatever its mode: record it before anything else so
+		// cleanupMCPServersForControlPlane never deletes a server Konnect
+		// still reports.
+		konnectIDs[server.ID] = struct{}{}
+
+		if err := f.syncMCPServer(ctx, logger, server, nnCP, byID[server.ID], sig); err != nil {
 			errs = append(errs, err)
-			continue
-		}
-		if !ok {
-			logger.Info("MCPServer failed to synchronize", "id", server.ID, "cp", nnCP)
-			continue
 		}
 	}
 
-	if err := f.cleanupMCPServersForControlPlane(ctx, logger, nnCP, konnectIDs); err != nil {
+	if err := f.cleanupMCPServersForControlPlane(ctx, logger, existing.Items, konnectIDs); err != nil {
 		errs = append(errs, err)
 	}
 
@@ -206,56 +256,55 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	return servers, nil
 }
 
-// syncMCPServer syncs MCP Server from Konnect to Kubernetes.
-// It also deploys the MCPServerDataPlane for the MCPServer if it does not exist yet.
-// It returns true if the sync was successful.
+// syncMCPServer syncs a single Konnect MCP server to Kubernetes: if a
+// matching in-cluster MCPServer exists (whether operator-created or
+// user-created, in either mode), it is annotated with the latest signal (if
+// any) and a reconciliation is triggered. Otherwise, a mirror is created for
+// basic-mode servers; advanced-mode servers with no in-cluster counterpart are
+// left for the user to create and configure.
 func (f *MCPServersFetcher) syncMCPServer(
 	ctx context.Context,
 	logger logr.Logger,
 	mcpServerInfo sdkkonnectcomp.MCPServerCPInfo,
 	nnCP types.NamespacedName,
-	mcpServerKonnectIDs map[string]struct{},
-) (bool, error) {
+	existing *konnectv1alpha1.MCPServer,
+	sig *mcpSignal,
+) error {
+	if existing != nil {
+		if err := f.setSignalAnnotations(ctx, logger, existing, sig); err != nil {
+			return fmt.Errorf("failed to update signal annotations on MCPServer %s/%s: %w", existing.Namespace, existing.Name, err)
+		}
+		// Trigger a reconciliation so the controller can sync its state with
+		// the remote without waiting for a CRD change.
+		select {
+		case f.reconcileEventCh <- event.GenericEvent{Object: existing}:
+		default:
+			return fmt.Errorf("trigger channel is full, failed to enqueue reconciliation for MCPServer %s/%s", existing.Namespace, existing.Name)
+		}
+		return nil
+	}
 
-	// Skip servers that are not in "basic" mode. Currently, the only other
-	// mode is advanced and we do not sync/deploy MCPServers for advanced mode.
-	// Users are expected to deploy their own MCPServer for advanced mode
-	// and configure it as they see fit.
-	// NOTE: This does not take into account migrating between modes.
-	// If a server is migrated from basic to advanced, the mirrored MCPServer will
-	// be deleted.
-	// If a server is migrated from advanced to basic, the mirrored
-	// MCPServer will be created.
+	// No in-cluster MCPServer for this Konnect server. Only basic mode gets an
+	// operator-created mirror; advanced mode is the user's to deploy and
+	// configure as they see fit.
+	// NOTE: This does not take into account migrating between modes: if a
+	// server is migrated from advanced to basic, a mirror is created here; if
+	// migrated from basic to advanced, the existing mirror is left in place
+	// (and kept alive by the presence check in syncMCPServers) rather than
+	// handed over to the user.
 	// TODO: https://github.com/Kong/kong-operator/issues/5135
 	if mcpServerInfo.Mode != nil &&
 		*mcpServerInfo.Mode != sdkkonnectcomp.MCPServerCPInfoModeBasic {
-		return true, nil
+		return nil
 	}
-
-	mcpServerKonnectIDs[mcpServerInfo.ID] = struct{}{}
 
 	nn := generateMCPServerNN(nnCP.Namespace, nnCP.Name, mcpServerInfo.ID)
-	var existing konnectv1alpha1.MCPServer
-	if err := f.client.Get(ctx, nn, &existing); err == nil {
-		// The MCPServer already exists on the API server: trigger a
-		// reconciliation so the controller can sync its state with the
-		// remote without waiting for a CRD change.
-		select {
-		case f.reconcileEventCh <- event.GenericEvent{Object: &existing}:
-		default:
-			return false, fmt.Errorf("trigger channel is full, failed to enqueue reconciliation for MCPServer %s/%s", nnCP.Namespace, existing.Name)
-		}
-		return false, nil
-	} else if !apierrors.IsNotFound(err) {
-		return false, fmt.Errorf("failed to check MCPServer existence %s: %w", nn, err)
-	}
-
-	mcpServer := generateMCPServer(nn, mcpServerInfo, nnCP.Name)
+	mcpServer := generateMCPServer(nn, mcpServerInfo, nnCP.Name, sig)
 	if err := controllerutil.SetControllerReference(f.controlPlane, mcpServer, f.scheme); err != nil {
-		return false, fmt.Errorf("failed to set owner reference on MCPServer %s: %w", nn, err)
+		return fmt.Errorf("failed to set owner reference on MCPServer %s: %w", nn, err)
 	}
 	if err := f.client.Create(ctx, mcpServer); err != nil {
-		return false, fmt.Errorf("failed to create MCPServer %s: %w", nn, err)
+		return fmt.Errorf("failed to create MCPServer %s: %w", nn, err)
 	}
 	nnMCP := client.ObjectKeyFromObject(mcpServer)
 	log.Debug(logger, "created MCPServer", "name", nnMCP.Name, "namespace", nnMCP.Namespace, "id", mcpServerInfo.ID)
@@ -264,15 +313,36 @@ func (f *MCPServersFetcher) syncMCPServer(
 	// MCPServerDataPlane create fails — permanent orphan.
 	mcpServerDataPlane := generateMCPServerDataPlane(nn, mcpServer)
 	if err := controllerutil.SetControllerReference(mcpServer, mcpServerDataPlane, f.scheme); err != nil {
-		return false, fmt.Errorf("failed to set owner reference on MCPServerDataPlane %s: %w", nn, err)
+		return fmt.Errorf("failed to set owner reference on MCPServerDataPlane %s: %w", nn, err)
 	}
 	if err := f.client.Create(ctx, mcpServerDataPlane); err != nil {
-		return false, fmt.Errorf("failed to create MCPServerDataPlane %s: %w", nn, err)
+		return fmt.Errorf("failed to create MCPServerDataPlane %s: %w", nn, err)
 	}
 	nnMCPDataPlane := client.ObjectKeyFromObject(mcpServerDataPlane)
 	log.Debug(logger, "created MCPServerDataPlane", "name", nnMCPDataPlane.Name, "namespace", nnMCPDataPlane.Namespace)
 
-	return true, nil
+	return nil
+}
+
+// setSignalAnnotations stamps sig's offset/version onto mcpServer's
+// annotations and patches the object if anything changed. A nil sig, or a
+// sig matching what's already stored, is a no-op.
+func (f *MCPServersFetcher) setSignalAnnotations(ctx context.Context, logger logr.Logger, mcpServer *konnectv1alpha1.MCPServer, sig *mcpSignal) error {
+	if sig == nil ||
+		(mcpServer.Annotations[mcpSignalOffsetAnnotationKey] == sig.Offset &&
+			mcpServer.Annotations[mcpSignalVersionAnnotationKey] == sig.Version) {
+		return nil
+	}
+
+	old := mcpServer.DeepCopy()
+	if mcpServer.Annotations == nil {
+		mcpServer.Annotations = make(map[string]string, 2)
+	}
+	mcpServer.Annotations[mcpSignalOffsetAnnotationKey] = sig.Offset
+	mcpServer.Annotations[mcpSignalVersionAnnotationKey] = sig.Version
+
+	_, _, err := patch.ApplyPatchIfNotEmpty(ctx, f.client, logger, mcpServer, old, true)
+	return err
 }
 
 // generateMCPServerNN builds a Kubernetes-safe NamespacedName for a mirrored
@@ -285,8 +355,9 @@ func generateMCPServer(
 	nn types.NamespacedName,
 	server sdkkonnectcomp.MCPServerCPInfo,
 	cpName string,
+	sig *mcpSignal,
 ) *konnectv1alpha1.MCPServer {
-	return &konnectv1alpha1.MCPServer{
+	mcpServer := &konnectv1alpha1.MCPServer{
 		Name:      nn.Name,
 		Namespace: nn.Namespace,
 		Finalizers: []string{
@@ -307,6 +378,13 @@ func generateMCPServer(
 			},
 		},
 	}
+	if sig != nil {
+		mcpServer.Annotations = map[string]string{
+			mcpSignalOffsetAnnotationKey:  sig.Offset,
+			mcpSignalVersionAnnotationKey: sig.Version,
+		}
+	}
+	return mcpServer
 }
 
 func generateMCPServerDataPlane(
@@ -331,34 +409,20 @@ func generateMCPServerDataPlane(
 }
 
 // cleanupMCPServersForControlPlane deletes any MCPServer Kubernetes objects
-// that exist for the given control plane but are no longer present in the provided
-// map of Konnect server IDs.
+// (in the given, already-fetched list of MCPServers for the control plane)
+// that are no longer present in the provided map of Konnect server IDs.
 // MCPServerDataPlane objects are automatically deleted by ownerReference garbage collection.
 // It returns a joined error if any deletions fail.
 func (f *MCPServersFetcher) cleanupMCPServersForControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
-	nnCP types.NamespacedName,
+	existing []konnectv1alpha1.MCPServer,
 	mcpServerKonnectIDs map[string]struct{},
 ) error {
-	var (
-		errs        []error
-		objectKeyCP = nnCP.String()
-	)
+	var errs []error
 
-	// Delete MCPServers that exist in Kubernetes but are no longer present in Konnect.
-	var existing konnectv1alpha1.MCPServerList
-	if err := f.client.List(ctx, &existing,
-		client.InNamespace(nnCP.Namespace),
-		client.MatchingFields{
-			index.IndexFieldMCPServerOnKonnectGatewayControlPlane: objectKeyCP,
-		},
-	); err != nil {
-		return fmt.Errorf("failed to list MCPServers for control plane %s: %w", objectKeyCP, err)
-	}
-
-	for i := range existing.Items {
-		mcpServer := &existing.Items[i]
+	for i := range existing {
+		mcpServer := &existing[i]
 		id := string(mcpServer.Spec.Mirror.Konnect.ID)
 		nnMCP := client.ObjectKeyFromObject(mcpServer)
 
