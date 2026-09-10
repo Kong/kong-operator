@@ -24,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -82,6 +83,7 @@ func TestDeploymentBuilder(t *testing.T) {
 				ctx := t.Context()
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -147,6 +149,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -257,6 +260,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -345,6 +349,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(client.MatchingLabels{})
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -407,6 +412,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(client.MatchingLabels{})
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -477,6 +483,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				deploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(client.MatchingLabels{})
 
 				deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -513,6 +520,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				firstDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -541,6 +549,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				secondDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -576,6 +585,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				firstDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				existingDeployment, res, err := firstDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)
@@ -605,6 +615,7 @@ func TestDeploymentBuilder(t *testing.T) {
 
 				secondDeploymentBuilder := NewDeploymentBuilder(logr.Discard(), reconciler.Client).
 					WithClusterCertificate(certSecretName).
+					WithIPFamily(ipfamily.IPv4).
 					WithAdditionalLabels(deploymentLiveLabels)
 
 				deployment, res, err := secondDeploymentBuilder.BuildAndDeploy(ctx, dataPlane, enforceConfig, validateDataPlaneImage)

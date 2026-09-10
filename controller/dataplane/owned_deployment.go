@@ -162,7 +162,11 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, err
 	}
 	// apply default envvars and restore the hacked-out ones
-	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults(d.ipFamily))
+	kongDefaults, err := config.KongDefaults(d.ipFamily)
+	if err != nil {
+		return nil, op.Noop, fmt.Errorf("failed to compute Kong defaults for the DataPlane: %w", err)
+	}
+	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
 
 	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err

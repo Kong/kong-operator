@@ -1420,33 +1420,26 @@ func setDataPlaneDeploymentListenPorts(
 		// One template is derived per user-configured SSL endpoint, so a dual-stack
 		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
 		// bind addresses (with their own options) for every generated Kong port.
-		var templates []streamListenTemplate
-		switch dataPlaneIPFamily {
-		case ipfamily.IPv6:
-			templates = []streamListenTemplate{
-				{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
-			}
-		case ipfamily.Dual:
-			templates = []streamListenTemplate{
-				{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
-				{address: consts.ListenAddressIPv6, options: []string{"reuseport"}},
-			}
-		case ipfamily.IPv4, ipfamily.Auto:
-			fallthrough
-		default:
-			templates = []streamListenTemplate{
-				{address: consts.ListenAddressIPv4, options: []string{"reuseport"}},
-			}
+		templates, err := wildcardStreamTemplates(dataPlaneIPFamily, []string{"reuseport"})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build default stream listen templates: %w", err)
 		}
 		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
 				templates = templates[:0]
 				for _, ep := range cfg.SSLEndpoints {
-					address := ep.Address
-					if address == "" {
-						address = consts.ListenAddressIPv4
+					if ep.Address == "" {
+						// An empty host in a user-configured listen value (e.g. ":8443 ssl")
+						// is valid Kong syntax meaning "bind to the wildcard": resolve it
+						// to the wildcard address(es) of the cluster's IP family.
+						wildcards, err := wildcardStreamTemplates(dataPlaneIPFamily, ep.Options)
+						if err != nil {
+							return nil, fmt.Errorf("failed to resolve the wildcard address in KONG_STREAM_LISTEN endpoint %q: %w", ep.Address+":"+strconv.Itoa(ep.Port), err)
+						}
+						templates = append(templates, wildcards...)
+						continue
 					}
-					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
+					templates = append(templates, streamListenTemplate{address: ep.Address, options: ep.Options})
 				}
 			}
 		}
@@ -1726,6 +1719,34 @@ type streamListenPort struct {
 type streamListenTemplate struct {
 	address string
 	options []string
+}
+
+// wildcardStreamTemplates returns one stream listen template per wildcard
+// address of the given IP family (one for single-stack families, two for
+// ipfamily.Dual), all bound with the given listen options. It returns an
+// error for ipfamily.Auto and any unrecognized family: the IP family must be
+// resolved to a concrete value (see ipfamily.Resolve) before listen values
+// are rendered, because silently assuming a concrete family (e.g. IPv4)
+// would render DataPlanes' Kong listens unreachable on clusters of a
+// different family.
+func wildcardStreamTemplates(family ipfamily.IPFamily, options []string) ([]streamListenTemplate, error) {
+	switch family {
+	case ipfamily.IPv4:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv4, options: options},
+		}, nil
+	case ipfamily.IPv6:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv6, options: options},
+		}, nil
+	case ipfamily.Dual:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv4, options: options},
+			{address: consts.ListenAddressIPv6, options: options},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown IP family %q: the IP family must be resolved before rendering stream listen values", family)
+	}
 }
 
 // streamListenProtocolTokens returns the KONG_STREAM_LISTEN tokens the controller

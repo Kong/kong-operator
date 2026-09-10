@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -198,6 +199,7 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 				WithClusterCertificate("test-cert").
 				WithAdditionalLabels(map[string]string{"app": "test"}).
 				WithSecretLabelSelector("test-selector").
+				WithIPFamily(ipfamily.IPv4).
 				WithOpts(
 					labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(tc.dataplane),
 				)
@@ -273,6 +275,7 @@ func TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations(t *testing.T) {
 	newBuilder := func() *DeploymentBuilder {
 		return NewDeploymentBuilder(logger, fakeClient).
 			WithDefaultImage("kong:3.0").
+			WithIPFamily(ipfamily.IPv4).
 			WithClusterCertificate("test-cert")
 	}
 
@@ -361,6 +364,7 @@ func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) 
 
 	builder := NewDeploymentBuilder(logger, fakeClient).
 		WithDefaultImage("kong:3.0").
+		WithIPFamily(ipfamily.IPv4).
 		WithClusterCertificate("test-cert").
 		WithOpts(
 			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
@@ -430,6 +434,7 @@ func TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig(t *tes
 
 	builder := NewDeploymentBuilder(logr.Discard(), fakeClient).
 		WithDefaultImage("kong:3.0").
+		WithIPFamily(ipfamily.IPv4).
 		WithClusterCertificate("test-cert").
 		WithOpts(
 			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),

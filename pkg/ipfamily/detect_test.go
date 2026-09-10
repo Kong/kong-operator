@@ -1,12 +1,12 @@
 package ipfamily_test
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -17,8 +17,8 @@ import (
 
 func kubernetesServiceWithFamilies(families ...corev1.IPFamily) *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{Name: "kubernetes", Namespace: "default"},
-		Spec:       corev1.ServiceSpec{IPFamilies: families},
+		Name: "kubernetes", Namespace: "default",
+		Spec: corev1.ServiceSpec{IPFamilies: families},
 	}
 }
 
@@ -83,19 +83,32 @@ func TestResolve(t *testing.T) {
 
 	t.Run("explicit configuration wins over detection", func(t *testing.T) {
 		cl := newFakeClient(t, kubernetesServiceWithFamilies(corev1.IPv6Protocol)).Build()
-		got := ipfamily.Resolve(t.Context(), ipfamily.IPv4, cl, log)
+		got, err := ipfamily.Resolve(t.Context(), ipfamily.IPv4, cl, log)
+		require.NoError(t, err)
 		assert.Equal(t, ipfamily.IPv4, got)
 	})
 
 	t.Run("auto detects from cluster", func(t *testing.T) {
 		cl := newFakeClient(t, kubernetesServiceWithFamilies(corev1.IPv4Protocol, corev1.IPv6Protocol)).Build()
-		got := ipfamily.Resolve(t.Context(), ipfamily.Auto, cl, log)
+		got, err := ipfamily.Resolve(t.Context(), ipfamily.Auto, cl, log)
+		require.NoError(t, err)
 		assert.Equal(t, ipfamily.Dual, got)
 	})
 
-	t.Run("auto falls back to ipv4 on detection failure", func(t *testing.T) {
+	t.Run("auto returns an error when detection fails", func(t *testing.T) {
 		cl := newFakeClient(t).Build()
-		got := ipfamily.Resolve(t.Context(), ipfamily.Auto, cl, log)
-		assert.Equal(t, ipfamily.IPv4, got)
+		got, err := ipfamily.Resolve(t.Context(), ipfamily.Auto, cl, log)
+		require.Error(t, err)
+		assert.Empty(t, got)
+	})
+
+	t.Run("auto returns the context error when cancelled before the first attempt", func(t *testing.T) {
+		cl := newFakeClient(t).Build()
+		ctx, cancel := context.WithCancel(t.Context())
+		cancel()
+		got, err := ipfamily.Resolve(ctx, ipfamily.Auto, cl, log)
+		require.ErrorIs(t, err, context.Canceled)
+		assert.NotContains(t, err.Error(), "%!w(", "error must not wrap a nil detection error")
+		assert.Empty(t, got)
 	})
 }

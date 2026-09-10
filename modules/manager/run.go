@@ -92,6 +92,8 @@ type Config struct {
 	// (or families) DataPlanes' Kong listens bind to. Defaults to
 	// ipfamily.Auto, in which case Run resolves it to a concrete family by
 	// detecting the cluster's IP family before controllers are set up.
+	// Resolution of ipfamily.Auto is fatal if detection fails: the operator
+	// exits with an error instead of assuming a concrete family.
 	IPFamily ipfamily.IPFamily
 	// SecretLabelSelector specifies the label which will be used to limit the ingestion of secrets. Only those that have this label set to "true" will be ingested.
 	SecretLabelSelector string
@@ -346,7 +348,11 @@ func Run(
 		}
 	}
 
-	cfg.IPFamily = ipfamily.Resolve(ctx, cfg.IPFamily, mgr.GetAPIReader(), setupLog.WithName("ipfamily"))
+	ipFamily, err := ipfamily.Resolve(ctx, cfg.IPFamily, mgr.GetAPIReader(), setupLog.WithName("ipfamily"))
+	if err != nil {
+		return fmt.Errorf("unable to resolve the cluster IP family: %w", err)
+	}
+	cfg.IPFamily = ipFamily
 
 	controllers, err := setupControllers(mgr, &cfg, cpInstancesMgr, ssaProvider)
 	if err != nil {

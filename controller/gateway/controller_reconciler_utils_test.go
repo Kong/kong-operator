@@ -1102,6 +1102,28 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 		},
 	}
 
+	newOpts := func(userStreamListen string) operatorv1beta1.DataPlaneOptions {
+		opts := operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: consts.DataPlaneProxyContainerName},
+							},
+						},
+					},
+				},
+			},
+		}
+		if userStreamListen != "" {
+			opts.Deployment.PodTemplateSpec.Spec.Containers[0].Env = []corev1.EnvVar{
+				{Name: "KONG_STREAM_LISTEN", Value: userStreamListen},
+			}
+		}
+		return opts
+	}
+
 	for _, tt := range []struct {
 		family   ipfamily.IPFamily
 		expected string
@@ -1111,19 +1133,7 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 		{family: ipfamily.Dual, expected: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport"},
 	} {
 		t.Run(tt.family.String(), func(t *testing.T) {
-			opts := operatorv1beta1.DataPlaneOptions{
-				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-					DeploymentOptions: operatorv1beta1.DeploymentOptions{
-						PodTemplateSpec: &corev1.PodTemplateSpec{
-							Spec: corev1.PodSpec{
-								Containers: []corev1.Container{
-									{Name: consts.DataPlaneProxyContainerName},
-								},
-							},
-						},
-					},
-				},
-			}
+			opts := newOpts("")
 
 			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
 			require.NoError(t, err)
@@ -1133,6 +1143,37 @@ func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
 			assert.Equal(t, tt.expected, k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"))
 		})
 	}
+
+	t.Run("unresolved IP family returns an error", func(t *testing.T) {
+		for _, family := range []ipfamily.IPFamily{ipfamily.Auto, "unknown"} {
+			opts := newOpts("")
+
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, family)
+			require.Error(t, err, "family %q should not silently fall back to IPv4", family)
+		}
+	})
+
+	t.Run("user-configured KONG_STREAM_LISTEN with empty host resolves the wildcard per IP family", func(t *testing.T) {
+		for _, tt := range []struct {
+			family   ipfamily.IPFamily
+			expected string
+		}{
+			{family: ipfamily.IPv4, expected: "0.0.0.0:8899 ssl"},
+			{family: ipfamily.IPv6, expected: "[::]:8899 ssl"},
+			{family: ipfamily.Dual, expected: "0.0.0.0:8899 ssl,[::]:8899 ssl"},
+		} {
+			t.Run(tt.family.String(), func(t *testing.T) {
+				opts := newOpts(":8899 ssl")
+
+				_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+				require.NoError(t, err)
+
+				container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				assert.Equal(t, tt.expected, k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"))
+			})
+		}
+	})
 }
 
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {

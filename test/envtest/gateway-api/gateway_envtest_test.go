@@ -22,6 +22,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -167,12 +168,14 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	// Start KO Gateway and DataPlane reconcilers.
 	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&kogateway.Reconciler{
+			DataPlaneIPFamily:     ipfamily.IPv4,
 			Client:                c,
 			Scheme:                scheme,
 			Namespace:             ns.Name,
 			DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
 		},
 		&dpreconciler.Reconciler{
+			DataPlaneIPFamily:        ipfamily.IPv4,
 			Client:                   c,
 			ClusterCASecretName:      caSecretName,
 			ClusterCASecretNamespace: ns.Name,

@@ -20,6 +20,7 @@ import (
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
@@ -336,6 +337,7 @@ func setupDataPlaneTest(t *testing.T, ctx context.Context, caSecretName string) 
 
 	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, caSecretName)
 	dpReconciler := &dataplane.Reconciler{
+		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),
 		ClusterCASecretName:      clusterCA.Name,
 		ClusterCASecretNamespace: clusterCA.Namespace,

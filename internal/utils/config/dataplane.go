@@ -17,7 +17,13 @@ import (
 
 // ListenValue renders a Kong listen value for the given port, bound to the
 // wildcard address(es) of the given IP family.
-func ListenValue(family ipfamily.IPFamily, port int, options ...string) string {
+//
+// It returns an error for ipfamily.Auto and any unrecognized family: the IP
+// family must be resolved to a concrete value (see ipfamily.Resolve) before
+// listen values are rendered, because silently assuming a concrete family
+// (e.g. IPv4) would render DataPlanes' Kong listens unreachable on clusters
+// of a different family.
+func ListenValue(family ipfamily.IPFamily, port int, options ...string) (string, error) {
 	var suffix string
 	if len(options) > 0 {
 		suffix = " " + strings.Join(options, " ")
@@ -28,20 +34,38 @@ func ListenValue(family ipfamily.IPFamily, port int, options ...string) string {
 
 	switch family {
 	case ipfamily.IPv6:
-		return ipv6
+		return ipv6, nil
 	case ipfamily.Dual:
-		return fmt.Sprintf("%s, %s", ipv4, ipv6)
-	case ipfamily.IPv4, ipfamily.Auto:
-		fallthrough
+		return fmt.Sprintf("%s, %s", ipv4, ipv6), nil
+	case ipfamily.IPv4:
+		return ipv4, nil
 	default:
-		return ipv4
+		return "", fmt.Errorf("cannot render Kong listen value for IP family %q: the IP family must be resolved before rendering listen values", family)
 	}
 }
 
 // KongDefaults returns the baseline Kong proxy configuration options needed
 // for the proxy to function, with its listen addresses rendered for the
-// given IP family.
-func KongDefaults(family ipfamily.IPFamily) map[string]string {
+// given IP family. It returns an error for ipfamily.Auto and any
+// unrecognized family (see ListenValue).
+func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
+	proxyListenHTTP, err := ListenValue(family, consts.DataPlaneProxyPort, "reuseport", "backlog=16384")
+	if err != nil {
+		return nil, err
+	}
+	proxyListenHTTPS, err := ListenValue(family, consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384")
+	if err != nil {
+		return nil, err
+	}
+	statusListen, err := ListenValue(family, consts.DataPlaneStatusPort)
+	if err != nil {
+		return nil, err
+	}
+	adminListen, err := ListenValue(family, consts.DataPlaneAdminAPIPort, "ssl", "reuseport", "backlog=16384")
+	if err != nil {
+		return nil, err
+	}
+
 	return map[string]string{
 		"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
 		"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
@@ -57,13 +81,13 @@ func KongDefaults(family ipfamily.IPFamily) map[string]string {
 		"KONG_PROXY_ACCESS_LOG":       "/dev/stdout",
 		"KONG_PROXY_ERROR_LOG":        "/dev/stderr",
 		"KONG_PROXY_LISTEN": strings.Join([]string{
-			ListenValue(family, consts.DataPlaneProxyPort, "reuseport", "backlog=16384"),
-			ListenValue(family, consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384"),
+			proxyListenHTTP,
+			proxyListenHTTPS,
 		}, ", "),
-		"KONG_STATUS_LISTEN":                  ListenValue(family, consts.DataPlaneStatusPort),
+		"KONG_STATUS_LISTEN":                  statusListen,
 		"KONG_USE_STANDARD_GRPC_STATUS_CODES": "on",
 
-		"KONG_ADMIN_LISTEN": ListenValue(family, consts.DataPlaneAdminAPIPort, "ssl", "reuseport", "backlog=16384"),
+		"KONG_ADMIN_LISTEN": adminListen,
 
 		// MTLS
 		"KONG_ADMIN_SSL_CERT":                     "/var/cluster-certificate/tls.crt",
@@ -71,7 +95,7 @@ func KongDefaults(family ipfamily.IPFamily) map[string]string {
 		"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
 		"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
 		"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
-	}
+	}, nil
 }
 
 // kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
