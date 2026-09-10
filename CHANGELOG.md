@@ -70,7 +70,7 @@
   the corresponding `KONG_OPERATOR_KONNECT_CONTROLLER_MAX_CONCURRENT_RECONCILES`
   environment variable) has been removed. Please use
   `--max-concurrent-reconciles-konnect-controller` instead.
-  [#2768](https://github.com/Kong/kong-operator/issues/2768)
+  [#5544](https://github.com/Kong/kong-operator/pull/5544)
 
 ### Added
 
