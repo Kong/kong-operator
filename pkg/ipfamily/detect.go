@@ -2,6 +2,7 @@ package ipfamily
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -70,6 +71,9 @@ func Detect(ctx context.Context, reader client.Reader) (IPFamily, error) {
 // silently break DataPlanes on clusters of a different family.
 func Resolve(ctx context.Context, configured IPFamily, reader client.Reader, log logr.Logger) (IPFamily, error) {
 	if configured != Auto {
+		if _, err := New(string(configured)); err != nil {
+			return "", fmt.Errorf("invalid configured IP family %q: %w", configured, err)
+		}
 		return configured, nil
 	}
 
@@ -92,6 +96,9 @@ func Resolve(ctx context.Context, configured IPFamily, reader client.Reader, log
 			// first attempt. Wrap the wait error (ctx.Err()) itself instead of
 			// the unset lastErr.
 			return "", fmt.Errorf("failed to detect cluster IP family: %w", err)
+		}
+		if ctxErr := ctx.Err(); ctxErr != nil {
+			return "", fmt.Errorf("failed to detect cluster IP family: %w", errors.Join(ctxErr, lastErr))
 		}
 		return "", fmt.Errorf("failed to detect cluster IP family after %d attempts: %w", detectBackoff.Steps, lastErr)
 	}
