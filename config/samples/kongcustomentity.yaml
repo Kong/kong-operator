@@ -1,0 +1,25 @@
+# KongCustomEntity lets you configure a Kong entity that has no dedicated CRD yet.
+# This example configures a `degraphql_routes` entity for the `degraphql` plugin
+# (Kong Enterprise only), attaching it to the KongPlugin below via parentRef.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: degraphql-example
+plugin: degraphql
+config:
+  graphql_server_path: /v1/graphql
+---
+apiVersion: configuration.konghq.com/v1alpha1
+kind: KongCustomEntity
+metadata:
+  name: degraphql-route-example
+spec:
+  controllerName: kong
+  type: degraphql_routes
+  parentRef:
+    group: configuration.konghq.com
+    kind: KongPlugin
+    name: degraphql-example
+  fields:
+    uri: /contacts
+    query: "query{ contacts { name } }"
