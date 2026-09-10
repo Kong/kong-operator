@@ -95,11 +95,11 @@ func NewManager(logger logr.Logger, opts ...ManagerOption) *Manager {
 // ScheduleInstance adds a new manager.Manager instance to the multi-instance manager and starts it immediately in a
 // separate goroutine. If an instance with the same ID already exists, it returns a InstanceWithIDAlreadyScheduledError error.
 func (m *Manager) ScheduleInstance(in ManagerInstance) error {
-	if err := m.Registry.ScheduleInstance(in); err != nil {
-		return err
-	}
 	if m.admissionReqHandler != nil {
 		m.admissionReqHandler.RegisterValidator(in.ID(), in.KongValidator())
+	}
+	if err := m.Registry.ScheduleInstance(in); err != nil {
+		return err
 	}
 	return nil
 }
