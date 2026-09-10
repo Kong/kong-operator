@@ -40,7 +40,6 @@ jobs:
           - suite: ko
           - suite: ko
             ip_family: ipv6
-            continue-on-error: true
           - suite: konnect
           - suite: kic
             kong-variant: enterprise
@@ -49,7 +48,6 @@ jobs:
           - suite: bluegreen
           - suite: bluegreen
             ip_family: ipv6
-            continue-on-error: true
           - suite: validatingwebhook
             router_flavor: traditional_compatible
           - suite: validatingwebhook
