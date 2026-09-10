@@ -40,6 +40,10 @@ func (m *mockInstance) ID() manager.ID {
 func (m *mockInstance) Run(ctx context.Context) error {
 	m.wasStarted.Store(true)
 
+	if m.returnErrOnRun != nil {
+		return m.returnErrOnRun
+	}
+
 	<-ctx.Done()
 	m.wasContextCanceled.Store(true)
 

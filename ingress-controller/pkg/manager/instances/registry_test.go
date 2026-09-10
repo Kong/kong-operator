@@ -1,6 +1,7 @@
 package instances_test
 
 import (
+	"errors"
 	"testing"
 	"time"
 
@@ -85,6 +86,17 @@ func TestRegistry_Scheduling(t *testing.T) {
 		require.EventuallyWithT(t, func(t *assert.CollectT) {
 			err := registry.IsInstanceReady(mockInstance1.ID())
 			require.ErrorIs(t, err, instances.NewInstanceNotFoundError(mockInstance1.ID()))
+		}, waitTime, tickTime)
+	})
+
+	t.Run("removes an instance that exits with an error", func(t *testing.T) {
+		failing := newMockInstance(manager.NewRandomID())
+		failing.returnErrOnRun = errors.New("boom")
+		require.NoError(t, registry.ScheduleInstance(failing))
+
+		require.EventuallyWithT(t, func(t *assert.CollectT) {
+			err := registry.IsInstanceReady(failing.ID())
+			assert.ErrorIs(t, err, instances.NewInstanceNotFoundError(failing.ID()))
 		}, waitTime, tickTime)
 	})
 }
