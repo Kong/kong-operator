@@ -360,6 +360,29 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 		assert.Equal(t, metav1.ConditionFalse, cond.Status)
 		assert.Equal(t, string(aigatewayv1alpha1.CertificateControlPlaneRefMissingReason), cond.Reason)
 	})
+
+	t.Run("no ControlPlaneRef, CertificateSecret cleared after being set: stale condition is removed", func(t *testing.T) {
+		aigwdp := makeAIGWDP()
+		aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+			Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
+		}
+		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
+		r := &Reconciler{Client: cl}
+
+		// Prior reconcile: CertificateSecret was set, condition surfaces the mismatch.
+		_, _, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		require.NoError(t, err)
+		require.NotNil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
+
+		// User clears CertificateSecret; still no ControlPlaneRef.
+		aigwdp.Spec.CertificateSecret = nil
+		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+
+		require.NoError(t, err)
+		assert.Equal(t, op.Noop, res)
+		assert.Nil(t, secret)
+		assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
+	})
 }
 
 func Test_cleanupStaleAutomaticCertificateSecret(t *testing.T) {

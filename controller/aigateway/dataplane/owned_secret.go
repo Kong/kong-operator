@@ -64,6 +64,12 @@ func (r *Reconciler) getCertificateSecret(
 				Message:            aigatewayv1alpha1.CertificateControlPlaneRefMissingMessage,
 				ObservedGeneration: aigwdp.Generation,
 			})
+		} else {
+			// cs was cleared (or never set) while still controlPlaneRef-less:
+			// drop any stale condition from an earlier reconcile where cs was
+			// non-nil, since nothing else touches CertificateProvisionedType
+			// while aigatewaycp stays nil.
+			apimeta.RemoveStatusCondition(&aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType))
 		}
 		return op.Noop, nil, nil
 	}
