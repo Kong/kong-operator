@@ -119,11 +119,25 @@ func routesForClientCertSecret(ctx context.Context, cl client.Client, secretName
 	return requests
 }
 
-// MapHTTPRouteForPluginConfigSecret returns a handler.MapFunc that, given a Secret, lists all
-// KongPlugins in the same namespace sourcing their configuration from it via spec.configFrom or
-// spec.configPatches, then returns reconcile.Requests for all HTTPRoutes that reference those
-// KongPlugins in an ExtensionRef filter.
+// MapHTTPRouteForPluginConfigSecret returns a handler.MapFunc mapping a Secret to the HTTPRoutes
+// whose ExtensionRef KongPlugins source their configuration from it.
 func MapHTTPRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
+	return mapRoutesForPluginConfigSecret[gwtypes.HTTPRouteList](cl, index.KongPluginsOnHTTPRouteIndex)
+}
+
+// MapGRPCRouteForPluginConfigSecret returns a handler.MapFunc mapping a Secret to the GRPCRoutes
+// whose ExtensionRef KongPlugins source their configuration from it.
+func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
+	return mapRoutesForPluginConfigSecret[gwtypes.GRPCRouteList](cl, index.KongPluginsOnGRPCRouteIndex)
+}
+
+// mapRoutesForPluginConfigSecret returns reconcile.Requests for the routes listed by indexName that
+// reference a KongPlugin sourcing its configuration from the given Secret via spec.configFrom or
+// spec.configPatches.
+func mapRoutesForPluginConfigSecret[
+	TList gwtypes.SupportedRouteList,
+	TListPtr gwtypes.SupportedRouteListPtr[TList],
+](cl client.Client, indexName string) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
 		secret, ok := obj.(*corev1.Secret)
 		if !ok {
@@ -132,55 +146,36 @@ func MapHTTPRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 
 		var requests []reconcile.Request
 		for _, pluginKey := range kongPluginsForConfigSecret(ctx, cl, secret.Namespace, secret.Name) {
-			routes := &gwtypes.HTTPRouteList{}
-			if err := cl.List(ctx, routes, client.MatchingFields{
-				index.KongPluginsOnHTTPRouteIndex: pluginKey,
-			}); err != nil {
-				// Map functions cannot return an error, so log the dropped reconcile instead of
-				// letting the mirrored KongPlugin keep a stale config with no trace of why.
-				log.Error(ctrllog.FromContext(ctx), err, "Failed to list HTTPRoutes for KongPlugin", "kongplugin", pluginKey)
+			var list TList
+			var listPtr TListPtr = &list
+			if err := cl.List(ctx, listPtr, client.MatchingFields{indexName: pluginKey}); err != nil {
+				// Map functions cannot return an error, so log the dropped reconcile.
+				log.Error(ctrllog.FromContext(ctx), err, "Failed to list routes for KongPlugin", "kongplugin", pluginKey)
 				continue
 			}
-			for _, route := range routes.Items {
-				requests = append(requests, reconcile.Request{
-					Namespace: route.Namespace, Name: route.Name,
-				})
-			}
+			requests = append(requests, requestsForRouteList(listPtr)...)
 		}
 		return lo.Uniq(requests)
 	}
 }
 
-// MapGRPCRouteForPluginConfigSecret returns a handler.MapFunc that, given a Secret, lists all
-// KongPlugins in the same namespace sourcing their configuration from it via spec.configFrom or
-// spec.configPatches, then returns reconcile.Requests for all GRPCRoutes that reference those
-// KongPlugins in an ExtensionRef filter.
-func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		secret, ok := obj.(*corev1.Secret)
-		if !ok {
-			return nil
-		}
-
-		var requests []reconcile.Request
-		for _, pluginKey := range kongPluginsForConfigSecret(ctx, cl, secret.Namespace, secret.Name) {
-			routes := &gwtypes.GRPCRouteList{}
-			if err := cl.List(ctx, routes, client.MatchingFields{
-				index.KongPluginsOnGRPCRouteIndex: pluginKey,
-			}); err != nil {
-				// Map functions cannot return an error, so log the dropped reconcile instead of
-				// letting the mirrored KongPlugin keep a stale config with no trace of why.
-				log.Error(ctrllog.FromContext(ctx), err, "Failed to list GRPCRoutes for KongPlugin", "kongplugin", pluginKey)
-				continue
-			}
-			for _, route := range routes.Items {
-				requests = append(requests, reconcile.Request{
-					Namespace: route.Namespace, Name: route.Name,
-				})
-			}
-		}
-		return lo.Uniq(requests)
+// requestsForRouteList returns one reconcile.Request per route in the list.
+func requestsForRouteList(list client.ObjectList) []reconcile.Request {
+	var requests []reconcile.Request
+	appendRoute := func(namespace, name string) {
+		requests = append(requests, reconcile.Request{Namespace: namespace, Name: name})
 	}
+	switch l := list.(type) {
+	case *gwtypes.HTTPRouteList:
+		for _, route := range l.Items {
+			appendRoute(route.Namespace, route.Name)
+		}
+	case *gwtypes.GRPCRouteList:
+		for _, route := range l.Items {
+			appendRoute(route.Namespace, route.Name)
+		}
+	}
+	return requests
 }
 
 // kongPluginsForConfigSecret returns the "namespace/name" keys of the KongPlugins in the given
@@ -189,8 +184,7 @@ func MapGRPCRouteForPluginConfigSecret(cl client.Client) handler.MapFunc {
 func kongPluginsForConfigSecret(ctx context.Context, cl client.Client, secretNamespace, secretName string) []string {
 	plugins := &configurationv1.KongPluginList{}
 	if err := cl.List(ctx, plugins, client.InNamespace(secretNamespace)); err != nil {
-		// Map functions cannot return an error, so log the dropped reconcile instead of
-		// letting the mirrored KongPlugin keep a stale config with no trace of why.
+		// Map functions cannot return an error, so log the dropped reconcile.
 		log.Error(ctrllog.FromContext(ctx), err, "Failed to list KongPlugins for config Secret",
 			"secret", secretNamespace+"/"+secretName)
 		return nil

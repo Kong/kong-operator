@@ -131,10 +131,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
-	// The hybrid gateway controllers watch the same Gateway API types and rely on the same indexes,
-	// but they are enabled by the Konnect flag rather than the Gateway one. Without this the field
-	// indexes are missing in a Konnect-only setup and every index-backed watch silently stops
-	// mapping events back to their route.
+	// The hybrid gateway controllers need the same indexes but are gated on the Konnect flag.
 	if cfg.GatewayControllerEnabled || cfg.KonnectControllersEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForGatewayClass(),

@@ -1,10 +1,8 @@
 # Asserts the configuration of the KongPlugin the operator mirrors into the control plane
 # namespace for a given route and plugin type.
 #
-# Unlike assert-kongPlugin.yaml this selects the mirrored KongPlugin explicitly, by the operator's
-# managed-by label plus the hybrid-routes annotation, so user-authored KongPlugins in the same
-# namespace are never considered. Use it whenever such a KongPlugin may carry no spec.config of its
-# own, as is the case with spec.configFrom.
+# Unlike assert-kongPlugin.yaml it selects the mirrored KongPlugin explicitly, so a user-authored
+# KongPlugin carrying no spec.config of its own (spec.configFrom) is never considered.
 #
 # Required bindings:
 #   - namespace: Namespace holding the mirrored KongPlugin (the control plane namespace)

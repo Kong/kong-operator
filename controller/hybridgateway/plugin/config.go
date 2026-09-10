@@ -23,21 +23,13 @@ const rawPatchPattern = `[{"op":"%s","path":"%s","value":%s}]`
 const (
 	// jsonPatchOpAdd is the RFC6902 "add" operation.
 	jsonPatchOpAdd = "add"
-	// jsonPatchOpReplace is the RFC6902 "replace" operation. It is used instead of
-	// "add" when patching the document root, which the jsonpatch package cannot "add" to.
+	// jsonPatchOpReplace is the RFC6902 "replace" operation, used on the document root.
 	jsonPatchOpReplace = "replace"
 )
 
 // ResolveConfig returns the effective configuration of the given KongPlugin, resolving the Secret
-// references declared in spec.configFrom and spec.configPatches.
-//
-// The two fields are mutually exclusive (enforced by the KongPlugin CRD validation rules), so:
-//   - when spec.configFrom is set, the whole configuration is read from the referenced Secret key,
-//     which may hold either JSON or YAML;
-//   - otherwise spec.config is used as-is, with every spec.configPatches entry applied on top of it
-//     as an RFC6902 patch whose value is read from the referenced Secret key.
-//
-// When neither field is set the raw spec.config is returned untouched, including when it is nil.
+// references declared in spec.configFrom and spec.configPatches. The two are mutually exclusive,
+// enforced by the KongPlugin CRD validation rules. With neither set, spec.config is returned as-is.
 func ResolveConfig(ctx context.Context, cl client.Client, plugin *configurationv1.KongPlugin) (json.RawMessage, error) {
 	if plugin == nil {
 		return nil, errors.New("plugin cannot be nil")
@@ -62,9 +54,8 @@ func ResolveConfig(ctx context.Context, cl client.Client, plugin *configurationv
 	return config, nil
 }
 
-// configFromSecret reads the plugin configuration from the key of the Secret referenced by the
-// given source, in the given namespace. The stored value may be either a JSON or a YAML object, and
-// is always returned as JSON. Anything that is not an object is rejected.
+// configFromSecret reads the plugin configuration from the referenced Secret key. The value must be
+// a JSON or YAML object, and is always returned as JSON.
 func configFromSecret(
 	ctx context.Context,
 	cl client.Client,
@@ -82,9 +73,7 @@ func configFromSecret(
 			return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object: %w", ref.Key, namespace, ref.Secret, yamlErr)
 		}
 	}
-	// An empty value and a literal null both parse cleanly into a nil map. Reject them instead of
-	// mirroring a null configuration, which would be the silent misconfiguration this resolution
-	// exists to prevent.
+	// Empty and null values parse into a nil map; reject rather than mirror a null config.
 	if config == nil {
 		return nil, fmt.Errorf("key %s in secret %s/%s does not hold a JSON or YAML object", ref.Key, namespace, ref.Secret)
 	}
@@ -97,8 +86,8 @@ func configFromSecret(
 }
 
 // applyConfigPatches applies every configPatches entry on top of the given raw configuration,
-// resolving each patched value from the referenced Secret key in the given namespace. A nil or
-// empty raw configuration is patched as if it were an empty JSON object.
+// resolving each patched value from the referenced Secret key. An empty configuration is patched
+// as an empty JSON object.
 func applyConfigPatches(
 	ctx context.Context,
 	cl client.Client,
@@ -130,8 +119,7 @@ func applyConfigPatches(
 }
 
 // applyJSONPatchFromSecretRef applies a single RFC6902 patch to raw, injecting at path the value
-// held by the given key of the given Secret. The raw secret bytes are interpolated into the patch
-// document as-is, so they must themselves be valid JSON.
+// held by the given Secret key. The secret bytes are interpolated as-is, so must be valid JSON.
 // Ported from ingress-controller/internal/dataplane/kongstate/plugin.go.
 func applyJSONPatchFromSecretRef(
 	ctx context.Context,
@@ -147,9 +135,8 @@ func applyJSONPatchFromSecretRef(
 		return nil, err
 	}
 
-	// RFC6902 specifies the behavior of applying "add" on the document root, but the jsonpatch
-	// package cannot "add" on the root path (path=""), so "replace" is used to set the whole
-	// document instead. See https://github.com/evanphx/json-patch/issues/188.
+	// jsonpatch cannot "add" on the root path, so use "replace" there.
+	// See https://github.com/evanphx/json-patch/issues/188.
 	op := jsonPatchOpAdd
 	if path == "" {
 		op = jsonPatchOpReplace
@@ -161,8 +148,7 @@ func applyJSONPatchFromSecretRef(
 		return nil, fmt.Errorf("failed to decode patch for path %s from secret %s/%s: %w", path, namespace, secretName, err)
 	}
 
-	// EnsurePathExistsOnAdd allows adding a subpath of a path that does not exist yet, e.g. applying
-	// {"op":"add","path":"/add/headers","value":[{"h1":"v1"}]} on `{}`.
+	// EnsurePathExistsOnAdd allows adding a subpath of a path that does not exist yet.
 	opts := jsonpatch.NewApplyOptions()
 	opts.EnsurePathExistsOnAdd = true
 	patched, err := p.ApplyWithOptions(raw, opts)

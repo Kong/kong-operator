@@ -4,12 +4,9 @@ set -o errexit
 set -o nounset
 set -o pipefail
 
-# Verifies the configuration of the KongPlugin the operator mirrors into the control plane
-# namespace for a given route and plugin type.
-#
-# The mirrored KongPlugin is selected by the operator's managed-by label plus the hybrid-routes
-# annotation, so user-authored KongPlugins living in the same namespace are never considered. That
-# matters for plugins using spec.configFrom, which carry no spec.config of their own.
+# Verifies the configuration of the KongPlugin the operator mirrors into the control plane namespace
+# for a given route and plugin type. It is selected by the managed-by label plus the hybrid-routes
+# annotation, so user-authored KongPlugins in the same namespace are never considered.
 #
 # Variables (from environment):
 #   NAMESPACE: Namespace holding the mirrored KongPlugin (the control plane namespace).
@@ -29,8 +26,7 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 MANAGED_BY_LABEL="gateway-operator.konghq.com/managed-by"
 ROUTES_ANNOTATION="gateway-operator.konghq.com/hybrid-routes"
 
-# EXPECTED_CONFIG is interpolated into jq with --argjson below, which aborts the script on malformed
-# input. Report it as a normal failure so the chainsaw check shows what is wrong.
+# jq --argjson aborts on malformed input, so report it as a normal failure instead.
 if ! jq -e . >/dev/null 2>&1 <<<"$EXPECTED_CONFIG"; then
   jq -n --arg expected_config "$EXPECTED_CONFIG" \
     '{success: false, error: "EXPECTED_CONFIG is not valid JSON", expected_config: $expected_config}'
@@ -51,9 +47,8 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
     continue
   }
 
-  # The annotation is a bare comma-separated list of "namespace/name" (see
-  # metadata.AppendRouteToAnnotation), so match a whole element: a substring match would also accept
-  # a route whose name merely starts with this one.
+  # The annotation is a bare comma-separated list, so match a whole element: a substring match
+  # would also accept a route whose name merely starts with this one.
   LAST_CONFIG=$(echo "$PLUGINS_JSON" | jq -c \
     --arg route "$ROUTE_REF" \
     --arg ptype "$PLUGIN_TYPE" \
@@ -85,8 +80,7 @@ while [[ $ATTEMPT -lt $RETRY_COUNT ]]; do
   sleep "$RETRY_DELAY"
 done
 
-# LAST_ERROR embeds quotes and, on a kubectl failure, raw stderr, so let jq do the escaping:
-# interpolating it into a heredoc emits invalid JSON exactly when the diagnostics are needed.
+# LAST_ERROR embeds quotes and raw kubectl stderr, so let jq escape it.
 jq -n \
   --arg error "$LAST_ERROR" \
   --arg namespace "$NAMESPACE" \
