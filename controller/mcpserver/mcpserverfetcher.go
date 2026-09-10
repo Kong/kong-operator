@@ -176,7 +176,14 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 
 	byID := make(map[string]*konnectv1alpha1.MCPServer, len(existing.Items))
 	for i := range existing.Items {
-		byID[string(existing.Items[i].Spec.Mirror.Konnect.ID)] = &existing.Items[i]
+		key := string(existing.Items[i].Spec.Mirror.Konnect.ID)
+		if _, ok := byID[key]; ok {
+			logger.Info("Duplicate MCPServers detected using the same Konnect ID. "+
+				"Currently maximum of 1 is supported to use the same ID at a time",
+				"konnectID", key,
+			)
+		}
+		byID[key] = &existing.Items[i]
 	}
 
 	for _, server := range servers {
