@@ -17,7 +17,7 @@ runs:
   using: composite
   steps:
     - name: Cache mise tools
-      uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
       with:
         path: bin/installs
         key: mise-${{ runner.os }}-${{ runner.arch }}-${{ github.job }}-${{ hashFiles('.mise.toml', '.tools_versions.yaml') }}
@@ -27,6 +27,6 @@ runs:
     - uses: jdx/mise-action@c2a87611a18de5b3828c5652fe268e992400cb5c # v4.3.0
       with:
         # renovate: datasource=github-releases depName=jdx/mise extractVersion=^v(?<version>.+)$
-        version: 2026.9.3
+        version: 2026.9.4
         install: ${{ inputs.install }}
         install_args: ${{ inputs.install_args }}
