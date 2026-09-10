@@ -64,6 +64,14 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- The deprecated `--konnect-controller-max-concurrent-reconciles` CLI flag (and
+  the corresponding `KONG_OPERATOR_KONNECT_CONTROLLER_MAX_CONCURRENT_RECONCILES`
+  environment variable) has been removed. Please use
+  `--max-concurrent-reconciles-konnect-controller` instead.
+  [#5544](https://github.com/Kong/kong-operator/pull/5544)
+
 ### Added
 
 - `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
