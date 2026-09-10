@@ -1,0 +1,29 @@
+# Konnect-backed GatewayConfiguration and GatewayClass with a same-namespace authRef.
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: (join('-', [($test_name), 'gateway-configuration']))
+  namespace: ($namespace)
+spec:
+  konnect:
+    authRef:
+      name: (join('-', [($test_name), 'konnect-api-auth']))
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+            - name: proxy
+              image: ($gateway_image)
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: (join('-', [($test_name), 'gateway-class']))
+spec:
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: (join('-', [($test_name), 'gateway-configuration']))
+    namespace: ($namespace)

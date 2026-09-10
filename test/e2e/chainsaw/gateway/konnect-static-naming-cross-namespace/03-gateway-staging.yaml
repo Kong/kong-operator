@@ -1,0 +1,16 @@
+# Gateway in the "staging" namespace with static naming enabled.
+# Its name is deliberately identical to the Gateway created in the "production"
+# namespace: that is the condition that triggers the Konnect 409 of #4079.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($staging_namespace)
+  annotations:
+    gateway-operator.konghq.com/static-naming: "true"
+spec:
+  gatewayClassName: (join('-', [($test_name), 'staging-gateway-class']))
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: ($listener_http_port)

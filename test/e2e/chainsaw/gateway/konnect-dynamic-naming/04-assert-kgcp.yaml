@@ -1,0 +1,17 @@
+# The Gateway-owned KonnectGatewayControlPlane is programmed in Konnect.
+#
+# Its name is generated, so it cannot be addressed by name: match on the labels the
+# operator applies to Gateway-owned objects instead. The naming invariants themselves are
+# checked by the following step, which needs to compare two fields against each other.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  namespace: ($namespace)
+  labels:
+    gateway-operator.konghq.com/managed-by: gateway
+    gateway.networking.k8s.io/gateway-name: ($gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true

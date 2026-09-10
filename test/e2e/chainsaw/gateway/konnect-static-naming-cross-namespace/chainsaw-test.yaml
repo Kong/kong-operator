@@ -1,0 +1,219 @@
+# Regression test for https://github.com/Kong/kong-operator/issues/4079.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-konnect-static-naming-cross-namespace
+spec:
+  description: |
+    Validates that two Gateways sharing a name across namespaces, both opted into static
+    naming, each get their own Control Plane in Konnect.
+
+    A KonnectGatewayControlPlane carries two independent names with two different uniqueness
+    scopes: metadata.name is unique per (namespace, kind, name), while
+    spec.createControlPlaneRequest.name must be unique per (org_id, name) across the whole
+    Konnect organization. Static naming drops the random suffix, so before the fix both
+    Gateways requested a Control Plane named "edge-gw" and the second create failed with
+    HTTP 409, leaving that Gateway stuck at Programmed=False.
+
+    The Konnect name is now qualified with the namespace, while the Kubernetes resource name
+    stays the unqualified Gateway name.
+
+    This is the first Konnect-backed test in the gateway/ suite. It lives here rather than
+    under hybridgateway/ because the code under test is controller/gateway/.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    # A fixed literal, IDENTICAL in both namespaces: this is the condition that triggers the
+    # bug. Uniqueness against concurrent runs and against other tests sharing the Konnect
+    # organization comes from $namespace, which chainsaw randomizes per test.
+    - name: gateway_name
+      value: edge-gw
+    - name: listener_http_port
+      value: 80
+    - name: staging_namespace
+      value: (join('-', [($namespace), 'staging']))
+    - name: production_namespace
+      value: (join('-', [($namespace), 'production']))
+
+  steps:
+    - name: 01-create-staging-namespace
+      description: Create the namespace standing in for a "staging" environment.
+      bindings:
+        - name: namespace_name
+          value: ($staging_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 02-create-production-namespace
+      description: Create the namespace standing in for a "production" environment.
+      bindings:
+        - name: namespace_name
+          value: ($production_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-namespace.yaml
+
+    - name: 03-create-staging-auth-secret
+      description: Create the Secret holding the Konnect token in the staging namespace.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($test_name), 'staging-konnect-auth-secret']))
+        - name: auth_secret_namespace
+          value: ($staging_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 04-create-staging-konnect-api-auth
+      description: Create the KonnectAPIAuthConfiguration in the staging namespace.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($test_name), 'staging-konnect-auth-secret']))
+        - name: auth_secret_namespace
+          value: ($staging_namespace)
+        - name: konnect_auth_name
+          value: (join('-', [($test_name), 'staging-konnect-api-auth']))
+        - name: konnect_auth_namespace
+          value: ($staging_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: 05-create-production-auth-secret
+      description: Create the Secret holding the Konnect token in the production namespace.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($test_name), 'production-konnect-auth-secret']))
+        - name: auth_secret_namespace
+          value: ($production_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 06-create-production-konnect-api-auth
+      description: Create the KonnectAPIAuthConfiguration in the production namespace.
+      bindings:
+        - name: auth_secret_name
+          value: (join('-', [($test_name), 'production-konnect-auth-secret']))
+        - name: auth_secret_namespace
+          value: ($production_namespace)
+        - name: konnect_auth_name
+          value: (join('-', [($test_name), 'production-konnect-api-auth']))
+        - name: konnect_auth_namespace
+          value: ($production_namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: 07-create-staging-gateway-configuration
+      description: |
+        Create the Konnect-backed GatewayConfiguration and GatewayClass for staging.
+        These are local files rather than the shared templates: the shared
+        apply-assert-gatewayConfiguration.yaml always emits an explicit
+        authRef.namespace, which would require a KongReferenceGrant this test does not
+        need, and both shared templates derive their names from chainsaw's own $namespace
+        rather than a per-environment one.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration-staging.yaml
+        - assert:
+            file: 02-assert-gatewayclass-staging.yaml
+
+    - name: 08-create-production-gateway-configuration
+      description: Create the Konnect-backed GatewayConfiguration and GatewayClass for production.
+      try:
+        - apply:
+            file: 05-gatewayconfiguration-production.yaml
+        - assert:
+            file: 06-assert-gatewayclass-production.yaml
+
+    - name: 09-create-staging-gateway
+      description: Create the staging Gateway with static naming and assert its Konnect Control Plane.
+      try:
+        - apply:
+            file: 03-gateway-staging.yaml
+        - assert:
+            file: 04-assert-kgcp-staging.yaml
+
+    - name: 10-create-production-gateway
+      description: |
+        Create the identically named Gateway in the production namespace and assert its
+        Konnect Control Plane. This is the regression assertion: before the fix the create
+        in Konnect failed with HTTP 409 and this Control Plane never became Programmed.
+      try:
+        - apply:
+            file: 07-gateway-production.yaml
+        - assert:
+            file: 08-assert-kgcp-production.yaml
+
+    - name: 11-assert-both-gateways-programmed
+      description: Both Gateways are fully programmed, with no conflict between them.
+      try:
+        - assert:
+            file: 09-assert-gateways-programmed.yaml
+
+    - name: 12-cleanup
+      description: |
+        Delete the Gateways and wait for their Konnect-backed children to be gone before
+        chainsaw tears the namespaces down. Chainsaw cleans up in reverse creation order,
+        which would remove the KonnectAPIAuthConfiguration while the operator still needs
+        it to authenticate to Konnect and drop the "konnectapiauth-in-use" finalizer --
+        deprovisioning would then hang. The error operation succeeds only when nothing
+        matches, so it doubles as "wait until gone".
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+              namespace: ($staging_namespace)
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+              namespace: ($production_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                namespace: ($staging_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                namespace: ($staging_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                namespace: ($production_namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                namespace: ($production_namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-konnect-static-naming-cross-namespace
+          - name: NAMESPACE
+            value: ($namespace)
+          # Comma-separated: debug_snapshot.sh splits on commas, not spaces.
+          - name: ADDITIONAL_NAMESPACES
+            value: (join(',', [($staging_namespace), ($production_namespace)]))
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

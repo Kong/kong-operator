@@ -1,0 +1,13 @@
+# A Gateway WITHOUT the static-naming annotation, so its owned resources get the default
+# dynamic naming: "<gateway-name>-<random suffix>".
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($namespace)
+spec:
+  gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: ($listener_http_port)

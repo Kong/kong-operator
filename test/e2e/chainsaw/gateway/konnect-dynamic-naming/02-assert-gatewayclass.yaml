@@ -1,0 +1,8 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: GatewayClass
+metadata:
+  name: (join('-', [($test_name), 'gateway-class']))
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted

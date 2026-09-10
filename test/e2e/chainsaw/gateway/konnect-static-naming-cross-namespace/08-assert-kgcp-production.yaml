@@ -1,0 +1,19 @@
+# This is the regression assertion of #4079.
+#
+# The spec check alone would pass even if Konnect rejected the request, because it only
+# inspects what the operator wrote locally. Programmed=True with a non-null Konnect ID on
+# THIS second Control Plane is what proves the create succeeded: before the fix this
+# resource stayed Programmed=False, looping on a 409 conflict with the staging one.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($gateway_name)
+  namespace: ($production_namespace)
+spec:
+  createControlPlaneRequest:
+    name: (join('-', [($production_namespace), ($gateway_name)]))
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true

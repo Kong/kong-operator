@@ -1,0 +1,16 @@
+# Gateway with the SAME name as the staging one, in a different namespace, also with
+# static naming. Before the #4079 fix both Gateways asked Konnect for a Control Plane
+# named "edge-gw", and this second create failed with HTTP 409.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($production_namespace)
+  annotations:
+    gateway-operator.konghq.com/static-naming: "true"
+spec:
+  gatewayClassName: (join('-', [($test_name), 'production-gateway-class']))
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: ($listener_http_port)

@@ -1,0 +1,170 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-konnect-dynamic-naming
+spec:
+  description: |
+    Non-regression lock for the default (dynamic) naming path of Gateway-owned
+    KonnectGatewayControlPlanes.
+
+    Without the static-naming annotation the operator generates
+    "<gateway-name>-<random suffix>" for the Kubernetes resource and uses that same string
+    as the Konnect Control Plane name, which is the invariant introduced in #3357. The fix
+    for #4079 qualifies the Konnect name with the namespace only under static naming; this
+    test makes sure the dynamic path is not changed by accident.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    # A short literal rather than the usual "<test_name>-gateway": the assertions below
+    # compare the generated name against the namespace, and a name that already embeds the
+    # namespace would make those comparisons meaningless.
+    - name: gateway_name
+      value: edge-gw
+    - name: listener_http_port
+      value: 80
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+
+  steps:
+    - name: 01-create-auth-secret
+      description: Create the Secret holding the Konnect token.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 02-create-konnect-api-auth
+      description: Create the KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: 03-create-gateway-configuration
+      description: |
+        Create the Konnect-backed GatewayConfiguration and GatewayClass. These are local
+        files rather than the shared templates because the shared
+        apply-assert-gatewayConfiguration.yaml always emits an explicit authRef.namespace,
+        which would require a KongReferenceGrant this test does not need.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 02-assert-gatewayclass.yaml
+
+    - name: 04-create-gateway
+      description: Create a Gateway without the static-naming annotation.
+      try:
+        - apply:
+            file: 03-gateway.yaml
+
+    - name: 05-assert-konnect-control-plane-programmed
+      description: The Gateway-owned KonnectGatewayControlPlane reaches Programmed in Konnect.
+      try:
+        - assert:
+            file: 04-assert-kgcp.yaml
+
+    - name: 06-assert-dynamic-naming-invariants
+      description: |
+        The Konnect name equals the generated Kubernetes name (#3357) and is not qualified
+        with the namespace. This is a script rather than an assertion tree because it
+        compares two fields of the same resource against each other, and the expected
+        values are not known up front: the name carries a random suffix.
+
+        The preceding step already waited for the resource, so a single read is enough --
+        chainsaw runs a script exactly once, with no retry.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+            content: |
+              set -euo pipefail
+
+              SELECTOR="gateway-operator.konghq.com/managed-by=gateway,gateway.networking.k8s.io/gateway-name=${GATEWAY_NAME}"
+
+              K8S_NAME=$(kubectl get konnectgatewaycontrolplanes.konnect.konghq.com \
+                -n "${NAMESPACE}" -l "${SELECTOR}" \
+                -o jsonpath='{.items[0].metadata.name}')
+              KONNECT_NAME=$(kubectl get konnectgatewaycontrolplanes.konnect.konghq.com \
+                -n "${NAMESPACE}" -l "${SELECTOR}" \
+                -o jsonpath='{.items[0].spec.createControlPlaneRequest.name}')
+
+              echo "kubernetes name: ${K8S_NAME}"
+              echo "konnect name:    ${KONNECT_NAME}"
+
+              if [ -z "${K8S_NAME}" ] || [ -z "${KONNECT_NAME}" ]; then
+                echo "FAIL: could not read both names from the KonnectGatewayControlPlane" >&2
+                exit 1
+              fi
+
+              # Invariant from #3357: on the dynamic path the two names are the same string.
+              if [ "${K8S_NAME}" != "${KONNECT_NAME}" ]; then
+                echo "FAIL: the Konnect name must equal the Kubernetes name on the dynamic naming path (#3357)" >&2
+                exit 1
+              fi
+
+              # The #4079 fix must qualify the Konnect name with the namespace ONLY under
+              # static naming.
+              if [ "${KONNECT_NAME}" = "${NAMESPACE}-${GATEWAY_NAME}" ]; then
+                echo "FAIL: the dynamic Konnect name must not be qualified with the namespace" >&2
+                exit 1
+              fi
+
+              # Dynamic naming appends a random suffix, so the bare Gateway name is wrong.
+              if [ "${K8S_NAME}" = "${GATEWAY_NAME}" ]; then
+                echo "FAIL: the dynamic Kubernetes name must carry a random suffix" >&2
+                exit 1
+              fi
+
+    - name: 07-cleanup
+      description: |
+        Delete the Gateway and wait for its Konnect-backed children to be gone before
+        chainsaw tears the namespace down, so the operator can still authenticate to
+        Konnect while deprovisioning. The error operation succeeds only when nothing
+        matches, so it doubles as "wait until gone".
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-konnect-dynamic-naming
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

@@ -1,0 +1,17 @@
+# The Kubernetes resource name is the unqualified Gateway name (that is what static
+# naming means), while the name requested from Konnect is qualified with the namespace.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($gateway_name)
+  namespace: ($staging_namespace)
+spec:
+  createControlPlaneRequest:
+    name: (join('-', [($staging_namespace), ($gateway_name)]))
+status:
+  # Programmed=True plus a non-null Konnect ID is what proves the Control Plane was
+  # actually created in Konnect, rather than merely requested.
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true
