@@ -66,7 +66,7 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.2.4"
+version = "4.3.0"
 
 # NOTE: temporary override to work around:
 # export data version 4 is greater than maximum supported version 2
