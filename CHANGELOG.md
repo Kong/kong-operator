@@ -78,6 +78,32 @@
   only reports readiness; configuration aggregation and pushing to data planes
   land in a later change.
   [#5567](https://github.com/Kong/kong-operator/issues/5567)
+- `AIGatewayDataPlane`: added `spec.certificateSecret.{provisioning,secretRef}`,
+  letting users supply their own same-namespace TLS Secret for the mTLS client
+  certificate instead of relying on operator auto-provisioning, with support
+  for switching between `Manual` and `Automatic` provisioning.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
+
+### Breaking changes
+
+- `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
+  client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
+  This corrects a bug where a certificate was previously always auto-provisioned
+  and signed by the operator's shared cluster CA (the same one used for
+  `ControlPlane`/`DataPlane` hybrid-mode mTLS elsewhere), regardless of whether
+  there was any control plane configured to use it. On upgrade, an existing
+  `controlPlaneRef`-less `AIGatewayDataPlane` hand-wired (via
+  `spec.deployment.podTemplateSpec`) to a same-cluster, operator-managed
+  `ControlPlane` loses that auto-issued certificate and must supply its own via
+  `spec.deployment.podTemplateSpec`. `spec.certificateSecret` is not a valid
+  remedy here: with no `spec.controlPlaneRef` it sets
+  `CertificateProvisioned=False/ControlPlaneRefMissing` and the operator stops
+  reconciling the Deployment, the HPA and the ingress Service entirely.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
+- `AIGatewayDataPlane`: the Deployment's Pod template now carries a certificate
+  checksum annotation. On upgrade, this causes a one-time rolling restart of
+  every existing `AIGatewayDataPlane` Deployment that has a `spec.controlPlaneRef`.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
 
 ### Fixes
 

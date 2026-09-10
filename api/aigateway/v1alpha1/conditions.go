@@ -16,7 +16,11 @@ limitations under the License.
 
 package v1alpha1
 
-import "github.com/kong/kong-operator/v2/api/common/consts"
+import (
+	"fmt"
+
+	"github.com/kong/kong-operator/v2/api/common/consts"
+)
 
 // -----------------------------------------------------------------------------
 // DataPlane - Ready Condition Constants
@@ -54,7 +58,36 @@ const (
 	CertificateProvisionedReason consts.ConditionReason = "CertificateProvisioned"
 	// CertificateProvisioningReason indicates the certificate Secret is being provisioned.
 	CertificateProvisioningReason consts.ConditionReason = "CertificateProvisioning"
+	// CertificateSecretRefNotFoundReason indicates the manually-referenced
+	// certificate Secret does not exist (or isn't visible to the operator,
+	// e.g. due to a missing secret-label-selector label).
+	CertificateSecretRefNotFoundReason consts.ConditionReason = "SecretRefNotFound" //nolint:gosec
+	// CertificateSecretInvalidReason indicates the manually-referenced Secret
+	// does not contain a valid tls.crt/tls.key pair.
+	CertificateSecretInvalidReason consts.ConditionReason = "InvalidSecret"
+	// CertificateControlPlaneRefMissingReason indicates spec.certificateSecret
+	// was configured but spec.controlPlaneRef is unset, so there's no
+	// KonnectAIGateway to ever use the certificate against.
+	CertificateControlPlaneRefMissingReason consts.ConditionReason = "ControlPlaneRefMissing"
 )
+
+// CertificateSecretRefNotFoundMessage formats the message used when the
+// manually-referenced certificate Secret cannot be found.
+func CertificateSecretRefNotFoundMessage(name string) string {
+	return fmt.Sprintf(
+		"Referenced certificate Secret %q not found (it must exist and carry the operator's secret-label-selector label to be visible)",
+		name,
+	)
+}
+
+// CertificateSecretInvalidMessage is the message used when the
+// manually-referenced certificate Secret does not contain a valid TLS
+// certificate and key.
+const CertificateSecretInvalidMessage = "Referenced certificate Secret does not contain a valid tls.crt/tls.key pair"
+
+// CertificateControlPlaneRefMissingMessage is the message used when
+// spec.certificateSecret is configured but spec.controlPlaneRef is unset.
+const CertificateControlPlaneRefMissingMessage = "certificateSecret is configured but controlPlaneRef is unset: there is no control plane to use the certificate against"
 
 // -----------------------------------------------------------------------------
 // DataPlane - KonnectAIGateway (controlplane) Resolved Condition Constants
