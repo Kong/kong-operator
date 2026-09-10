@@ -190,6 +190,7 @@ func TestSyncMCPServers(t *testing.T) {
 		expectNotCreated   []string // MCPServer names expected to NOT exist after sync
 		expectNoDataPlanes []string // MCPServer names for which no MCPServerDataPlane must exist
 		expectAnnotated    []string // MCPServer names expected to carry sig's offset/version
+		expectSurvived     []string // MCPServer names expected to still exist, unannotated (no finalizer check)
 	}{
 		{
 			name:          "no servers, no existing objects is a no-op",
@@ -270,6 +271,22 @@ func TestSyncMCPServers(t *testing.T) {
 			sig:                &mcpSignal{Offset: "off-1", Version: "v-1"},
 			expectNoDataPlanes: []string{"user-mcpserver-1"},
 			expectAnnotated:    []string{"user-mcpserver-1"},
+		},
+		{
+			// Regression test pinning the fix to its actual broken condition: the
+			// original bug (server ID recorded after the early return) was
+			// signal-independent, so the keep-path must hold with sig == nil too,
+			// not just when a signal happens to be in flight.
+			name: "advanced-mode server with a user-created MCPServer survives sync with no signal",
+			servers: []sdkkonnectcomp.MCPServerCPInfo{
+				newAdvancedServer("adv-id-3", "adv-name-3", new("resource-id")),
+			},
+			existingObjects: []client.Object{
+				userMCPServer("user-mcpserver-2", "adv-id-3"),
+			},
+			sig:                nil,
+			expectNoDataPlanes: []string{"user-mcpserver-2"},
+			expectSurvived:     []string{"user-mcpserver-2"},
 		},
 		{
 			name: "advanced-mode server with no in-cluster MCPServer is left alone",
@@ -395,6 +412,16 @@ func TestSyncMCPServers(t *testing.T) {
 				require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: name, Namespace: namespace}, &mcp))
 				assert.Equal(t, tt.sig.Offset, mcp.Annotations[mcpSignalOffsetAnnotationKey])
 				assert.Equal(t, tt.sig.Version, mcp.Annotations[mcpSignalVersionAnnotationKey])
+			}
+
+			// Without a signal, an advanced-mode MCPServer must still survive
+			// cleanup and be left unannotated: the keep-path is signal-independent.
+			for _, name := range tt.expectSurvived {
+				var mcp konnectv1alpha1.MCPServer
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKey{Name: name, Namespace: namespace}, &mcp),
+					"expected MCPServer %q to survive sync", name)
+				assert.Empty(t, mcp.Annotations[mcpSignalOffsetAnnotationKey])
+				assert.Empty(t, mcp.Annotations[mcpSignalVersionAnnotationKey])
 			}
 		})
 	}
