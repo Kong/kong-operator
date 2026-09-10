@@ -1,6 +1,7 @@
 package integration
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"testing"
@@ -27,6 +28,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/gatewayapi"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
@@ -715,7 +717,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	t.Run("verifying DataPlane's NetworkPolicies get updated after customizing kong proxy listen port through GatewayConfiguration", func(t *testing.T) {
 		gwcClient := integration.GetClients().OperatorClient.GatewayOperatorV2beta1().GatewayConfigurations(namespace.Name)
 		t.Log("ingress rules get updated with configured admin listen port")
-		setGatewayConfigurationEnvAdminAPIPort(t, gatewayConfig, 8555)
+		setGatewayConfigurationEnvAdminAPIPort(t, ctx, gatewayConfig, 8555)
 		_, err = gwcClient.Update(ctx, gatewayConfig, metav1.UpdateOptions{})
 		require.NoError(t, err)
 
@@ -758,7 +760,7 @@ func TestGatewayDataPlaneNetworkPolicy(t *testing.T) {
 	})
 }
 
-func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, adminAPIPort int) {
+func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, ctx context.Context, gatewayConfiguration *operatorv2beta1.GatewayConfiguration, adminAPIPort int) {
 	t.Helper()
 
 	dpOptions := gatewayConfiguration.Spec.DataPlaneOptions
@@ -769,9 +771,14 @@ func setGatewayConfigurationEnvAdminAPIPort(t *testing.T, gatewayConfiguration *
 	container := k8sutils.GetPodContainerByName(&dpOptions.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
 	require.NotNil(t, container)
 
+	ipFamily, err := ipfamily.Detect(ctx, integration.GetClients().MgrClient)
+	require.NoError(t, err)
+	adminListen, err := dpconfig.ListenValue(ipFamily, adminAPIPort, "ssl", "reuseport", "backlog=16384")
+	require.NoError(t, err)
+
 	container.Env = envs.SetValueByName(container.Env,
 		"KONG_ADMIN_LISTEN",
-		dpconfig.DualStackListen(adminAPIPort, "ssl", "reuseport", "backlog=16384"),
+		adminListen,
 	)
 
 	gatewayConfiguration.Spec.DataPlaneOptions = dpOptions
