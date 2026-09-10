@@ -204,10 +204,11 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 
 	r.logger.Info("Starting instance", "instanceID", instanceID)
 
+	errCh := make(chan error, 1)
 	// Wrap with pprof.Do to add instanceID to the pprof labels. That will make it easier to identify which instance
 	// is responsible for the CPU consumption.
 	pprof.Do(ctx, pprof.Labels("instanceID", instanceID.String()), func(ctx context.Context) {
-		go in.Run(ctx)
+		go func() { errCh <- in.Run(ctx) }()
 	})
 
 	// If diagnostics are enabled, register the instance with the diagnostics exposer.
@@ -221,5 +222,12 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 		r.logger.Info("Instance stopped, removing it from managed instances", "instanceID", instanceID)
 		removeInstance(instanceID)
 	case <-ctx.Done():
+
+	case err := <-errCh:
+		if err != nil {
+			r.logger.Error(err, "Instance exited with an error", "instanceID", instanceID)
+		}
+		r.logger.Info("Instance stopped, removing it from managed instances", "instanceID", instanceID)
+		removeInstance(instanceID)
 	}
 }

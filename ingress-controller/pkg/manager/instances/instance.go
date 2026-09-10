@@ -51,18 +51,26 @@ func (i *instance) ConfigHash() string {
 }
 
 // Run runs the instance in a goroutine and blocks until the instance is stopped or the context is done.
-func (i *instance) Run(ctx context.Context) {
+func (i *instance) Run(ctx context.Context) error {
+	errCh := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		if err := i.in.Run(ctx); err != nil {
 			i.logger.Error(err, "Instance exited with an error")
+			errCh <- err
+			return
 		}
+		errCh <- nil
 	}()
 
 	defer cancel() // Cancel the context once the parent context is done or the instance is stopped.
 	select {
 	case <-ctx.Done():
+		return nil
 	case <-i.stopCh:
+		return nil
+	case err := <-errCh:
+		return err
 	}
 }
 
