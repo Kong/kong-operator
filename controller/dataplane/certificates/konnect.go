@@ -51,8 +51,7 @@ var certificateGVR = schema.GroupVersionResource{
 // certificateCRDNotInstalled returns true if `certmanager.io/v1.certificates` CRD is not installed
 // so we can skip the processing of Konnect certificates when KonnectCertificateOptions is missing in DataPlane.
 func certificateCRDNotInstalled(logger logr.Logger, cl client.Client) bool {
-	checker := k8sutils.CRDChecker{Client: cl}
-	exist, err := checker.CRDExists(certificateGVR)
+	exist, err := k8sutils.CRDExists(cl.RESTMapper(), certificateGVR)
 	if err != nil {
 		log.Error(logger, err, "failed to check if certificate CRD installed")
 		return false

@@ -1,10 +1,13 @@
 package manager_test
 
 import (
+	"net/http"
 	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"k8s.io/apimachinery/pkg/api/meta"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	ctrlmgr "sigs.k8s.io/controller-runtime/pkg/manager"
@@ -13,11 +16,26 @@ import (
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 )
 
+type allKindsRESTMapper struct {
+	meta.RESTMapper
+}
+
+func (allKindsRESTMapper) KindFor(gvr schema.GroupVersionResource) (schema.GroupVersionKind, error) {
+	return gvr.GroupVersion().WithKind(gvr.Resource), nil
+}
+
 func TestSetupControllers(t *testing.T) {
 	t.Parallel()
 
 	// Actual values of parameters are not important for this test.
-	mgr, err := ctrl.NewManager(&rest.Config{}, ctrlmgr.Options{})
+	// A RESTMapper that resolves everything is supplied because there is no
+	// apiserver here: without it, SetupControllers' CRD checks fail with a
+	// discovery error rather than finding the CRDs installed.
+	mgr, err := ctrl.NewManager(&rest.Config{}, ctrlmgr.Options{
+		MapperProvider: func(*rest.Config, *http.Client) (meta.RESTMapper, error) {
+			return allKindsRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}, nil
+		},
+	})
 	require.NoError(t, err)
 	cfg := testutils.DefaultControllerConfigForTests()
 	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)

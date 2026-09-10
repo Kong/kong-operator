@@ -74,7 +74,11 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	// when reconciling HTTPRoutes.
 	// Once the HTTPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
 	// ReferenceGrant handling again in this reconciler at runtime.
-	r.referenceGrantVersion, r.enableReferenceGrant = ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	gv, ok, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	if err != nil {
+		return fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
+	}
+	r.referenceGrantVersion, r.enableReferenceGrant = gv, ok
 	if !r.enableReferenceGrant {
 		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
 	}
