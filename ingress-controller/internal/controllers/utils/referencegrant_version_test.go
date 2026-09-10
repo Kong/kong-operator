@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -23,13 +24,33 @@ func restMapperWithReferenceGrant(gvs ...schema.GroupVersion) meta.RESTMapper {
 	return mapper
 }
 
+type erroringRESTMapper struct {
+	meta.RESTMapper
+}
+
+func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, errors.New("discovery is unavailable")
+}
+
+func (erroringRESTMapper) KindsFor(schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
+	return nil, errors.New("discovery is unavailable")
+}
+
 func TestDetectReferenceGrantVersion(t *testing.T) {
 	tests := []struct {
-		name       string
-		mapper     meta.RESTMapper
-		expectedGV schema.GroupVersion
-		expectedOK bool
+		name        string
+		mapper      meta.RESTMapper
+		expectedGV  schema.GroupVersion
+		expectedOK  bool
+		expectedErr bool
 	}{
+		{
+			name:        "lookup failure is reported as an error",
+			mapper:      erroringRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)},
+			expectedGV:  schema.GroupVersion{},
+			expectedOK:  false,
+			expectedErr: true,
+		},
 		{
 			name:       "only v1 is served",
 			mapper:     restMapperWithReferenceGrant(v1GroupVersion),
@@ -58,7 +79,12 @@ func TestDetectReferenceGrantVersion(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gv, ok := DetectReferenceGrantVersion(tc.mapper)
+			gv, ok, err := DetectReferenceGrantVersion(tc.mapper)
+			if tc.expectedErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
 			require.Equal(t, tc.expectedOK, ok)
 			require.Equal(t, tc.expectedGV, gv)
 		})

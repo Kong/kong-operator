@@ -128,17 +128,17 @@ func createManager(
 	}
 	// Add cluster state workflow
 	{
-		checker := k8sutils.CRDChecker{Client: cl}
+		restMapper := cl.RESTMapper()
 
-		cpExists, err := checker.CRDExists(gwtypes.ControlPlaneGVR())
+		cpExists, err := k8sutils.CRDExists(restMapper, gwtypes.ControlPlaneGVR())
 		if err != nil {
 			log.Info("failed to check if controlplane CRD exists", "error", err)
 		}
-		aiGatewayExists, err := checker.CRDExists(operatorv1alpha1.AIGatewayGVR())
+		aiGatewayExists, err := k8sutils.CRDExists(restMapper, operatorv1alpha1.AIGatewayGVR())
 		if err != nil {
 			log.Info("failed to check if aigateway CRD exists", "error", err)
 		}
-		dpExists, err := checker.CRDExists(operatorv1beta1.DataPlaneGVR())
+		dpExists, err := k8sutils.CRDExists(restMapper, operatorv1beta1.DataPlaneGVR())
 		if err != nil {
 			log.Info("failed to check if dataplane CRD exists", "error", err)
 		}
