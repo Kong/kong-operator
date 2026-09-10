@@ -41,6 +41,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
@@ -74,6 +75,7 @@ func (r *Reconciler) createDataPlane(
 		&dataplane.Spec.DataPlaneOptions,
 		gateway.Spec.Listeners,
 		gatewayConfig.Spec.ListenersOptions,
+		r.DataPlaneIPFamily,
 	); err != nil {
 		return nil, err
 	}
@@ -660,40 +662,42 @@ func generateDataPlaneNetworkPolicy(
 			return nil, fmt.Errorf("failed parsing KONG_PROXY_LISTEN env: %w", err)
 		}
 
-		proxyPorts = lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		// Dual-stack listen values name the same port once per address family,
+		// so deduplicate to keep the NetworkPolicy ports stable.
+		proxyPorts = lo.Uniq(lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
-		proxySSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		}))
+		proxySSLPorts = lo.Uniq(lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 	}
 	if adminListen := k8sutils.EnvValueByName(container.Env, "KONG_ADMIN_LISTEN"); adminListen != "" {
 		kongListenConfig, err := parseKongListenEnv(adminListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_ADMIN_LISTEN env: %w", err)
 		}
-		adminAPISSLPorts = lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		adminAPISSLPorts = lo.Uniq(lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 	}
 	if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 		kongListenConfig, err := parseKongListenEnv(streamListen)
 		if err != nil {
 			return nil, fmt.Errorf("failed parsing KONG_STREAM_LISTEN env: %w", err)
 		}
-		streamUDPListenPorts = lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
+		streamUDPListenPorts = lo.Uniq(lo.Map(kongListenConfig.UDPEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 			return intstr.FromInt(ep.Port)
-		})
+		}))
 		// Include both plain-TCP entries (TCPRoute) and SSL entries (TLSRoute) — the
 		// NetworkPolicy must allow ingress on every port Kong is listening on for stream.
-		streamListenPorts = append(
+		streamListenPorts = lo.Uniq(append(
 			lo.Map(kongListenConfig.Endpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 				return intstr.FromInt(ep.Port)
 			}),
 			lo.Map(kongListenConfig.SSLEndpoints, func(ep *proxyListenEndpoint, _ int) intstr.IntOrString {
 				return intstr.FromInt(ep.Port)
 			})...,
-		)
+		))
 	}
 
 	// Construct the policy to allow the KO pod to access DataPlane admin APIs.
@@ -1296,8 +1300,9 @@ func setDataPlaneOptionsForListeners(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
 	listenersOpts []operatorv2beta1.GatewayConfigurationListenerOptions,
+	dataPlaneIPFamily ipfamily.IPFamily,
 ) error {
-	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners)
+	listenerPortToKongListenPort, err := setDataPlaneDeploymentListenPorts(opts, listeners, dataPlaneIPFamily)
 	if err != nil {
 		return err
 	}
@@ -1316,6 +1321,7 @@ func isKnownPort(portNumber int) bool {
 func setDataPlaneDeploymentListenPorts(
 	opts *operatorv1beta1.DataPlaneOptions,
 	listeners []gatewayv1.Listener,
+	dataPlaneIPFamily ipfamily.IPFamily,
 ) (map[int]int, error) {
 
 	if opts.Deployment.PodTemplateSpec == nil {
@@ -1414,16 +1420,26 @@ func setDataPlaneDeploymentListenPorts(
 		// One template is derived per user-configured SSL endpoint, so a dual-stack
 		// value like "0.0.0.0:X ssl reuseport, [::]:Y ssl reuseport" produces both
 		// bind addresses (with their own options) for every generated Kong port.
-		templates := []streamListenTemplate{{address: "0.0.0.0", options: []string{"reuseport"}}}
+		templates, err := wildcardStreamTemplates(dataPlaneIPFamily, []string{"reuseport"})
+		if err != nil {
+			return nil, fmt.Errorf("failed to build default stream listen templates: %w", err)
+		}
 		if streamListen := k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"); streamListen != "" {
 			if cfg, err := parseKongListenEnv(streamListen); err == nil && len(cfg.SSLEndpoints) > 0 {
 				templates = templates[:0]
 				for _, ep := range cfg.SSLEndpoints {
-					address := ep.Address
-					if address == "" {
-						address = "0.0.0.0"
+					if ep.Address == "" {
+						// An empty host in a user-configured listen value (e.g. ":8443 ssl")
+						// is valid Kong syntax meaning "bind to the wildcard": resolve it
+						// to the wildcard address(es) of the cluster's IP family.
+						wildcards, err := wildcardStreamTemplates(dataPlaneIPFamily, ep.Options)
+						if err != nil {
+							return nil, fmt.Errorf("failed to resolve the wildcard address in KONG_STREAM_LISTEN endpoint %q: %w", ep.Address+":"+strconv.Itoa(ep.Port), err)
+						}
+						templates = append(templates, wildcards...)
+						continue
 					}
-					templates = append(templates, streamListenTemplate{address: address, options: ep.Options})
+					templates = append(templates, streamListenTemplate{address: ep.Address, options: ep.Options})
 				}
 			}
 		}
@@ -1703,6 +1719,34 @@ type streamListenPort struct {
 type streamListenTemplate struct {
 	address string
 	options []string
+}
+
+// wildcardStreamTemplates returns one stream listen template per wildcard
+// address of the given IP family (one for single-stack families, two for
+// ipfamily.Dual), all bound with the given listen options. It returns an
+// error for ipfamily.Auto and any unrecognized family: the IP family must be
+// resolved to a concrete value (see ipfamily.Resolve) before listen values
+// are rendered, because silently assuming a concrete family (e.g. IPv4)
+// would render DataPlanes' Kong listens unreachable on clusters of a
+// different family.
+func wildcardStreamTemplates(family ipfamily.IPFamily, options []string) ([]streamListenTemplate, error) {
+	switch family {
+	case ipfamily.IPv4:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv4, options: options},
+		}, nil
+	case ipfamily.IPv6:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv6, options: options},
+		}, nil
+	case ipfamily.Dual:
+		return []streamListenTemplate{
+			{address: consts.ListenAddressIPv4, options: options},
+			{address: consts.ListenAddressIPv6, options: options},
+		}, nil
+	default:
+		return nil, fmt.Errorf("unknown IP family %q: the IP family must be resolved before rendering stream listen values", family)
+	}
 }
 
 // streamListenProtocolTokens returns the KONG_STREAM_LISTEN tokens the controller

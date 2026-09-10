@@ -52,6 +52,7 @@ import (
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/utils/kubernetes/compare"
@@ -77,6 +78,9 @@ type Reconciler struct {
 	AnonymousReportsEnabled bool
 	LoggingMode             logging.Mode
 	WatchNamespaces         []string
+	// DataPlaneIPFamily controls which IP family (or families) provisioned
+	// DataPlanes' Kong listens bind to.
+	DataPlaneIPFamily ipfamily.IPFamily
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -716,7 +720,7 @@ func (r *Reconciler) provisionDataPlane(
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
 
-	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
+	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions, r.DataPlaneIPFamily)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(

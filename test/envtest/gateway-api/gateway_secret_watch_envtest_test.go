@@ -12,6 +12,7 @@ import (
 
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -30,6 +31,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
+		DataPlaneIPFamily:     ipfamily.IPv4,
 		Client:                mgr.GetClient(),
 		Scheme:                scheme,
 		Namespace:             ns.Name,

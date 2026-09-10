@@ -16,6 +16,7 @@ import (
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 )
@@ -27,6 +28,7 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 
 	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "cluster-ca-bluegreen-reconcile")
 	bgReconciler := &dataplane.BlueGreenReconciler{
+		DataPlaneIPFamily:        ipfamily.IPv4,
 		Client:                   mgr.GetClient(),
 		ClusterCASecretName:      clusterCA.Name,
 		ClusterCASecretNamespace: clusterCA.Namespace,
@@ -34,6 +36,7 @@ func TestDataPlaneBlueGreen(t *testing.T) {
 		ValidateDataPlaneImage:   true,
 		CertTTL:                  consts.DefaultCertTTL,
 		DataPlaneController: &dataplane.Reconciler{
+			DataPlaneIPFamily:        ipfamily.IPv4,
 			Client:                   mgr.GetClient(),
 			ClusterCASecretName:      clusterCA.Name,
 			ClusterCASecretNamespace: clusterCA.Namespace,

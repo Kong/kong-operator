@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
@@ -77,6 +78,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			require.NoError(t, cl.Create(ctx, caSecret))
 
 			dpReconciler := &dataplane.Reconciler{
+				DataPlaneIPFamily:        ipfamily.IPv4,
 				Client:                   cl,
 				ClusterCASecretName:      clusterCASecretNN.Name,
 				ClusterCASecretNamespace: clusterCASecretNN.Namespace,

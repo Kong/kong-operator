@@ -676,6 +676,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				AnonymousReportsEnabled: c.AnonymousReports,
 				LoggingMode:             c.LoggingMode,
 				WatchNamespaces:         c.WatchNamespaces,
+				DataPlaneIPFamily:       c.IPFamily,
 			},
 		},
 		// ControlPlane controller
@@ -717,6 +718,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				LoggingMode:              c.LoggingMode,
 				ValidateDataPlaneImage:   c.ValidateImages,
 				CertTTL:                  c.CertTTL,
+				DataPlaneIPFamily:        c.IPFamily,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -742,6 +744,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ValidateDataPlaneImage:   c.ValidateImages,
 					LoggingMode:              c.LoggingMode,
 					CertTTL:                  c.CertTTL,
+					DataPlaneIPFamily:        c.IPFamily,
 				},
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
@@ -749,6 +752,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ValidateDataPlaneImage: c.ValidateImages,
 				LoggingMode:            c.LoggingMode,
 				CertTTL:                c.CertTTL,
+				DataPlaneIPFamily:      c.IPFamily,
 			},
 		},
 		// DataPlaneOwnedServiceFinalizer controller

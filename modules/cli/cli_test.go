@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 )
 
 func TestSetFlagFromEnvVar(t *testing.T) {
@@ -402,6 +403,7 @@ func expectedDefaultCfg() manager.Config {
 		MaxConcurrentReconcilesGateway:           consts.DefaultMaxConcurrentReconcilesGateway,
 		ClusterDomain:                            ingressmgrconfig.DefaultClusterDomain,
 		EmitKubernetesEvents:                     true,
+		IPFamily:                                 ipfamily.Auto,
 		ConversionWebhookEnabled:                 true,
 		ValidatingWebhookEnabled:                 true,
 		FQDNModeEnabled:                          false,
