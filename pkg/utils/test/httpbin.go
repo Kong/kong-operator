@@ -4,10 +4,12 @@ import (
 	"net"
 	"strconv"
 
+	"github.com/kong/kubernetes-testing-framework/pkg/clusters"
 	"github.com/kong/kubernetes-testing-framework/pkg/utils/kubernetes/generators"
 	corev1 "k8s.io/api/core/v1"
 
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test"
 )
 
 // NewHTTPBinContainer returns a container running the httpbin test image, bound
@@ -25,9 +27,16 @@ func NewHTTPBinContainer(name string, port int32) corev1.Container {
 	container := generators.NewContainer(name, HTTPBinImage, port)
 	container.Command = []string{
 		"gunicorn",
-		"-b", net.JoinHostPort(consts.ListenAddressIPv6, strconv.Itoa(int(port))),
 		"httpbin:app",
 		"-k", "gevent",
+	}
+	if test.ClusterIPFamily() == clusters.IPv6 {
+		container.Command = []string{
+			"gunicorn",
+			"-b", net.JoinHostPort(consts.ListenAddressIPv6, strconv.Itoa(int(port))),
+			"httpbin:app",
+			"-k", "gevent",
+		}
 	}
 	return container
 }

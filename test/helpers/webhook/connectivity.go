@@ -114,8 +114,8 @@ func getHostIPv6ByType(ht hostType) string {
 // Docker network, i.e. the address of the host on that bridge.
 //
 // Docker doesn't always report a Gateway for an IPv6 pool it assigned itself
-// (only the Subnet), so fall back to the subnet's first address, which is what
-// Docker assigns to the bridge in that case.
+// (only the Subnet), so fall back to the first address after the network
+// address, which is what Docker assigns to the bridge in that case.
 func getKindNetworkIPv6Gateway() (string, error) {
 	cmd := exec.Command("docker", "network", "inspect", kindNetworkName, "--format", "{{json .IPAM.Config}}")
 	out, err := cmd.CombinedOutput()
