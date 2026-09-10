@@ -16,6 +16,12 @@ set -o pipefail
 #   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 
 PROXY_IP="${PROXY_IP}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 METHOD="${METHOD}"
 ROUTE_PATH="${ROUTE_PATH:-/}"
 PROXY_PORT="${PROXY_PORT:-80}"
@@ -47,7 +53,7 @@ build_curl_cmd() {
     done
   fi
 
-  CMD="$CMD 'http://${PROXY_IP}:${PROXY_PORT}${ROUTE_PATH}'"
+  CMD="$CMD 'http://${PROXY_HOST}:${PROXY_PORT}${ROUTE_PATH}'"
   echo "$CMD"
 }
 
@@ -99,7 +105,7 @@ done
 # All retries exhausted, output failure.
 cat <<EOF
 {
-  "http_status": ${HTTP_CODE:-"000"},
+  "http_status": "${HTTP_CODE:-000}",
   "expected_status": $EXPECTED_STATUS,
   "error": "Request returned status ${HTTP_CODE:-unknown} but expected $EXPECTED_STATUS after $MAX_RETRIES attempts",
   "success": false,
