@@ -12,24 +12,22 @@ import (
 	"github.com/kong/kong-operator/v2/test"
 )
 
-// NewHTTPBinContainer returns a container running the httpbin test image, bound
-// to the IPv6 wildcard address so that it is reachable on IPv6-only clusters.
+// NewHTTPBinContainer returns a container running the httpbin test image.
 //
-// The image's own command binds 0.0.0.0 (see its Cmd:
-// `gunicorn -b 0.0.0.0:80 httpbin:app -k gevent`), so on an IPv6-only cluster
-// nothing listens on the Pod's address and Kong answers 502 for any route
-// pointing at it. The Pod still reports Ready, because the generated Deployment
-// has no readiness probe.
+// On IPv6 clusters the command is overridden to bind the IPv6 wildcard
+// address, because the image's default command binds 0.0.0.0 (see its Cmd:
+// `gunicorn -b 0.0.0.0:80 httpbin:app -k gevent`), which is unreachable on
+// IPv6-only clusters: nothing listens on the Pod's address and Kong answers
+// 502 for any route pointing at it. The Pod still reports Ready, because the
+// generated Deployment has no readiness probe.
 //
-// Binding the IPv6 wildcard keeps IPv4 working too: Linux defaults
-// net.ipv6.bindv6only to 0, so the socket accepts both families.
+// On IPv4 clusters the image's default command is used as-is.
+//
+// Note that the port argument is only honored in the IPv6 case: the image's
+// default command always binds port 80 (which is what every current caller
+// passes anyway).
 func NewHTTPBinContainer(name string, port int32) corev1.Container {
 	container := generators.NewContainer(name, HTTPBinImage, port)
-	container.Command = []string{
-		"gunicorn",
-		"httpbin:app",
-		"-k", "gevent",
-	}
 	if test.ClusterIPFamily() == clusters.IPv6 {
 		container.Command = []string{
 			"gunicorn",
