@@ -112,7 +112,7 @@ jobs:
         make test.e2e.chainsaw
 
     - name: Upload debug snapshots as artifacts
-      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      if: always() && steps.chainsaw-tests.outcome != 'success'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
         name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ github.run_id }}
@@ -121,7 +121,7 @@ jobs:
         retention-days: 3
 
     - name: Clean up debug snapshots
-      if: always() && steps.chainsaw-tests.outcome == 'failure'
+      if: always() && steps.chainsaw-tests.outcome != 'success'
       env:
         SUITE: ${{ matrix.suite }}
       run: rm -rf "/tmp/chainsaw/$SUITE"
