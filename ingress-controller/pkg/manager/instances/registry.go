@@ -184,6 +184,21 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 		return
 	}
 
+	removeInstance := func(id manager.ID) {
+		r.instancesLock.Lock()
+		delete(r.instances, id)
+		r.instancesLock.Unlock()
+	}
+
+	select {
+	case <-in.StopChannel():
+		// Instance was stopped before it got a chance to run. Remove it here since StopInstance does not.
+		r.logger.Info("Instance was stopped before it started, removing it from managed instances", "instanceID", instanceID)
+		removeInstance(instanceID)
+		return
+	default:
+	}
+
 	r.logger.Info("Starting instance", "instanceID", instanceID)
 
 	// Wrap with pprof.Do to add instanceID to the pprof labels. That will make it easier to identify which instance
@@ -201,9 +216,7 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 	select {
 	case <-in.StopChannel():
 		r.logger.Info("Instance stopped, removing it from managed instances", "instanceID", instanceID)
-		r.instancesLock.Lock()
-		delete(r.instances, instanceID)
-		r.instancesLock.Unlock()
+		removeInstance(instanceID)
 	case <-ctx.Done():
 	}
 }
