@@ -66,7 +66,7 @@ func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
 		return nil, err
 	}
 
-	return map[string]string{
+	defaults := map[string]string{
 		"KONG_ADMIN_ACCESS_LOG":       "/dev/stdout",
 		"KONG_ADMIN_ERROR_LOG":        "/dev/stderr",
 		"KONG_ADMIN_GUI_ACCESS_LOG":   "/dev/stdout",
@@ -95,7 +95,15 @@ func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
 		"KONG_NGINX_ADMIN_SSL_CLIENT_CERTIFICATE": "/var/cluster-certificate/ca.crt",
 		"KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT":      "on",
 		"KONG_NGINX_ADMIN_SSL_VERIFY_DEPTH":       "3",
-	}, nil
+	}
+
+	switch family {
+	case ipfamily.IPv6, ipfamily.Dual:
+		defaults["KONG_DNS_ORDER"] = "LAST,SRV,AAAA,A,CNAME"
+	case ipfamily.IPv4, ipfamily.Auto:
+	}
+
+	return defaults, nil
 }
 
 // kongInKonnectClusterTypeControlPlane are the baseline Kong proxy configuration options needed for
