@@ -107,19 +107,22 @@ func (r *Registry) ScheduleInstance(in Instance) error {
 	r.logger.Info("Scheduling instance", "instanceID", in.ID())
 
 	r.instancesLock.Lock()
-	defer r.instancesLock.Unlock()
 
 	if _, exists := r.instances[in.ID()]; exists {
+		r.instancesLock.Unlock()
 		return NewInstanceWithIDAlreadyScheduledError(in.ID())
 	}
 	// Keep track of the instance, but do not start it from here.
 	instance, err := newInstance(in, r.logger)
 	if err != nil {
+		r.instancesLock.Unlock()
 		return err
 	}
 	r.instances[in.ID()] = instance
+	r.instancesLock.Unlock()
 
-	// Send a signal to the scheduling channel to start the instance.
+	// Send a signal to the scheduling channel to start the instance. Done after unlocking so a full
+	// queue does not block other lock holders (StopInstance, IsInstanceReady, GetInstanceConfigHash, runInstance).
 	r.schedulingQueue <- in.ID()
 
 	return nil
