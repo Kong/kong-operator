@@ -188,6 +188,9 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 	}
 
 	removeInstance := func(id manager.ID) {
+		if r.diagnosticsExposer != nil {
+			r.diagnosticsExposer.UnregisterInstance(instanceID)
+		}
 		r.instancesLock.Lock()
 		delete(r.instances, id)
 		r.instancesLock.Unlock()
@@ -222,6 +225,8 @@ func (r *Registry) runInstance(ctx context.Context, instanceID manager.ID) {
 		r.logger.Info("Instance stopped, removing it from managed instances", "instanceID", instanceID)
 		removeInstance(instanceID)
 	case <-ctx.Done():
+		r.logger.Info("Parent context done, removing instance from managed instances", "instanceID", instanceID)
+		removeInstance(instanceID)
 
 	case err := <-errCh:
 		if err != nil {

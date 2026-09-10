@@ -56,7 +56,6 @@ func (i *instance) Run(ctx context.Context) error {
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		if err := i.in.Run(ctx); err != nil {
-			i.logger.Error(err, "Instance exited with an error")
 			errCh <- err
 			return
 		}
