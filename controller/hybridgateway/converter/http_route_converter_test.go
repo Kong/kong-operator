@@ -1041,7 +1041,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					}
 
 					routeNames[route.Name] = struct{}{}
-					assert.Equal(t, []string{"~/"}, route.Spec.Paths)
+					assert.Equal(t, []string{"~/(.*)"}, route.Spec.Paths)
 					assert.Empty(t, route.Spec.Methods)
 					// Header-only matches on the default path get an explicit
 					// regex_priority to preserve Gateway API precedence.

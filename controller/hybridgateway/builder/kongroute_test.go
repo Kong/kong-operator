@@ -165,7 +165,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				Method: &method,
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"~/"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Paths)
 				assert.Equal(t, []string{"GET"}, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 				assert.Nil(t, route.Spec.RegexPriority)
@@ -193,7 +193,7 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"~/"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Paths)
 				assert.Empty(t, route.Spec.Methods)
 				require.NotNil(t, route.Spec.Headers)
 				assert.Equal(t, []string{"Bearer token"}, route.Spec.Headers["Authorization"])
@@ -255,14 +255,14 @@ func TestKongRouteBuilder_WithHTTPRouteMatch(t *testing.T) {
 				},
 			},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"~/"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Paths)
 			},
 		},
 		{
 			name:  "empty match",
 			match: gwtypes.HTTPRouteMatch{},
 			validate: func(t *testing.T, route configurationv1alpha1.KongRoute) {
-				assert.Equal(t, []string{"~/"}, route.Spec.Paths)
+				assert.Empty(t, route.Spec.Paths)
 				assert.Empty(t, route.Spec.Methods)
 				assert.Nil(t, route.Spec.Headers)
 			},
