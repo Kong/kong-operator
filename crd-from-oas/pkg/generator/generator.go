@@ -6568,7 +6568,7 @@ func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Prop
 	// Headers) is reached at the same path depth as prop itself, keyed by the
 	// variant's own property name.
 	//
-	// ponytail: this path only matches in the root-union SDK-ops pipeline,
+	// This path only matches in the root-union SDK-ops pipeline,
 	// where renameKeysToSDKExcept runs before flattenSDKUnions so the CRD's
 	// nested {"type":..., "<member>": {...}} shape is still intact. The
 	// standard (non-root-union) pipeline flattens before renaming, hoisting

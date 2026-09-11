@@ -52,12 +52,12 @@ import (
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstanceai"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -212,6 +212,14 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	if cfg.AIGatewayDataPlaneControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForAIGatewayDataPlane(),
+		)
+	}
+
+	// The AIGatewayModel index is also registered above under KonnectControllersEnabled; guard
+	// against indexing the same field twice.
+	if cfg.OnPremAIGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForAIGatewayModel(),
 		)
 	}
 

@@ -99,6 +99,13 @@
   with the certificate, private key, and alternate cert/key sourced from a
   Kubernetes `Secret`.
   [#5658](https://github.com/Kong/kong-operator/pull/5658)
+- `OnPremAIGateway`: the reconciler now lists the `AIGatewayModel`s referencing it,
+  translates each into `github.com/Kong/ai-deck-converter`'s entity model, and
+  renders the result into a dbless configuration payload, restarting the control
+  plane instance when it changes. The other nine `aiconfiguration` entity kinds
+  aren't translated yet, so the rendered payload isn't a complete, pushable
+  configuration on its own; pushing it to data planes is also not wired yet.
+  [#5402](https://github.com/Kong/kong-operator/issues/5402)
 
 ### Breaking changes
 

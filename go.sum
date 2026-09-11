@@ -21,6 +21,8 @@ github.com/Azure/go-ansiterm v0.0.0-20250102033503-faa5f7b0171c/go.mod h1:xomTg6
 github.com/BurntSushi/toml v0.3.1/go.mod h1:xHWCNGjB5oqiDr8zfno3MHue2Ht5sIBksp03qcyfWMU=
 github.com/BurntSushi/toml v1.4.0 h1:kuoIxZQy2WRRk1pttg9asf+WVv6tWQuBNVmK8+nqPr0=
 github.com/BurntSushi/toml v1.4.0/go.mod h1:ukJfTF/6rtPPRCnwkur4qwRxa8vTRFBF0uk2lLoLwho=
+github.com/Kong/ai-deck-converter v0.18.2 h1:ymCu5Iq/5vGibpOFMivC7lwfdMI1RXj4qoY6aObGWdA=
+github.com/Kong/ai-deck-converter v0.18.2/go.mod h1:tsirPu/2guK1tjGyBueqk82ULcY0LYsjvMSl+pbJE0I=
 github.com/Kong/go-diff v1.2.2 h1:KKKaqHc8IxuguFVIZMNt3bi6YuC/t9r7BGD8bOOpSgM=
 github.com/Kong/go-diff v1.2.2/go.mod h1:nlvdwVZQk3Rm+tbI0cDmKFrOjghtcZTrZBp+UruvvA8=
 github.com/Kong/gojsondiff v1.3.2 h1:qIOVq2mUXt+NXy8Be5gRUee9TP3Ve0MbQSafg9bXKZE=

@@ -5,6 +5,7 @@ go 1.27.1
 require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
+	github.com/Kong/ai-deck-converter v0.18.2
 	github.com/Kong/sdk-konnect-go v0.65.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
@@ -52,6 +53,7 @@ require (
 	golang.org/x/sync v0.23.0
 	google.golang.org/api v0.297.0
 	google.golang.org/grpc v1.83.2
+	gopkg.in/yaml.v3 v3.0.1
 	k8s.io/api v0.37.0
 	k8s.io/apiextensions-apiserver v0.37.0
 	k8s.io/apimachinery v0.37.0
@@ -301,7 +303,6 @@ require (
 	gopkg.in/evanphx/json-patch.v4 v4.13.0 // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiserver v0.37.0 // indirect
 	k8s.io/component-base v0.37.0 // indirect
 	k8s.io/component-helpers v0.37.0 // indirect
