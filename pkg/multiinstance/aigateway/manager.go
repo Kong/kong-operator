@@ -1,12 +1,12 @@
-// Package multiinstanceai is able to dynamically run multiple on-prem AI Gateway control plane instances and
+// Package aigateway is able to dynamically run multiple on-prem AI Gateway control plane instances and
 // manage their lifecycle. The generic instance lifecycle is shared with the Kong Ingress Controller's
 // multi-instance manager through the instances package.
-package multiinstanceai
+package aigateway
 
 import (
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/instances"
 )
 
 // Manager runs multiple on-prem AI Gateway control plane instances.

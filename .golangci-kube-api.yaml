@@ -173,3 +173,9 @@ linters:
           - kubeapilinter
         path: api/common/v1alpha1/references.go
         text: 'optionalorrequired: field .* must be marked as optional or required'
+
+      # NOTE: non user facing API types.
+      - linters:
+          - kubeapilinter
+        path: api/aiconfiguration/v1alpha1/aigatewaymodel_aigw_manual.go
+        text: .*
