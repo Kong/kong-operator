@@ -26,9 +26,11 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	"github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	gatewayapipkg "github.com/kong/kong-operator/v2/pkg/gatewayapi"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test"
 	"github.com/kong/kong-operator/v2/test/helpers"
@@ -327,6 +329,22 @@ func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 func createGatewayConfiguration(
 	ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor, gatewayType gatewayType,
 ) *operatorv2beta1.GatewayConfiguration {
+	// The default KONG_PROXY_LISTEN already binds per the cluster's IP
+	// family (see config.KongDefaults), but that default is overridden below
+	// for the h2c/GRPCRoute requirement, so it has to be rebuilt here the
+	// same IP-family-aware way instead of hardcoding the IPv4 wildcard -
+	// otherwise Kong would bind to nothing reachable on an IPv6-only cluster.
+	family, err := ipfamily.Detect(ctx, clients.MgrClient)
+	require.NoError(t, err)
+	proxyNoSSLListen, err := config.ListenValue(family, consts.DataPlaneProxyPort, "http2")
+	require.NoError(t, err)
+	proxySSLListen, err := config.ListenValue(family, consts.DataPlaneProxySSLPort, "http2", "ssl")
+	require.NoError(t, err)
+	proxyListen := strings.Join([]string{
+		proxyNoSSLListen,
+		proxySSLListen,
+	}, ", ")
+
 	gwconf := operatorv2beta1.GatewayConfiguration{
 		GenerateName: "ko-gwconf-conformance-",
 		Namespace:    conformanceInfraNamespace,
@@ -363,7 +381,7 @@ func createGatewayConfiguration(
 											// In order to pass conformance tests, the proxy must listen http2 and http on the same port.
 											{
 												Name:  "KONG_PROXY_LISTEN",
-												Value: "0.0.0.0:8000 http2, 0.0.0.0:8443 http2 ssl",
+												Value: proxyListen,
 											},
 										},
 									},

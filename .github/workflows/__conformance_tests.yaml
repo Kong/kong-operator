@@ -14,7 +14,15 @@ jobs:
   conformance-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1}', matrix.gateway-type, matrix.router-flavor) }}
+    name: ${{ format('{0} {1} {2}', matrix.gateway-type, matrix.router-flavor, matrix.ip_family) }}
+    # Only the ipv6 legs opt into this (see matrix below): IPv6 cluster
+    # support is new and shouldn't block merges yet while it proves out.
+    continue-on-error: ${{ matrix.continue-on-error || false }}
+    env:
+      # Only used by the hybrid+ipv6 leg's pre-created cluster (see below);
+      # harmless and unused by every other leg, which manages its own
+      # cluster inside the `make test.conformance` Go test binary.
+      CLUSTER_NAME: gwapi-conformance-hybrid-ipv6
     strategy:
       fail-fast: false
       matrix:
@@ -24,9 +32,31 @@ jobs:
         gateway-type:
           - standard
           - hybrid
+        ip_family:
+          - ipv4
         exclude:
          - router-flavor: expressions
            gateway-type: hybrid
+        include:
+          - router-flavor: traditional_compatible
+            gateway-type: standard
+            ip_family: ipv6
+            continue-on-error: true
+          - router-flavor: expressions
+            gateway-type: standard
+            ip_family: ipv6
+            continue-on-error: true
+          # Hybrid makes real Konnect API calls, which on an ipv6-only
+          # cluster needs NAT64/DNS64 (see e2e chainsaw's hybridgateway
+          # ipv6 leg). That needs the cluster to exist before the Go test
+          # binary starts (to patch CoreDNS), so this leg pre-creates its
+          # own cluster via the ktf CLI and hands it to `make
+          # test.conformance` as an existing cluster (KONG_TEST_CLUSTER)
+          # instead of letting the test binary create+own it.
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv6
+            continue-on-error: true
 
     steps:
     - name: Harden Runner
@@ -45,7 +75,7 @@ jobs:
 
     - uses: ./.github/actions/setup-mise
       with:
-        install: false
+        install_args: github:Kong/kubernetes-testing-framework kind
 
     - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
       id: license
@@ -91,12 +121,104 @@ jobs:
 
     - uses: ./.github/actions/bump-inotify
 
+    # Only the hybrid+ipv6 leg needs a cluster that exists before the test
+    # binary starts (see the include entry above for why): every other leg
+    # still creates and owns its cluster inside `make test.conformance`.
+    - name: Create k8s KinD Cluster with ktf (hybrid+ipv6 only)
+      if: ${{ matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ktf environments create --name "$CLUSTER_NAME" --ipv6-only
+
+    # IPv6-only kind clusters on IPv4-only GitHub runners have no route to IPv4-only/legacy external
+    # services (e.g. Konnect's API): the pod network can't reach the real internet on its own.
+    # NAT64 (Jool) translates that egress traffic onto this host's real IPv4 uplink, and DNS64 (unbound)
+    # synthesizes AAAA answers for hostnames that only have an A record, so pods route through the
+    # NAT64 prefix automatically.
+    - name: Set up NAT64 + DNS64 for IPv6-only cluster external reachability
+      if: ${{ matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6' }}
+      run: |
+        set -o pipefail
+
+        sudo apt-get update -qq
+        sudo apt-get install -y jool-dkms jool-tools unbound
+        sudo modprobe jool
+
+        sudo sysctl -w net.ipv4.ip_forward=1
+        sudo sysctl -w net.ipv6.conf.all.forwarding=1
+        sudo sysctl -w net.ipv6.conf.default.forwarding=1
+
+        # Read the uplink address from the route table instead of listing
+        # global-scope addresses: by this point kind's own docker bridge
+        # also has one, and list order isn't guaranteed to put the real
+        # uplink first.
+        RUNNER_IP4=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="src") print $(i+1); exit}')
+        sudo jool instance add nat64 --netfilter --pool6 64:ff9b::/96
+        sudo jool -i nat64 pool4 add --tcp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --udp "${RUNNER_IP4}" 61001-65535
+        sudo jool -i nat64 pool4 add --icmp "${RUNNER_IP4}" 61001-65535
+
+        # This host needs a route for the NAT64 prefix to accept forwarding
+        # it at all. It has no real IPv6 default route, so an on-link route
+        # (no gateway) makes the kernel try to NDP-resolve the fake NAT64
+        # destination itself, which just times out. A permanent, never-
+        # verified fake neighbor gives the kernel a resolved next hop
+        # without that - Jool intercepts and re-injects as IPv4 long before
+        # any real L2 delivery to that (nonexistent) neighbor is attempted.
+        PRIMARY_IF=$(ip -6 route show default | awk '{for(i=1;i<NF;i++) if($i=="dev") print $(i+1); exit}')
+        if [ -z "$PRIMARY_IF" ]; then
+          PRIMARY_IF=$(ip -4 route get 1.1.1.1 | awk '{for(i=1;i<NF;i++) if($i=="dev") print $(i+1); exit}')
+        fi
+        sudo ip -6 neigh add fe80::64 lladdr 00:00:00:00:00:64 dev "${PRIMARY_IF}" nud permanent
+        sudo ip -6 route add 64:ff9b::/96 via fe80::64 dev "${PRIMARY_IF}"
+
+        # DNS64 has to run on this host, not as a cluster pod: it needs to
+        # be reachable via IPv6 from the pod network AND do real IPv4 DNS
+        # lookups itself, which an IPv6-only CoreDNS pod can't do.
+        GW=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Gateway')
+        if [ -z "$GW" ] || [ "$GW" = "null" ]; then
+          SUBNET=$(docker network inspect kind | jq -r '.[0].IPAM.Config[] | select(.Subnet | contains(":")) | .Subnet')
+          GW=$(python3 -c "import ipaddress; print(ipaddress.ip_interface('$SUBNET').network.network_address + 1)")
+        fi
+        echo "kind bridge IPv6 gateway (this host): $GW"
+
+        sudo tee /etc/unbound/unbound.conf.d/dns64.conf >/dev/null <<EOF
+        server:
+          interface: ${GW}
+          interface: 127.0.0.1
+          access-control: ::0/0 allow
+          access-control: 0.0.0.0/0 allow
+          do-ip4: yes
+          do-ip6: yes
+          module-config: "dns64 validator iterator"
+          dns64-prefix: 64:ff9b::/96
+        EOF
+        sudo systemctl restart unbound
+
+        NEW_COREFILE=$(kubectl -n kube-system get configmap coredns -o jsonpath='{.data.Corefile}' \
+          | sed "s#forward \. /etc/resolv.conf#forward . ${GW}#")
+        case "$NEW_COREFILE" in
+          *"forward . ${GW}"*) ;;
+          *) echo "Corefile rewrite did not apply" >&2; exit 1 ;;
+        esac
+        kubectl -n kube-system get configmap coredns -o json \
+          | jq --arg cf "$NEW_COREFILE" '.data.Corefile = $cf' \
+          | kubectl apply -f -
+        kubectl -n kube-system rollout restart deployment coredns
+        kubectl -n kube-system rollout status deployment coredns --timeout=60s
+
     - name: run conformance tests
       run: make test.conformance
       env:
-        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
         KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
+        KONG_TEST_CLUSTER_IP_FAMILY: ${{ matrix.ip_family }}
+        # hybrid+ipv6 hands off its pre-created (and NAT64/DNS64-patched)
+        # cluster here instead of letting the test binary create its own;
+        # every other leg leaves this empty and self-manages as before.
+        KONG_TEST_CLUSTER: ${{ (matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6') && format('kind:{0}', env.CLUSTER_NAME) || '' }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
         KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
         KONG_TEST_FORCE_CLEANUP: "true"
@@ -106,7 +228,7 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -114,19 +236,19 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
-        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}
+        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}.xml
 
     - name: collect conformance report
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}
         path: experimental-*-report.yaml
 
     - name: upload controller logs
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}-${{ matrix.ip_family }}
         path: /tmp/kong-operator-controller-logs*
         if-no-files-found: error
