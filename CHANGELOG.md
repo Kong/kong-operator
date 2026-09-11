@@ -136,8 +136,9 @@
   [#5643](https://github.com/Kong/kong-operator/pull/5643)
 - On-prem gateway: keep tags of translated Kong certificate stable when multiple
   `Secret`s have the same certificate content. The tags generated from the `Secret`
-  with the earlist creation timestamp is choosen, and the one with the lowest UID
-  when tie happens. This is align with choosing ID of the translated certificate.
+  with the earliest creation timestamp are chosen, and the one with the lowest
+  UID when a tie happens.
+  This aligns with choosing ID of the translated certificate.
   [#5657](https://github.com/Kong/kong-operator/pull/5657)
 
 ## [v2.3.1]
