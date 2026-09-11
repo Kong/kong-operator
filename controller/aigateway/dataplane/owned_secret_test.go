@@ -2,11 +2,13 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
@@ -16,147 +18,178 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
-	"github.com/kong/kong-operator/v2/pkg/consts"
+	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
-const (
-	testCASecretName      = "test-ca"
-	testCASecretNamespace = "test-ns"
-	testDPName            = "my-dp"
-)
-
-// makeAIGWDP builds an AIGatewayDataPlane with an explicit UID so that ListSecretsForOwner
-// can match OwnerReferences by UID.
-func makeAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
+// newTestAIGWDP builds an AIGatewayDataPlane with an explicit UID so owner
+// references can be matched against it.
+func newTestAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		Namespace: testCASecretNamespace,
-		Name:      testDPName,
-		UID:       types.UID("aigwdp-uid"),
+		Name:      "test-dp",
+		Namespace: "default",
+		UID:       types.UID("aigwdp-uid-123"),
 	}
 }
 
-// caSecret builds a Secret containing a self-signed RSA CA certificate.
-func caSecret() *corev1.Secret {
-	cert, key := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName("Kong Test CA"),
-		certificate.WithCATrue(),
-	)
-	return &corev1.Secret{
-		Namespace: testCASecretNamespace, Name: testCASecretName,
-		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
-		},
+// managedCert builds an AIGatewayDataPlaneCertificate CR owned by aigwdp, so
+// it's discoverable by cleanupStaleKonnectCertificates' List call regardless
+// of whether it also carries the managed-by labels (older, pre-upgrade CRs
+// may not).
+func managedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+		Name:      name,
+		Namespace: aigwdp.Namespace,
+		Labels:    selectorLabelsForAIGatewayDataPlane(aigwdp),
 	}
+	k8sutils.SetOwnerForObject(cert, aigwdp)
+	return cert
 }
 
-func Test_ensureCertificateSecret(t *testing.T) {
-	scheme := managerscheme.Get()
-
-	tests := []struct {
-		name              string
-		reconciler        func() *Reconciler
-		wantResult        op.Result
-		wantErrContains   string
-		wantConditionTrue bool
-	}{
-		{
-			name: "CA exists: creates cert secret and sets CertificateProvisioned=True",
-			reconciler: func() *Reconciler {
-				aigwdp := makeAIGWDP()
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(aigwdp, caSecret()).
-					Build()
-				return &Reconciler{
-					Client:                   cl,
-					ClusterCASecretName:      testCASecretName,
-					ClusterCASecretNamespace: testCASecretNamespace,
-					CertTTL:                  consts.DefaultCertTTL,
-				}
-			},
-			wantResult:        op.Created,
-			wantConditionTrue: true,
-		},
-		{
-			name: "CA secret missing: returns error and sets CertificateProvisioned=False",
-			reconciler: func() *Reconciler {
-				aigwdp := makeAIGWDP()
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(aigwdp).
-					Build()
-				return &Reconciler{
-					Client:                   cl,
-					ClusterCASecretName:      testCASecretName,
-					ClusterCASecretNamespace: testCASecretNamespace,
-				}
-			},
-			wantResult:        op.Noop,
-			wantErrContains:   "not found",
-			wantConditionTrue: false,
-		},
-		{
-			name: "SecretLabelSelector adds extra label to matching labels",
-			reconciler: func() *Reconciler {
-				aigwdp := makeAIGWDP()
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme).
-					WithObjects(aigwdp, caSecret()).
-					Build()
-				return &Reconciler{
-					Client:                   cl,
-					ClusterCASecretName:      testCASecretName,
-					ClusterCASecretNamespace: testCASecretNamespace,
-					SecretLabelSelector:      "my-org/team",
-					CertTTL:                  consts.DefaultCertTTL,
-				}
-			},
-			wantResult:        op.Created,
-			wantConditionTrue: true,
-		},
+// unlabeledManagedCert builds an AIGatewayDataPlaneCertificate CR owned by
+// aigwdp but carrying no managed-by labels, mirroring certificates created
+// before those labels existed.
+func unlabeledManagedCert(name string, aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
+		Name:      name,
+		Namespace: aigwdp.Namespace,
 	}
+	k8sutils.SetOwnerForObject(cert, aigwdp)
+	return cert
+}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			r := tc.reconciler()
-			aigwdp := makeAIGWDP()
+func Test_cleanupStaleKonnectCertificates(t *testing.T) {
+	aigwdp := newTestAIGWDP()
 
-			res, secret, err := r.ensureCertificateSecret(context.Background(), aigwdp)
-
-			assert.Equal(t, tc.wantResult, res)
-
-			if tc.wantErrContains != "" {
-				require.Error(t, err)
-				assert.Contains(t, err.Error(), tc.wantErrContains)
-				assert.Nil(t, secret)
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, secret)
-			}
-
-			// Verify condition set on aigwdp.
-			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType))
-			require.NotNil(t, cond, "condition %q must be set", aigatewayv1alpha1.CertificateProvisionedType)
-			if tc.wantConditionTrue {
-				assert.Equal(t, metav1.ConditionTrue, cond.Status)
-				assert.Equal(t, string(aigatewayv1alpha1.CertificateProvisionedReason), cond.Reason)
-				// Verify the returned secret has the expected standard labels.
-				assert.Equal(t, "true", secret.Labels[consts.SecretAIGatewayDataPlaneCertificateLabel])
-				// Verify TLS data is present.
-				assert.Contains(t, secret.Data, "tls.crt")
-				assert.Contains(t, secret.Data, "tls.key")
-			} else {
-				assert.Equal(t, metav1.ConditionFalse, cond.Status)
-				assert.Equal(t, string(aigatewayv1alpha1.UnableToProvisionReason), cond.Reason)
-			}
+	t.Run("deletes every managed cert except the current one", func(t *testing.T) {
+		current := managedCert("test-dp-current", aigwdp)
+		stale1 := managedCert("test-dp-stale1", aigwdp)
+		stale2 := managedCert("test-dp-stale2", aigwdp)
+		// A cert belonging to a different AIGatewayDataPlane must never be touched.
+		otherDPCert := managedCert("other-dp-current", &aigatewayv1alpha1.AIGatewayDataPlane{
+			Name: "other-dp", Namespace: "default", UID: types.UID("other-dp-uid-456"),
 		})
+
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithObjects(current, stale1, stale2, otherDPCert).
+			Build()
+
+		err := cleanupStaleKonnectCertificates(t.Context(), cl, logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"current cert must survive")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stale1.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"stale1 must be deleted")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stale2.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"stale2 must be deleted")
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: otherDPCert.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"cert belonging to a different AIGatewayDataPlane must not be touched")
+	})
+
+	t.Run("no-op when only the current cert exists", func(t *testing.T) {
+		current := managedCert("test-dp-current", aigwdp)
+		cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(current).Build()
+
+		err := cleanupStaleKonnectCertificates(t.Context(), cl, logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}))
+	})
+
+	t.Run("deletes a stale cert with no managed-by labels, as long as it's owned by aigwdp", func(t *testing.T) {
+		// Mirrors a certificate created before the managed-by labels existed:
+		// it must still be found and cleaned up via its owner reference.
+		current := managedCert("test-dp-current", aigwdp)
+		stalePreUpgrade := unlabeledManagedCert("test-dp", aigwdp)
+
+		cl := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithObjects(current, stalePreUpgrade).
+			Build()
+
+		err := cleanupStaleKonnectCertificates(t.Context(), cl, logr.Discard(), aigwdp, current.Name)
+		require.NoError(t, err)
+
+		assert.NoError(t, cl.Get(t.Context(), types.NamespacedName{Name: current.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}),
+			"current cert must survive")
+		assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), types.NamespacedName{Name: stalePreUpgrade.Name, Namespace: "default"}, &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{})),
+			"unlabeled pre-upgrade cert must be deleted based on its owner reference")
+	})
+
+	t.Run("List error is propagated", func(t *testing.T) {
+		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
+				return assert.AnError
+			},
+		})
+
+		err := cleanupStaleKonnectCertificates(t.Context(), cl, logr.Discard(), aigwdp, "test-dp-current")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to list AIGatewayDataPlaneCertificates")
+	})
+
+	t.Run("non-NotFound Delete error is propagated", func(t *testing.T) {
+		stale := managedCert("test-dp-stale", aigwdp)
+		base := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(stale).Build()
+		cl := interceptor.NewClient(base, interceptor.Funcs{
+			Delete: func(_ context.Context, _ client.WithWatch, _ client.Object, _ ...client.DeleteOption) error {
+				return assert.AnError
+			},
+		})
+
+		err := cleanupStaleKonnectCertificates(t.Context(), cl, logr.Discard(), aigwdp, "test-dp-current")
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "failed to delete stale AIGatewayDataPlaneCertificate")
+	})
+}
+
+// automaticProvisioningForTest returns a resolveAutomatic fallback for
+// resolveCertificateSecret tests: it provisions an operator-managed
+// certificate Secret exactly like the shared reconciler's default path does.
+func automaticProvisioningForTest(
+	cl client.Client,
+) func(ctx context.Context, dp *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error) {
+	return func(ctx context.Context, dp *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error) {
+		return secrets.EnsureCertificate(
+			ctx,
+			dp,
+			fmt.Sprintf("%s.%s", dp.Name, dp.Namespace),
+			types.NamespacedName{Namespace: testCASecretNamespace, Name: testCASecretName},
+			[]certificatesv1.KeyUsage{
+				certificatesv1.UsageKeyEncipherment,
+				certificatesv1.UsageDigitalSignature,
+				certificatesv1.UsageClientAuth,
+			},
+			cl,
+			client.MatchingLabels{
+				pkgconsts.SecretProvisioningLabelKey:               pkgconsts.SecretProvisioningAutomaticLabelValue,
+				pkgconsts.SecretAIGatewayDataPlaneCertificateLabel: "true",
+			},
+			pkgconsts.DefaultCertTTL,
+		)
+	}
+}
+
+// automaticFallbackUnexpected fails the test when the automatic-provisioning
+// fallback is invoked where it must not be (Manual provisioning, or no
+// ControlPlaneRef configured).
+func automaticFallbackUnexpected(
+	t *testing.T,
+) func(ctx context.Context, dp *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error) {
+	return func(context.Context, *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error) {
+		t.Fatal("automatic certificate provisioning must not be invoked")
+		return op.Noop, nil, nil
 	}
 }
 
@@ -179,7 +212,7 @@ func manualCertSecret(valid bool) *corev1.Secret {
 // aigwdpWithManualCertRef builds an AIGatewayDataPlane referencing
 // manualCertSecretName via Manual provisioning.
 func aigwdpWithManualCertRef() *aigatewayv1alpha1.AIGatewayDataPlane {
-	aigwdp := makeAIGWDP()
+	aigwdp := newReconcileAIGWDP()
 	aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
 		Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
 		SecretRef:    &aigatewayv1alpha1.SecretRef{Name: manualCertSecretName},
@@ -230,9 +263,8 @@ func Test_getManualCertificateSecret(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			aigwdp := aigwdpWithManualCertRef()
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(tc.objects...).Build()
-			r := &Reconciler{Client: cl}
 
-			res, secret, err := r.getManualCertificateSecret(context.Background(), aigwdp)
+			res, secret, err := getManualCertificateSecret(context.Background(), cl, aigwdp)
 
 			assert.Equal(t, tc.wantResult, res)
 			if tc.wantErrContains != "" {
@@ -263,9 +295,7 @@ func Test_getManualCertificateSecret(t *testing.T) {
 				return assert.AnError
 			},
 		})
-		r := &Reconciler{Client: cl}
-
-		res, secret, err := r.getManualCertificateSecret(context.Background(), aigwdp)
+		res, secret, err := getManualCertificateSecret(context.Background(), cl, aigwdp)
 
 		assert.Equal(t, op.Noop, res)
 		assert.Nil(t, secret)
@@ -279,16 +309,15 @@ func Test_getManualCertificateSecret(t *testing.T) {
 	})
 }
 
-func Test_getCertificateSecret_dispatch(t *testing.T) {
+func Test_resolveCertificateSecret(t *testing.T) {
 	scheme := managerscheme.Get()
 	aigatewaycp := &konnectv1alpha1.KonnectAIGateway{}
 
 	t.Run("Manual provisioning: fetches referenced secret, never calls EnsureCertificate", func(t *testing.T) {
 		aigwdp := aigwdpWithManualCertRef()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manualCertSecret(true)).Build()
-		r := &Reconciler{Client: cl}
 
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, aigatewaycp)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, aigatewaycp, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -297,16 +326,10 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 	})
 
 	t.Run("nil CertificateSecret: falls back to automatic provisioning", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(caSecret()).Build()
-		r := &Reconciler{
-			Client:                   cl,
-			ClusterCASecretName:      testCASecretName,
-			ClusterCASecretNamespace: testCASecretNamespace,
-			CertTTL:                  consts.DefaultCertTTL,
-		}
 
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, aigatewaycp)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, aigatewaycp, automaticProvisioningForTest(cl))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Created, res)
@@ -314,11 +337,10 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 	})
 
 	t.Run("no ControlPlaneRef, nothing configured: no certificate, no condition", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &Reconciler{Client: cl}
 
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -327,14 +349,13 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 	})
 
 	t.Run("no ControlPlaneRef, Automatic requested anyway: no certificate, condition surfaces mismatch", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
 			Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
 		}
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &Reconciler{Client: cl}
 
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -348,9 +369,8 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 	t.Run("no ControlPlaneRef, Manual requested anyway: no lookup, condition surfaces mismatch", func(t *testing.T) {
 		aigwdp := aigwdpWithManualCertRef()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manualCertSecret(true)).Build()
-		r := &Reconciler{Client: cl}
 
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -362,21 +382,20 @@ func Test_getCertificateSecret_dispatch(t *testing.T) {
 	})
 
 	t.Run("no ControlPlaneRef, CertificateSecret cleared after being set: stale condition is removed", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
 			Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
 		}
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
-		r := &Reconciler{Client: cl}
 
 		// Prior reconcile: CertificateSecret was set, condition surfaces the mismatch.
-		_, _, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		_, _, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
 		require.NoError(t, err)
 		require.NotNil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
 
 		// User clears CertificateSecret; still no ControlPlaneRef.
 		aigwdp.Spec.CertificateSecret = nil
-		res, secret, err := r.getCertificateSecret(context.Background(), aigwdp, nil)
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -389,19 +408,13 @@ func Test_cleanupStaleAutomaticCertificateSecret(t *testing.T) {
 	scheme := managerscheme.Get()
 
 	t.Run("deletes the operator-provisioned Secret owned by the AIGatewayDataPlane", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp, caSecret()).Build()
-		r := &Reconciler{
-			Client:                   cl,
-			ClusterCASecretName:      testCASecretName,
-			ClusterCASecretNamespace: testCASecretNamespace,
-			CertTTL:                  consts.DefaultCertTTL,
-		}
-		_, automaticSecret, err := r.ensureCertificateSecret(context.Background(), aigwdp)
+		_, automaticSecret, err := automaticProvisioningForTest(cl)(context.Background(), aigwdp)
 		require.NoError(t, err)
 		require.NotNil(t, automaticSecret)
 
-		err = r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		err = cleanupStaleAutomaticCertificateSecret(t.Context(), cl, logr.Discard(), aigwdp)
 		require.NoError(t, err)
 
 		err = cl.Get(t.Context(), types.NamespacedName{Namespace: automaticSecret.Namespace, Name: automaticSecret.Name}, &corev1.Secret{})
@@ -409,39 +422,31 @@ func Test_cleanupStaleAutomaticCertificateSecret(t *testing.T) {
 	})
 
 	t.Run("no automatic Secret present: no-op", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp).Build()
-		r := &Reconciler{Client: cl}
 
-		err := r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		err := cleanupStaleAutomaticCertificateSecret(t.Context(), cl, logr.Discard(), aigwdp)
 		require.NoError(t, err)
 	})
 
 	t.Run("List error is propagated", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		base := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp).Build()
 		cl := interceptor.NewClient(base, interceptor.Funcs{
 			List: func(_ context.Context, _ client.WithWatch, _ client.ObjectList, _ ...client.ListOption) error {
 				return assert.AnError
 			},
 		})
-		r := &Reconciler{Client: cl}
 
-		err := r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		err := cleanupStaleAutomaticCertificateSecret(t.Context(), cl, logr.Discard(), aigwdp)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to list automatic certificate Secrets")
 	})
 
 	t.Run("non-NotFound Delete error is propagated", func(t *testing.T) {
-		aigwdp := makeAIGWDP()
+		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(aigwdp, caSecret()).Build()
-		r := &Reconciler{
-			Client:                   cl,
-			ClusterCASecretName:      testCASecretName,
-			ClusterCASecretNamespace: testCASecretNamespace,
-			CertTTL:                  consts.DefaultCertTTL,
-		}
-		_, automaticSecret, err := r.ensureCertificateSecret(context.Background(), aigwdp)
+		_, automaticSecret, err := automaticProvisioningForTest(cl)(context.Background(), aigwdp)
 		require.NoError(t, err)
 		require.NotNil(t, automaticSecret)
 
@@ -450,9 +455,8 @@ func Test_cleanupStaleAutomaticCertificateSecret(t *testing.T) {
 				return assert.AnError
 			},
 		})
-		r.Client = failingClient
 
-		err = r.cleanupStaleAutomaticCertificateSecret(t.Context(), logr.Discard(), aigwdp)
+		err = cleanupStaleAutomaticCertificateSecret(t.Context(), failingClient, logr.Discard(), aigwdp)
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "failed to delete stale automatic certificate Secret")
 	})
