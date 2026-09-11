@@ -20,6 +20,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 - [AIGatewayModel](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodel)
 - [AIGatewayModelProvider](#aiconfiguration-konghq-com-v1alpha1-aigatewaymodelprovider)
 - [AIGatewayPolicy](#aiconfiguration-konghq-com-v1alpha1-aigatewaypolicy)
+- [AIGatewaySNI](#aiconfiguration-konghq-com-v1alpha1-aigatewaysni)
 
 ### AIGatewayAgent
 
@@ -200,6 +201,21 @@ AIGatewayPolicy is the Schema for the aigatewaypolicys API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayPolicySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyspec)_ |  |
 | `status` _[AIGatewayPolicyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicystatus)_ |  |
+
+### AIGatewaySNI
+
+
+AIGatewaySNI is the Schema for the aigatewaysnis API.
+
+<!-- ai_gateway_sni description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewaySNI`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewaySNISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnispec)_ |  |
+| `status` _[AIGatewaySNIStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnistatus)_ |  |
 
 ### Types
 
@@ -831,6 +847,24 @@ _Appears in:_
 
 - [AIGatewayCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatespec)
 
+#### AIGatewayCertificateRef
+
+
+AIGatewayCertificateRef references an AIGatewayCertificate in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+
 #### AIGatewayCertificateSpec
 
 
@@ -1234,6 +1268,22 @@ _Appears in:_
 
 - [AIGatewayEmbeddingsModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
 - [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
+
+#### AIGatewayHostname
+
+_Underlying type:_ `string`
+
+AIGatewayHostname A hostname used for TLS Server Name Indication (SNI)
+matching.
+Supports an optional wildcard segment at either end of the hostname (for
+example `*.example.com` or `example.*`).
+
+
+
+
+_Appears in:_
+
+- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
 
 #### AIGatewayHuggingfaceEmbeddingsModelConfig
 
@@ -5047,6 +5097,61 @@ _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
 
+#### AIGatewaySNIAPISpec
+
+
+AIGatewaySNIAPISpec defines the API spec fields for AIGatewaySNI.
+
+
+
+| Field | Description |
+| --- | --- |
+| `certificate` _[AIGatewayCertificateRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateref)_ | A reference to the certificate with which to associate the SNI hostname, by certificate name. The certificate must have a valid private key to be used by the SNI. |
+| `displayName` _string_ | The display name for this SNI. |
+| `hostname` _[AIGatewayHostname](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayhostname)_ | A hostname used for TLS Server Name Indication (SNI) matching. Supports an optional wildcard segment at either end of the hostname (for example `*.example.com` or `example.*`). |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _string_ | The name for this SNI. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewaySNISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnispec)
+
+
+
+#### AIGatewaySNISpec
+
+
+AIGatewaySNISpec defines the desired state of AIGatewaySNI.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `apiSpec` _[AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewaySNI](#aiconfiguration-konghq-com-v1alpha1-aigatewaysni)
+
+#### AIGatewaySNIStatus
+
+
+AIGatewaySNIStatus defines the observed state of AIGatewaySNI.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewaySNI](#aiconfiguration-konghq-com-v1alpha1-aigatewaysni)
+
 #### AIGatewayServiceTierFactor
 
 
@@ -5916,6 +6021,7 @@ _Appears in:_
 - [AIGatewayModelProviderStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderstatus)
 - [AIGatewayModelStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelstatus)
 - [AIGatewayPolicyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicystatus)
+- [AIGatewaySNIStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnistatus)
 
 
 
@@ -5966,6 +6072,7 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
 
 #### ManagedByValue
 
@@ -6028,6 +6135,7 @@ _Appears in:_
 - [AIGatewayModelProviderVllm](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelprovidervllm)
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+- [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
 
 #### PublicLabelsValue
 

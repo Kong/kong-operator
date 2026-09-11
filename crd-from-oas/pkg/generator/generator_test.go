@@ -664,20 +664,22 @@ func TestGenerateCRDType_NoAssociationsByDefault(t *testing.T) {
 	require.NotContains(t, content, "consumerGroups")
 }
 
-func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
-	parsed := &parser.ParsedSpec{
-		RequestBodies: map[string]*parser.Schema{
-			"CreateAIGatewayAgent": {
-				Name: "CreateAIGatewayAgent",
-				Properties: []*parser.Property{
-					{Name: "policies", Type: "string"},
+func TestGenerate_ReferencePathMustBeArrayOrDirectString(t *testing.T) {
+	parsedWith := func(propType string) *parser.ParsedSpec {
+		return &parser.ParsedSpec{
+			RequestBodies: map[string]*parser.Schema{
+				"CreateAIGatewayAgent": {
+					Name: "CreateAIGatewayAgent",
+					Properties: []*parser.Property{
+						{Name: "policies", Type: propType},
+					},
 				},
 			},
-		},
-		Schemas: map[string]*parser.Schema{},
+			Schemas: map[string]*parser.Schema{},
+		}
 	}
 
-	t.Run("non-array property errors", func(t *testing.T) {
+	t.Run("direct scalar string property succeeds as a single reference", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIGroup:   "konnect.konghq.com",
 			APIVersion: "v1alpha1",
@@ -689,7 +691,23 @@ func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
 				}},
 			},
 		})
-		_, err := g.Generate(parsed)
+		_, err := g.Generate(parsedWith("string"))
+		require.NoError(t, err)
+	})
+
+	t.Run("non-array, non-string property errors", func(t *testing.T) {
+		g := NewGenerator(Config{
+			APIGroup:   "konnect.konghq.com",
+			APIVersion: "v1alpha1",
+			References: map[string][]config.ReferenceConfig{
+				"AIGatewayAgent": {{
+					Path:       "spec.apiSpec.policies",
+					Kinds:      []string{"AIGatewayPolicy"},
+					ResolvesTo: "id",
+				}},
+			},
+		})
+		_, err := g.Generate(parsedWith("object"))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "must be an array property")
 	})
@@ -706,7 +724,7 @@ func TestGenerate_ReferencePathMustBeArray(t *testing.T) {
 				}},
 			},
 		})
-		_, err := g.Generate(parsed)
+		_, err := g.Generate(parsedWith("string"))
 		require.Error(t, err)
 		require.Contains(t, err.Error(), "spec.apiSpec.doesnotexist")
 		require.Contains(t, err.Error(), "does not match any field")

@@ -90,12 +90,12 @@ func (g *Generator) generateEntityOpsTestFile(
 		return nil, nil
 	}
 
-	fixtureFields := g.buildOpsControllerTestFields(entityName, schema.Properties)
+	fixtureFields, refSeedObjects := g.buildOpsControllerTestFields(entityName, schema.Properties)
 	rootUnion := buildOpsControllerRootUnionFixture(entityName, schema, g.config.APIGroupPackageAlias)
 
-	var extraSeedObjects []string
+	extraSeedObjects := refSeedObjects
 	if rootUnion != nil {
-		extraSeedObjects = rootUnion.ExtraSeedObjects
+		extraSeedObjects = append(extraSeedObjects, rootUnion.ExtraSeedObjects...)
 	}
 	data := opsControllerTestFileData{
 		Entity:           entityName,
@@ -149,15 +149,36 @@ func (g *Generator) generateEntityOpsTestFile(
 	}, nil
 }
 
-func (g *Generator) buildOpsControllerTestFields(entityName string, props []*parser.Property) []opsControllerTestField {
+func (g *Generator) buildOpsControllerTestFields(entityName string, props []*parser.Property) ([]opsControllerTestField, []string) {
 	testFields := make([]opsControllerTestField, 0, len(props))
+	var seedObjects []string
 	for _, prop := range props {
 		if skipProperty(prop) || prop.IsReference {
 			continue
 		}
 		// Configured inter-CR reference fields are typed ref slices; skip them
 		// here because generated reference-specific tests cover the ref path.
-		if g.referenceForField(entityName, jsonName(prop.Name)) != nil {
+		// A direct scalar reference (e.g. AIGatewaySNI's single "certificate"
+		// field) can't be left unset the way an empty slice can — it's always
+		// exactly one attempted resolution — so it needs a real fixture value
+		// and a matching, "programmed" seed object for that resolution to
+		// succeed against the test's fake client.
+		if ref := g.referenceForField(entityName, jsonName(prop.Name)); ref != nil {
+			if prop.Type != "array" && len(ref.Kinds) > 0 {
+				refName := "test-" + jsonName(prop.Name)
+				testFields = append(testFields, opsControllerTestField{
+					FieldName: goFieldName(prop.Name),
+					TestValue: fmt.Sprintf("%s.%s{Name: %q}", g.config.APIGroupPackageAlias, ref.TypeName(), refName),
+				})
+				seedObjects = append(seedObjects, fmt.Sprintf(
+					`func() *%[1]s.%[2]s {
+		r := &%[1]s.%[2]s{ObjectMeta: metav1.ObjectMeta{Name: %[3]q, Namespace: "default"}}
+		r.SetKonnectID(%[3]q + "-kid")
+		return r
+	}()`,
+					g.config.APIGroupPackageAlias, ref.Kinds[0], refName,
+				))
+			}
 			continue
 		}
 		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
@@ -185,7 +206,7 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			})
 			continue
 		}
-		goType := g.goType(prop)
+		goType := g.testFieldGoType(prop)
 		testValue := controllerOpsTestValueForProperty(prop, goType, g.config.APIGroupPackageAlias)
 		if testValue == "" {
 			continue
@@ -195,7 +216,7 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			TestValue: testValue,
 		})
 	}
-	return testFields
+	return testFields, seedObjects
 }
 
 func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema, apiAlias string) *opsControllerRootUnionFixture {

@@ -596,6 +596,23 @@ func findEntitySchema(parsed *parser.ParsedSpec, entityName string) *parser.Sche
 	return nil
 }
 
+// findAPISpecProperty returns entityName's direct top-level apiSpec property
+// named jsonFieldName, or nil if there's no such property. Only meaningful
+// for non-root-union entities, since a root-union entity's own top-level
+// properties are never referenced directly (see templateReferences).
+func findAPISpecProperty(parsed *parser.ParsedSpec, entityName, jsonFieldName string) *parser.Property {
+	schema := findEntitySchema(parsed, entityName)
+	if schema == nil {
+		return nil
+	}
+	for _, p := range schema.Properties {
+		if jsonName(p.Name) == jsonFieldName {
+			return p
+		}
+	}
+	return nil
+}
+
 // isSchemaFieldSensitiveLeaf returns true if the given JSON field name within
 // the given schema Go type name is a configured sensitive leaf.
 func (g *Generator) isSchemaFieldSensitiveLeaf(schemaGoTypeName, jsonFieldName string) bool {
@@ -2547,10 +2564,16 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// original OAS type.
 	goTypeInCRD := func(prop *parser.Property) string {
 		// Configured inter-CR reference fields become slices of the generated
-		// ref struct (e.g. []AIGatewayPolicyRef). Checked first so non-template
-		// consumers (buildSDKOpsTestFields etc.) observe the ref type too.
+		// ref struct (e.g. []AIGatewayPolicyRef) — unless the underlying field
+		// is itself a plain scalar (e.g. AIGatewaySNI's single "certificate"
+		// field), which becomes a single ref struct, not a one-element slice.
+		// Checked first so non-template consumers (buildSDKOpsTestFields etc.)
+		// observe the ref type too.
 		if ref := g.referenceForField(entityName, jsonName(prop.Name)); ref != nil {
-			return "[]" + ref.TypeName()
+			if prop.Type == "array" {
+				return "[]" + ref.TypeName()
+			}
+			return ref.TypeName()
 		}
 
 		// NOTE: direct apiSpec-level (single-segment path) secret leaves are
@@ -4442,6 +4465,13 @@ type TemplateReferenceConfig struct {
 	// under for a SingleValueObjectRef (e.g. "name" or "id", from ResolvesTo).
 	// Only set when SingleValueObjectRef is true.
 	ObjectWrapKey string
+	// DirectScalarRef is true when this is a direct (non-nested) reference
+	// whose apiSpec field is itself a plain scalar rather than an array (e.g.
+	// AIGatewaySNI's single "certificate" field). RefsExpr wraps it in a
+	// one-element slice literal so it flows through the same []<RefType>
+	// resolver plumbing as an array-typed direct reference, and the SDK
+	// payload write unwraps the single resolved value back out of that slice.
+	DirectScalarRef bool
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -4477,6 +4507,18 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			// leaves GoPathSegments empty rather than aborting generation.
 			if _, _, goPath, err := g.refFieldTarget(entityName, ref); err == nil {
 				goPathSegments = goPath
+			}
+		}
+		// A direct (non-nested) reference whose apiSpec field is itself a plain
+		// scalar (not the usual array-shaped body field, e.g. AIGatewaySNI's
+		// single "certificate" field) resolves to exactly one reference. Wrap
+		// it in a one-element slice literal so it flows through the same
+		// []<RefType> resolver plumbing as an array-typed direct reference.
+		var directScalarRef bool
+		if !nested {
+			if prop := findAPISpecProperty(g.parsed, entityName, tail); prop != nil && prop.Type != "array" {
+				directScalarRef = true
+				refsExpr = "[]" + ref.TypeName() + "{obj.Spec.APISpec." + goFieldNameStr + "}"
 			}
 		}
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
@@ -4523,6 +4565,7 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			ArrayLeafPointer:     arrayLeafPointer,
 			SingleValueObjectRef: singleValueObjectRef,
 			ObjectWrapKey:        objectWrapKey,
+			DirectScalarRef:      directScalarRef,
 		}
 	}
 	return result
@@ -5222,7 +5265,16 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// variants) standing in for one reference, rather than an array of them.
 			objectRefLeaf := prop.Type != "array" && (len(prop.OneOf) > 0 || len(prop.AnyOf) > 0 ||
 				(prop.RefName != "" && refTargetHasRootOneOf(g.parsed, prop.RefName)))
-			if prop.Type != "array" && !sawArray && !objectRefLeaf {
+			// A plain string field sitting directly on apiSpec (the reference
+			// path is a single segment, so there's no enclosing array or
+			// oneOf/anyOf wrapper to borrow cardinality from) is also a valid
+			// single-reference target: its cardinality is exactly one, same as
+			// an objectRefLeaf, it just has nothing to unwrap. Restricted to
+			// "string" (not just "not array") so a direct object-typed field
+			// (e.g. a nested config object with no reference semantics of its
+			// own) still isn't mistaken for a reference target.
+			directScalarLeaf := len(segments) == 1 && prop.Type == "string" && !objectRefLeaf
+			if prop.Type != "array" && !sawArray && !objectRefLeaf && !directScalarLeaf {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
 			// A scalar leaf inside a non-leaf array (sawArray), or a single
@@ -6168,7 +6220,7 @@ func (g *Generator) buildSDKOpsTestFields(entityName string, props []*parser.Pro
 			})
 			continue
 		}
-		goType := g.goType(prop)
+		goType := g.testFieldGoType(prop)
 		testValue, expectedValue := testValuesForProperty(prop, goType)
 		if testValue == "" || expectedValue == "" {
 			continue
@@ -6916,6 +6968,18 @@ func (g *Generator) goType(prop *parser.Property) string {
 	}
 
 	return baseType
+}
+
+// testFieldGoType returns the Go type to use when generating a test fixture
+// value for prop, mirroring writeSchemaTypeField's pointer promotion for
+// anyOf-derived scalar wrapper types: goType() alone always returns such a
+// RefName type unpointered, but the actual generated struct field is a
+// pointer (see the g.anyOfSchemaNames[prop.RefName] case there).
+func (g *Generator) testFieldGoType(prop *parser.Property) string {
+	if prop.RefName != "" && g.anyOfSchemaNames[prop.RefName] {
+		return "*" + fixInitialisms(prop.RefName)
+	}
+	return g.goType(prop)
 }
 
 // formatComment formats a description string for use as a Go comment

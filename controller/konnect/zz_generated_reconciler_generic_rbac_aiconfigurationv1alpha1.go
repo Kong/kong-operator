@@ -38,3 +38,6 @@ package konnect
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaypolicies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaypolicies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaypolicies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaysnis,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaysnis/status,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaysnis/finalizers,verbs=update;patch
