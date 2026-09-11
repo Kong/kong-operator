@@ -155,7 +155,11 @@ type {{.EntityName}}APISpec struct {
 	// {{.}}
 {{- end}}
 {{- if isRefConfigField $prop}}
+{{- if eq $prop.Type "array"}}
 	{{goFieldName $prop.Name}} []{{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitempty"` + "`" + `
+{{- else}}
+	{{goFieldName $prop.Name}} {{refTypeNameForField $prop}} ` + "`" + `json:"{{jsonPropName $prop}},omitzero"` + "`" + `
+{{- end}}
 {{- else if isRefProperty $prop}}
 	{{goFieldName $prop.Name}}Ref {{goType $prop}} ` + "`" + `json:"{{refJSONTag $prop}},omitempty"` + "`" + `
 {{- else}}
@@ -901,8 +905,12 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
 	}
+{{- if .DirectScalarRef}}
+	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+{{- else}}
 	// Always set: an empty list must explicitly clear the field in Konnect.
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- template "sdkOpsRefInjections" $}}
@@ -1017,7 +1025,7 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
 func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
-{{- if .NestedRef}}
+{{- if or .NestedRef .DirectScalarRef}}
 	refs := {{.RefsExpr}}
 	resolved := make([]string, 0, len(refs))
 	var errs []error

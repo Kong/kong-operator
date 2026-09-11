@@ -19,6 +19,22 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayAuthStrategyRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayCertificateRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayCertificate reference is valid and points to an existing
+	// AIGatewayCertificate.
+	AIGatewayCertificateRefValidConditionType = "AIGatewayCertificateRefValid"
+
+	// AIGatewayCertificateRefReasonValid is the reason used with the AIGatewayCertificateRefValid
+	// condition type indicating that the AIGatewayCertificate reference is valid.
+	AIGatewayCertificateRefReasonValid = "Valid"
+	// AIGatewayCertificateRefReasonInvalid is the reason used with the AIGatewayCertificateRefValid
+	// condition type indicating that the AIGatewayCertificate reference is invalid.
+	AIGatewayCertificateRefReasonInvalid = "Invalid"
+	// AIGatewayCertificateRefReasonNotProgrammed is the reason used with the AIGatewayCertificateRefValid
+	// condition type indicating that the referenced AIGatewayCertificate exists but is not
+	// yet programmed in Konnect.
+	AIGatewayCertificateRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayConsumerRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayConsumer reference is valid and points to an existing
 	// AIGatewayConsumer.

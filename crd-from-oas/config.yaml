@@ -426,6 +426,33 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      # The nested /certificates/{certificateId}/snis path is not modelled as
+      # a separate CRD: it's the same underlying SNI object as /snis (just
+      # addressed via a different path param), and the OAS marks it
+      # x-terraform-excluded for that reason — a second CRD here would let the
+      # same Konnect object be managed two ways and drift.
+      - path: /v1/ai-gateways/{gatewayId}/snis
+        name: AIGatewaySNI
+        references:
+          - path: spec.apiSpec.certificate
+            kinds: [AIGatewayCertificate]
+            resolvesTo: name
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewaySNIsSDK
+            fieldName: AIGatewaySNIs
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewaySNIRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewaySNIRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
   configuration.konghq.com/v1alpha1:
     categories:
       - kong

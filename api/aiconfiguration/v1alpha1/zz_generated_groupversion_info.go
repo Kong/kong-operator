@@ -33,6 +33,8 @@ func addKnownTypesGenerated(scheme *runtime.Scheme) error {
 		&AIGatewayModelProviderList{},
 		&AIGatewayPolicy{},
 		&AIGatewayPolicyList{},
+		&AIGatewaySNI{},
+		&AIGatewaySNIList{},
 	)
 
 	metav1.AddToGroupVersion(scheme, GroupVersion)

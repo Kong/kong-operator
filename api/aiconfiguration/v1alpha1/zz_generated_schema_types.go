@@ -932,6 +932,12 @@ type AIGatewayGeminiEmbeddingsModelConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
+// AIGatewayHostname A hostname used for TLS Server Name Indication (SNI)
+// matching.
+// Supports an optional wildcard segment at either end of the hostname (for
+// example `*.example.com` or `example.*`).
+type AIGatewayHostname string
+
 // AIGatewayHuggingfaceEmbeddingsModelConfig Hugging Face-specific configuration
 // for a model.
 type AIGatewayHuggingfaceEmbeddingsModelConfig struct {
@@ -8200,6 +8206,11 @@ type AIGatewayRouteConfig struct {
 	// +optional
 	Tags []string `json:"tags,omitempty"`
 }
+
+// AIGatewaySNICertificateReference A reference to the certificate with which to
+// associate the SNI hostname, by certificate name.
+// The certificate must have a valid private key to be used by the SNI.
+type AIGatewaySNICertificateReference string
 
 // AIGatewayServiceTierFactor is a type alias.
 type AIGatewayServiceTierFactor struct {
