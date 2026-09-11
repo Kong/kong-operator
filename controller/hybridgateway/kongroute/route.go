@@ -432,7 +432,15 @@ func priorityForTraditionalHTTPRouteMatch(
 	priorities map[httpRouteMatchPriorityKey]int64,
 	ruleIndex, matchIndex int,
 ) *int64 {
-	if isDefaultPathHTTPRouteMatch(match) || match.Path == nil || match.Path.Value == nil {
+	// Matches on the default path (nil or "/") need an explicit regex_priority to
+	// preserve Gateway API precedence, since Kong weighs populated match fields
+	// before regex_priority and would otherwise treat all default-path matches as
+	// equally specific regardless of their method or header constraints.
+	if isDefaultPathHTTPRouteMatch(match) {
+		priority := priorityForHTTPRouteMatch(priorities, ruleIndex, matchIndex)
+		return &priority
+	}
+	if match.Path == nil || match.Path.Value == nil {
 		return nil
 	}
 	pathType := gatewayv1.PathMatchPathPrefix

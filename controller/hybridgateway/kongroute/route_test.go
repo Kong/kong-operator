@@ -197,7 +197,7 @@ func TestRoutesForRule(t *testing.T) {
 
 				if result.Spec.Paths[0] == "/" {
 					assert.Equal(t, map[string][]string{"X-Foo": {"bar"}}, result.Spec.Headers)
-					assert.Nil(t, result.Spec.RegexPriority)
+					assert.NotNil(t, result.Spec.RegexPriority)
 					continue
 				}
 
@@ -790,9 +790,13 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	assert.Equal(t, []string{"/"}, versionTwoRoute.Spec.Paths)
 	assert.Equal(t, []string{"/"}, twoHeaderRoute.Spec.Paths)
 	assert.Equal(t, []string{"/"}, colorBlueRoute.Spec.Paths)
-	assert.Nil(t, versionTwoRoute.Spec.RegexPriority)
-	assert.Nil(t, twoHeaderRoute.Spec.RegexPriority)
-	assert.Nil(t, colorBlueRoute.Spec.RegexPriority)
+	// Header-only matches on the default path get an explicit regex_priority so
+	// Gateway API precedence (more headers beat fewer headers) is preserved.
+	assert.NotNil(t, versionTwoRoute.Spec.RegexPriority)
+	assert.NotNil(t, twoHeaderRoute.Spec.RegexPriority)
+	assert.NotNil(t, colorBlueRoute.Spec.RegexPriority)
+	assert.Greater(t, *twoHeaderRoute.Spec.RegexPriority, *versionTwoRoute.Spec.RegexPriority)
+	assert.Greater(t, *twoHeaderRoute.Spec.RegexPriority, *colorBlueRoute.Spec.RegexPriority)
 }
 
 func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(t *testing.T) {
@@ -869,7 +873,7 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	methodWithHeaderRoute := methodOnlyRoutes[1]
 	assert.Equal(t, []string{"PATCH"}, methodOnlyRoute.Spec.Methods)
 	assert.Empty(t, methodOnlyRoute.Spec.Paths)
-	assert.Nil(t, methodOnlyRoute.Spec.RegexPriority)
+	assert.NotNil(t, methodOnlyRoute.Spec.RegexPriority)
 	assert.Nil(t, methodOnlyRoute.Spec.Headers)
 	assert.Equal(t, []string{"PATCH"}, methodWithHeaderRoute.Spec.Methods)
 	assert.Equal(t, map[string][]string{"version": {"four"}}, methodWithHeaderRoute.Spec.Headers)
@@ -878,9 +882,11 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	headerOnlyRoute := headerOnlyRoutes[0]
 	assert.Empty(t, headerOnlyRoute.Spec.Paths)
 	assert.Empty(t, headerOnlyRoute.Spec.Methods)
-	assert.Nil(t, headerOnlyRoute.Spec.RegexPriority)
+	assert.NotNil(t, headerOnlyRoute.Spec.RegexPriority)
 	require.NotNil(t, headerOnlyRoute.Spec.Headers)
 	assert.Equal(t, map[string][]string{"version": {"four"}}, headerOnlyRoute.Spec.Headers)
+	// Method matches rank above header-only matches per Gateway API precedence.
+	assert.Greater(t, *methodOnlyRoute.Spec.RegexPriority, *headerOnlyRoute.Spec.RegexPriority)
 
 	pathOnlyRoute := pathRoutes[0]
 	pathWithHeaderRoute := pathRoutes[1]
@@ -1199,7 +1205,9 @@ func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
 	assert.Equal(t, []string{"GET"}, results[0].Spec.Methods)
 	assert.Empty(t, results[0].Spec.Paths)
 	assert.Nil(t, results[0].Spec.Headers)
-	assert.Nil(t, results[0].Spec.RegexPriority)
+	// Method-only matches on the default path get an explicit regex_priority so
+	// Gateway API precedence is preserved relative to header-only matches.
+	assert.NotNil(t, results[0].Spec.RegexPriority)
 	assert.Equal(t, []string{"example.com"}, results[0].Spec.Hosts)
 }
 
