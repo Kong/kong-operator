@@ -1,4 +1,4 @@
-package multiinstance_test
+package instances_test
 
 import (
 	"context"
@@ -8,13 +8,11 @@ import (
 
 	"github.com/samber/lo"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/admission"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
-	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 )
 
-// mockInstance is a mock implementation of multiinstance.ManagerInstance.
+// mockInstance is a mock implementation of instances.Instance.
 type mockInstance struct {
 	id                 manager.ID
 	returnErrOnRun     error
@@ -22,11 +20,11 @@ type mockInstance struct {
 	wasContextCanceled atomic.Bool
 }
 
-var _ multiinstance.ManagerInstance = &mockInstance{}
+var _ instances.Instance = &mockInstance{}
 
-// Config implements multiinstance.ManagerInstance.
-func (m *mockInstance) Config() managercfg.Config {
-	return managercfg.Config{}
+// ConfigHash implements instances.Instance.
+func (m *mockInstance) ConfigHash() (string, error) {
+	return m.id.String(), nil
 }
 
 func newMockInstance(id manager.ID) *mockInstance {
@@ -42,10 +40,12 @@ func (m *mockInstance) ID() manager.ID {
 func (m *mockInstance) Run(ctx context.Context) error {
 	m.wasStarted.Store(true)
 
-	go func() {
-		<-ctx.Done()
-		m.wasContextCanceled.Store(true)
-	}()
+	if m.returnErrOnRun != nil {
+		return m.returnErrOnRun
+	}
+
+	<-ctx.Done()
+	m.wasContextCanceled.Store(true)
 
 	return m.returnErrOnRun
 }
@@ -58,11 +58,7 @@ func (m *mockInstance) DiagnosticsHandler() http.Handler {
 	return nil
 }
 
-func (m *mockInstance) KongValidator() admission.KongHTTPValidator {
-	return admission.KongHTTPValidator{}
-}
-
-// mockDiagnosticsExposer is a mock implementation of multiinstance.DiagnosticsExposer.
+// mockDiagnosticsExposer is a mock implementation of instances.DiagnosticsExposer.
 type mockDiagnosticsExposer struct {
 	registeredInstances map[manager.ID]struct{}
 	lock                sync.Mutex

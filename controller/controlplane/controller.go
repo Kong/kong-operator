@@ -672,21 +672,25 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 
 	// If the error is transient, we log it and requeue the resource. Such errors include:
 	// - NoAvailableEndpointsError: indicates that there are no available endpoints for the dataplane;
-	// - KongClientNotReadyError: indicates that the Kong client is not ready.
+	// - KongClientNotReadyError: indicates that the Kong client is not ready;
+	// - InstanceWithIDAlreadyScheduledError: indicates that the previously stopped instance
+	//   with the same ID hasn't been reaped yet.
 	// These errors are considered transient and will be retried after a delay.
 	if endpointsError, ok := errors.AsType[ingresserrors.NoAvailableEndpointsError](err); ok {
-		conditionMessage = endpointsError.Error()
+		conditionMessage = fmt.Sprintf("Unable to connect to data plane: %s", endpointsError.Error())
 	} else if kongClientError, ok := errors.AsType[ingresserrors.KongClientNotReadyError](err); ok {
-		conditionMessage = kongClientError.Error()
+		conditionMessage = fmt.Sprintf("Unable to connect to data plane: %s", kongClientError.Error())
+	} else if _, ok := errors.AsType[multiinstance.InstanceWithIDAlreadyScheduledError](err); ok {
+		conditionMessage = "Waiting for the previous control plane instance to be removed"
 	}
 	if conditionMessage != "" {
-		logger.Info("Transient error encountered while creating kong api clients, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
+		logger.Info("Transient error encountered while scheduling control plane instance, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(
 				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
 				kcfgdataplane.WaitingToBecomeReadyReason,
-				fmt.Sprintf("Unable to connect to data plane: %s", conditionMessage),
+				conditionMessage,
 			),
 			cp,
 		)

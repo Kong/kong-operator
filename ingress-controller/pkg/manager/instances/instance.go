@@ -1,4 +1,4 @@
-package multiinstance
+package instances
 
 import (
 	"context"
@@ -6,22 +6,20 @@ import (
 	"sync"
 
 	"github.com/go-logr/logr"
-
-	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 )
 
-// instance represents a single manager.Manager instance in the multi-instance manager.
+// instance represents a single Instance managed by a Registry.
 type instance struct {
 	logger  logr.Logger
-	in      ManagerInstance
+	in      Instance
 	cfgHash string
 
 	stopOnce sync.Once
 	stopCh   chan struct{}
 }
 
-func newInstance(in ManagerInstance, logger logr.Logger) (*instance, error) {
-	hash, err := managercfg.Hash(in.Config())
+func newInstance(in Instance, logger logr.Logger) (*instance, error) {
+	hash, err := in.ConfigHash()
 	if err != nil {
 		return nil, err
 	}
@@ -47,29 +45,31 @@ func (i *instance) StopChannel() <-chan struct{} {
 	return i.stopCh
 }
 
-// Config returns the configuration of the instance.
-func (i *instance) Config() managercfg.Config {
-	return i.in.Config()
-}
-
-// ConfigHash returns a hash of the instance's configuration.
+// ConfigHash returns a hash of the instance's configuration, computed when the instance was scheduled.
 func (i *instance) ConfigHash() string {
 	return i.cfgHash
 }
 
 // Run runs the instance in a goroutine and blocks until the instance is stopped or the context is done.
-func (i *instance) Run(ctx context.Context) {
+func (i *instance) Run(ctx context.Context) error {
+	errCh := make(chan error, 1)
 	ctx, cancel := context.WithCancel(ctx)
 	go func() {
 		if err := i.in.Run(ctx); err != nil {
-			i.logger.Error(err, "Instance exited with an error")
+			errCh <- err
+			return
 		}
+		errCh <- nil
 	}()
 
 	defer cancel() // Cancel the context once the parent context is done or the instance is stopped.
 	select {
 	case <-ctx.Done():
+		return nil
 	case <-i.stopCh:
+		return nil
+	case err := <-errCh:
+		return err
 	}
 }
 

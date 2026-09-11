@@ -1,4 +1,4 @@
-package multiinstance
+package instances
 
 import "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 
@@ -16,7 +16,7 @@ func (e InstanceWithIDAlreadyScheduledError) Error() string {
 	return "instance with ID " + e.id.String() + " already exists"
 }
 
-// InstanceNotFoundError is an error indicating that an instance with the given ID was not found in the manager.
+// InstanceNotFoundError is an error indicating that an instance with the given ID was not found in the registry.
 // It can indicate that the instance was never scheduled or was stopped.
 type InstanceNotFoundError struct {
 	id manager.ID

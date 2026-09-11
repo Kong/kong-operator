@@ -95,6 +95,12 @@ func (m *Manager) Config() managercfg.Config {
 	return m.cfg
 }
 
+// ConfigHash returns a hash of the manager's configuration. It's used to detect configuration drift between
+// a running instance and its desired configuration.
+func (m *Manager) ConfigHash() (string, error) {
+	return managercfg.Hash(m.cfg)
+}
+
 // GetKubeconfig returns the Kubernetes REST config object associated with the instance.
 func (m *Manager) GetKubeconfig() *rest.Config {
 	return m.manager.GetKubeconfig()

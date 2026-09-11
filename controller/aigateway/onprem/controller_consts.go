@@ -16,10 +16,21 @@ limitations under the License.
 
 package onprem
 
+import "time"
+
 // -----------------------------------------------------------------------------
-// OnPremAIGateway Reconciler - RBAC
+// OnPremAIGateway - Finalizers
 // -----------------------------------------------------------------------------
 
-// +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways,verbs=get;list;watch;update;patch
-// +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways/status,verbs=update;patch
-// +kubebuilder:rbac:groups=aigateway.konghq.com,resources=onpremaigateways/finalizers,verbs=update
+// OnPremAIGatewayFinalizer defines finalizers added by the onpremaigateway controller.
+type OnPremAIGatewayFinalizer string
+
+const (
+	// OnPremAIGatewayFinalizerInstanceTeardown is the finalizer to tear down the on-prem AI Gateway control
+	// plane instance that this resource runs.
+	OnPremAIGatewayFinalizerInstanceTeardown OnPremAIGatewayFinalizer = "gateway-operator.konghq.com/teardown-onprem-aigateway-instance"
+)
+
+// requeueAfterBoot is the delay after which an OnPremAIGateway is requeued while its control plane
+// instance is booting.
+const requeueAfterBoot = time.Second

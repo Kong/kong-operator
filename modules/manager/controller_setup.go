@@ -52,6 +52,7 @@ import (
 	secretcert "github.com/kong/kong-operator/v2/controller/secret_cert"
 	"github.com/kong/kong-operator/v2/controller/specialized"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstance"
+	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/multiinstanceai"
 	"github.com/kong/kong-operator/v2/internal/metrics"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -647,6 +648,20 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		podLabels = map[string]string{}
 	}
 
+	// aiGatewayInstancesMgr runs the in-process on-prem AI Gateway control plane instances, one per
+	// OnPremAIGateway resource.
+	// NOTE: no diagnostics exposer is configured yet. When the AI Gateway control plane grows a config
+	// dump, add one mirroring diagnostics.NewControlPlaneDiagnosticsExposer (see run.go, where it's passed
+	// to the ControlPlane's multi-instance manager) and pass it here via instances.WithDiagnosticsExposer.
+	// TODO: https://github.com/Kong/kong-operator/issues/5630
+	var aiGatewayInstancesMgr *multiinstanceai.Manager
+	if c.OnPremAIGatewayControllerEnabled {
+		aiGatewayInstancesMgr = multiinstanceai.NewManager(mgr.GetLogger())
+		if err := mgr.Add(aiGatewayInstancesMgr); err != nil {
+			return nil, fmt.Errorf("failed to add AI Gateway instances manager to controller-runtime manager: %w", err)
+		}
+	}
+
 	ctrlOpts := controller.Options{
 		CacheSyncTimeout: c.CacheSyncTimeout,
 	}
@@ -843,9 +858,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		{
 			Enabled: c.OnPremAIGatewayControllerEnabled,
 			Controller: &aigwonprem.Reconciler{
-				Client:        mgr.GetClient(),
-				LoggingMode:   c.LoggingMode,
-				TypeConverter: ssaProvider,
+				Client:           mgr.GetClient(),
+				LoggingMode:      c.LoggingMode,
+				TypeConverter:    ssaProvider,
+				InstancesManager: aiGatewayInstancesMgr,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when
