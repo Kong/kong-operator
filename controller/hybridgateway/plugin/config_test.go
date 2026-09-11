@@ -184,7 +184,7 @@ func TestConfigFromSecret(t *testing.T) {
 		{
 			name:        "missing secret",
 			ref:         configurationv1.SecretValueFromSource{Secret: "missing", Key: "config"},
-			expectedErr: "failed to fetch plugin configuration secret default/missing",
+			expectedErr: "plugin configuration secret default/missing not found: if it exists, it is not matched by --secret-label-selector",
 		},
 	}
 
@@ -335,7 +335,7 @@ func TestApplyJSONPatchFromSecretRef(t *testing.T) {
 			path:        "/b",
 			secretName:  "missing",
 			key:         "b",
-			expectedErr: "failed to fetch plugin configuration secret default/missing",
+			expectedErr: "plugin configuration secret default/missing not found: if it exists, it is not matched by --secret-label-selector",
 		},
 	}
 
@@ -393,7 +393,7 @@ func TestSecretValue(t *testing.T) {
 			namespace:   "default",
 			secretName:  "missing",
 			key:         "config",
-			expectedErr: "failed to fetch plugin configuration secret default/missing",
+			expectedErr: "plugin configuration secret default/missing not found: if it exists, it is not matched by --secret-label-selector",
 		},
 		{
 			name:        "secret in another namespace is not visible",
@@ -401,7 +401,7 @@ func TestSecretValue(t *testing.T) {
 			secretName:  "s",
 			key:         "config",
 			objects:     []client.Object{newSecret(map[string]string{"config": "value"})},
-			expectedErr: "failed to fetch plugin configuration secret other/s",
+			expectedErr: "plugin configuration secret other/s not found: if it exists, it is not matched by --secret-label-selector",
 		},
 	}
 

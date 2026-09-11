@@ -563,7 +563,7 @@ func resolvedConfigCases() []resolvedConfigCase {
 					SecretValue: configurationv1.SecretValueFromSource{Secret: "absent", Key: "config"},
 				}
 			}),
-			expectedErr: "failed to fetch plugin configuration secret test-namespace/absent",
+			expectedErr: "plugin configuration secret test-namespace/absent not found: if it exists, it is not matched by --secret-label-selector",
 		},
 	}
 }

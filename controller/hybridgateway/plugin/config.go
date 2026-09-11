@@ -8,11 +8,13 @@ import (
 
 	jsonpatch "github.com/evanphx/json-patch/v5"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/yaml"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
+	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 )
 
 // rawPatchPattern is the JSON patch (RFC6902) document template used to inject a
@@ -163,6 +165,12 @@ func applyJSONPatchFromSecretRef(
 func secretValue(ctx context.Context, cl client.Client, namespace, name, key string) ([]byte, error) {
 	secret := &corev1.Secret{}
 	if err := cl.Get(ctx, types.NamespacedName{Namespace: namespace, Name: name}, secret); err != nil {
+		// A Secret excluded by --secret-label-selector is absent from the cache and reads as
+		// NotFound even though it exists in the cluster.
+		if apierrors.IsNotFound(err) {
+			return nil, fmt.Errorf("plugin configuration secret %s/%s not found: if it exists, it is not matched by --secret-label-selector (%s=%s by default): %w",
+				namespace, name, mgrconfig.DefaultSecretLabelSelector, mgrconfig.LabelValueForSelectorTrue, err)
+		}
 		return nil, fmt.Errorf("failed to fetch plugin configuration secret %s/%s: %w", namespace, name, err)
 	}
 
