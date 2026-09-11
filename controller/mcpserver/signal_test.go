@@ -126,6 +126,32 @@ func TestSignalManager_DeregisterControlPlane(t *testing.T) {
 	})
 }
 
+func TestMCPServersFetcher_NotifySignal(t *testing.T) {
+	fetchEventCh := make(chan struct{}, 1)
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{Name: "my-cp", Namespace: "default"}
+	f := NewMCPServersFetcher(logging.DevelopmentMode, nil, nil, fetchEventCh, nil, cp, scheme.Get())
+
+	// Two signals arrive before the fetch loop wakes up and drains the
+	// channel: the last one must win, and only one wakeup must be queued.
+	f.NotifySignal(mcpSignal{Offset: "off-1", Version: "v-1"})
+	f.NotifySignal(mcpSignal{Offset: "off-2", Version: "v-2"})
+
+	select {
+	case <-fetchEventCh:
+	default:
+		t.Fatal("expected a wakeup to be queued")
+	}
+	select {
+	case <-fetchEventCh:
+		t.Fatal("expected only one wakeup to be queued")
+	default:
+	}
+
+	got := f.lastSignal.Load()
+	require.NotNil(t, got)
+	assert.Equal(t, mcpSignal{Offset: "off-2", Version: "v-2"}, *got)
+}
+
 func TestSignalManager_RegisterControlPlane(t *testing.T) {
 	makeCP := func(name, namespace string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
