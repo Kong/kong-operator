@@ -283,15 +283,13 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		enableRefGrant     bool
 		objects            []client.Object
 		route              gatewayapi.HTTPRoute
 		wantReason         gatewayapi.RouteConditionReason
 		wantMessageContain string
 	}{
 		{
-			name:           "extensionRef resolves",
-			enableRefGrant: true,
+			name: "extensionRef resolves",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 				&kongPlugin,
@@ -311,8 +309,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
-			name:           "extensionRef missing",
-			enableRefGrant: true,
+			name: "extensionRef missing",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
@@ -332,8 +329,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "extensionRef default/missing-plugin does not exist",
 		},
 		{
-			name:           "extensionRef invalid kind",
-			enableRefGrant: true,
+			name: "extensionRef invalid kind",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
@@ -353,8 +349,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "unsupported type configuration.konghq.com/KongClusterPlugin",
 		},
 		{
-			name:           "annotation plugin missing",
-			enableRefGrant: true,
+			name: "annotation plugin missing",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
@@ -369,8 +364,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "referenced KongPlugin default/missing-plugin does not exist",
 		},
 		{
-			name:           "annotation plugin cross-namespace without grant",
-			enableRefGrant: true,
+			name: "annotation plugin cross-namespace without grant",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 				&configurationv1.KongPlugin{
@@ -389,8 +383,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "and no ReferenceGrant allowing reference is configured",
 		},
 		{
-			name:           "annotation plugin cross-namespace with grant",
-			enableRefGrant: true,
+			name: "annotation plugin cross-namespace with grant",
 			objects: []client.Object{
 				&corev1.Service{Name: "svc", Namespace: "default"},
 				&configurationv1.KongPlugin{
@@ -421,26 +414,6 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			}(),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
-		{
-			name:           "annotation plugin cross-namespace without ReferenceGrant CRD",
-			enableRefGrant: false,
-			objects: []client.Object{
-				&corev1.Service{Name: "svc", Namespace: "default"},
-				&configurationv1.KongPlugin{
-					Name: "rate-limit", Namespace: "plugins",
-					PluginName: "rate-limiting",
-				},
-			},
-			route: func() gatewayapi.HTTPRoute {
-				r := baseRoute.DeepCopy()
-				r.Annotations = map[string]string{
-					metadata.AnnotationKeyPlugins: "plugins:rate-limit",
-				}
-				return *r
-			}(),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
-			wantMessageContain: "install ReferenceGrant CRD and configure a proper grant",
-		},
 	}
 
 	for _, tc := range tests {
@@ -450,9 +423,8 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 				WithObjects(tc.objects...).
 				Build()
 			reconciler := &HTTPRouteReconciler{
-				Client:               cl,
-				Log:                  logger,
-				enableReferenceGrant: tc.enableRefGrant,
+				Client: cl,
+				Log:    logger,
 			}
 
 			reason, msg, err := reconciler.getHTTPRouteRuleReason(ctx, tc.route)

@@ -24,68 +24,68 @@ func restMapperWithReferenceGrant(gvs ...schema.GroupVersion) meta.RESTMapper {
 	return mapper
 }
 
+// errDiscoveryUnavailable is what erroringRESTMapper fails with, so that tests can
+// assert the lookup error is propagated rather than just that some error occurred.
+var errDiscoveryUnavailable = errors.New("discovery is unavailable")
+
 type erroringRESTMapper struct {
 	meta.RESTMapper
 }
 
 func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
-	return schema.GroupVersionKind{}, errors.New("discovery is unavailable")
+	return schema.GroupVersionKind{}, errDiscoveryUnavailable
 }
 
 func (erroringRESTMapper) KindsFor(schema.GroupVersionResource) ([]schema.GroupVersionKind, error) {
-	return nil, errors.New("discovery is unavailable")
+	return nil, errDiscoveryUnavailable
 }
 
 func TestDetectReferenceGrantVersion(t *testing.T) {
 	tests := []struct {
-		name        string
-		mapper      meta.RESTMapper
-		expectedGV  schema.GroupVersion
-		expectedOK  bool
-		expectedErr bool
+		name       string
+		mapper     meta.RESTMapper
+		expectedGV schema.GroupVersion
+		// expectedErr is the sentinel the returned error must match, nil when no
+		// error is expected.
+		expectedErr error
 	}{
 		{
 			name:        "lookup failure is reported as an error",
 			mapper:      erroringRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)},
 			expectedGV:  schema.GroupVersion{},
-			expectedOK:  false,
-			expectedErr: true,
+			expectedErr: errDiscoveryUnavailable,
 		},
 		{
 			name:       "only v1 is served",
 			mapper:     restMapperWithReferenceGrant(v1GroupVersion),
 			expectedGV: v1GroupVersion,
-			expectedOK: true,
 		},
 		{
 			name:       "only v1beta1 is served",
 			mapper:     restMapperWithReferenceGrant(v1beta1GroupVersion),
 			expectedGV: v1beta1GroupVersion,
-			expectedOK: true,
 		},
 		{
 			name:       "both versions served, v1 is preferred",
 			mapper:     restMapperWithReferenceGrant(v1GroupVersion, v1beta1GroupVersion),
 			expectedGV: v1GroupVersion,
-			expectedOK: true,
 		},
 		{
-			name:       "neither version served",
-			mapper:     restMapperWithReferenceGrant(),
-			expectedGV: schema.GroupVersion{},
-			expectedOK: false,
+			name:        "neither version served",
+			mapper:      restMapperWithReferenceGrant(),
+			expectedGV:  schema.GroupVersion{},
+			expectedErr: ErrReferenceGrantCRDNotFound,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			gv, ok, err := DetectReferenceGrantVersion(tc.mapper)
-			if tc.expectedErr {
-				require.Error(t, err)
+			gv, err := DetectReferenceGrantVersion(tc.mapper)
+			if tc.expectedErr != nil {
+				require.ErrorIs(t, err, tc.expectedErr)
 			} else {
 				require.NoError(t, err)
 			}
-			require.Equal(t, tc.expectedOK, ok)
 			require.Equal(t, tc.expectedGV, gv)
 		})
 	}
