@@ -195,7 +195,15 @@ func TestRoutesForRule(t *testing.T) {
 				expectedAnnotation := httpRoute.Namespace + "/" + httpRoute.Name
 				assert.Contains(t, result.Annotations[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation], expectedAnnotation)
 
-				if result.Spec.Paths[0] == "/" {
+				if len(result.Spec.Paths) == 0 {
+					// Header-only match on default path: no paths, only headers.
+					assert.Equal(t, map[string][]string{"X-Foo": {"bar"}}, result.Spec.Headers)
+					assert.NotNil(t, result.Spec.RegexPriority)
+					continue
+				}
+
+				if len(result.Spec.Paths) == 1 && result.Spec.Paths[0] == "~/(.*)" {
+					// Header-only match with regex path.
 					assert.Equal(t, map[string][]string{"X-Foo": {"bar"}}, result.Spec.Headers)
 					assert.NotNil(t, result.Spec.RegexPriority)
 					continue
@@ -787,9 +795,9 @@ func TestRoutesForRule_PrioritizesHeaderOnlyHTTPRouteMatches(t *testing.T) {
 	assert.Equal(t, map[string][]string{"version": {"two"}}, versionTwoRoute.Spec.Headers)
 	assert.Equal(t, map[string][]string{"version": {"two"}, "color": {"orange"}}, twoHeaderRoute.Spec.Headers)
 	assert.Equal(t, map[string][]string{"color": {"blue"}}, colorBlueRoute.Spec.Headers)
-	assert.Equal(t, []string{"/"}, versionTwoRoute.Spec.Paths)
-	assert.Equal(t, []string{"/"}, twoHeaderRoute.Spec.Paths)
-	assert.Equal(t, []string{"/"}, colorBlueRoute.Spec.Paths)
+	assert.Equal(t, []string{"~/(.*)"}, versionTwoRoute.Spec.Paths)
+	assert.Equal(t, []string{"~/(.*)"}, twoHeaderRoute.Spec.Paths)
+	assert.Equal(t, []string{"~/(.*)"}, colorBlueRoute.Spec.Paths)
 	// Header-only matches on the default path get an explicit regex_priority so
 	// Gateway API precedence (more headers beat fewer headers) is preserved.
 	assert.NotNil(t, versionTwoRoute.Spec.RegexPriority)
@@ -872,15 +880,15 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	methodOnlyRoute := methodOnlyRoutes[0]
 	methodWithHeaderRoute := methodOnlyRoutes[1]
 	assert.Equal(t, []string{"PATCH"}, methodOnlyRoute.Spec.Methods)
-	assert.Equal(t, []string{"~/"}, methodOnlyRoute.Spec.Paths)
+	assert.Empty(t, methodOnlyRoute.Spec.Paths)
 	assert.NotNil(t, methodOnlyRoute.Spec.RegexPriority)
 	assert.Nil(t, methodOnlyRoute.Spec.Headers)
 	assert.Equal(t, []string{"PATCH"}, methodWithHeaderRoute.Spec.Methods)
 	assert.Equal(t, map[string][]string{"version": {"four"}}, methodWithHeaderRoute.Spec.Headers)
-	assert.Equal(t, []string{"~/"}, methodWithHeaderRoute.Spec.Paths)
+	assert.Empty(t, methodWithHeaderRoute.Spec.Paths)
 
 	headerOnlyRoute := headerOnlyRoutes[0]
-	assert.Equal(t, []string{"~/"}, headerOnlyRoute.Spec.Paths)
+	assert.Equal(t, []string{"~/(.*)"}, headerOnlyRoute.Spec.Paths)
 	assert.Empty(t, headerOnlyRoute.Spec.Methods)
 	assert.NotNil(t, headerOnlyRoute.Spec.RegexPriority)
 	require.NotNil(t, headerOnlyRoute.Spec.Headers)
@@ -1203,7 +1211,8 @@ func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
 	require.Len(t, results, 1)
 
 	assert.Equal(t, []string{"GET"}, results[0].Spec.Methods)
-	assert.Equal(t, []string{"~/"}, results[0].Spec.Paths)
+	assert.Empty(t, results[0].Spec.Paths)
+	assert.NotNil(t, results[0].Spec.RegexPriority)
 	assert.Nil(t, results[0].Spec.Headers)
 	// Method-only matches on the default path get an explicit regex_priority so
 	// Gateway API precedence is preserved relative to header-only matches.
