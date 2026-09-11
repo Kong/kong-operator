@@ -243,7 +243,7 @@ func (r *Reconciler) configFromSpec(
 		return multiinstanceai.Config{}, fmt.Errorf("rendering dbless configuration: %w", err)
 	}
 	for _, w := range warnings {
-		// TODO: Add 2 usability improvements:
+		// TODO: https://github.com/Kong/kong-operator/issues/5664
 		// - emit warnings as events on the OnPremAIGateway resource
 		// - emit warnings somewhere in OnPremAIGateway status
 		log.Info(logger, "AI Gateway configuration warning", "warning", w)
