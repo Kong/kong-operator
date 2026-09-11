@@ -99,6 +99,10 @@
   with the certificate, private key, and alternate cert/key sourced from a
   Kubernetes `Secret`.
   [#5658](https://github.com/Kong/kong-operator/pull/5658)
+- Added `AIGatewaySNI` CRD: manage Konnect AI Gateway SNIs
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  with the SNI associated to an `AIGatewayCertificate` by certificate reference.
+  [#5667](https://github.com/Kong/kong-operator/pull/5667)
 
 ### Breaking changes
 

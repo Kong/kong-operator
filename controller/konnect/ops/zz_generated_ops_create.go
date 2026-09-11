@@ -52,6 +52,8 @@ func CreateGeneratedOps[
 		return createAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return createAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewaySNI:
+		return createAIGatewaySNI(ctx, cl, sdk.GetAIGatewaySNIsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return createEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

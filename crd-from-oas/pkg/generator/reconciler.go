@@ -810,12 +810,17 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 		// The extractor scans a []<RefType> slice for each contributing
 		// reference. Nested references cross intermediate (possibly nil)
 		// pointers, so they source their slice from the exported, nil-guarded
-		// accessor in the API package; top-level references access the spec
-		// field directly.
+		// accessor in the API package; top-level array-typed references access
+		// the spec field directly; a top-level scalar reference (e.g.
+		// AIGatewaySNI's single "certificate" field) is wrapped in a
+		// one-element slice literal so it scans the same way.
 		var expr string
-		if ref.NestedRef {
+		switch {
+		case ref.NestedRef:
 			expr = fmt.Sprintf("%s.RefsAt%s%s(ent)", g.config.APIGroupPackageAlias, entityName, ref.GoResolverName)
-		} else {
+		case ref.DirectScalarRef:
+			expr = fmt.Sprintf("[]%s.%s{ent.Spec.APISpec.%s}", g.config.APIGroupPackageAlias, ref.TypeName(), ref.GoFieldName)
+		default:
 			expr = "ent.Spec.APISpec." + ref.GoFieldName
 		}
 		multiKind := len(ref.Kinds) > 1
