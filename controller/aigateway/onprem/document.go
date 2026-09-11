@@ -17,9 +17,10 @@ limitations under the License.
 package onprem
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -54,7 +55,12 @@ func buildDocument(ctx context.Context, cl client.Client, gw *aigatewayv1alpha1.
 	}
 
 	items := list.Items
-	sort.Slice(items, func(i, j int) bool { return items[i].Name < items[j].Name })
+	slices.SortFunc(items, func(a, b aiconfigurationv1alpha1.AIGatewayModel) int {
+		return cmp.Or(
+			cmp.Compare(a.Namespace, b.Namespace),
+			cmp.Compare(a.Name, b.Name),
+		)
+	})
 
 	doc := &aigw.Document{}
 	for i := range items {
