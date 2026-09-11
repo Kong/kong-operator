@@ -101,6 +101,7 @@
   Previously, only a change in the remote MCP server's own version triggered a
   redeploy, so config changes surfaced through the signal API alone were never
   picked up.
+  [#5643](https://github.com/Kong/kong-operator/pull/5643)
 
 ## [v2.3.1]
 
