@@ -28,6 +28,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayAuthStrategyReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
 		return AIGatewayCACertificateReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return AIGatewayCertificateReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return AIGatewayConsumerReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:

@@ -78,6 +78,7 @@ rules:
       - aigatewayagents
       - aigatewayauthstrategies
       - aigatewaycacertificates
+      - aigatewaycertificates
       - aigatewayconsumercredentials
       - aigatewayconsumergroups
       - aigatewayconsumers
@@ -100,6 +101,8 @@ rules:
       - aigatewayauthstrategies/status
       - aigatewaycacertificates/finalizers
       - aigatewaycacertificates/status
+      - aigatewaycertificates/finalizers
+      - aigatewaycertificates/status
       - aigatewayconsumercredentials/finalizers
       - aigatewayconsumercredentials/status
       - aigatewayconsumergroups/finalizers

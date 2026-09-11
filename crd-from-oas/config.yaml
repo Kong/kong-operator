@@ -399,6 +399,33 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/certificates
+        name: AIGatewayCertificate
+        secretReferences:
+          - path: spec.apiSpec.cert
+            type: Secret
+          - path: spec.apiSpec.key
+            type: Secret
+          - path: spec.apiSpec.certAlt
+            type: Secret
+          - path: spec.apiSpec.keyAlt
+            type: Secret
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayCertificatesSDK
+            fieldName: AIGatewayCertificates
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCertificateRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCertificateRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+
   configuration.konghq.com/v1alpha1:
     categories:
       - kong

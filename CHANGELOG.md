@@ -94,6 +94,11 @@
   `KonnectAIGateway`, with the certificate PEM sourced from a Kubernetes
   `Secret`.
   [#5656](https://github.com/Kong/kong-operator/pull/5656)
+- Added `AIGatewayCertificate` CRD: manage Konnect AI Gateway certificates
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  with the certificate, private key, and alternate cert/key sourced from a
+  Kubernetes `Secret`.
+  [#5658](https://github.com/Kong/kong-operator/pull/5658)
 
 ### Breaking changes
 
