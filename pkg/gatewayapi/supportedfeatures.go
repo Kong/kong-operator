@@ -10,7 +10,10 @@ import (
 )
 
 var (
-	traditionalCompatibleRouterSupportedFeatures = slices.Clone(commonSupportedFeatures) // Append here the traditional compatible router specific features.
+	traditionalCompatibleRouterSupportedFeatures = append(slices.Clone(commonSupportedFeatures),
+		// HTTPRoute extended.
+		features.SupportHTTPRouteMethodMatching,
+	)
 
 	expressionsRouterSupportedFeatures = append(slices.Clone(commonSupportedFeatures),
 		// HTTPRoute extended.
