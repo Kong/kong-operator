@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 
@@ -70,13 +71,18 @@ func setupControllers(
 ) ([]ControllerDef, error) {
 	// Resolve which ReferenceGrant API version (v1 or v1beta1) is served by the
 	// cluster, so the ReferenceGrant DynamicCRDController waits on the version
-	// that's actually installed. Default to v1 (the GA version) as the
-	// wait-target if the CRD isn't installed yet at all.
-	referenceGrantGV, referenceGrantFound, err := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	// that's actually installed. The CRD being absent is not fatal here: this
+	// value is only consumed by that controller, which may well be disabled (an
+	// ingress-only ControlPlane has every Gateway API controller turned off).
+	// Default to v1 (the GA version) as the wait-target so the
+	// DynamicCRDController can still pick the CRD up if it is installed later.
+	// Reconcilers that genuinely need ReferenceGrants fail loudly on their own,
+	// in their SetupWithManager.
+	referenceGrantGV, err := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
 	if err != nil {
-		return nil, fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
-	}
-	if !referenceGrantFound {
+		if !errors.Is(err, utils.ErrReferenceGrantCRDNotFound) {
+			return nil, err
+		}
 		referenceGrantGV = schema.GroupVersion(gatewayv1.GroupVersion)
 	}
 

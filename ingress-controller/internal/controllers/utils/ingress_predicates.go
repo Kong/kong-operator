@@ -1,6 +1,9 @@
 package utils
 
 import (
+	"errors"
+	"fmt"
+
 	netv1 "k8s.io/api/networking/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
@@ -78,23 +81,27 @@ func IsIngressClassEmpty(obj client.Object) bool {
 	}
 }
 
+// ErrReferenceGrantCRDNotFound is returned by DetectReferenceGrantVersion when the
+// cluster serves neither the v1 nor the v1beta1 ReferenceGrant CRD.
+var ErrReferenceGrantCRDNotFound = errors.New("neither v1 nor v1beta1 ReferenceGrant CRD found")
+
 // DetectReferenceGrantVersion returns the GroupVersion of whichever ReferenceGrant
 // API version is served by the cluster, preferring v1 and falling back to v1beta1
 // (ReferenceGrant was promoted from v1beta1 to v1 in gateway-api v1.5.0; older
-// clusters only serve v1beta1). ok is false if neither is installed. An error is
-// returned when the lookup itself failed.
-func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (gv schema.GroupVersion, ok bool, err error) {
+// clusters only serve v1beta1). It returns ErrReferenceGrantCRDNotFound if neither
+// is installed, and a wrapped lookup error if the lookup itself failed.
+func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (schema.GroupVersion, error) {
 	for _, gv := range []schema.GroupVersion{
 		schema.GroupVersion(gatewayv1.GroupVersion),
 		schema.GroupVersion(gatewayv1beta1.GroupVersion),
 	} {
 		exists, err := k8sutils.CRDExists(restMapper, gv.WithResource("referencegrants"))
 		if err != nil {
-			return schema.GroupVersion{}, false, err
+			return schema.GroupVersion{}, fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
 		}
 		if exists {
-			return gv, true, nil
+			return gv, nil
 		}
 	}
-	return schema.GroupVersion{}, false, nil
+	return schema.GroupVersion{}, ErrReferenceGrantCRDNotFound
 }
