@@ -804,11 +804,9 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "method-matching",
-			Namespace: "gateway-conformance-infra",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "method-matching",
+		Namespace: "gateway-conformance-infra",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: "same-namespace"}},
@@ -846,10 +844,8 @@ func TestRoutesForRule_PrioritizesDefaultPathMethodMatchesOverHeaderOnlyMatches(
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "same-namespace",
-			Namespace: "gateway-conformance-infra",
-		},
+		Name:      "same-namespace",
+		Namespace: "gateway-conformance-infra",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1157,10 +1153,8 @@ func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(scheme))
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.HTTPRouteSpec{
 			CommonRouteSpec: gatewayv1.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{
@@ -1187,10 +1181,8 @@ func TestRoutesForRule_MethodOnlyMatch(t *testing.T) {
 		},
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-gateway",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
