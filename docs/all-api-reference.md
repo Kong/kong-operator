@@ -12508,6 +12508,7 @@ Allowed values:
 Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq.com v1alpha1 API group.
 
 - [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 - [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
 - [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 - [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-watchnamespacegrant)
@@ -12546,6 +12547,25 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewaySpec](#gateway-operator-konghq-com-v1alpha1-types-aigatewayspec)_ | Spec is the desired state of the AIGateway. |
 | `status` _[AIGatewayStatus](#gateway-operator-konghq-com-v1alpha1-types-aigatewaystatus)_ | Status is the observed state of the AIGateway. |
+
+### DBBackedHybridControlPlane
+
+
+DBBackedHybridControlPlane stands for a control plane role in the DB backed hybrid mode deployed on prem.
+In the DB backed hybrid mode, the control plane is responsible accepting configuration from KO spawned KIC instances
+and storing it in the database. The control plane is also responsible for propagating the configuration to the
+data plane instances. The control plane is not responsible for serving traffic, which is the responsibility of the
+data plane instances.
+
+<!-- db_backed_hybrid_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
+| `kind` _string_ | `DBBackedHybridControlPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[DBBackedHybridControlPlaneSpec](#gateway-operator-konghq-com-v1alpha1-types-dbbackedhybridcontrolplanespec)_ |  |
+| `status` _[DBBackedHybridControlPlaneStatus](#gateway-operator-konghq-com-v1alpha1-types-dbbackedhybridcontrolplanestatus)_ |  |
 
 ### DataPlaneMetricsExtension
 
@@ -12749,6 +12769,33 @@ Azure, e.t.c.).
 _Appears in:_
 
 - [LargeLanguageModels](#gateway-operator-konghq-com-v1alpha1-types-largelanguagemodels)
+
+#### DBBackedHybridControlPlaneSpec
+
+
+DBBackedHybridControlPlaneSpec stands for the desired state of the DBBackedHybridControlPlane.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
+
+#### DBBackedHybridControlPlaneStatus
+
+
+DBBackedHybridControlPlaneStatus represents the observed state of the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the latest available observations of a DBBackedHybridControlPlane's current state. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 
 #### DataPlaneMetricsExtensionSpec
 
