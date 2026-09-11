@@ -13,6 +13,7 @@ import (
 type SupportedGeneratedKonnectEntityType interface {
 	aiconfigurationv1alpha1.AIGatewayAgent |
 		aiconfigurationv1alpha1.AIGatewayAuthStrategy |
+		aiconfigurationv1alpha1.AIGatewayCACertificate |
 		aiconfigurationv1alpha1.AIGatewayConsumer |
 		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
 		aiconfigurationv1alpha1.AIGatewayConsumerGroup |

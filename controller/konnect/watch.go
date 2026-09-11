@@ -320,6 +320,7 @@ type WatchableEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
 		aiconfigurationv1alpha1.AIGatewayMCPServer |
 		aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate |
+		aiconfigurationv1alpha1.AIGatewayCACertificate |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |
