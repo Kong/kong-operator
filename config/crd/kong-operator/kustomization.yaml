@@ -4,6 +4,7 @@ kind: Kustomization
 resources:
   - aiconfiguration.konghq.com_aigatewayagents.yaml
   - aiconfiguration.konghq.com_aigatewayauthstrategies.yaml
+  - aiconfiguration.konghq.com_aigatewaycacertificates.yaml
   - aiconfiguration.konghq.com_aigatewayconsumercredentials.yaml
   - aiconfiguration.konghq.com_aigatewayconsumergroups.yaml
   - aiconfiguration.konghq.com_aigatewayconsumers.yaml

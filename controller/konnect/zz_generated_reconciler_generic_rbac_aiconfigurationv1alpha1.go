@@ -8,6 +8,9 @@ package konnect
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayauthstrategies,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayauthstrategies/status,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayauthstrategies/finalizers,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaycacertificates,verbs=get;list;watch;update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaycacertificates/status,verbs=update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaycacertificates/finalizers,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumers,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumers/status,verbs=update;patch
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewayconsumers/finalizers,verbs=update;patch

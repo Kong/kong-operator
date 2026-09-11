@@ -89,6 +89,11 @@
   is not assembled from the spec in this change, so full configuration handling
   (including restarts driven by spec changes) lands in a later change.
   [#5402](https://github.com/Kong/kong-operator/issues/5402)
+- Added `AIGatewayCACertificate` CRD: manage Konnect AI Gateway CA
+  certificates (`aiconfiguration.konghq.com/v1alpha1`), parented to
+  `KonnectAIGateway`, with the certificate PEM sourced from a Kubernetes
+  `Secret`.
+  [#5656](https://github.com/Kong/kong-operator/pull/5656)
 
 ### Breaking changes
 

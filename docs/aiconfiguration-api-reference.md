@@ -10,6 +10,7 @@ Package v1alpha1 contains API Schema definitions for the aiconfiguration.konghq.
 
 - [AIGatewayAgent](#aiconfiguration-konghq-com-v1alpha1-aigatewayagent)
 - [AIGatewayAuthStrategy](#aiconfiguration-konghq-com-v1alpha1-aigatewayauthstrategy)
+- [AIGatewayCACertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaycacertificate)
 - [AIGatewayConsumer](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumer)
 - [AIGatewayConsumerCredential](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumercredential)
 - [AIGatewayConsumerGroup](#aiconfiguration-konghq-com-v1alpha1-aigatewayconsumergroup)
@@ -48,6 +49,21 @@ AIGatewayAuthStrategy is the Schema for the aigatewayauthstrategys API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewayAuthStrategySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyspec)_ |  |
 | `status` _[AIGatewayAuthStrategyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategystatus)_ |  |
+
+### AIGatewayCACertificate
+
+
+AIGatewayCACertificate is the Schema for the aigatewaycacertificates API.
+
+<!-- ai_gateway_ca_certificate description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aiconfiguration.konghq.com/v1alpha1`
+| `kind` _string_ | `AIGatewayCACertificate`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[AIGatewayCACertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatespec)_ |  |
+| `status` _[AIGatewayCACertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatestatus)_ |  |
 
 ### AIGatewayConsumer
 
@@ -693,6 +709,57 @@ _Appears in:_
 - [AIGatewayEmbeddingsModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayembeddingsmodelconfig)
 - [AIGatewayModelBalancerSemanticConfigEmbeddingsConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelbalancersemanticconfigembeddingsconfig)
 
+#### AIGatewayCACertificateAPISpec
+
+
+AIGatewayCACertificateAPISpec defines the API spec fields for AIGatewayCACertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `cert` _[SensitiveDataSource](#aiconfiguration-konghq-com-v1alpha1-types-sensitivedatasource)_ | PEM-encoded public certificate of the CA. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
+| `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this CA certificate, used as a stable human-readable reference. This value is immutable after creation. |
+
+_Appears in:_
+
+- [AIGatewayCACertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatespec)
+
+#### AIGatewayCACertificateSpec
+
+
+AIGatewayCACertificateSpec defines the desired state of AIGatewayCACertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `apiSpec` _[AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
+
+_Appears in:_
+
+- [AIGatewayCACertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaycacertificate)
+
+#### AIGatewayCACertificateStatus
+
+
+AIGatewayCACertificateStatus defines the observed state of AIGatewayCACertificate.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the current state of the resource. |
+| `gatewayID` _[KonnectEntityRef](#aiconfiguration-konghq-com-v1alpha1-types-konnectentityref)_ | GatewayID is the Konnect ID of the parent Gateway. |
+| `observedGeneration` _int64_ | ObservedGeneration is the most recent generation observed |
+
+_Appears in:_
+
+- [AIGatewayCACertificate](#aiconfiguration-konghq-com-v1alpha1-aigatewaycacertificate)
+
 #### AIGatewayCacheWriteCost
 
 
@@ -1047,6 +1114,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
 - [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+- [AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
@@ -5767,6 +5835,7 @@ _Appears in:_
 
 - [AIGatewayAgentStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentstatus)
 - [AIGatewayAuthStrategyStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategystatus)
+- [AIGatewayCACertificateStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatestatus)
 - [AIGatewayConsumerCredentialStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialstatus)
 - [AIGatewayConsumerGroupStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupstatus)
 - [AIGatewayConsumerStatus](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerstatus)
@@ -5793,6 +5862,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
 - [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+- [AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
@@ -5853,6 +5923,7 @@ _Appears in:_
 - [AIGatewayAgentAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentapispec)
 - [AIGatewayAuthStrategyKeyAuth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategykeyauth)
 - [AIGatewayAuthStrategyOpenIDConnect](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnect)
+- [AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)
 - [AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)
@@ -5935,6 +6006,7 @@ either inline or sourced from a Kubernetes Secret.
 _Appears in:_
 
 - [AIGatewayAuthStrategyOpenIDConnectConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyopenidconnectconfig)
+- [AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)
 - [AIGatewayConsumerCredentialAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumercredentialapispec)
 - [AIGatewayDataPlaneCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)
 - [AIGatewayModelProviderConfigAuthAWS](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderconfigauthaws)
