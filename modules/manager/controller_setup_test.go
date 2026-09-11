@@ -41,7 +41,7 @@ func TestSetupControllers(t *testing.T) {
 	controllerDefs, err := manager.SetupControllers(mgr, &cfg, nil, nil)
 	require.NoError(t, err)
 
-	const expectedControllerCount = 85
+	const expectedControllerCount = 86
 	require.Len(t, controllerDefs, expectedControllerCount)
 
 	seenControllerTypes := make(map[string]int, expectedControllerCount)
