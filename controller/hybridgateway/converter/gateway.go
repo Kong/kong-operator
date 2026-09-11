@@ -254,8 +254,9 @@ func (c *gatewayConverter) processListenerCertificate(
 		return fmt.Errorf("failed to get secret %s/%s: %w", secretNamespace, certRef.Name, err)
 	}
 
-	// Validate that the secret contains valid TLS certificate data.
-	if !secrets.IsTLSSecretValid(secret) {
+	// Validate that the secret contains valid TLS certificate data. Either field may
+	// instead hold a Kong vault reference, resolved by Kong Gateway at runtime.
+	if !secrets.IsTLSSecretValidOrVaultRef(secret) {
 		return fmt.Errorf("invalid TLS secret %s/%s for listener %+v", secretNamespace, certRef.Name, listener)
 	}
 

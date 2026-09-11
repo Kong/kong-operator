@@ -153,6 +153,29 @@ type KongCertificateStatus struct {
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
+
+	// VaultSecret records the Konnect Config Store secret this KongCertificate's
+	// tls.key was pushed to, when its source Secret carries the
+	// "konghq.com/vault-secret" annotation. It identifies the entry this
+	// KongCertificate owns, so later reconciles know to update rather than
+	// recreate it, and deletion knows what to remove, even if the source Secret
+	// no longer exists by then.
+	// +optional
+	VaultSecret *KongCertificateVaultSecretStatus `json:"vaultSecret,omitempty"`
+}
+
+// KongCertificateVaultSecretStatus identifies a secret pushed to a Konnect
+// Config Store on behalf of a KongCertificate.
+type KongCertificateVaultSecretStatus struct {
+	// ControlPlaneID is the Konnect ID of the control plane that owns the Config Store.
+	// +kubebuilder:validation:MinLength=1
+	ControlPlaneID string `json:"controlPlaneID"`
+	// ConfigStoreID is the Konnect ID of the Config Store holding the secret.
+	// +kubebuilder:validation:MinLength=1
+	ConfigStoreID string `json:"configStoreID"`
+	// Key is the secret's key name within the Config Store.
+	// +kubebuilder:validation:MinLength=1
+	Key string `json:"key"`
 }
 
 // KongCertificateList contains a list of KongCertificates.
