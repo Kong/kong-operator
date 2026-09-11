@@ -3,10 +3,12 @@ package translator
 import (
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/go-logr/logr"
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
@@ -119,6 +121,181 @@ func TestMergeCerts(t *testing.T) {
 			idToMergedID: certIDToMergedCertID{
 				"certificate-1":   "certificate-1",
 				"certificate-1-1": "certificate-1",
+			},
+		},
+		{
+			// Regression test: the merged certificate's Tags must come from the same
+			// winning Secret as its ID (earliest CreationTimestamp), not from whichever
+			// certWrapper happened to be visited first while merging.
+			name: "tags follow the earliest-created winner when the loser is listed first",
+			certs: []certWrapper{
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(200, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-2"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-2"),
+					},
+					snis: []string{"foo.com"},
+				},
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+					},
+					snis: []string{"baz.com"},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:   new("certificate-1"),
+					Cert: new(string(crt1)),
+					Key:  new(string(key1)),
+					Tags: kong.StringSlice("tag-1"),
+					SNIs: kong.StringSlice("baz.com", "foo.com"),
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+				"certificate-2": "certificate-1",
+			},
+		},
+		{
+			name: "tags follow the earliest-created winner when the winner is listed first",
+			certs: []certWrapper{
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+					},
+					snis: []string{"baz.com"},
+				},
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(200, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-2"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-2"),
+					},
+					snis: []string{"foo.com"},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:   new("certificate-1"),
+					Cert: new(string(crt1)),
+					Key:  new(string(key1)),
+					Tags: kong.StringSlice("tag-1"),
+					SNIs: kong.StringSlice("baz.com", "foo.com"),
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+				"certificate-2": "certificate-1",
+			},
+		},
+		{
+			name: "tags follow the lowest ID when creation timestamps tie",
+			certs: []certWrapper{
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-2"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-2"),
+					},
+					snis: []string{"foo.com"},
+				},
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+					},
+					snis: []string{"baz.com"},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:   new("certificate-1"),
+					Cert: new(string(crt1)),
+					Key:  new(string(key1)),
+					Tags: kong.StringSlice("tag-1"),
+					SNIs: kong.StringSlice("baz.com", "foo.com"),
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+				"certificate-2": "certificate-1",
+			},
+		},
+		{
+			name: "tags follow the earliest-created winner across multiple duplicates with winner in the middle",
+			certs: []certWrapper{
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(200, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-2"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-2"),
+					},
+					snis: []string{"foo.com"},
+				},
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(100, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+					},
+					snis: []string{"baz.com"},
+				},
+				{
+					identifier:        string(crt1) + string(key1),
+					CreationTimestamp: metav1.NewTime(time.Unix(300, 0)),
+					cert: kong.Certificate{
+						ID:   new("certificate-3"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-3"),
+					},
+					snis: []string{"qux.com"},
+				},
+			},
+			mergedCerts: []kongstate.Certificate{
+				{
+					ID:   new("certificate-1"),
+					Cert: new(string(crt1)),
+					Key:  new(string(key1)),
+					Tags: kong.StringSlice("tag-1"),
+					SNIs: kong.StringSlice("baz.com", "foo.com", "qux.com"),
+				},
+			},
+			idToMergedID: certIDToMergedCertID{
+				"certificate-1": "certificate-1",
+				"certificate-2": "certificate-1",
+				"certificate-3": "certificate-1",
 			},
 		},
 	}
