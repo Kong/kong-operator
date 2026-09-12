@@ -26,38 +26,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
-
-// enqueueForKonnectAIGatewayRef returns a MapFunc that enqueues reconcile requests
-// for all AIGatewayDataPlanes in the same namespace whose
-// spec.controlPlaneRef.konnectNamespacedRef.name matches the changed KonnectAIGateway.
-func enqueueForKonnectAIGatewayRef(cl client.Client) handler.MapFunc {
-	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		aigwcp, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
-		if !ok {
-			return nil
-		}
-
-		aigwdpList := &aigatewayv1alpha1.AIGatewayDataPlaneList{}
-		if err := cl.List(ctx, aigwdpList,
-			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway: aigwcp.Namespace + "/" + aigwcp.Name},
-		); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for KonnectAIGateway",
-				"KonnectAIGateway", aigwcp.Name)
-			return nil
-		}
-
-		requests := make([]reconcile.Request, 0, len(aigwdpList.Items))
-		for _, aigwdp := range aigwdpList.Items {
-			requests = append(requests, reconcile.Request{
-				NamespacedName: client.ObjectKeyFromObject(&aigwdp),
-			})
-		}
-		return requests
-	}
-}
 
 // enqueueForAIGatewayDataPlaneCertificateSecretRef returns a MapFunc that
 // enqueues reconcile requests for all AIGatewayDataPlanes in the same
