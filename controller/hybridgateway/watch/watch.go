@@ -82,6 +82,10 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 				&corev1.Secret{},
 			},
 			{
+				MapHTTPRouteForPluginConfigSecret(cl),
+				&corev1.Secret{},
+			},
+			{
 				MapRouteForKongResource[*configurationv1alpha1.KongCertificate](kindHTTPRoute),
 				&configurationv1alpha1.KongCertificate{},
 			},
@@ -142,6 +146,10 @@ func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.G
 			},
 			{
 				MapGRPCRouteForClientCertSecret(cl),
+				&corev1.Secret{},
+			},
+			{
+				MapGRPCRouteForPluginConfigSecret(cl),
 				&corev1.Secret{},
 			},
 			{
