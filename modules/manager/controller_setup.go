@@ -134,7 +134,8 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
-	if cfg.GatewayControllerEnabled {
+	// The hybrid gateway controllers need the same indexes but are gated on the Konnect flag.
+	if cfg.GatewayControllerEnabled || cfg.KonnectControllersEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForGatewayClass(),
 			index.OptionsForGateway(),

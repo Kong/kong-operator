@@ -1,0 +1,32 @@
+# Asserts the configuration of the KongPlugin the operator mirrors into the control plane
+# namespace for a given route and plugin type.
+#
+# Unlike assert-kongPlugin.yaml it selects the mirrored KongPlugin explicitly, so a user-authored
+# KongPlugin carrying no spec.config of its own (spec.configFrom) is never considered.
+#
+# Required bindings:
+#   - namespace: Namespace holding the mirrored KongPlugin (the control plane namespace)
+#   - http_route_name: Name of the route the plugin is attached to
+#   - http_route_namespace: Namespace of that route
+#   - plugin_type: Type of the Kong plugin (e.g., 'response-transformer')
+#   - plugin_config: JSON string of the expected plugin configuration
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: assert-kong-plugin-config
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: ROUTE_REF
+            value: (join('/', [($http_route_namespace), ($http_route_name)]))
+          - name: PLUGIN_TYPE
+            value: ($plugin_type)
+          - name: EXPECTED_CONFIG
+            value: ($plugin_config)
+        content: |
+          bash ../../common/scripts/verify_kongplugin_config.sh
+        check:
+          (json_parse($stdout).success): true
