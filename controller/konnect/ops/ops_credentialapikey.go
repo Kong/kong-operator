@@ -201,7 +201,8 @@ func getKongCredentialAPIKeyForUID(
 		return "", fmt.Errorf("failed listing %s: %w", cred.GetTypeName(), ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cred)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), cred)
+	return id, err
 }
 
 func credentialAPIKeyMatch(
