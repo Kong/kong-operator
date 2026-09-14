@@ -185,7 +185,7 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
-// newProgrammedKonnectCert builds a EventGatewayDataPlaneCertificate with Programmed=True,
+// newProgrammedKonnectCert builds an EventGatewayDataPlaneCertificate with Programmed=True,
 // modelling the state after the Konnect controller has registered it.
 func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
@@ -240,13 +240,15 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "KonnectEventGateway not found: error returned (runtime handles backoff), KonnectResolved=False",
+			// A missing KonnectEventGateway is an expected, user-fixable state:
+			// Reconcile returns no error and the control plane watch re-triggers
+			// the reconcile once it appears.
+			name: "KonnectEventGateway not found: no error, watch re-triggers, KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				egdp := getEGDP(t, cl)
@@ -258,14 +260,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectEventGateway not yet programmed: error returned (runtime handles backoff), KonnectResolved=False",
+			// A not yet Programmed KonnectEventGateway is an expected transient
+			// state: Reconcile returns no error and the control plane watch
+			// re-triggers the reconcile once it flips Programmed.
+			name: "KonnectEventGateway not yet programmed: no error, watch re-triggers, KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				newNotProgrammedKEG(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				egdp := getEGDP(t, cl)
