@@ -109,7 +109,7 @@
   plane instance when it changes. The other nine `aiconfiguration` entity kinds
   aren't translated yet, so the rendered payload isn't a complete, pushable
   configuration on its own; pushing it to data planes is also not wired yet.
-  [#5402](https://github.com/Kong/kong-operator/issues/5402)
+  [#5661](https://github.com/Kong/kong-operator/pull/5661)
 
 ### Breaking changes
 
