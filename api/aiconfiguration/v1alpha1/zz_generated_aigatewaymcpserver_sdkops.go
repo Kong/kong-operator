@@ -998,6 +998,10 @@ func resolveAIGatewayMCPServerConversionListenerPolicies(ctx context.Context, cl
 		if kind == "" {
 			kind = "AIGatewayPolicy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -1053,6 +1057,10 @@ func resolveAIGatewayMCPServerConversionOnlyPolicies(ctx context.Context, cl cli
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayPolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
@@ -1110,6 +1118,10 @@ func resolveAIGatewayMCPServerListenerPolicies(ctx context.Context, cl client.Cl
 		if kind == "" {
 			kind = "AIGatewayPolicy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -1166,6 +1178,10 @@ func resolveAIGatewayMCPServerPassthroughListenerPolicies(ctx context.Context, c
 		if kind == "" {
 			kind = "AIGatewayPolicy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -1221,6 +1237,10 @@ func resolveAIGatewayMCPServerUpstreamServerPolicies(ctx context.Context, cl cli
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayPolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})

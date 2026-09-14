@@ -440,6 +440,10 @@ func resolveAIGatewayModelAPIPolicies(ctx context.Context, cl client.Client, obj
 		if kind == "" {
 			kind = "AIGatewayPolicy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -495,6 +499,10 @@ func resolveAIGatewayModelModelPolicies(ctx context.Context, cl client.Client, o
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayPolicy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
@@ -558,6 +566,10 @@ func resolveAIGatewayModelAPIAccessAclsAllowAllow(ctx context.Context, cl client
 		if kind == "" {
 			kind = "AIGatewayConsumerGroup"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -616,6 +628,10 @@ func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.C
 		if kind == "" {
 			kind = "AIGatewayConsumerGroup"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -671,6 +687,10 @@ func resolveAIGatewayModelAPITargetsProvider(ctx context.Context, cl client.Clie
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayModelProvider"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
@@ -732,6 +752,10 @@ func resolveAIGatewayModelModelTargetsProvider(ctx context.Context, cl client.Cl
 		if kind == "" {
 			kind = "AIGatewayModelProvider"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -788,6 +812,10 @@ func resolveAIGatewayModelAPIAccessAuthStrategies(ctx context.Context, cl client
 		if kind == "" {
 			kind = "AIGatewayAuthStrategy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -843,6 +871,10 @@ func resolveAIGatewayModelModelAccessAuthStrategies(ctx context.Context, cl clie
 		kind := ref.Kind
 		if kind == "" {
 			kind = "AIGatewayAuthStrategy"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})

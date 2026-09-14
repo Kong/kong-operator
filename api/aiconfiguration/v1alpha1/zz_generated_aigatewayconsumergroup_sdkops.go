@@ -64,6 +64,10 @@ func resolveAIGatewayConsumerGroupPolicies(ctx context.Context, cl client.Client
 		if kind == "" {
 			kind = "AIGatewayPolicy"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
