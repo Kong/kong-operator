@@ -1,3 +1,46 @@
+# Ingress-only Kong Operator setup.
+#
+# This is the shape that needs no Gateway API at all: the ControlPlane
+# references a DataPlane directly (dataplane.type: ref) leaves only
+# the Ingress controller running. Nothing here requires the Gateway API
+# CRDs to be installed on the cluster.
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong
+---
+# The Kong proxy that serves the Ingress.
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-ingress
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.9
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+# The ingress controller configuring that proxy.
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-ingress
+spec:
+  # Required when dataplane.type is ref, and only Ingress is supported in that mode.
+  ingressClass: kong
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-ingress
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -41,7 +84,7 @@ kind: Ingress
 metadata:
   name: httpbin-ingress
   annotations:
-    httpbin.ingress.kubernetes.io/rewrite-target: /
+    konghq.com/strip-path: "true"
 spec:
   ingressClassName: kong
   rules:
