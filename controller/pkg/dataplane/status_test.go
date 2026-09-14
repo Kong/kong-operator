@@ -1,0 +1,323 @@
+package dataplane
+
+import (
+	"context"
+	"errors"
+	"testing"
+
+	"github.com/go-logr/logr"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	appsv1 "k8s.io/api/apps/v1"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/util/managedfields"
+	"k8s.io/client-go/tools/events"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+)
+
+// -----------------------------------------------------------------
+// ensureReadyStatus
+// -----------------------------------------------------------------
+
+func Test_ensureReadyStatus(t *testing.T) {
+	scheme := managerscheme.Get()
+
+	aigwdp := func() *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Namespace: testCASecretNamespace, Name: testDPName,
+		}
+	}
+
+	// deploy builds a Deployment with the given generation/replica counts so
+	// tests can control DeploymentRolloutComplete's inputs precisely.
+	deploy := func(generation, observedGeneration int64, specReplicas, replicas, updatedReplicas, availableReplicas, readyReplicas int32) *appsv1.Deployment {
+		d := &appsv1.Deployment{
+			Namespace: testCASecretNamespace, Name: testDPName, Generation: generation,
+			Spec: appsv1.DeploymentSpec{Replicas: new(specReplicas)},
+		}
+		d.Status = appsv1.DeploymentStatus{
+			ObservedGeneration: observedGeneration,
+			Replicas:           replicas,
+			UpdatedReplicas:    updatedReplicas,
+			AvailableReplicas:  availableReplicas,
+			ReadyReplicas:      readyReplicas,
+		}
+		return d
+	}
+
+	tests := []struct {
+		name              string
+		preConditions     []metav1.Condition
+		objects           []client.Object
+		buildClient       func(base client.WithWatch) client.Client
+		wantErr           bool
+		wantReadyStatus   metav1.ConditionStatus
+		wantReason        string
+		wantReplicas      int32
+		wantReadyReplicas int32
+	}{
+		{
+			name:            "deployment not found: Ready=False with DependenciesNotReady",
+			objects:         nil,
+			wantReadyStatus: metav1.ConditionFalse,
+		},
+		{
+			name:              "deployment exists but zero ready: Ready=False",
+			objects:           []client.Object{deploy(1, 1, 2, 2, 0, 0, 0)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      2,
+			wantReadyReplicas: 0,
+		},
+		{
+			name:              "deployment fully rolled out: Ready=True",
+			objects:           []client.Object{deploy(1, 1, 2, 2, 2, 2, 2)},
+			wantReadyStatus:   metav1.ConditionTrue,
+			wantReplicas:      2,
+			wantReadyReplicas: 2,
+		},
+		{
+			name:              "rolling update in progress: some ready replicas: Ready=False until rollout completes",
+			objects:           []client.Object{deploy(1, 1, 2, 2, 1, 1, 1)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      2,
+			wantReadyReplicas: 1,
+		},
+		{
+			name:              "stale observed generation: Ready=False even though replica counts look complete",
+			objects:           []client.Object{deploy(2, 1, 2, 2, 2, 2, 2)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      2,
+			wantReadyReplicas: 2,
+		},
+		{
+			// spec.deployment.replicas=0 is a valid, explicit scale-down. Every
+			// counter trivially matches (0 == 0), but there are no pods serving
+			// traffic, so this must not report Ready=True.
+			name:              "spec.replicas=0: Ready=False even though every counter is 0",
+			objects:           []client.Object{deploy(1, 1, 0, 0, 0, 0, 0)},
+			wantReadyStatus:   metav1.ConditionFalse,
+			wantReason:        string(aigatewayv1alpha1.WaitingToBecomeReadyReason),
+			wantReplicas:      0,
+			wantReadyReplicas: 0,
+		},
+		{
+			name: "GET error propagated",
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return assert.AnError
+					},
+				})
+			},
+			wantErr: true,
+		},
+		{
+			// When a non-Ready condition is already False, Ready must be set to
+			// False/DependenciesNotReady without fetching the Deployment. The GET
+			// interceptor errors to prove the Deployment was never looked up.
+			name: "non-Ready condition False: Ready=False without fetching deployment",
+			preConditions: []metav1.Condition{
+				{
+					Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+					Status:             metav1.ConditionFalse,
+					Reason:             "NotFound",
+					Message:            "referenced KonnectAIGateway not found",
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return assert.AnError
+					},
+				})
+			},
+			wantReadyStatus: metav1.ConditionFalse,
+			wantReason:      string(aigatewayv1alpha1.DependenciesNotReadyReason),
+		},
+		{
+			// When all non-Ready conditions are True, the function falls through to
+			// the Deployment check. With no Deployment present it sets Ready=False.
+			name: "all non-Ready conditions True: falls through to deployment check",
+			preConditions: []metav1.Condition{
+				{
+					Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+					Status:             metav1.ConditionTrue,
+					Reason:             string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+			wantReadyStatus: metav1.ConditionFalse,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			base := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(tc.objects...).
+				WithStatusSubresource(tc.objects...).
+				Build()
+			var cl client.Client = base
+			if tc.buildClient != nil {
+				cl = tc.buildClient(base)
+			}
+
+			dp := aigwdp()
+			dp.Status.Conditions = append(dp.Status.Conditions, tc.preConditions...)
+			err := (&testReconciler{Client: cl, Config: testConfig}).ensureReadyStatus(context.Background(), dp)
+
+			if tc.wantErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+
+			cond := apimeta.FindStatusCondition(dp.Status.Conditions, string(aigatewayv1alpha1.ReadyType))
+			require.NotNil(t, cond, "Ready condition must be set")
+			assert.Equal(t, tc.wantReadyStatus, cond.Status)
+			if tc.wantReason != "" {
+				assert.Equal(t, tc.wantReason, cond.Reason)
+			}
+
+			assert.Equal(t, tc.wantReplicas, dp.Status.Replicas)
+			assert.Equal(t, tc.wantReadyReplicas, dp.Status.ReadyReplicas)
+		})
+	}
+}
+
+// aigwdpWithType wraps makeAIGWDP with TypeMeta set, which is required by
+// ApplyStatusIfChanged to determine the object's GVK.
+func aigwdpWithType() *aigatewayv1alpha1.AIGatewayDataPlane {
+	a := makeAIGWDP()
+	a.TypeMeta = metav1.TypeMeta{
+		APIVersion: "aigateway.konghq.com/v1alpha1",
+		Kind:       "AIGatewayDataPlane",
+	}
+	return a
+}
+
+// -----------------------------------------------------------------
+// applyStatus
+// -----------------------------------------------------------------
+
+func Test_applyStatus(t *testing.T) {
+	scheme := managerscheme.Get()
+	tc := managedfields.NewDeducedTypeConverter()
+
+	newReconciler := func(cl client.Client, rec *events.FakeRecorder) *testReconciler {
+		return &testReconciler{
+			Config:        testConfig,
+			Client:        cl,
+			TypeConverter: tc,
+			EventRecorder: rec,
+		}
+	}
+
+	tests := []struct {
+		name          string
+		buildClient   func(base client.WithWatch) client.Client
+		preObjects    bool
+		modifyAIGWDP  func(*aigatewayv1alpha1.AIGatewayDataPlane)
+		incomingErr   error
+		wantErrJoined bool
+		wantEvent     string
+	}{
+		{
+			name:        "object not in cluster: status apply fails and error is joined",
+			buildClient: func(base client.WithWatch) client.Client { return base },
+			// aigwdp not pre-created → Get inside ApplyStatusIfChanged returns not-found → error
+			wantErrJoined: true,
+			wantEvent:     "StatusPatchFailed",
+		},
+		{
+			name:        "status first apply: object pre-created, StatusUpdated event emitted",
+			buildClient: func(base client.WithWatch) client.Client { return base },
+			preObjects:  true,
+			wantEvent:   "StatusUpdated",
+		},
+		{
+			name:        "StatusUpdated event emitted when condition present",
+			buildClient: func(base client.WithWatch) client.Client { return base },
+			preObjects:  true,
+			modifyAIGWDP: func(a *aigatewayv1alpha1.AIGatewayDataPlane) {
+				a.Status.Conditions = append(a.Status.Conditions, metav1.Condition{
+					Type:               string(aigatewayv1alpha1.ReadyType),
+					Status:             metav1.ConditionTrue,
+					Reason:             "Ready",
+					LastTransitionTime: metav1.Now(),
+				})
+			},
+			wantEvent: "StatusUpdated",
+		},
+		{
+			name: "apply error is joined with incoming error",
+			buildClient: func(base client.WithWatch) client.Client {
+				return interceptor.NewClient(base, interceptor.Funcs{
+					SubResourceApply: func(ctx context.Context, c client.Client, subResourceName string, obj runtime.ApplyConfiguration, opts ...client.SubResourceApplyOption) error {
+						return assert.AnError
+					},
+					Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+						return c.Get(ctx, key, obj, opts...)
+					},
+				})
+			},
+			preObjects:    true,
+			incomingErr:   assert.AnError,
+			wantErrJoined: true,
+			wantEvent:     "StatusPatchFailed",
+		},
+	}
+
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
+			aigwdp := aigwdpWithType()
+			if testcase.modifyAIGWDP != nil {
+				testcase.modifyAIGWDP(aigwdp)
+			}
+
+			var objects []client.Object
+			if testcase.preObjects {
+				objects = append(objects, aigwdp)
+			}
+
+			base := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithStatusSubresource(objects...).
+				Build()
+
+			recorder := events.NewFakeRecorder(10)
+			r := newReconciler(testcase.buildClient(base), recorder)
+
+			result := errors.Join(testcase.incomingErr, r.applyStatus(context.Background(), logr.Discard(), aigwdp))
+
+			if testcase.wantErrJoined {
+				require.Error(t, result)
+			} else {
+				require.NoError(t, result)
+			}
+
+			if testcase.wantEvent != "" {
+				select {
+				case event := <-recorder.Events:
+					assert.Contains(t, event, testcase.wantEvent)
+				default:
+					t.Errorf("expected event containing %q but channel was empty", testcase.wantEvent)
+				}
+			} else {
+				assert.Empty(t, recorder.Events)
+			}
+		})
+	}
+}
