@@ -37,7 +37,7 @@ jobs:
       dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
       gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
       gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
-      gh-pat: ${{ secrets.PAT_GITHUB }}
+      gh-app-private-key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
       konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
       op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
     with:
