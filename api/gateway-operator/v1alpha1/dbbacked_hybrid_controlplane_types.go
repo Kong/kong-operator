@@ -45,6 +45,9 @@ type DBBackedHybridControlPlaneSpec struct{}
 type DBBackedHybridControlPlaneStatus struct {
 	// Conditions represent the latest available observations of a DBBackedHybridControlPlane's current state.
 	// +optional
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MaxItems=8
 	Conditions []metav1.Condition `json:"conditions,omitempty"`
 }
 
