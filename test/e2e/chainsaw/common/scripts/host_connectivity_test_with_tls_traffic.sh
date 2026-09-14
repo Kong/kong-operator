@@ -12,6 +12,12 @@ set -o pipefail
 #   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 
 PROXY_IP="${PROXY_IP}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 PROXY_PORT="${PROXY_PORT}"
 
 # Retry configuration (configurable via environment variables).
@@ -21,7 +27,7 @@ RETRY_DELAY="${RETRY_DELAY:-1}"
 
 # Build openssl command.
 build_openssl_cmd() {
-  local CMD="openssl s_client -connect ${PROXY_IP}:${PROXY_PORT} -servername ${SNI} -quiet -no_ign_eof"
+  local CMD="openssl s_client -connect ${PROXY_HOST}:${PROXY_PORT} -servername ${SNI} -quiet -no_ign_eof"
   # sleep for a second to receive the initial welcome message from the echo server.
   echo "(sleep 1; echo 'Q') | $CMD"
 }

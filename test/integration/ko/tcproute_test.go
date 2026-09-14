@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"fmt"
 	"strconv"
 	"testing"
 	"time"
@@ -164,7 +163,7 @@ func TestTCPRoute(t *testing.T) {
 
 	t.Logf("verifying connectivity to the TCPRoute via %s:%d", gatewayIPAddress, tcpListenerPort)
 	require.Eventually(t, func() bool {
-		err := helpers.EchoResponds(t, helpers.ProtocolTCP, fmt.Sprintf("%s:%d", gatewayIPAddress, tcpListenerPort), "test-tcp-echo")
+		err := helpers.EchoResponds(t, helpers.ProtocolTCP, helpers.HostPort(gatewayIPAddress, tcpListenerPort), "test-tcp-echo")
 		if err != nil {
 			t.Logf("failed to access TCPRoute on %s:%d, error %+v", gatewayIPAddress, tcpListenerPort, err)
 			return false
