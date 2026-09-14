@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -58,6 +59,30 @@ const (
 	reconcileTestDPName     = testDPName
 	reconcileTestAIGWCPName = "my-aigwcp"
 )
+
+func TestCertEntityName(t *testing.T) {
+	const checksum = "abcdef1234567890"
+
+	t.Run("short name remains readable", func(t *testing.T) {
+		aigwdp := newReconcileAIGWDP()
+		assert.Equal(t, aigwdp.Name+"-abcdef1234", certEntityName(aigwdp, checksum))
+	})
+
+	t.Run("truncated names remain distinct", func(t *testing.T) {
+		commonPrefix := strings.Repeat("a", 252)
+		first := newReconcileAIGWDP()
+		first.Name = commonPrefix + "a"
+		second := newReconcileAIGWDP()
+		second.Name = commonPrefix + "b"
+
+		firstCertName := certEntityName(first, checksum)
+		secondCertName := certEntityName(second, checksum)
+
+		assert.NotEqual(t, firstCertName, secondCertName)
+		assert.LessOrEqual(t, len(firstCertName), 253)
+		assert.LessOrEqual(t, len(secondCertName), 253)
+	})
+}
 
 // caSecret builds the cluster CA Secret used across Reconcile tests.
 func caSecret() *corev1.Secret {
@@ -163,10 +188,10 @@ func newNotProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	return aigwcp
 }
 
-// newTestReconciler builds a Reconciler wired to cl and recorder.
+// newTestReconciler builds a shared reconciler wired to cl and recorder.
 // The fake client is wrapped with an interceptor that populates TypeMeta on
 // AIGatewayDataPlane objects after Get, because the fake client does not set it.
-func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reconciler {
+func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *sharedReconciler {
 	wrapped := interceptor.NewClient(cl, interceptor.Funcs{
 		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			if err := c.Get(ctx, key, obj, opts...); err != nil {
@@ -184,14 +209,14 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 			return nil
 		},
 	})
-	return &Reconciler{
+	return (&Reconciler{
 		Client:                   wrapped,
 		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
 		CertTTL:                  pkgconsts.DefaultCertTTL,
-	}
+	}).base()
 }
 
 // getAIGWDP fetches the fresh AIGatewayDataPlane from the fake client.

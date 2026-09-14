@@ -53,18 +53,16 @@ type Reconciler struct {
 	eventRecorder events.EventRecorder
 }
 
-// base returns the shared generic reconciler wired with the AIGatewayDataPlane
-// configuration.
-func (r *Reconciler) base() *shareddataplane.Reconciler[
+type sharedReconciler = shareddataplane.Reconciler[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
 	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
-] {
-	return &shareddataplane.Reconciler[
-		*aigatewayv1alpha1.AIGatewayDataPlane,
-		*konnectv1alpha1.KonnectAIGateway,
-		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
-	]{
+]
+
+// base returns the shared generic reconciler wired with the AIGatewayDataPlane
+// configuration.
+func (r *Reconciler) base() *sharedReconciler {
+	return &sharedReconciler{
 		Client:                   r.Client,
 		LoggingMode:              r.LoggingMode,
 		ClusterCASecretName:      r.ClusterCASecretName,
@@ -81,12 +79,4 @@ func (r *Reconciler) base() *shareddataplane.Reconciler[
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
 	return r.base().SetupWithManager(ctx, mgr)
-}
-
-// Reconcile moves the current state of an AIGatewayDataPlane toward the desired state.
-func (r *Reconciler) Reconcile(
-	ctx context.Context,
-	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-) (ctrl.Result, error) {
-	return r.base().Reconcile(ctx, aigwdp)
 }

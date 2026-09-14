@@ -18,7 +18,9 @@ package dataplane
 
 import (
 	"context"
+	"crypto/sha256"
 	"fmt"
+	"strings"
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
@@ -337,18 +339,24 @@ func buildAIGatewayEnvVars(
 // name) means a certificate rotation creates a new CR/Konnect entity instead
 // of overwriting the existing one in place, so the previous certificate stays
 // registered and trusted by Konnect until it is safe to remove it (see
-// cleanupStaleKonnectCertificates).
+// cleanupStaleKonnectCertificates). When the DataPlane name must be truncated,
+// a hash of the full name is retained to distinguish names with a shared prefix.
 func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum string) string {
-	const checksumPrefixLen = 10
+	const (
+		maxObjectNameLen  = 253
+		checksumPrefixLen = 10
+		nameHashPrefixLen = 10
+	)
 	suffix := certChecksum
 	if len(suffix) > checksumPrefixLen {
 		suffix = suffix[:checksumPrefixLen]
 	}
-	// Truncate the name portion so the derived name never exceeds Kubernetes'
-	// 253-character object name limit.
 	name := aigwdp.Name
-	if maxNameLen := 253 - 1 - checksumPrefixLen; len(name) > maxNameLen {
-		name = name[:maxNameLen]
+	if maxNameLen := maxObjectNameLen - 1 - len(suffix); len(name) > maxNameLen {
+		nameHash := fmt.Sprintf("%x", sha256.Sum256([]byte(name)))[:nameHashPrefixLen]
+		maxNameLen = maxObjectNameLen - 1 - len(nameHash) - 1 - len(suffix)
+		name = strings.TrimRight(name[:maxNameLen], ".-")
+		return fmt.Sprintf("%s-%s-%s", name, nameHash, suffix)
 	}
 	return fmt.Sprintf("%s-%s", name, suffix)
 }
