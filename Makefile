@@ -357,7 +357,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -422,6 +422,10 @@ generate.cli-arguments-docs:
 	$(PROJECT_DIR)/scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
 		$(PROJECT_DIR)/docs/cli-arguments-for-developer-konghq-com.md \
 		$(PROJECT_DIR)/docs/cli-arguments.md
+
+.PHONY: generate.controllers-aigw
+generate.controllers-aigw:
+	go run ./hack/generators/controllers/aigw/
 
 # ------------------------------------------------------------------------------
 # Build - Manifests

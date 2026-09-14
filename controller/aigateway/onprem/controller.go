@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -42,7 +41,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
-	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -63,6 +62,8 @@ type Reconciler struct {
 	// InstancesManager runs the in-process on-prem AI Gateway control plane instances, one per
 	// OnPremAIGateway resource.
 	InstancesManager *multiinstanceai.Manager
+
+	ChangeNotifier *changenotifier.ChangeNotifier
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -208,37 +209,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 // dangling model_providers/policies/auth_strategies references would otherwise turn into fatal
 // errors instead of warnings.
 // TODO: https://github.com/Kong/kong-operator/issues/5569
-//
-// NOTE: this currently builds out the runtime configuration for OnPremAIGateway
-// control plane instance based on configuration CRs but it will be changed to
-// drive the startup configuration of the control plane instance when OnPremAIGateway
-// CRD spec options are added and runtime config gets moved elsewhere.
 func (r *Reconciler) configFromSpec(
 	ctx context.Context,
 	logger logr.Logger,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
 ) (multiinstanceai.Config, error) {
-	doc, err := translator.BuildDocument(ctx, r.Client, onprem)
-	if err != nil {
-		return multiinstanceai.Config{}, fmt.Errorf("building configuration document: %w", err)
-	}
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
-	if err != nil {
-		return multiinstanceai.Config{}, fmt.Errorf("rendering dbless configuration: %w", err)
-	}
-	for _, w := range warnings {
-		// TODO: https://github.com/Kong/kong-operator/issues/5664
-		// - emit warnings as events on the OnPremAIGateway resource
-		// - emit warnings somewhere in OnPremAIGateway status
-		log.Info(logger, "AI Gateway configuration warning", "warning", w)
-	}
-	return multiinstanceai.Config{DBLessConfig: payload}, nil
+	// TODO: fill this in based on the OnPremAIGateway spec.
+	return multiinstanceai.Config{}, nil
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
 func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg multiinstanceai.Config) error {
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
-	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(mgrID, logger, cfg)); err != nil {
+	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(mgrID, logger, r.Client, cfg, r.ChangeNotifier)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)
 	}
 	return nil
