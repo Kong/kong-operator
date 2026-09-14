@@ -690,9 +690,25 @@ func TestGenerate_ReferencePathMustBeArrayOrDirectString(t *testing.T) {
 					ResolvesTo: "id",
 				}},
 			},
+			OpsConfig: map[string]*config.EntityOpsConfig{
+				"AIGatewayAgent": {
+					Ops: map[string]*config.OpConfig{
+						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayAgentRequest"},
+						"update": {Path: "github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayAgentRequest"},
+					},
+				},
+			},
 		})
-		_, err := g.Generate(parsedWith("string"))
+		generated, err := g.Generate(parsedWith("string"))
 		require.NoError(t, err)
+		var content string
+		for _, file := range generated {
+			content += file.Content
+		}
+		// Pins the DirectScalarRef codegen shape so a silent revert to the
+		// array-only resolver plumbing would fail this test.
+		require.Contains(t, content, "refs := []AIGatewayPolicyRef{obj.Spec.APISpec.Policies}")
+		require.Contains(t, content, `payload["policies"] = resolvedPolicies[0]`)
 	})
 
 	t.Run("non-array, non-string property errors", func(t *testing.T) {
