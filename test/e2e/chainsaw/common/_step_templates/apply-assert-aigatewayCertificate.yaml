@@ -1,0 +1,52 @@
+# Template for creating and asserting an AIGatewayCertificate sourced from an
+# existing Secret.
+#
+# The referenced Secret must be of type kubernetes.io/tls and contain keys
+# tls.crt and tls.key.
+#
+# Required bindings:
+#   - cert_name: Name of the AIGatewayCertificate to create.
+#   - cert_namespace: Namespace where the AIGatewayCertificate will be created.
+#   - secret_name: Name of the existing kubernetes.io/tls Secret.
+#   - aigw_name: Name of the KonnectAIGateway to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-certificate
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_name)
+            apiSpec:
+              name: ($cert_name)
+              cert:
+                type: secretRef
+                secretRef:
+                  name: ($secret_name)
+                  key: tls.crt
+              key:
+                type: secretRef
+                secretRef:
+                  name: ($secret_name)
+                  key: tls.key
+    - assert:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCertificate
+          metadata:
+            name: ($cert_name)
+            namespace: ($cert_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

@@ -1,0 +1,46 @@
+# Template for creating and asserting an AIGatewayCACertificate sourced from
+# an existing Secret.
+#
+# The referenced Secret must contain a key named 'ca.crt'.
+#
+# Required bindings:
+#   - ca_cert_name: Name of the AIGatewayCACertificate to create.
+#   - ca_cert_namespace: Namespace where the AIGatewayCACertificate will be created.
+#   - secret_name: Name of the Secret holding the CA certificate (under key 'ca.crt').
+#   - aigw_name: Name of the KonnectAIGateway to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-ca-certificate
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCACertificate
+          metadata:
+            name: ($ca_cert_name)
+            namespace: ($ca_cert_namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_name)
+            apiSpec:
+              name: ($ca_cert_name)
+              cert:
+                type: secretRef
+                secretRef:
+                  name: ($secret_name)
+                  key: ca.crt
+    - assert:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCACertificate
+          metadata:
+            name: ($ca_cert_name)
+            namespace: ($ca_cert_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

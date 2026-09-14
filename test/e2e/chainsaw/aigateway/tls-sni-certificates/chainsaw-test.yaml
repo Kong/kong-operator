@@ -1,0 +1,428 @@
+# AI Gateway TLS / SNI certificates: happy path + unhappy path.
+#
+# Stands up a Konnect AIGateway control plane, generates a fresh self-signed
+# CA and a leaf certificate (CN=api.example.com, SAN=*.example.com) signed by
+# that CA, attaches the leaf certificate to two AIGatewaySNI hostnames (an
+# exact hostname and a wildcard hostname), then proves:
+#
+#   1. TLS/SNI certificate selection: connecting with SNI=api.example.com and
+#      SNI=foo.example.com (only covered by the wildcard entry) both
+#      terminate TLS successfully.
+#   2. Full chain-of-trust validation: the presented certificate validates
+#      against the generated CA (curl --cacert), not just cert/hostname
+#      matching with verification disabled.
+#   3. App-layer routing still works end-to-end on the same data plane (a
+#      real chat-completions request gets HTTP 200 + the expected model
+#      header).
+#   4. Unhappy path, reusing this same environment (no separate setup): a
+#      hostname with no AIGatewaySNI entry at all does not get a matching
+#      certificate, and deleting the exact-hostname AIGatewaySNI mapping
+#      makes that hostname stop matching too, proving the mapping is
+#      live/dynamic and not a one-time apply-time effect.
+#
+
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-tls-sni-certificates
+spec:
+  description: |
+    Validates AIGatewayCACertificate, AIGatewayCertificate, and AIGatewaySNI:
+    a fresh self-signed CA + leaf certificate (covering an exact hostname and
+    a wildcard hostname via SAN) are attached to two AIGatewaySNI mappings,
+    then TLS/SNI certificate selection and chain-of-trust validation are
+    proven for both hostnames, and a real chat-completions request confirms
+    the AI-proxy application layer still works on the same data plane.
+    Finally, on the same environment: a hostname with no AIGatewaySNI
+    mapping, and that same mapping deleted after being confirmed to work,
+    must not continue reporting a matching, chain-validated certificate.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: aigw_dp_name
+      value: (join('-', [($test_name), 'dp']))
+    - name: aigw_dp_image
+      value: (env('AIGW_DP_IMAGE'))
+
+    # Hostnames. exact_hostname has its own AIGatewaySNI entry;
+    # wildcard_hostname is covered by a second AIGatewaySNI entry;
+    # wildcard_covered_hostname is a hostname with NO SNI entry of its own,
+    # only reachable via the wildcard entry's coverage.
+    - name: exact_hostname
+      value: api.example.com
+    - name: wildcard_hostname
+      value: "*.example.com"
+    - name: wildcard_covered_hostname
+      value: foo.example.com
+    # Unhappy-path hostname: zero AIGatewaySNI entries anywhere in this
+    # control plane. Deliberately NOT a subdomain of example.com: anything
+    # under example.com (e.g. "nomatch.example.com") would be covered by the
+    # wildcard_hostname (*.example.com) mapping above, which stays active
+    # throughout this test, and would therefore still match. ".invalid" is
+    # reserved by RFC 2606 for exactly this kind of "guaranteed not to
+    # resolve to anything real" use.
+    - name: nomatch_hostname
+      value: nomatch.invalid
+
+    # Cert/SNI resource names.
+    - name: ca_secret_name
+      value: (join('-', [($test_name), 'ca-cert']))
+    - name: serving_cert_secret_name
+      value: (join('-', [($test_name), 'serving-cert']))
+    - name: ca_cert_name
+      value: (join('-', [($test_name), 'ca-cert']))
+    - name: serving_cert_name
+      value: (join('-', [($test_name), 'serving-cert']))
+    - name: exact_sni_name
+      value: (join('-', [($test_name), 'api-sni']))
+    - name: wildcard_sni_name
+      value: (join('-', [($test_name), 'wildcard-sni']))
+
+    # Chat-completion route shared by the TLS checks and the final traffic
+    # assertion.
+    - name: route_path
+      value: /v1/chat
+    - name: model_alias
+      value: qwen2.5:0.5b
+
+  steps:
+    - name: 01-Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: 02-Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: 03-Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: 04-Generate-cert-chain-secrets
+      bindings:
+        - name: ca_common_name
+          value: (join('-', [($test_name), 'ca']))
+        - name: server_common_name
+          value: ($exact_hostname)
+        - name: server_sans
+          value: ($wildcard_hostname)
+        - name: ca_secret_namespace
+          value: ($namespace)
+        - name: server_secret_name
+          value: ($serving_cert_secret_name)
+        - name: server_secret_namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-mtlsCertChainSecrets.yaml
+
+    - name: 05-Create-aigateway-ca-certificate
+      bindings:
+        - name: ca_cert_namespace
+          value: ($namespace)
+        - name: secret_name
+          value: ($ca_secret_name)
+        - name: aigw_name
+          value: ($aigw_cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCACertificate.yaml
+
+    - name: 06-Create-aigateway-certificate
+      bindings:
+        - name: cert_name
+          value: ($serving_cert_name)
+        - name: cert_namespace
+          value: ($namespace)
+        - name: secret_name
+          value: ($serving_cert_secret_name)
+        - name: aigw_name
+          value: ($aigw_cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayCertificate.yaml
+
+    - name: 07-Create-aigateway-sni-exact
+      bindings:
+        - name: sni_name
+          value: ($exact_sni_name)
+        - name: sni_namespace
+          value: ($namespace)
+        - name: hostname
+          value: ($exact_hostname)
+        - name: certificate_name
+          value: ($serving_cert_name)
+        - name: aigw_name
+          value: ($aigw_cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewaySNI.yaml
+
+    - name: 08-Create-aigateway-sni-wildcard
+      bindings:
+        - name: sni_name
+          value: ($wildcard_sni_name)
+        - name: sni_namespace
+          value: ($namespace)
+        - name: hostname
+          value: ($wildcard_hostname)
+        - name: certificate_name
+          value: ($serving_cert_name)
+        - name: aigw_name
+          value: ($aigw_cp_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewaySNI.yaml
+
+    - name: 09-Create-provider-and-model
+      try:
+        - apply:
+            file: 01-aigateway-provider-model.yaml
+        - assert:
+            file: 01-aigateway-provider-model-assert.yaml
+
+    - name: 10-Create-aigateway-dataplane
+      bindings:
+        - name: namespace
+          value: ($namespace)
+      use:
+        template: ../../common/_step_templates/apply-assert-aigatewayDataPlane.yaml
+
+    - name: 11-Verify-tls-sni-exact-hostname
+      description: |
+        Connect with SNI=exact_hostname (forced via curl --resolve) and
+        validate the presented certificate's chain against the CA generated
+        above, proving SNI-based certificate selection AND chain-of-trust
+        validation together. Confirmed against a live Konnect account: Kong's
+        AI Proxy plugin forwards this plain request (no X-Kong-LLM-Model
+        selector) through to the single configured target on this path
+        without issue, since the selector only disambiguates between multiple
+        models sharing a path. "13-Drive-chat-completion-traffic" below
+        separately proves the full, properly-formed app-layer request path.
+      bindings:
+        - name: aigw_dp_name
+          value: ($aigw_dp_name)
+        - name: fqdn
+          value: ($exact_hostname)
+        - name: route_path
+          value: ($route_path)
+        - name: method
+          value: POST
+        - name: ca_secret_name
+          value: ($ca_secret_name)
+      use:
+        template: ../../common/_step_templates/verify-aigw-tls-sni-match.yaml
+
+    - name: 12-Verify-tls-sni-wildcard-covered-hostname
+      description: |
+        Same as 11-Verify-tls-sni-exact-hostname, but with SNI forced to
+        wildcard_covered_hostname (a hostname with no AIGatewaySNI entry of
+        its own, reachable only via the wildcard entry's coverage). Proves
+        the wildcard AIGatewaySNI mapping resolves the correct certificate.
+      bindings:
+        - name: aigw_dp_name
+          value: ($aigw_dp_name)
+        - name: fqdn
+          value: ($wildcard_covered_hostname)
+        - name: route_path
+          value: ($route_path)
+        - name: method
+          value: POST
+        - name: ca_secret_name
+          value: ($ca_secret_name)
+      use:
+        template: ../../common/_step_templates/verify-aigw-tls-sni-match.yaml
+
+    - name: 13-Drive-chat-completion-traffic
+      description: |
+        Real chat-completions request (proper X-Kong-LLM-Model header + JSON
+        body) proving the AI-proxy application layer still routes correctly
+        on this data plane. Runs via the ingress Service's cluster-DNS name
+        (mirroring aigateway/ai-proxy), not the external exact_hostname/SNI
+        path, since aigw_chat_completion.sh has no --resolve/SNI override to
+        force a specific hostname from inside the cluster. Combined with the
+        two TLS/SNI steps above (which do force SNI per hostname), this
+        demonstrates both halves of the feature even though no single
+        request here exercises hostname-based SNI routing and chat
+        completion at once.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: MODEL_ALIAS
+                value: ($model_alias)
+              - name: EXPECT_HEADER
+                value: X-Kong-LLM-Model
+            content: |
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+
+    - name: 14-Verify-hostname-with-no-matching-sni-fails
+      description: |
+        Unhappy path, scenario 1: nomatch_hostname has zero AIGatewaySNI
+        entries anywhere in this control plane, so no certificate should
+        match it. Confirmed against a live Konnect account.
+
+        Not expressed via verify-aigw-tls-sni-match.yaml: that template only
+        asserts the certificate_match: true direction (the case every other
+        caller above needs), and baking a second, "expect NOT true" mode
+        into it would trade a small amount of duplication here for a
+        template whose single check has to special-case two different,
+        unrelated failure shapes. The inner script call is guarded with
+        "|| true": unlike a normal assertion,
+        host_connectivity_test_with_hostname_tls_check.sh always exits
+        non-zero on anything other than a clean matching-status-and-cert
+        result, and here that non-zero exit IS the expected outcome, not a
+        broken step. Chainsaw's script `check:` (evaluated against $stdout),
+        not the script's own exit code, decides pass/fail for this step,
+        matching the "regex/JSON matches the expected shape" pattern used
+        elsewhere in this repo's chainsaw tests for negative assertions (see
+        e.g. common/scripts/host_connectivity_test_https_status.sh's
+        EXPECTED_STATUS_REGEX, which encodes the same idea of a script whose
+        own exit code always reflects "matched what we expected", including
+        when what's expected is itself a failure code).
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_DP_NAME
+                value: ($aigw_dp_name)
+            content: |
+              bash ../../common/scripts/aigw_dataplane_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CA_SECRET_NAME
+                value: ($ca_secret_name)
+              - name: FQDN
+                value: ($nomatch_hostname)
+              - name: PROXY_IP
+                value: ($lb_address)
+              - name: METHOD
+                value: POST
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: INSECURE
+                value: 'false'
+              - name: EXPECTED_STATUS_REGEX
+                value: '^[0-9]{3}$'
+              - name: MAX_RETRIES
+                value: '3'
+              - name: RETRY_DELAY
+                value: '1'
+            content: |
+              CACERT_PATH="$(bash ../../common/scripts/write_ca_cert_file.sh | jq -r '.ca_cert_path')"
+              export CACERT_PATH
+              trap 'rm -f "${CACERT_PATH}"' EXIT
+              bash ../../common/scripts/host_connectivity_test_with_hostname_tls_check.sh || true
+            check:
+              (to_string(json_parse($stdout).certificate_match) != 'true'): true
+
+    - name: 15-Delete-wildcard-sni-mapping
+      description: |
+        Delete wildcard_sni_name, NOT exact_sni_name: exact_hostname
+        (api.example.com) is itself a subdomain of example.com, so as long
+        as wildcard_sni_name (*.example.com) stays active it ALSO covers
+        exact_hostname (both entries point at the same certificate), so
+        deleting exact_sni_name alone would just make routing fall back to
+        the still-active wildcard, which still matches, proving nothing.
+        wildcard_covered_hostname (foo.example.com), by contrast, has never
+        had any OTHER overlapping AIGatewaySNI entry. Only the wildcard
+        ever covered it (already proven working in
+        12-Verify-tls-sni-wildcard-covered-hostname above), so deleting the
+        wildcard is the one mapping whose removal can actually be observed
+        as "this hostname stops matching" without another entry masking it.
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewaySNI
+              name: ($wildcard_sni_name)
+              namespace: ($namespace)
+
+    - name: 16-Verify-sni-mapping-removed-after-deletion
+      description: |
+        Unhappy path, scenario 2: wildcard_covered_hostname previously
+        worked via wildcard_sni_name (12-Verify-tls-sni-wildcard-covered-hostname
+        above); that mapping was just deleted, and nothing else ever covered
+        this hostname. Same "check: decides pass/fail, not the script's exit
+        code" reasoning as 14-Verify-hostname-with-no-matching-sni-fails
+        applies here too.
+
+        Unlike scenario 1, this one genuinely needs to WAIT: the deletion
+        above has to propagate from Konnect down to the running data plane
+        (real hybrid-mode CP<->DP sync) before the hostname actually stops
+        matching, which won't happen instantly. That's a fundamentally different
+        completion condition than host_connectivity_test_with_hostname_tls_check.sh's
+        own MAX_RETRIES loop is built for (that one waits for a match to
+        APPEAR, not disappear), and chainsaw doesn't re-poll a script step's
+        `check:` either (see test/e2e/chainsaw/README.md). See
+        wait_for_tls_sni_mismatch.sh for the outer poll-until-mismatch loop.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_DP_NAME
+                value: ($aigw_dp_name)
+            content: |
+              bash ../../common/scripts/aigw_dataplane_lb_address.sh
+            outputs:
+              - name: lb_address
+                value: (json_parse($stdout).address)
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CA_SECRET_NAME
+                value: ($ca_secret_name)
+              - name: FQDN
+                value: ($wildcard_covered_hostname)
+              - name: PROXY_IP
+                value: ($lb_address)
+              - name: METHOD
+                value: POST
+              - name: ROUTE_PATH
+                value: ($route_path)
+              - name: INSECURE
+                value: 'false'
+              - name: EXPECTED_STATUS_REGEX
+                value: '^[0-9]{3}$'
+            content: |
+              bash ../../common/scripts/wait_for_tls_sni_mismatch.sh
+            check:
+              (to_string(json_parse($stdout).certificate_match) != 'true'): true
+
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-tls-sni-certificates
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

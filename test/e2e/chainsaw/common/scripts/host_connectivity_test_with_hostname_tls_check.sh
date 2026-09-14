@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 # Abort on nonzero exit status, unbound variable, and pipefail.
 set -o errexit
 set -o nounset
@@ -10,6 +10,22 @@ set -o pipefail
 #   METHOD: The HTTP method to use (e.g., 'GET', 'POST', 'PUT').
 #   ROUTE_PATH: (optional) The HTTP path to test. Default: '/'.
 #   INSECURE: (optional) If 'true', disables TLS verification. Default: 'true'.
+#             Ignored when CACERT_PATH is set (see below).
+#   CACERT_PATH: (optional) Path to a local CA certificate file. When set to a
+#             non-empty value, the request validates the server's certificate
+#             chain against this CA (curl --cacert) instead of skipping TLS
+#             verification, so real chain-of-trust validation can be proven
+#             (not just cert-hostname matching with verification disabled).
+#             Takes precedence over INSECURE. Default: unset (falls back to
+#             the INSECURE behavior described above, unchanged).
+#   EXPECTED_STATUS_REGEX: (optional) Extended regex the HTTP status
+#             code must match for the request to count as successful (the
+#             certificate still has to match on top of this). Default:
+#             '^200$', unchanged from before this option existed. Use e.g.
+#             '^[0-9]{3}$' to accept any well-formed HTTP response when only
+#             the TLS/SNI/certificate handshake is under test, independent of
+#             whether the request is also routed successfully at the
+#             application layer.
 #   MAX_RETRIES: (optional) Maximum number of retry attempts. Default: '180'.
 #   RETRY_DELAY: (optional) Delay in seconds between retries. Default: '1'.
 
@@ -18,210 +34,249 @@ PROXY_IP="${PROXY_IP}"
 METHOD="${METHOD}"
 ROUTE_PATH="${ROUTE_PATH:-/}"
 INSECURE="${INSECURE:-true}"
+CACERT_PATH="${CACERT_PATH:-}"
+EXPECTED_STATUS_REGEX="${EXPECTED_STATUS_REGEX:-^200$}"
 
 # Retry configuration (configurable via environment variables).
 # Default: 180 retries with 1 second delay = up to 180 seconds total.
 MAX_RETRIES="${MAX_RETRIES:-180}"
 RETRY_DELAY="${RETRY_DELAY:-1}"
 
-# Determine insecure flag.
+# Determine the TLS verification flag. CACERT_PATH (real chain-of-trust
+# validation against a specific CA) takes precedence over INSECURE (skip
+# verification entirely). When CACERT_PATH is unset/empty, behavior is
+# unchanged from before this option existed.
 INSECURE_FLAG=""
-if [[ "$INSECURE" == "true" ]]; then
+if [ -n "$CACERT_PATH" ]; then
+  INSECURE_FLAG="--cacert '${CACERT_PATH}'"
+elif [ "$INSECURE" = "true" ]; then
   INSECURE_FLAG="--insecure"
 fi
 
-# Body temp file.
+# Body temp file, cleaned up on any exit path.
 BODY_FILE=$(mktemp /tmp/curl_body.XXXXXX)
+trap 'rm -f "$BODY_FILE"' EXIT
 
-# Build curl command - capture body to temp file, output only HTTP code to stdout.
-build_curl_cmd() {
-  local CMD="curl -s -w '%{http_code}' -X $METHOD --resolve '${FQDN}:443:${PROXY_IP}' 'https://${FQDN}${ROUTE_PATH}' -vv $INSECURE_FLAG -o $BODY_FILE"
-  echo "$CMD"
+CURL_CMD="curl -s -w '%{http_code}' -X $METHOD --resolve '${FQDN}:443:${PROXY_IP}' 'https://${FQDN}${ROUTE_PATH}' -vv $INSECURE_FLAG -o $BODY_FILE"
+
+# Pure shell JSON string escaping, since jq isn't available in the
+# curlimages/curl image this script runs under for in-cluster checks.
+json_escape() {
+  printf '%s' "$1" | awk '
+    {
+      line = $0
+      out = ""
+      n = length(line)
+      for (i = 1; i <= n; i++) {
+        c = substr(line, i, 1)
+        if (c == "\\") out = out "\\\\"
+        else if (c == "\"") out = out "\\\""
+        else out = out c
+      }
+      printf "%s%s", (NR > 1 ? "\\n" : ""), out
+    }
+  '
 }
 
-CURL_CMD=$(build_curl_cmd)
+# Build a JSON object from "type:key=value" tokens (type is str/num/bool) and
+# print it to stdout. One implementation shared by every exit path below.
+emit_result() {
+  local first=true kv type rest key value
+  printf '{\n'
+  for kv in "$@"; do
+    type="${kv%%:*}"
+    rest="${kv#*:}"
+    key="${rest%%=*}"
+    value="${rest#*=}"
+    if [ "$first" = true ]; then
+      first=false
+    else
+      printf ',\n'
+    fi
+    printf '  "%s": ' "$key"
+    case "$type" in
+      str) printf '"%s"' "$(json_escape "$value")" ;;
+      num | bool) printf '%s' "$value" ;;
+      *) echo "emit_result: unknown type '$type' for key '$key'" >&2; exit 1 ;;
+    esac
+  done
+  printf '\n}\n'
+}
 
-# Function to extract info from response body.
-# Body format:
+# Sets POD_NODE, POD_NAME, POD_NAMESPACE, POD_IP from a response body of the
+# form:
 #   Welcome, you are connected to node <node>.
 #   Running on Pod <pod-name>.
 #   In namespace <namespace>.
 #   With IP address <ip>.
 extract_body_info() {
-  local BODY="$1"
-  local POD_NODE=$(echo "$BODY" | grep -o 'connected to node [^.]*' | sed 's/connected to node //' || echo "")
-  local POD_NAME=$(echo "$BODY" | grep -o 'Running on Pod [^.]*' | sed 's/Running on Pod //' || echo "")
-  local POD_NAMESPACE=$(echo "$BODY" | grep -o 'In namespace [^.]*' | sed 's/In namespace //' || echo "")
-  local POD_IP=$(echo "$BODY" | grep -o 'IP address .*' | sed 's/IP address //' || echo "")
-  echo "${POD_NODE}|${POD_NAME}|${POD_NAMESPACE}|${POD_IP}"
+  local body="$1"
+  POD_NODE=$(echo "$body" | grep -o 'connected to node [^.]*' | sed 's/connected to node //' || echo "")
+  POD_NAME=$(echo "$body" | grep -o 'Running on Pod [^.]*' | sed 's/Running on Pod //' || echo "")
+  POD_NAMESPACE=$(echo "$body" | grep -o 'In namespace [^.]*' | sed 's/In namespace //' || echo "")
+  POD_IP=$(echo "$body" | grep -o 'IP address .*' | sed 's/IP address //' || echo "")
 }
 
-# Function to validate certificate hostname.
+# Sets CERTIFICATE_MATCH ("true"/"false") and MESSAGE from comparing the
+# presented certificate's hostname against $FQDN. Supports:
+# 1. Exact match (echo.kong.example.com == echo.kong.example.com)
+# 2. Wildcard match (*.kong.example.com covers echo.kong.example.com)
+# 3. Parent domain match (kong.example.com covers echo.kong.example.com)
 validate_certificate() {
-  local OUTPUT="$1"
-  local ACTUAL_HOSTNAME="$2"
+  local actual_hostname="$1" wildcard_base
 
-  # Verify that the certificate hostname matches or is a parent domain of the SNI hostname.
-  # Supports:
-  # 1. Exact match (echo.kong.example.com == echo.kong.example.com)
-  # 2. Wildcard match (*.kong.example.com covers echo.kong.example.com)
-  # 3. Parent domain match (kong.example.com covers echo.kong.example.com)
-
-  if [[ "$ACTUAL_HOSTNAME" == "$FQDN" ]]; then
-    # Exact match.
-    echo "true|Certificate hostname validation passed: exact match $ACTUAL_HOSTNAME"
-  elif [[ "$ACTUAL_HOSTNAME" == \*.* ]]; then
-    # Wildcard certificate (e.g., *.kong.example.com).
-    # Extract the base domain from the wildcard (remove the *.).
-    WILDCARD_BASE="${ACTUAL_HOSTNAME#\*.}"
-    # Check if SNI hostname ends with the wildcard base domain.
-    if [[ "$FQDN" == *".$WILDCARD_BASE" ]] || [[ "$FQDN" == "$WILDCARD_BASE" ]]; then
-      echo "true|Certificate hostname validation passed: wildcard $ACTUAL_HOSTNAME covers $FQDN"
-    else
-      echo "false|Certificate hostname mismatch: wildcard $ACTUAL_HOSTNAME does not cover $FQDN"
-    fi
-  elif [[ "$FQDN" == *".$ACTUAL_HOSTNAME" ]]; then
-    # Parent domain match (e.g., kong.example.com covers echo.kong.example.com).
-    echo "true|Certificate hostname validation passed: parent domain $ACTUAL_HOSTNAME covers $FQDN"
+  if [ "$actual_hostname" = "$FQDN" ]; then
+    CERTIFICATE_MATCH="true"
+    MESSAGE="Certificate hostname validation passed: exact match $actual_hostname"
+  elif printf '%s' "$actual_hostname" | grep -Eq '^\*\..+'; then
+    wildcard_base="${actual_hostname#\*.}"
+    case "$FQDN" in
+      *."$wildcard_base" | "$wildcard_base")
+        CERTIFICATE_MATCH="true"
+        MESSAGE="Certificate hostname validation passed: wildcard $actual_hostname covers $FQDN"
+        ;;
+      *)
+        CERTIFICATE_MATCH="false"
+        MESSAGE="Certificate hostname mismatch: wildcard $actual_hostname does not cover $FQDN"
+        ;;
+    esac
   else
-    echo "false|Certificate hostname mismatch: expected $FQDN or a subdomain of $ACTUAL_HOSTNAME, got $ACTUAL_HOSTNAME"
+    case "$FQDN" in
+      *."$actual_hostname")
+        CERTIFICATE_MATCH="true"
+        MESSAGE="Certificate hostname validation passed: parent domain $actual_hostname covers $FQDN"
+        ;;
+      *)
+        CERTIFICATE_MATCH="false"
+        MESSAGE="Certificate hostname mismatch: expected $FQDN or a subdomain of $actual_hostname, got $actual_hostname"
+        ;;
+    esac
   fi
 }
 
-# Retry loop: Keep trying until we get 200 and certificate matches, or run out of retries.
+# Extracts the hostname the server's certificate was actually matched/issued
+# for out of curl's -vv output. Prefers curl's own hostname-match report:
+# whenever curl actually verifies the hostname (i.e. TLS verification isn't
+# disabled), it prints `subjectAltName: host "<fqdn>" matched cert's
+# "<pattern>"`, where <pattern> is the exact SAN entry that matched, even a
+# wildcard SAN (e.g. "*.example.com") if that's what matched, even when the
+# certificate's own Subject CN is a different, more specific name (e.g.
+# CN=api.example.com with SAN=*.example.com). Falls back to the Subject CN
+# only when that line is absent (TLS verification was skipped, INSECURE=true).
+resolve_actual_hostname() {
+  local output="$1" hostname
+  hostname=$(echo "$output" | grep -o 'subjectAltName: host "[^"]*" matched cert'"'"'s "[^"]*"' | sed -E 's/.*matched cert'"'"'s "([^"]*)"/\1/' || echo "")
+  if [ -z "$hostname" ]; then
+    hostname=$(echo "$output" | grep -o 'subject:.*CN=[^;]*' | sed 's/.*CN=//' | tr -d ' ' || echo "")
+  fi
+  echo "$hostname"
+}
+
+# Retry loop: Keep trying until the status matches EXPECTED_STATUS_REGEX and
+# the certificate matches, or we run out of retries.
 LAST_OUTPUT=""
 LAST_HTTP_CODE=""
 LAST_ACTUAL_HOSTNAME=""
 LAST_MESSAGE=""
-LAST_BODY_INFO=""
+POD_NODE=""
+POD_NAME=""
+POD_NAMESPACE=""
+POD_IP=""
 
-for ATTEMPT in $(seq 1 $MAX_RETRIES); do
-  # Clear body file.
-  > $BODY_FILE
+for ATTEMPT in $(seq 1 "$MAX_RETRIES"); do
+  > "$BODY_FILE"
 
-  if OUTPUT=$(eval $CURL_CMD 2>&1); then
+  if OUTPUT=$(eval "$CURL_CMD" 2>&1); then
     LAST_OUTPUT="$OUTPUT"
 
     # The last line of the output is the HTTP code from -w.
     HTTP_CODE=$(echo "$OUTPUT" | tail -n 1)
     LAST_HTTP_CODE="$HTTP_CODE"
 
-    # Read response body.
-    BODY=$(cat $BODY_FILE 2>/dev/null || echo "")
-    if [[ -n "$BODY" ]]; then
-      LAST_BODY_INFO=$(extract_body_info "$BODY")
-    fi
+    BODY=$(cat "$BODY_FILE" 2>/dev/null || echo "")
+    [ -n "$BODY" ] && extract_body_info "$BODY"
 
-    # Extract the Common Name (CN) from the 'subject:' line in the certificate section.
-    # Look for pattern like "subject: ... CN=hostname" and extract the CN value.
-    ACTUAL_HOSTNAME=$(echo "$OUTPUT" | grep -o 'subject:.*CN=[^;]*' | sed 's/.*CN=//' | tr -d ' ' || echo "")
+    ACTUAL_HOSTNAME=$(resolve_actual_hostname "$OUTPUT")
     LAST_ACTUAL_HOSTNAME="$ACTUAL_HOSTNAME"
 
-    if [[ "$HTTP_CODE" == "200" ]]; then
-      # Check certificate validation.
-      VALIDATION_RESULT=$(validate_certificate "$OUTPUT" "$ACTUAL_HOSTNAME")
-      CERTIFICATE_MATCH=$(echo "$VALIDATION_RESULT" | cut -d'|' -f1)
-      MESSAGE=$(echo "$VALIDATION_RESULT" | cut -d'|' -f2)
+    if printf '%s' "$HTTP_CODE" | grep -Eq "$EXPECTED_STATUS_REGEX"; then
+      validate_certificate "$ACTUAL_HOSTNAME"
       LAST_MESSAGE="$MESSAGE"
 
-      if [[ "$CERTIFICATE_MATCH" == "true" ]]; then
-        # Success! Got 200 and certificate matches.
-        POD_NODE=$(echo "$LAST_BODY_INFO" | cut -d'|' -f1)
-        POD_NAME=$(echo "$LAST_BODY_INFO" | cut -d'|' -f2)
-        POD_NAMESPACE=$(echo "$LAST_BODY_INFO" | cut -d'|' -f3)
-        POD_IP=$(echo "$LAST_BODY_INFO" | cut -d'|' -f4)
-        rm -f $BODY_FILE
-        cat <<EOF
-{
-  "http_status": $HTTP_CODE,
-  "certificate_match": true,
-  "resolved_hostname": "$ACTUAL_HOSTNAME",
-  "fqdn": "$FQDN",
-  "method": "$METHOD",
-  "message": "$MESSAGE",
-  "pod_node": "$POD_NODE",
-  "pod_name": "$POD_NAME",
-  "pod_namespace": "$POD_NAMESPACE",
-  "pod_ip": "$POD_IP",
-  "retry_attempt": $ATTEMPT,
-  "max_retries": $MAX_RETRIES,
-  "curl_command": "$CURL_CMD"
-}
-EOF
+      if [ "$CERTIFICATE_MATCH" = "true" ]; then
+        # Success! Status matched EXPECTED_STATUS_REGEX and certificate matches.
+        emit_result \
+          "num:http_status=$HTTP_CODE" \
+          "bool:certificate_match=true" \
+          "str:resolved_hostname=$ACTUAL_HOSTNAME" \
+          "str:fqdn=$FQDN" \
+          "str:method=$METHOD" \
+          "str:message=$MESSAGE" \
+          "str:pod_node=$POD_NODE" \
+          "str:pod_name=$POD_NAME" \
+          "str:pod_namespace=$POD_NAMESPACE" \
+          "str:pod_ip=$POD_IP" \
+          "num:retry_attempt=$ATTEMPT" \
+          "num:max_retries=$MAX_RETRIES" \
+          "str:curl_command=$CURL_CMD"
         exit 0
       fi
     fi
 
-    # Either HTTP code is not 200 or certificate doesn't match, retry.
-    if [[ $ATTEMPT -lt $MAX_RETRIES ]]; then
-      sleep $RETRY_DELAY
-    fi
+    # Either the status didn't match EXPECTED_STATUS_REGEX or the certificate
+    # doesn't match, retry.
   else
     # Curl command failed.
     LAST_OUTPUT="$OUTPUT"
-    if [[ $ATTEMPT -lt $MAX_RETRIES ]]; then
-      sleep $RETRY_DELAY
-    fi
   fi
+
+  [ "$ATTEMPT" -lt "$MAX_RETRIES" ] && sleep "$RETRY_DELAY"
 done
 
 # All retries exhausted, output failure.
-rm -f $BODY_FILE
-if [[ -z "$LAST_HTTP_CODE" ]]; then
+if [ -z "$LAST_HTTP_CODE" ]; then
   # Curl never succeeded.
-  cat <<EOF
-{
-  "success": false,
-  "error": "Curl command failed after $MAX_RETRIES attempts",
-  "fqdn": "$FQDN",
-  "proxy_ip": "$PROXY_IP",
-  "method": "$METHOD",
-  "route_path": "$ROUTE_PATH",
-  "insecure": "$INSECURE",
-  "retry_attempt": $MAX_RETRIES,
-  "max_retries": $MAX_RETRIES,
-  "curl_command": $(echo "$CURL_CMD" | jq -Rs .),
-  "curl_output": $(echo "$LAST_OUTPUT" | jq -Rs .)
-}
-EOF
-elif [[ "$LAST_HTTP_CODE" != "200" ]]; then
-  # Got HTTP response but not 200.
-  cat <<EOF
-{
-  "http_status": $LAST_HTTP_CODE,
-  "certificate_match": false,
-  "method": "$METHOD",
-  "error": "Request failed with status $LAST_HTTP_CODE after $MAX_RETRIES attempts",
-  "retry_attempt": $MAX_RETRIES,
-  "max_retries": $MAX_RETRIES,
-  "curl_command": $(echo "$CURL_CMD" | jq -Rs .),
-  "curl_output": $(echo "$LAST_OUTPUT" | jq -Rs .)
-}
-EOF
+  emit_result \
+    "bool:success=false" \
+    "bool:certificate_match=false" \
+    "str:error=Curl command failed after $MAX_RETRIES attempts" \
+    "str:fqdn=$FQDN" \
+    "str:proxy_ip=$PROXY_IP" \
+    "str:method=$METHOD" \
+    "str:route_path=$ROUTE_PATH" \
+    "str:insecure=$INSECURE" \
+    "num:retry_attempt=$MAX_RETRIES" \
+    "num:max_retries=$MAX_RETRIES" \
+    "str:curl_command=$CURL_CMD" \
+    "str:curl_output=$LAST_OUTPUT"
+elif ! printf '%s' "$LAST_HTTP_CODE" | grep -Eq "$EXPECTED_STATUS_REGEX"; then
+  # Got an HTTP response, but the status didn't match EXPECTED_STATUS_REGEX.
+  emit_result \
+    "num:http_status=$LAST_HTTP_CODE" \
+    "bool:certificate_match=false" \
+    "str:method=$METHOD" \
+    "str:error=Request failed with status $LAST_HTTP_CODE (expected to match $EXPECTED_STATUS_REGEX) after $MAX_RETRIES attempts" \
+    "num:retry_attempt=$MAX_RETRIES" \
+    "num:max_retries=$MAX_RETRIES" \
+    "str:curl_command=$CURL_CMD" \
+    "str:curl_output=$LAST_OUTPUT"
 else
-  # Got 200 but certificate didn't match.
-  POD_NODE=$(echo "$LAST_BODY_INFO" | cut -d'|' -f1)
-  POD_NAME=$(echo "$LAST_BODY_INFO" | cut -d'|' -f2)
-  POD_NAMESPACE=$(echo "$LAST_BODY_INFO" | cut -d'|' -f3)
-  POD_IP=$(echo "$LAST_BODY_INFO" | cut -d'|' -f4)
-  cat <<EOF
-{
-  "http_status": $LAST_HTTP_CODE,
-  "certificate_match": false,
-  "resolved_hostname": "$LAST_ACTUAL_HOSTNAME",
-  "fqdn": "$FQDN",
-  "method": "$METHOD",
-  "message": "$LAST_MESSAGE",
-  "pod_node": "$POD_NODE",
-  "pod_name": "$POD_NAME",
-  "pod_namespace": "$POD_NAMESPACE",
-  "pod_ip": "$POD_IP",
-  "error": "Certificate hostname mismatch after $MAX_RETRIES attempts",
-  "retry_attempt": $MAX_RETRIES,
-  "max_retries": $MAX_RETRIES,
-  "curl_command": $(echo "$CURL_CMD" | jq -Rs .),
-  "curl_output": $(echo "$LAST_OUTPUT" | jq -Rs .)
-}
-EOF
+  # Status matched EXPECTED_STATUS_REGEX but certificate didn't match.
+  emit_result \
+    "num:http_status=$LAST_HTTP_CODE" \
+    "bool:certificate_match=false" \
+    "str:resolved_hostname=$LAST_ACTUAL_HOSTNAME" \
+    "str:fqdn=$FQDN" \
+    "str:method=$METHOD" \
+    "str:message=$LAST_MESSAGE" \
+    "str:pod_node=$POD_NODE" \
+    "str:pod_name=$POD_NAME" \
+    "str:pod_namespace=$POD_NAMESPACE" \
+    "str:pod_ip=$POD_IP" \
+    "str:error=Certificate hostname mismatch after $MAX_RETRIES attempts" \
+    "num:retry_attempt=$MAX_RETRIES" \
+    "num:max_retries=$MAX_RETRIES" \
+    "str:curl_command=$CURL_CMD" \
+    "str:curl_output=$LAST_OUTPUT"
 fi
 exit 1

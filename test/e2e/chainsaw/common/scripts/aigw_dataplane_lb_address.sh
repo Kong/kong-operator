@@ -28,11 +28,15 @@ for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
     -o jsonpath='{.status.loadBalancer.ingress[0].hostname}' 2>/dev/null || true)
   ADDR="${IP:-${HOSTNAME}}"
   if [[ -n "${ADDR}" ]]; then
+    ADDR_TYPE="ip"
+    [[ -z "${IP}" ]] && ADDR_TYPE="hostname"
     cat <<EOF
 {
   "success": true,
   "address": "${ADDR}",
-  "service": "${SVC}",
+  "address_type": "${ADDR_TYPE}",
+  "service": "${NAMESPACE}/${SVC}",
+  "message": "Service ${NAMESPACE}/${SVC} was assigned LoadBalancer ${ADDR_TYPE} ${ADDR} on attempt ${ATTEMPT}/${MAX_RETRIES}",
   "retry_attempt": ${ATTEMPT},
   "max_retries": ${MAX_RETRIES}
 }
@@ -47,8 +51,10 @@ done
 cat <<EOF
 {
   "success": false,
-  "error": "Service ${SVC} never got a LoadBalancer address after ${MAX_RETRIES} attempts",
-  "service": "${SVC}",
+  "address": null,
+  "service": "${NAMESPACE}/${SVC}",
+  "error": "Service ${NAMESPACE}/${SVC} never got a LoadBalancer address after ${MAX_RETRIES} attempts",
+  "message": "Service ${NAMESPACE}/${SVC} never got a LoadBalancer address after ${MAX_RETRIES} attempts (${RETRY_DELAY}s apart)",
   "retry_attempt": ${ATTEMPT},
   "max_retries": ${MAX_RETRIES}
 }
