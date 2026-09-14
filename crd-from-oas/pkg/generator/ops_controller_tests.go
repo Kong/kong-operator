@@ -416,8 +416,8 @@ func controllerOpsTestValueForProperty(prop *parser.Property, goType, apiAlias s
 	if prop.RefName != "" {
 		switch prop.Type {
 		case "string":
-			if strings.HasPrefix(goType, "*") {
-				return ""
+			if elementType, ok := strings.CutPrefix(goType, "*"); ok {
+				return fmt.Sprintf("new(%s.%s(\"test-value\"))", apiAlias, elementType)
 			}
 			return `"test-value"`
 		case "object":

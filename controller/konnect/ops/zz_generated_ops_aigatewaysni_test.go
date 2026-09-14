@@ -33,6 +33,7 @@ func testGeneratedAIGatewaySNIForSDKOps() *aiconfigurationv1alpha1.AIGatewaySNI 
 			APISpec: aiconfigurationv1alpha1.AIGatewaySNIAPISpec{
 				Certificate: aiconfigurationv1alpha1.AIGatewayCertificateRef{Name: "test-certificate"},
 				DisplayName: "test-value",
+				Hostname:    new(aiconfigurationv1alpha1.AIGatewayHostname("test-value")),
 				Labels:      aiconfigurationv1alpha1.PublicLabels{"test-key": "test-value"},
 				ManagedBy:   aiconfigurationv1alpha1.ManagedBy{"test-key": "test-value"},
 				Name:        "test-value",
