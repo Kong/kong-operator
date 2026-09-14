@@ -19,7 +19,7 @@ package v1alpha1
 import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 // DBBackedHybridControlPlane stands for a control plane role in the DB backed hybrid mode deployed on prem.
-// In the DB backed hybrid mode, the control plane is responsible accepting configuration from KO spawned KIC instances
+// In the DB backed hybrid mode, the control plane is responsible for accepting configuration from KO spawned KIC instances
 // and storing it in the database. The control plane is also responsible for propagating the configuration to the
 // data plane instances. The control plane is not responsible for serving traffic, which is the responsibility of the
 // data plane instances.
@@ -28,7 +28,6 @@ import metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 // +kubebuilder:object:root=true
 // +kubebuilder:subresource:status
 // +kubebuilder:resource:shortName=dbcp,categories=kong
-// +kubebuilder:subresource:status
 // +kong:channels=kong-operator
 type DBBackedHybridControlPlane struct {
 	metav1.TypeMeta   `json:",inline"`

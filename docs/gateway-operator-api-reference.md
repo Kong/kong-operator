@@ -55,7 +55,7 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 
 
 DBBackedHybridControlPlane stands for a control plane role in the DB backed hybrid mode deployed on prem.
-In the DB backed hybrid mode, the control plane is responsible accepting configuration from KO spawned KIC instances
+In the DB backed hybrid mode, the control plane is responsible for accepting configuration from KO spawned KIC instances
 and storing it in the database. The control plane is also responsible for propagating the configuration to the
 data plane instances. The control plane is not responsible for serving traffic, which is the responsibility of the
 data plane instances.
