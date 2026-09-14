@@ -95,8 +95,12 @@ jobs:
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         with:
-          client-id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
           private-key: ${{ secrets.gh-app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
+            developer.konghq.com
 
   semver:
     outputs:
@@ -176,7 +180,7 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         env:
           GH_PAT: ${{ needs.github-app-token.outputs.token }}
-        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://x-access-token:${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - name: Setup golang
         uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
@@ -283,7 +287,7 @@ jobs:
       - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
         env:
           GH_PAT: ${{ needs.github-app-token.outputs.token }}
-        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
+        run: git config --global url."https://x-access-token:${GH_PAT}@github.com".insteadOf "https://github.com"
 
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
