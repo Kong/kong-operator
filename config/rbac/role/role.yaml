@@ -77,6 +77,8 @@ rules:
   resources:
   - aigatewayagents
   - aigatewayauthstrategies
+  - aigatewaycacertificates
+  - aigatewaycertificates
   - aigatewayconsumercredentials
   - aigatewayconsumergroups
   - aigatewayconsumers
@@ -97,6 +99,10 @@ rules:
   - aigatewayagents/status
   - aigatewayauthstrategies/finalizers
   - aigatewayauthstrategies/status
+  - aigatewaycacertificates/finalizers
+  - aigatewaycacertificates/status
+  - aigatewaycertificates/finalizers
+  - aigatewaycertificates/status
   - aigatewayconsumercredentials/finalizers
   - aigatewayconsumercredentials/status
   - aigatewayconsumergroups/finalizers

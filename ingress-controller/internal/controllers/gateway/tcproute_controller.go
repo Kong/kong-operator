@@ -47,11 +47,6 @@ type TCPRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
-	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
 	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
 	// served by the cluster, resolved on SetupWithManager call.
 	referenceGrantVersion schema.GroupVersion
@@ -63,19 +58,14 @@ type TCPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the TCPRouteReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling TCPRoutes.
-	// Once the TCPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	gv, ok, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	// The ReferenceGrant CRD is a hard requirement of this reconciler: it is needed to
+	// resolve cross-namespace references. Resolve which version the cluster serves at
+	// setup, and fail loudly if neither is installed.
+	gv, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
+		return err
 	}
-	r.referenceGrantVersion, r.enableReferenceGrant = gv, ok
-	if !r.enableReferenceGrant {
-		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
-	}
+	r.referenceGrantVersion = gv
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tcproute-controller").
@@ -106,12 +96,10 @@ func (r *TCPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForGateway),
 		)
 
-	if r.enableReferenceGrant {
-		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
-			handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForReferenceGrant),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTCPRouteFrom)),
-		)
-	}
+	blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listTCPRoutesForReferenceGrant),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTCPRouteFrom)),
+	)
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -630,11 +618,6 @@ func (r *TCPRouteReconciler) getTCPRouteRuleReason(ctx context.Context, tcpRoute
 			// verify that a ReferenceGrant permits the reference.
 			if tcpRoute.Namespace != backendNamespace {
 				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the TCPRoute (namespace %s)", targetNN, tcpRoute.Namespace)
-				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
-						nil
-				}
 
 				referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
 				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {

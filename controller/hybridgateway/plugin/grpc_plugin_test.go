@@ -328,3 +328,48 @@ func TestGRPCPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 
 	assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugins[0].Tags)
 }
+
+func TestGRPCPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{
+			{
+				Type: gatewayv1.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	for _, tc := range resolvedConfigCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.objects()...).
+				Build()
+
+			plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, plugins, 1)
+			assert.JSONEq(t, tc.expected, string(plugins[0].Config.Raw))
+		})
+	}
+}

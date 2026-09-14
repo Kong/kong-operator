@@ -30,6 +30,10 @@ func DeleteGeneratedOps[
 		return deleteAIGatewayAgent(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return deleteAIGatewayAuthStrategy(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
+		return deleteAIGatewayCACertificate(ctx, sdk.GetAIGatewayCACertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return deleteAIGatewayCertificate(ctx, sdk.GetAIGatewayCertificatesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return deleteAIGatewayConsumer(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:

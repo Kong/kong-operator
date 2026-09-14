@@ -89,6 +89,16 @@
   is not assembled from the spec in this change, so full configuration handling
   (including restarts driven by spec changes) lands in a later change.
   [#5402](https://github.com/Kong/kong-operator/issues/5402)
+- Added `AIGatewayCACertificate` CRD: manage Konnect AI Gateway CA
+  certificates (`aiconfiguration.konghq.com/v1alpha1`), parented to
+  `KonnectAIGateway`, with the certificate PEM sourced from a Kubernetes
+  `Secret`.
+  [#5656](https://github.com/Kong/kong-operator/pull/5656)
+- Added `AIGatewayCertificate` CRD: manage Konnect AI Gateway certificates
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  with the certificate, private key, and alternate cert/key sourced from a
+  Kubernetes `Secret`.
+  [#5658](https://github.com/Kong/kong-operator/pull/5658)
 
 ### Breaking changes
 
@@ -119,6 +129,13 @@
   This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
+- Konnect-hybrid gateways: resolve `spec.configFrom` and `spec.configPatches` of a
+  `KongPlugin` attached to an `HTTPRoute` or `GRPCRoute` through an `ExtensionRef`
+  filter. Both fields were previously ignored, so a plugin whose configuration came
+  from a `Secret` was pushed to Konnect without it. The referenced `Secret`s are now
+  watched, so changing one triggers a reconcile, and a failure to resolve them is
+  reported instead of silently yielding an empty configuration.
+  [#5600](https://github.com/Kong/kong-operator/pull/5600)
 - Konnect reconciler: release the cleanup finalizer with a non-optimistic merge
   patch instead of an optimistic-locked update. A stale cached `resourceVersion`
   could previously make that write conflict, which silently requeued the
@@ -134,6 +151,12 @@
   redeploy, so config changes surfaced through the signal API alone were never
   picked up.
   [#5643](https://github.com/Kong/kong-operator/pull/5643)
+- On-prem gateway: keep tags of translated Kong certificate stable when multiple
+  `Secret`s have the same certificate content. The tags generated from the `Secret`
+  with the earliest creation timestamp are chosen, and the one with the lowest
+  UID when a tie happens.
+  This aligns with choosing ID of the translated certificate.
+  [#5657](https://github.com/Kong/kong-operator/pull/5657)
 
 ## [v2.3.1]
 

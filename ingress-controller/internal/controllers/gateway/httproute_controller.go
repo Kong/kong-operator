@@ -53,11 +53,6 @@ type HTTPRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
-	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
 	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
 	// served by the cluster, resolved on SetupWithManager call.
 	referenceGrantVersion schema.GroupVersion
@@ -69,19 +64,14 @@ type HTTPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the HTTPRouteReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling HTTPRoutes.
-	// Once the HTTPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	gv, ok, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	// The ReferenceGrant CRD is a hard requirement of this reconciler: it is needed to
+	// resolve cross-namespace references. Resolve which version the cluster serves at
+	// setup, and fail loudly if neither is installed.
+	gv, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
+		return err
 	}
-	r.referenceGrantVersion, r.enableReferenceGrant = gv, ok
-	if !r.enableReferenceGrant {
-		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
-	}
+	r.referenceGrantVersion = gv
 
 	if err := setupHTTPRouteIndices(mgr); err != nil {
 		return err
@@ -121,12 +111,10 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForKongPlugin),
 	)
 
-	if r.enableReferenceGrant {
-		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
-			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForReferenceGrant),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom)),
-		)
-	}
+	blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForReferenceGrant),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom)),
+	)
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -678,11 +666,6 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
 				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the HTTPRoute (namespace %s)", targetNN, httpRoute.Namespace)
-				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
-						nil
-				}
 
 				referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
 				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
@@ -768,29 +751,12 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 			crossNSNamespaces[pluginNamespace] = struct{}{}
 		}
 	}
-	if len(crossNSNamespaces) > 0 {
-		if !r.enableReferenceGrant {
-			for _, pluginRef := range pluginRefs {
-				pluginNamespace := pluginRef.Namespace
-				if pluginNamespace == "" {
-					pluginNamespace = httpRoute.Namespace
-				}
-				if pluginNamespace != httpRoute.Namespace {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) install ReferenceGrant CRD and configure a proper grant",
-							pluginNamespace, pluginRef.Name, httpRoute.Namespace,
-						),
-						nil
-				}
-			}
+	for ns := range crossNSNamespaces {
+		grants, err := r.listReferenceGrants(ctx, ns)
+		if err != nil {
+			return "", "", err
 		}
-		for ns := range crossNSNamespaces {
-			grants, err := r.listReferenceGrants(ctx, ns)
-			if err != nil {
-				return "", "", err
-			}
-			referenceGrants = append(referenceGrants, grants...)
-		}
+		referenceGrants = append(referenceGrants, grants...)
 	}
 
 	for _, pluginRef := range pluginRefs {

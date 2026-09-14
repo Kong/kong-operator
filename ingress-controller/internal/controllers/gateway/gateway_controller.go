@@ -62,10 +62,6 @@ type GatewayReconciler struct {
 	// AddressOverridesUDP are addresses to use in Gateway status instead of the PublishServiceUDPRef addresses.
 	AddressOverridesUDP []string
 
-	// If enableReferenceGrant is true, controller will watch ReferenceGrants
-	// to invalidate or allow cross-namespace TLSConfigs in gateways.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
 	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
 	// served by the cluster, resolved on SetupWithManager call.
 	referenceGrantVersion schema.GroupVersion
@@ -82,19 +78,14 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		return fmt.Errorf("publish service must be configured")
 	}
 
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the GatewayReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling Gateways.
-	// Once the GatewayReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	gv, ok, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	// The ReferenceGrant CRD is a hard requirement of this reconciler: it is needed to
+	// validate cross-namespace TLSConfigs in Gateways. Resolve which version the cluster
+	// serves at setup, and fail loudly if neither is installed.
+	gv, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
+		return err
 	}
-	r.referenceGrantVersion, r.enableReferenceGrant = gv, ok
-	if !r.enableReferenceGrant {
-		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
-	}
+	r.referenceGrantVersion = gv
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
@@ -131,12 +122,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	if r.enableReferenceGrant {
-		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
-			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
-		)
-	}
+	blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
+	)
 
 	// Watch Secrets to immediately reconcile Gateways when referenced certificate Secrets change.
 	blder.WatchesRawSource(
@@ -651,10 +640,8 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
 	referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
-	if r.enableReferenceGrant {
-		if err := r.List(ctx, referenceGrantList); err != nil {
-			return ctrl.Result{}, err
-		}
+	if err := r.List(ctx, referenceGrantList); err != nil {
+		return ctrl.Result{}, err
 	}
 
 	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, gatewayapi.ReferenceGrantItems(referenceGrantList), r.Client)

@@ -1,0 +1,58 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-ca-cert
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  # Replace with your own PEM-encoded CA certificate.
+  ca.crt: |
+    -----BEGIN CERTIFICATE-----
+    <PASTE YOUR PEM-ENCODED CA CERTIFICATE HERE>
+    -----END CERTIFICATE-----
+---
+kind: AIGatewayCACertificate
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-ca-cert
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    # Name of the CA certificate. The name must be unique within the AI Gateway.
+    name: ai-gw-ca-cert
+    cert:
+      type: secretRef
+      secretRef:
+        name: ai-gw-ca-cert
+        key: ca.crt

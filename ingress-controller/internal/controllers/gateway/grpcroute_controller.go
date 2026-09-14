@@ -37,15 +37,11 @@ import (
 type GRPCRouteReconciler struct {
 	client.Client
 
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	DataplaneClient controllers.DataPlane
-	StatusQueue     *status.Queue
-	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	EnableReferenceGrant bool
-	CacheSyncTimeout     time.Duration
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	StatusQueue      *status.Queue
+	CacheSyncTimeout time.Duration
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
