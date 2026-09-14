@@ -32,6 +32,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -171,10 +172,9 @@ type DeploymentConfig[T Object, CP ControlPlaneObject] struct {
 	// replica count, or the HPA minReplicas when horizontal scaling is configured.
 	Replicas func(T) *int32
 
-	// BuildContainer builds the DataPlane container and the additional
-	// volumes (the certificate volume itself is managed by the shared
-	// machinery and appended separately when certSecretName is not empty).
-	// it requires. The Konnect certificate volume is appended by the reconciler.
+	// BuildContainer builds the DataPlane container and the additional volumes
+	// it requires. The Konnect certificate volume itself is managed by the
+	// shared machinery and appended separately when certSecretName is not empty.
 	// cp is nil when the DataPlane has no control plane reference configured.
 	BuildContainer func(dp T, cp CP, image, certSecretName string) (corev1.Container, []corev1.Volume, error)
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
@@ -369,6 +369,14 @@ func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl
 	if cpName != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, cpName)
 		if err != nil {
+			// A missing or not yet Programmed control plane is an expected,
+			// user-fixable state: resolveControlPlane has set the resolution
+			// condition and the control plane watch re-triggers the reconcile
+			// once the control plane appears or flips Programmed, so there is
+			// no need to retry with error backoff.
+			if apierrors.IsNotFound(err) || errors.Is(err, errControlPlaneNotProgrammed) {
+				return ctrl.Result{}, nil
+			}
 			return ctrl.Result{}, err
 		}
 	}
@@ -416,7 +424,7 @@ func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl
 	}
 
 	// Ensure the certificate is registered with Konnect.
-	// Return early if not yet programmed; the Owns() watch retriggeres once
+	// Return early if not yet programmed; the Owns() watch retriggers once
 	// the Konnect controller flips Programmed to True.
 	certProgrammed := true
 	if cpName != "" && certSecret != nil {

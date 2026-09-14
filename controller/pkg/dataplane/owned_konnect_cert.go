@@ -22,6 +22,7 @@ import (
 
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -107,17 +108,7 @@ func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
 	dp T,
 	desired Cert,
 ) (bool, error) {
-	current := r.Config.NewCertificateObject()
-	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), current); err != nil {
-		return false, fmt.Errorf("failed to get %s %s/%s: %w",
-			r.Config.CertificateKind, desired.GetNamespace(), desired.GetName(), err)
-	}
-
-	programmedCond := apimeta.FindStatusCondition(current.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
-	if programmedCond == nil || programmedCond.Status != metav1.ConditionTrue {
-		// Not yet programmed, update condition and return early. The Owns()
-		// watch on the certificate will retrigger once the Konnect controller
-		// flips Programmed to True.
+	markNotProgrammed := func() (bool, error) {
 		setStatusCondition(dp, metav1.Condition{
 			Type:               r.Config.Conditions.KonnectCertificateRegisteredType,
 			Status:             metav1.ConditionFalse,
@@ -126,6 +117,24 @@ func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
 			ObservedGeneration: dp.GetGeneration(),
 		})
 		return false, nil
+	}
+
+	current := r.Config.NewCertificateObject()
+	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), current); err != nil {
+		if !apierrors.IsNotFound(err) {
+			return false, fmt.Errorf("failed to get %s %s/%s: %w",
+				r.Config.CertificateKind, desired.GetNamespace(), desired.GetName(), err)
+		}
+		// A NotFound here means the informer cache has not caught up with the
+		// apply yet; treat it as not-programmed. The Owns() watch on the
+		// certificate will retrigger once the Konnect controller flips
+		// Programmed to True.
+		return markNotProgrammed()
+	}
+
+	programmedCond := apimeta.FindStatusCondition(current.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType)
+	if programmedCond == nil || programmedCond.Status != metav1.ConditionTrue {
+		return markNotProgrammed()
 	}
 	return true, nil
 }

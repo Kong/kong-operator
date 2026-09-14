@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/go-logr/logr"
@@ -29,6 +30,13 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 )
+
+// errControlPlaneNotProgrammed is returned by resolveControlPlane when the
+// referenced control plane exists but is not yet Programmed on Konnect. It is
+// an expected transient state: the resolution condition is set and the control
+// plane watch re-triggers the reconcile, so callers should not retry it with
+// error backoff.
+var errControlPlaneNotProgrammed = errors.New("control plane is not yet Programmed")
 
 // resolveControlPlane resolves the control plane referenced by the DataPlane.
 // It sets the control plane resolved condition on the DataPlane and returns
@@ -76,8 +84,8 @@ func (r *Reconciler[T, CP, Cert]) resolveControlPlane(
 			ObservedGeneration: dp.GetGeneration(),
 		})
 
-		return cp, fmt.Errorf("referenced %s %q is not yet Programmed",
-			r.Config.ControlPlaneKind, cpName)
+		return cp, fmt.Errorf("referenced %s %q: %w",
+			r.Config.ControlPlaneKind, cpName, errControlPlaneNotProgrammed)
 	}
 
 	setStatusCondition(dp, metav1.Condition{

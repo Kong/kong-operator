@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -212,6 +213,20 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 							},
 						},
 					},
+				},
+			},
+			wantProgrammed: false,
+			wantCondStatus: metav1.ConditionFalse,
+			wantCondReason: string(aigatewayv1alpha1.KonnectCertificateNotProgrammedReason),
+		},
+		{
+			name: "Get NotFound after apply (cache not caught up): treated as not-programmed, no error",
+			interceptors: interceptor.Funcs{
+				Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+					if _, ok := obj.(*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate); ok {
+						return apierrors.NewNotFound(corev1.Resource("aigatewaydataplanecertificates"), key.Name)
+					}
+					return c.Get(ctx, key, obj, opts...)
 				},
 			},
 			wantProgrammed: false,

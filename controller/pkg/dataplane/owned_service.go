@@ -192,8 +192,9 @@ func GenerateBaseService[T Object](dp T, cfg ServiceConfig[T]) *corev1.Service {
 }
 
 // GenerateServiceOverlay builds a Service skeleton from the user-provided
-// ServiceOptions. This is merged on top of the base by MergeObjects; base wins
-// on conflicts (e.g. selector, default port).
+// ServiceOptions. It is merged onto the base by MergeObjects, where the
+// overlay wins on conflicts; the base only supplies the fields the overlay
+// leaves unset (selector, default port).
 func GenerateServiceOverlay[T Object](dp T, cfg ServiceConfig[T], opts *ServiceOptions) *corev1.Service {
 	var ports []corev1.ServicePort
 	for _, p := range opts.Ports {
