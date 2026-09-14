@@ -193,6 +193,7 @@ jobs:
           do-ip6: yes
           module-config: "dns64 validator iterator"
           dns64-prefix: 64:ff9b::/96
+          dns64-synthall: yes
         EOF
         sudo systemctl restart unbound
 
