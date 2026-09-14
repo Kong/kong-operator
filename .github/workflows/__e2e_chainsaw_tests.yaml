@@ -139,6 +139,16 @@ jobs:
           do-ip6: yes
           module-config: "dns64 validator iterator"
           dns64-prefix: 64:ff9b::/96
+          # Force synthesis unconditionally, ignoring any real AAAA record.
+          # Without this, a hostname that later gains a genuine AAAA (e.g.
+          # if Konnect ever dual-stacks its cp/tp endpoints) would return
+          # that real address instead of the NAT64-prefixed one - and github
+          # runner has no real IPv6 route to send it over, so it would be
+          # just as unreachable as a bare IPv4 address, only via a
+          # different code path. Synthesizing unconditionally keeps every
+          # external destination routed through the one path that's
+          # actually proven to work here: NAT64 onto the real IPv4 uplink.
+          dns64-synthall: yes
         EOF
         sudo systemctl restart unbound
 
