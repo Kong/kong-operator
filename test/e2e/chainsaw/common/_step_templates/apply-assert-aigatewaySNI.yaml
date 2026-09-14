@@ -1,0 +1,45 @@
+# Template for creating and asserting an AIGatewaySNI mapping a hostname to
+# an existing AIGatewayCertificate.
+#
+# Required bindings:
+#   - sni_name: Name of the AIGatewaySNI to create.
+#   - sni_namespace: Namespace where the AIGatewaySNI will be created.
+#   - hostname: Hostname for TLS SNI matching (exact or wildcard, e.g. "*.example.com").
+#   - certificate_name: Name of the AIGatewayCertificate this SNI resolves to.
+#   - aigw_name: Name of the KonnectAIGateway to reference.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-sni
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewaySNI
+          metadata:
+            name: ($sni_name)
+            namespace: ($sni_namespace)
+          spec:
+            aiGatewayRef:
+              type: namespacedRef
+              namespacedRef:
+                name: ($aigw_name)
+            apiSpec:
+              name: ($sni_name)
+              displayName: ($sni_name)
+              hostname: ($hostname)
+              certificate:
+                kind: AIGatewayCertificate
+                name: ($certificate_name)
+    - assert:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewaySNI
+          metadata:
+            name: ($sni_name)
+            namespace: ($sni_namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

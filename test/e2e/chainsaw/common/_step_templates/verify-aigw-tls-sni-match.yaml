@@ -1,0 +1,75 @@
+# Template for verifying AI Gateway TLS/SNI certificate selection and full
+# chain-of-trust for a given hostname: forces SNI via curl --resolve to the
+# AIGatewayDataPlane's ingress LoadBalancer address, and validates the
+# presented certificate's chain against a CA stored in a Secret.
+#
+# Deliberately accepts ANY well-formed HTTP status (EXPECTED_STATUS_REGEX:
+# '^[0-9]{3}$'), not just 200: this template verifies the TLS/SNI/chain-of-
+# trust handshake only, which is already fully proven the moment any HTTP
+# response comes back over the validated connection. Whether Kong's
+# application-layer routing then matches a route (e.g. because a request
+# lacks an AI Gateway model selector header/body) is a separate, unrelated
+# concern that would otherwise make this step retry for the full
+# MAX_RETRIES budget waiting on a 200 that will never come. App-layer
+# routing is proven separately (e.g. "Drive-chat-completion-traffic" in
+# tls-sni-certificates/chainsaw-test.yaml).
+#
+# Only fits the case where the expected outcome is a MATCHING, chain-
+# validated certificate (happy-path / baseline checks). A hostname expected
+# to NOT match (no AIGatewaySNI entry, or a deleted one) needs its own
+# inline check: the failure shape (certificate_match: false vs. a
+# missing/absent result) isn't specific enough to templatize the opposite
+# assertion here; see the unhappy-path steps in
+# tls-sni-certificates/chainsaw-test.yaml.
+#
+# Required bindings:
+#   - namespace: Namespace the AIGatewayDataPlane / CA Secret live in.
+#   - aigw_dp_name: Name of the AIGatewayDataPlane (its ingress Service is
+#       <aigw_dp_name>-ingress).
+#   - fqdn: Hostname to force via SNI (curl --resolve).
+#   - route_path: HTTP path to request.
+#   - method: HTTP method to use.
+#   - ca_secret_name: Name of the Secret holding the CA certificate (key
+#       'ca.crt') to validate the presented certificate's chain against.
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: verify-aigw-tls-sni-match
+spec:
+  try:
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: AIGW_DP_NAME
+            value: ($aigw_dp_name)
+        content: |
+          bash ../../common/scripts/aigw_dataplane_lb_address.sh
+        outputs:
+          - name: lb_address
+            value: (json_parse($stdout).address)
+    - script:
+        env:
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: CA_SECRET_NAME
+            value: ($ca_secret_name)
+          - name: FQDN
+            value: ($fqdn)
+          - name: PROXY_IP
+            value: ($lb_address)
+          - name: METHOD
+            value: ($method)
+          - name: ROUTE_PATH
+            value: ($route_path)
+          - name: INSECURE
+            value: 'false'
+          - name: EXPECTED_STATUS_REGEX
+            value: '^[0-9]{3}$'
+        content: |
+          CACERT_PATH="$(bash ../../common/scripts/write_ca_cert_file.sh | jq -r '.ca_cert_path')"
+          export CACERT_PATH
+          trap 'rm -f "${CACERT_PATH}"' EXIT
+          bash ../../common/scripts/host_connectivity_test_with_hostname_tls_check.sh
+        check:
+          (to_string(json_parse($stdout).certificate_match) == 'true'): true
