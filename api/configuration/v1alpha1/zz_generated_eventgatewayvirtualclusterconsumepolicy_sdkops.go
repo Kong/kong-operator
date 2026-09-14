@@ -365,6 +365,10 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigJSONSch
 		if kind == "" {
 			kind = "EventGatewaySchemaRegistry"
 		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
+		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
 			continue
@@ -429,6 +433,10 @@ func resolveEventGatewayVirtualClusterConsumePolicySchemaValidationConfigConflue
 		kind := ref.Kind
 		if kind == "" {
 			kind = "EventGatewaySchemaRegistry"
+		}
+		if ref.Name == "" {
+			errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+			continue
 		}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})

@@ -23,6 +23,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayModel |
 		aiconfigurationv1alpha1.AIGatewayModelProvider |
 		aiconfigurationv1alpha1.AIGatewayPolicy |
+		aiconfigurationv1alpha1.AIGatewaySNI |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |
