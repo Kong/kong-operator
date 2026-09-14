@@ -79,6 +79,27 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
+// mapAIGatewayModelToOnPremAIGateway requeues the OnPremAIGateway an AIGatewayModel's
+// aiGatewayRef names, so config changes on the model are picked up without waiting for the
+// OnPremAIGateway's own resync.
+func mapAIGatewayModelToOnPremAIGateway(_ context.Context, obj client.Object) []reconcile.Request {
+	model, ok := obj.(*aiconfigurationv1alpha1.AIGatewayModel)
+	if !ok || model.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	ns := model.Namespace
+	ref := model.Spec.AIGatewayRef.NamespacedRef
+	if ref.Namespace != nil && *ref.Namespace != "" {
+		ns = *ref.Namespace
+	}
+	return []reconcile.Request{
+		{
+			Namespace: ns,
+			Name:      ref.Name,
+		},
+	}
+}
+
 // Reconcile moves the current state of an OnPremAIGateway toward the desired state.
 func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.OnPremAIGateway) (ctrl.Result, error) {
 	logger := log.GetLogger(ctx, ControllerName, r.LoggingMode)
