@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package onprem
+package translator
 
 import (
 	"cmp"
@@ -30,7 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
-// buildDocument assembles the aigw.Document for the given OnPremAIGateway: every AIGatewayModel
+// BuildDocument assembles the aigw.Document for the given OnPremAIGateway: every AIGatewayModel
 // pointing at it, translated via AIGatewayModel.ToAIGWModel.
 //
 // This lists only AIGatewayModel today. The other nine aiconfiguration entity kinds join here as
@@ -46,7 +46,7 @@ import (
 //
 // NOTE: This will either stay here or be moved to a separate package where translation
 // (building the document) will happen asynchronously as it's done for ingress-controller.
-func buildDocument(ctx context.Context, cl client.Client, gw *aigatewayv1alpha1.OnPremAIGateway) (*aigw.Document, error) {
+func BuildDocument(ctx context.Context, cl client.Client, gw *aigatewayv1alpha1.OnPremAIGateway) (*aigw.Document, error) {
 	var list aiconfigurationv1alpha1.AIGatewayModelList
 	if err := cl.List(ctx, &list, client.MatchingFields{
 		index.IndexFieldAIGatewayModelOnKonnectAIGatewayRef: client.ObjectKeyFromObject(gw).String(),

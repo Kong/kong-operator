@@ -14,7 +14,7 @@ See the License for the specific language governing permissions and
 limitations under the License.
 */
 
-package onprem
+package translator
 
 import (
 	"testing"
@@ -77,7 +77,7 @@ func TestBuildDocument(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := buildDocument(t.Context(), cl, gw)
+	doc, err := BuildDocument(t.Context(), cl, gw)
 	require.NoError(t, err)
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
@@ -110,7 +110,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := buildDocument(t.Context(), cl, gw)
+	doc, err := BuildDocument(t.Context(), cl, gw)
 	require.NoError(t, err)
 	require.Empty(t, doc.Models)
 }

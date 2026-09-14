@@ -42,6 +42,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -70,33 +71,12 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 		For(&aigatewayv1alpha1.OnPremAIGateway{}).
 		// Watching AIGatewayModel only. A rename of a referenced
 		// AIGatewayModelProvider/Policy/AuthStrategy/ConsumerGroup changes the rendered payload
-		// but does not re-trigger. Add those watches when those kinds join buildDocument.
+		// but does not re-trigger. Add those watches when those kinds join translator.BuildDocument.
 		Watches(
 			&aiconfigurationv1alpha1.AIGatewayModel{},
 			handler.EnqueueRequestsFromMapFunc(mapAIGatewayModelToOnPremAIGateway),
 		).
 		Complete(reconcile.AsReconciler(r.Client, r))
-}
-
-// mapAIGatewayModelToOnPremAIGateway requeues the OnPremAIGateway an AIGatewayModel's
-// aiGatewayRef names, so config changes on the model are picked up without waiting for the
-// OnPremAIGateway's own resync.
-func mapAIGatewayModelToOnPremAIGateway(_ context.Context, obj client.Object) []reconcile.Request {
-	model, ok := obj.(*aiconfigurationv1alpha1.AIGatewayModel)
-	if !ok || model.Spec.AIGatewayRef.NamespacedRef == nil {
-		return nil
-	}
-	ns := model.Namespace
-	ref := model.Spec.AIGatewayRef.NamespacedRef
-	if ref.Namespace != nil && *ref.Namespace != "" {
-		ns = *ref.Namespace
-	}
-	return []reconcile.Request{
-		{
-			Namespace: ns,
-			Name:      ref.Name,
-		},
-	}
 }
 
 // Reconcile moves the current state of an OnPremAIGateway toward the desired state.
@@ -238,7 +218,7 @@ func (r *Reconciler) configFromSpec(
 	logger logr.Logger,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
 ) (multiinstanceai.Config, error) {
-	doc, err := buildDocument(ctx, r.Client, onprem)
+	doc, err := translator.BuildDocument(ctx, r.Client, onprem)
 	if err != nil {
 		return multiinstanceai.Config{}, fmt.Errorf("building configuration document: %w", err)
 	}
