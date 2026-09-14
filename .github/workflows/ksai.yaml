@@ -86,10 +86,10 @@ jobs:
       stall: ${{ inputs.stall }}
       prev_remaining: ${{ inputs.prev_remaining }}
       allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
-      client_id: ${{ vars.GH_APP__KONG_READONLY__APP_ID }}
+      client_id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
       anthropic_base_url: ${{ vars.KSAI_ANTHROPIC_BASE_URL }}
     secrets:
-      ksai_private_key: ${{ secrets.GH_APP__KONG_READONLY__PRIVATE_KEY }}
+      ksai_private_key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
 
   # Holds a pull request until an approval arrives from somebody who did not contribute to it.
   # GitHub refuses an approval only from the author, and on everything KSAI opens that is the App -
