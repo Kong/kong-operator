@@ -202,7 +202,8 @@ func getKongKeyForUID(
 		return "", fmt.Errorf("failed to list KongKeys: %w", ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), key)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), key)
+	return id, err
 }
 
 func keyMatch(konnectKey *sdkkonnectcomp.Key, key *configurationv1alpha1.KongKey) bool {

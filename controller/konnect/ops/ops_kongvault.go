@@ -248,5 +248,6 @@ func getKongVaultForUID(
 		return "", fmt.Errorf("failed to list KongVaults: %w", ErrNilResponse)
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), vault)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(resp.Object.Data), vault)
+	return id, err
 }
