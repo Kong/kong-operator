@@ -354,13 +354,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "KonnectAIGateway not found: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
+			name: "KonnectAIGateway not found: no error (watch re-triggers), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -372,14 +371,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectAIGateway not yet programmed: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
+			name: "KonnectAIGateway not yet programmed: no error (watch re-triggers), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
 				newNotProgrammedKonnectAIGateway(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -575,12 +573,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "Manual certificate: referenced secret not found, error returned",
+			name: "Manual certificate: referenced secret not found, no error, no Deployment",
 			objects: []client.Object{
 				newReconcileAIGWDPManualCertWithControlPlane(),
 				newProgrammedKonnectAIGateway(),
 			},
-			wantErr: true,
+			wantResult: ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -589,6 +587,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 					metav1.ConditionFalse,
 					aigatewayv1alpha1.CertificateSecretRefNotFoundReason,
 				)
+				deploy := &appsv1.Deployment{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy)
+				assert.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{

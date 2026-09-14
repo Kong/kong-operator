@@ -233,13 +233,12 @@ func Test_getManualCertificateSecret(t *testing.T) {
 		wantCondReason  commonconsts.ConditionReason
 	}{
 		{
-			name:            "referenced secret not found",
-			objects:         nil,
-			wantResult:      op.Noop,
-			wantErrContains: "not found",
-			wantSecretNil:   true,
-			wantCondStatus:  metav1.ConditionFalse,
-			wantCondReason:  aigatewayv1alpha1.CertificateSecretRefNotFoundReason,
+			name:           "referenced secret not found: no error, the Secret watch re-triggers",
+			objects:        nil,
+			wantResult:     op.Noop,
+			wantSecretNil:  true,
+			wantCondStatus: metav1.ConditionFalse,
+			wantCondReason: aigatewayv1alpha1.CertificateSecretRefNotFoundReason,
 		},
 		{
 			name:           "referenced secret invalid: missing tls.key",

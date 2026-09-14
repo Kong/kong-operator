@@ -112,22 +112,31 @@ func getManualCertificateSecret(
 	secret := &corev1.Secret{}
 	err := cl.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, secret)
 	if err != nil {
-		reason := aigatewayv1alpha1.CertificateSecretRefNotFoundReason
-		message := aigatewayv1alpha1.CertificateSecretRefNotFoundMessage(name)
 		if !apierrors.IsNotFound(err) {
 			// A transient API error or an RBAC denial isn't a missing-Secret
-			// problem: don't point the user at the label-selector requirement.
-			reason = aigatewayv1alpha1.UnableToProvisionReason
-			message = fmt.Sprintf("failed to read certificate Secret %q: %v", name, err)
+			// problem: don't point the user at the label-selector requirement,
+			// and surface the error so the reconcile retries with backoff.
+			apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
+				Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(aigatewayv1alpha1.UnableToProvisionReason),
+				Message:            fmt.Sprintf("failed to read certificate Secret %q: %v", name, err),
+				ObservedGeneration: aigwdp.Generation,
+			})
+			return op.Noop, nil, fmt.Errorf("failed to read certificate Secret %s/%s: %w", ns, name, err)
 		}
+		// A missing referenced Secret is an expected, user-fixable state: the
+		// condition points the user at the reference, and the Secret watch
+		// re-triggers the reconcile once the Secret appears, so there is no
+		// need to retry with error backoff.
 		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
 			Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(reason),
-			Message:            message,
+			Reason:             string(aigatewayv1alpha1.CertificateSecretRefNotFoundReason),
+			Message:            aigatewayv1alpha1.CertificateSecretRefNotFoundMessage(name),
 			ObservedGeneration: aigwdp.Generation,
 		})
-		return op.Noop, nil, fmt.Errorf("referenced certificate Secret %s/%s not found: %w", ns, name, err)
+		return op.Noop, nil, nil
 	}
 
 	if !secrets.IsTLSSecretValid(secret) {
