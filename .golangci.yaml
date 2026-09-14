@@ -150,6 +150,8 @@ linters:
           alias: k8sresources
         - pkg: k8s.io/apimachinery/pkg/api/errors
           alias: apierrors
+        - pkg: github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway
+          alias: multiinstanceai
       no-unaliased: true
     revive:
       rules:

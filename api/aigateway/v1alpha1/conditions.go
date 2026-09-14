@@ -43,6 +43,10 @@ const (
 	ResourceCreatedOrUpdatedReason consts.ConditionReason = "ResourceCreatedOrUpdated"
 	// UnableToProvisionReason is a generic reason for unexpected errors.
 	UnableToProvisionReason consts.ConditionReason = "UnableToProvision"
+	// ConfigurationInvalidReason indicates the resource's configuration could not be rendered
+	// into a valid payload for its data planes, e.g. an aiconfiguration entity CR referenced a
+	// sibling that doesn't exist.
+	ConfigurationInvalidReason consts.ConditionReason = "ConfigurationInvalid"
 )
 
 // -----------------------------------------------------------------------------
