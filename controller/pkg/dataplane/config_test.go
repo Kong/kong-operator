@@ -375,17 +375,11 @@ func makeAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 
 // caSecret builds a Secret containing a self-signed RSA CA certificate.
 func caSecret() *corev1.Secret {
-	cert, key := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName("Kong Test CA"),
-		certificate.WithCATrue(),
+	return certificate.MustGenerateCASecret(
+		testCASecretNamespace,
+		testCASecretName,
+		"Kong Test CA",
 	)
-	return &corev1.Secret{
-		Namespace: testCASecretNamespace, Name: testCASecretName,
-		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
-		},
-	}
 }
 
 // testKonnectAIGateway returns a minimal KonnectAIGateway with the standard

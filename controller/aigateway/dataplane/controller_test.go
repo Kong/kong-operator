@@ -86,17 +86,11 @@ func TestCertEntityName(t *testing.T) {
 
 // caSecret builds the cluster CA Secret used across Reconcile tests.
 func caSecret() *corev1.Secret {
-	cert, key := certificate.MustGenerateCertPEMFormat(
-		certificate.WithCommonName("Kong Test CA"),
-		certificate.WithCATrue(),
+	return certificate.MustGenerateCASecret(
+		testCASecretNamespace,
+		testCASecretName,
+		"Kong Test CA",
 	)
-	return &corev1.Secret{
-		Namespace: testCASecretNamespace, Name: testCASecretName,
-		Data: map[string][]byte{
-			"tls.crt": cert,
-			"tls.key": key,
-		},
-	}
 }
 
 // newReconcileAIGWDP builds the standard AIGatewayDataPlane used across Reconcile tests.
