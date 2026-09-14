@@ -30,9 +30,19 @@ type udpRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
-func newUDPRouteConverter(udpRoute *gwtypes.UDPRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.UDPRoute] {
+func newUDPRouteConverter(
+	udpRoute *gwtypes.UDPRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.UDPRoute] {
 	return &udpRouteConverter{
 		Client:      cl,
 		route:       udpRoute,
@@ -47,6 +57,8 @@ func newUDPRouteConverter(udpRoute *gwtypes.UDPRoute, cl client.Client, fqdnMode
 		},
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 	}
 }
 
@@ -65,7 +77,10 @@ func (c *udpRouteConverter) GetRootObject() gwtypes.UDPRoute {
 // UpdateRootObjectStatus implements the APIConverter interface.
 // It updates UDPRoute status conditions for each supported ParentReference.
 func (c *udpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForUDPRoute)
+	return route.UpdateRouteStatus(
+		ctx, logger, c.Client, c.referenceGrantVersion, c.route, c.expectedGVKs,
+		route.BuildResolvedRefsConditionForUDPRoute,
+	)
 }
 
 // GetOutputStore implements APIConverter.
@@ -192,6 +207,7 @@ func (c *udpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

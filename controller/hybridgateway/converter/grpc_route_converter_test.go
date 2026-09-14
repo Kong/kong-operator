@@ -34,7 +34,7 @@ func TestGRPCRouteConverter_GetOutputStore(t *testing.T) {
 	}
 
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-	converter := newGRPCRouteConverter(&gwtypes.GRPCRoute{}, fakeClient, false, "").(*grpcRouteConverter)
+	converter := newGRPCRouteConverter(&gwtypes.GRPCRoute{}, fakeClient, false, "", testReferenceGrantVersion).(*grpcRouteConverter)
 	converter.outputStore = []client.Object{validUpstream, validService}
 
 	objects, err := converter.GetOutputStore(ctx, logger)
@@ -189,7 +189,7 @@ func TestGRPCRouteConverter_DesiredResourcesReady(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			conv := newGRPCRouteConverter(baseRoute, cl, false, "").(*grpcRouteConverter)
+			conv := newGRPCRouteConverter(baseRoute, cl, false, "", testReferenceGrantVersion).(*grpcRouteConverter)
 			conv.outputStore = tt.outputStore
 
 			ready, err := conv.DesiredResourcesReady(ctx, logr.Discard())

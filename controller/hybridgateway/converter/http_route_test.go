@@ -107,7 +107,7 @@ func TestHostnamesIntersection(t *testing.T) {
 
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-			converter := newHTTPRouteConverter(tt.route, fakeClient, false, "")
+			converter := newHTTPRouteConverter(tt.route, fakeClient, false, "", testReferenceGrantVersion)
 			_, err := converter.Translate(t.Context(), logr.Discard())
 			require.NoError(t, err)
 
@@ -172,7 +172,7 @@ func TestTranslateHTTPRouteWithMultipleListenerParentRefs(t *testing.T) {
 	objects := newKonnectGatewayStandardObjects(gateway)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
-	converter := newHTTPRouteConverter(route, fakeClient, false, "")
+	converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 	_, err := converter.Translate(context.Background(), logr.Discard())
 	require.NoError(t, err)
 

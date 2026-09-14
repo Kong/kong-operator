@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -27,7 +28,13 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/utils" // Used by function under test.
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+// testReferenceGrantVersion is the version used by tests that are not sensitive to
+// which one the cluster serves; see referencegranthelpers.V1. Tests that depend on a
+// grant being found run against referencegranthelpers.Versions instead.
+var testReferenceGrantVersion = referencegranthelpers.V1()
 
 // Helper functions for creating test objects.
 func createTestEndpointSliceList(items []discoveryv1.EndpointSlice) *discoveryv1.EndpointSliceList {
@@ -122,6 +129,7 @@ func createTestScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(scheme)
 	_ = discoveryv1.AddToScheme(scheme)
 	_ = gatewayv1.Install(scheme)
+	_ = gatewayv1beta1.Install(scheme)
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	return scheme
 }
@@ -1693,38 +1701,42 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create objects for the fake client.
-			var objects []client.Object
-			for i := range tt.existingServices {
-				objects = append(objects, &tt.existingServices[i])
-			}
-			for i := range tt.existingEndpointSlices {
-				objects = append(objects, &tt.existingEndpointSlices[i])
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					// Create objects for the fake client.
+					var objects []client.Object
+					for i := range tt.existingServices {
+						objects = append(objects, &tt.existingServices[i])
+					}
+					for i := range tt.existingEndpointSlices {
+						objects = append(objects, &tt.existingEndpointSlices[i])
+					}
 
-			// Create fake client.
-			fakeClient := createTestFakeClient(objects...)
+					// Create fake client.
+					fakeClient := createTestFakeClient(objects...)
 
-			// Call the function.
-			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, tt.httpRoute, tt.backendRefs, tt.fqdn, "cluster.local") // Verify error expectations.
-			if tt.expectError {
-				assert.Error(t, err)
-				if tt.expectedErrorString != "" {
-					assert.Contains(t, err.Error(), tt.expectedErrorString)
-				}
-				return
-			}
+					// Call the function.
+					ctx := context.Background()
+					results, err := filterValidBackendRefs(ctx, logger, fakeClient, gv, tt.httpRoute, tt.backendRefs, tt.fqdn, "cluster.local") // Verify error expectations.
+					if tt.expectError {
+						assert.Error(t, err)
+						if tt.expectedErrorString != "" {
+							assert.Contains(t, err.Error(), tt.expectedErrorString)
+						}
+						return
+					}
 
-			// Verify success case.
-			require.NoError(t, err)
-			assert.Len(t, results, tt.expectedValidCount)
+					// Verify success case.
+					require.NoError(t, err)
+					assert.Len(t, results, tt.expectedValidCount)
 
-			// Run custom validation if provided.
-			if tt.validateResults != nil {
-				tt.validateResults(t, results)
+					// Run custom validation if provided.
+					if tt.validateResults != nil {
+						tt.validateResults(t, results)
+					}
+				})
 			}
 		})
 	}
@@ -1762,7 +1774,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		// Call the function.
 		ctx := context.Background()
-		_, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+		_, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 		// Verify that the error is returned.
 		assert.Error(t, err)
@@ -1771,6 +1783,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 	})
 
 	// Test ReferenceGrant scenarios.
+	// These sub-cases stay pinned to a single ReferenceGrant version: every one of them
+	// asserts that the reference is *denied*, either because no grant was seeded or
+	// because the seeded grant does not permit it. A wrong-version List returns an empty
+	// list and therefore the same denial, so running them twice proves nothing. The
+	// grant-permitted path through this same CheckReferenceGrant call is covered against
+	// both versions by TestTargetsForBackendRefs.
 	t.Run("ReferenceGrant enabled scenarios", func(t *testing.T) {
 		existingServices := []corev1.Service{
 			*createTestService("cross-ns-service", "other-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{
@@ -1815,7 +1833,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should succeed but return no valid backend refs since no ReferenceGrant exists.
 			require.NoError(t, err)
@@ -1864,7 +1882,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should succeed but return no valid backend refs since ReferenceGrant doesn't permit.
 			require.NoError(t, err)
@@ -1876,7 +1894,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			// Create fake client with interceptor that simulates ReferenceGrant list error.
 			interceptorFunc := interceptor.Funcs{
 				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
+					if referencegranthelpers.IsList(list) {
 						return fmt.Errorf("simulated ReferenceGrant list error")
 					}
 					return client.List(ctx, list, opts...)
@@ -1898,7 +1916,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			_, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			_, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should return an error.
 			assert.Error(t, err)
@@ -1948,7 +1966,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		// Call the function.
 		ctx := context.Background()
-		results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+		results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 		// Should succeed but return no valid backend refs since no EndpointSlices found.
 		require.NoError(t, err)
@@ -2994,91 +3012,98 @@ func TestTargetsForBackendRefs(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create fake client with test objects.
-			objects := []client.Object{}
-			for i := range tt.services {
-				objects = append(objects, &tt.services[i])
-			}
-			for i := range tt.endpointSlices {
-				objects = append(objects, &tt.endpointSlices[i])
-			}
-			for i := range tt.referenceGrants {
-				objects = append(objects, &tt.referenceGrants[i])
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					// Create fake client with test objects.
+					objects := []client.Object{}
+					for i := range tt.services {
+						objects = append(objects, &tt.services[i])
+					}
+					for i := range tt.endpointSlices {
+						objects = append(objects, &tt.endpointSlices[i])
+					}
+					grants := make([]client.Object, 0, len(tt.referenceGrants))
+					for i := range tt.referenceGrants {
+						grants = append(grants, &tt.referenceGrants[i])
+					}
+					objects = append(objects, referencegranthelpers.AsVersion(gv, grants)...)
 
-			var cl client.Client
-			// Add client error interceptors if specified.
-			if tt.clientErrors != nil {
-				cl = createTestFakeClientWithInterceptors(interceptor.Funcs{
-					Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if errorKey, exists := tt.clientErrors["get-service"]; exists {
-							if _, ok := obj.(*corev1.Service); ok && key.Name == "test-service" {
-								return errorKey
-							}
-						}
-						return client.Get(ctx, key, obj, opts...)
-					},
-					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-						// Handle ReferenceGrant list error.
-						if errorKey, exists := tt.clientErrors["list-referencegrant"]; exists {
-							if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
-								return errorKey
-							}
-						}
-						// Handle EndpointSlice list error.
-						if errorKey, exists := tt.clientErrors["list-endpointslice"]; exists {
-							if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
-								return errorKey
-							}
-						}
-						return client.List(ctx, list, opts...)
-					},
-				}, objects...)
-			} else {
-				cl = createTestFakeClient(objects...)
-			}
+					var cl client.Client
+					// Add client error interceptors if specified.
+					if tt.clientErrors != nil {
+						cl = createTestFakeClientWithInterceptors(interceptor.Funcs{
+							Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+								if errorKey, exists := tt.clientErrors["get-service"]; exists {
+									if _, ok := obj.(*corev1.Service); ok && key.Name == "test-service" {
+										return errorKey
+									}
+								}
+								return client.Get(ctx, key, obj, opts...)
+							},
+							List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+								// Handle ReferenceGrant list error.
+								if errorKey, exists := tt.clientErrors["list-referencegrant"]; exists {
+									if referencegranthelpers.IsList(list) {
+										return errorKey
+									}
+								}
+								// Handle EndpointSlice list error.
+								if errorKey, exists := tt.clientErrors["list-endpointslice"]; exists {
+									if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
+										return errorKey
+									}
+								}
+								return client.List(ctx, list, opts...)
+							},
+						}, objects...)
+					} else {
+						cl = createTestFakeClient(objects...)
+					}
 
-			// Call the function.
-			targets, err := TargetsForBackendRefs(
-				createTestContext(),
-				createTestLogger(),
-				cl,
-				tt.httpRoute,
-				tt.backendRefs,
-				tt.pRef,
-				tt.upstreamName,
-				tt.fqdn,
-				"cluster.local",
-			) // Check error expectation.
-			if tt.expectedError {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+					// Call the function.
+					targets, err := TargetsForBackendRefs(
+						createTestContext(),
+						createTestLogger(),
+						cl,
+						gv,
+						tt.httpRoute,
+						tt.backendRefs,
+						tt.pRef,
+						tt.upstreamName,
+						tt.fqdn,
+						"cluster.local",
+					) // Check error expectation.
+					if tt.expectedError {
+						require.Error(t, err)
+						return
+					}
+					require.NoError(t, err)
 
-			// Check number of targets.
-			assert.Len(t, targets, tt.expectedTargets)
+					// Check number of targets.
+					assert.Len(t, targets, tt.expectedTargets)
 
-			// Run custom validation if provided.
-			if tt.validateResult != nil {
-				tt.validateResult(t, targets)
-			}
+					// Run custom validation if provided.
+					if tt.validateResult != nil {
+						tt.validateResult(t, targets)
+					}
 
-			// General validations for all targets.
-			for _, target := range targets {
-				// All targets should have the correct upstream reference.
-				assert.Equal(t, tt.upstreamName, target.Spec.UpstreamRef.Name)
+					// General validations for all targets.
+					for _, target := range targets {
+						// All targets should have the correct upstream reference.
+						assert.Equal(t, tt.upstreamName, target.Spec.UpstreamRef.Name)
 
-				// All targets should be in the same namespace as the HTTPRoute.
-				assert.Equal(t, tt.httpRoute.Namespace, target.Namespace)
+						// All targets should be in the same namespace as the HTTPRoute.
+						assert.Equal(t, tt.httpRoute.Namespace, target.Namespace)
 
-				// All target names should contain the upstream name.
-				assert.Contains(t, target.Name, tt.upstreamName+".")
+						// All target names should contain the upstream name.
+						assert.Contains(t, target.Name, tt.upstreamName+".")
 
-				// Target should have an address:port format.
-				assert.Contains(t, target.Spec.Target, ":")
+						// Target should have an address:port format.
+						assert.Contains(t, target.Spec.Target, ":")
+					}
+				})
 			}
 		})
 	}
@@ -3116,7 +3141,7 @@ func TestTargetsForTCPRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, tcpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, tcpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)
@@ -3157,7 +3182,7 @@ func TestTargetsForGRPCRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, grpcRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, grpcRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.NotEmpty(t, targets[0].Name)
@@ -3197,7 +3222,7 @@ func TestTargetsForUDPRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, udpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, udpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)

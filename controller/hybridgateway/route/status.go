@@ -25,6 +25,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -32,6 +33,7 @@ type buildResolvedRefsConditionFunc[T gwtypes.SupportedRoute, TPtr gwtypes.Suppo
 	context.Context,
 	logr.Logger,
 	client.Client,
+	schema.GroupVersion,
 	TPtr,
 ) (*metav1.Condition, error)
 
@@ -39,6 +41,9 @@ type buildResolvedRefsConditionFunc[T gwtypes.SupportedRoute, TPtr gwtypes.Suppo
 // It builds the ResolvedRefs, Accepted and Programmed conditions for each supported
 // parentRef, cleans up orphaned ParentStatus entries and persists the status to the
 // cluster when changes are detected.
+//
+// referenceGrantVersion is the ReferenceGrant API version served by the cluster,
+// resolved once at controller setup.
 //
 // Returns:
 //   - updated: true if the route status was changed and persisted
@@ -48,6 +53,7 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
 	routeObject TPtr,
 	expectedGVKs []schema.GroupVersionKind,
 	buildResolvedRefsCondition buildResolvedRefsConditionFunc[T, TPtr],
@@ -57,7 +63,7 @@ func UpdateRouteStatus[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[
 	log.Debug(logger, "Starting UpdateRootObjectStatus")
 
 	log.Debug(logger, "Building ResolvedRefs condition", "routeKind", routeKind)
-	resolvedRefsCond, err := buildResolvedRefsCondition(ctx, logger, cl, routeObject)
+	resolvedRefsCond, err := buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, routeObject)
 	if err != nil {
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for %s %s: %w", routeKind, routeObject.GetName(), err)
 	}
@@ -649,7 +655,13 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForHTTPRoute(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.HTTPRoute,
+) (*metav1.Condition, error) {
 	backendRefs := make([]gwtypes.BackendRef, 0)
 	extensionRefs := make([]*gwtypes.LocalObjectReference, 0)
 	for _, rule := range route.Spec.Rules {
@@ -664,7 +676,7 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 		}
 	}
 
-	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
+	return buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, route, backendRefs, extensionRefs)
 }
 
 // BuildResolvedRefsConditionForGRPCRoute evaluates all BackendRefs and ExtensionRef filters in a
@@ -690,7 +702,10 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsConditionForGRPCRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.GRPCRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForGRPCRoute(
+	ctx context.Context, logger logr.Logger, cl client.Client,
+	referenceGrantVersion schema.GroupVersion, route *gwtypes.GRPCRoute,
+) (*metav1.Condition, error) {
 	backendRefs := make([]gwtypes.BackendRef, 0)
 	extensionRefs := make([]*gwtypes.LocalObjectReference, 0)
 	for _, rule := range route.Spec.Rules {
@@ -705,7 +720,7 @@ func BuildResolvedRefsConditionForGRPCRoute(ctx context.Context, logger logr.Log
 		}
 	}
 
-	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, extensionRefs)
+	return buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, route, backendRefs, extensionRefs)
 }
 
 // BuildResolvedRefsConditionForTLSRoute evaluates all BackendRefs in an TLSRoute to determine if their
@@ -726,36 +741,57 @@ func BuildResolvedRefsConditionForGRPCRoute(ctx context.Context, logger logr.Log
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForTLSRoute(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.TLSRoute,
+) (*metav1.Condition, error) {
 	backendRefs := make([]gwtypes.BackendRef, 0)
 	for _, rule := range route.Spec.Rules {
 		backendRefs = append(backendRefs, rule.BackendRefs...)
 	}
-	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+	return buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, route, backendRefs, nil)
 }
 
 // BuildResolvedRefsConditionForTCPRoute evaluates all BackendRefs in a TCPRoute to determine if their
 // references are valid and permitted.
-func BuildResolvedRefsConditionForTCPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TCPRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForTCPRoute(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.TCPRoute,
+) (*metav1.Condition, error) {
 	backendRefs := make([]gwtypes.BackendRef, 0)
 	for _, rule := range route.Spec.Rules {
 		backendRefs = append(backendRefs, rule.BackendRefs...)
 	}
-	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+	return buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, route, backendRefs, nil)
 }
 
 // BuildResolvedRefsConditionForUDPRoute evaluates all BackendRefs in a UDPRoute to determine if their
 // references are valid and permitted.
-func BuildResolvedRefsConditionForUDPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.UDPRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForUDPRoute(
+	ctx context.Context,
+	logger logr.Logger, cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.UDPRoute,
+) (*metav1.Condition, error) {
 	backendRefs := make([]gwtypes.BackendRef, 0)
 	for _, rule := range route.Spec.Rules {
 		backendRefs = append(backendRefs, rule.BackendRefs...)
 	}
-	return buildResolvedRefsCondition(ctx, logger, cl, route, backendRefs, nil)
+	return buildResolvedRefsCondition(ctx, logger, cl, referenceGrantVersion, route, backendRefs, nil)
 }
 
 func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
-	ctx context.Context, logger logr.Logger, cl client.Client, route TPtr,
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route TPtr,
 	backendRefs []gwtypes.BackendRef, extensionRefs []*gwtypes.LocalObjectReference,
 ) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
@@ -766,7 +802,7 @@ func buildResolvedRefsCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supported
 	}
 
 	for _, bRef := range backendRefs {
-		bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+		bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, referenceGrantVersion, route, bRef)
 		if err != nil {
 			return nil, err
 		}
@@ -884,7 +920,10 @@ func validateAnnotations[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePt
 //
 //   - error: any error happened in checking the validity of the backendRef.
 func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
-	ctx context.Context, logger logr.Logger, cl client.Client,
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
 	route TPtr, bRef gwtypes.BackendRef,
 ) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
@@ -915,7 +954,7 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	// Check if the referenced object is permitted by the reference grant if in a different namespace.
 	if bRefNamespace != route.GetNamespace() {
 		// Use CheckReferenceGrant helper to check if the reference is permitted.
-		permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace())
+		permitted, found, err := CheckReferenceGrant(ctx, cl, referenceGrantVersion, &bRef, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace())
 		if err != nil {
 			return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
 		}
@@ -1022,7 +1061,13 @@ func isProgrammed(obj *unstructured.Unstructured) bool {
 //
 // The returned condition will have status "False" with reason "NoMatchingParent" if no listeners
 // match the criteria.
-func FilterMatchingListeners(logger logr.Logger, gw *gwtypes.Gateway, routeKind string, pRef gwtypes.ParentReference, listeners []gwtypes.Listener) ([]gwtypes.Listener, *metav1.Condition) {
+func FilterMatchingListeners(
+	logger logr.Logger,
+	gw *gwtypes.Gateway,
+	routeKind string,
+	pRef gwtypes.ParentReference,
+	listeners []gwtypes.Listener,
+) ([]gwtypes.Listener, *metav1.Condition) {
 	var matchingListeners []gwtypes.Listener
 	for _, listener := range listeners {
 		// Check if the listener name matches the section name of the parent reference.
@@ -1121,7 +1166,14 @@ func isListenerValidForKind(routeKind string, listener gwtypes.Listener) bool {
 //   - []gwtypes.Listener: List of listeners that allow this route
 //   - *metav1.Condition: Condition indicating why no listeners allow the route (nil if matches found)
 //   - error: Any error that occurred during validation (e.g., invalid label selector)
-func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRef gwtypes.ParentReference, listeners []gwtypes.Listener, rgk gwtypes.RouteGroupKind, routeNamespace *corev1.Namespace) ([]gwtypes.Listener, *metav1.Condition, error) {
+func FilterListenersByAllowedRoutes(
+	logger logr.Logger,
+	gw *gwtypes.Gateway,
+	pRef gwtypes.ParentReference,
+	listeners []gwtypes.Listener,
+	rgk gwtypes.RouteGroupKind,
+	routeNamespace *corev1.Namespace,
+) ([]gwtypes.Listener, *metav1.Condition, error) {
 	var matchingListeners []gwtypes.Listener
 
 	for _, listener := range listeners {
@@ -1239,7 +1291,9 @@ func FilterListenersByAllowedRoutes(logger logr.Logger, gw *gwtypes.Gateway, pRe
 //
 // The returned condition will have status "False" with reason "NoMatchingListenerHostname" if no listeners
 // have hostname intersection with the route. If matching listeners are found, the condition will be nil.
-func FilterListenersByHostnames(logger logr.Logger, listeners []gwtypes.Listener, hostnames []gwtypes.Hostname) ([]gwtypes.Listener, *metav1.Condition) {
+func FilterListenersByHostnames(
+	logger logr.Logger, listeners []gwtypes.Listener, hostnames []gwtypes.Hostname,
+) ([]gwtypes.Listener, *metav1.Condition) {
 	if len(hostnames) == 0 {
 		if len(listeners) == 0 {
 			log.Debug(logger, "No listeners available for route hostnames")
@@ -1424,6 +1478,9 @@ func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gw
 // 2. Lists all ReferenceGrants in the target namespace
 // 3. Checks if any ReferenceGrant permits the HTTPRoute to access the BackendRef
 //
+// referenceGrantVersion selects which ReferenceGrant API version to list. It is
+// resolved once at controller setup.
+//
 // Returns:
 // - permitted: true if a ReferenceGrant allows the cross-namespace access
 // - found: true if ReferenceGrants exist in the target namespace (regardless of permission)
@@ -1431,25 +1488,32 @@ func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gw
 //
 // Note: This function does NOT check if namespaces are the same - it assumes cross-namespace
 // access and will return an error if no namespace is set on the BackendRef.
-func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.BackendRef, routeKind string, routeNamespace string) (permitted bool, found bool, err error) {
+func CheckReferenceGrant(
+	ctx context.Context,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	bRef *gwtypes.BackendRef,
+	routeKind string,
+	routeNamespace string,
+) (permitted bool, found bool, err error) {
 	// Check that the backendRef has a namespace set and if not return an error.
 	if bRef.Namespace == nil || *bRef.Namespace == "" {
 		return false, false, fmt.Errorf("backendRef namespace is not set for cross-namespace reference check, name %s", bRef.Name)
 	}
 
-	// List ReferenceGrants in the backend ref namespace.
-	grantList := &gwtypes.ReferenceGrantList{}
+	grantList := k8sutils.NewReferenceGrantList(referenceGrantVersion)
 	if err := cl.List(ctx, grantList, client.InNamespace(string(*bRef.Namespace))); err != nil {
 		return false, false, fmt.Errorf("failed to list ReferenceGrants in namespace %s: %w", *bRef.Namespace, err)
 	}
+	grants := k8sutils.ReferenceGrantItems(grantList)
 
 	// No ReferenceGrants found.
-	if len(grantList.Items) == 0 {
+	if len(grants) == 0 {
 		return false, false, nil
 	}
 
 	// Check if any ReferenceGrant permits this reference
-	for _, grant := range grantList.Items {
+	for _, grant := range grants {
 		if IsRouteReferenceGranted(grant.Spec, *bRef, routeKind, routeNamespace) {
 			return true, true, nil
 		}

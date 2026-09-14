@@ -20,6 +20,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -28,7 +29,13 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/vars"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+// testReferenceGrantVersion is the version used by tests that are not sensitive to
+// which one the cluster serves; see referencegranthelpers.V1. Tests that depend on a
+// grant being found run against referencegranthelpers.Versions instead.
+var testReferenceGrantVersion = referencegranthelpers.V1()
 
 // Test helpers for BuildProgrammedCondition.
 type fakeListClient struct {
@@ -956,6 +963,7 @@ func Test_UpdateRouteStatus(t *testing.T) {
 		context.Context,
 		logr.Logger,
 		client.Client,
+		schema.GroupVersion,
 		*gwtypes.HTTPRoute,
 	) (*metav1.Condition, error) {
 		return resolvedRefsCond.DeepCopy(), nil
@@ -1077,6 +1085,7 @@ func Test_UpdateRouteStatus(t *testing.T) {
 				context.Context,
 				logr.Logger,
 				client.Client,
+				schema.GroupVersion,
 				*gwtypes.HTTPRoute,
 			) (*metav1.Condition, error) {
 				return nil, fmt.Errorf("resolved refs failed")
@@ -1172,7 +1181,7 @@ func Test_UpdateRouteStatus(t *testing.T) {
 				WithInterceptorFuncs(tt.interceptorFuncs).
 				Build()
 
-			updated, stop, err := UpdateRouteStatus(ctx, logger, cl, tt.route, nil, tt.buildResolvedRefsCondition)
+			updated, stop, err := UpdateRouteStatus(ctx, logger, cl, testReferenceGrantVersion, tt.route, nil, tt.buildResolvedRefsCondition)
 
 			if tt.wantErrContains != "" {
 				require.Error(t, err)
@@ -2782,7 +2791,7 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 			},
 			interceptor: interceptor.Funcs{
 				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
+					if referencegranthelpers.IsList(list) {
 						return fmt.Errorf("failed to list ReferenceGrants")
 					}
 					return client.List(ctx, list, opts...)
@@ -2848,58 +2857,68 @@ func TestBuildResolvedRefsCondition(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := runtime.NewScheme()
-			_ = corev1.AddToScheme(s)
-			_ = configurationv1.AddToScheme(s)
-			_ = gatewayv1.Install(s)
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					s := runtime.NewScheme()
+					_ = corev1.AddToScheme(s)
+					_ = configurationv1.AddToScheme(s)
+					_ = gatewayv1.Install(s)
+					_ = gatewayv1beta1.Install(s)
 
-			// Create fake client
-			clientBuilder := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...)
+					// Create fake client
+					clientBuilder := fake.NewClientBuilder().WithScheme(s).WithObjects(referencegranthelpers.AsVersion(gv, tt.clientObjs)...)
 
-			cl := clientBuilder.Build()
+					cl := clientBuilder.Build()
 
-			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
-			require.NoError(t, err)
-			require.NotNil(t, cond)
+					cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, gv, tt.route)
+					require.NoError(t, err)
+					require.NotNil(t, cond)
 
-			if cond.Status != tt.wantStatus {
-				t.Errorf("got status %v, want %v", cond.Status, tt.wantStatus)
-			}
-			if cond.Reason != tt.wantReason {
-				t.Errorf("got reason %v, want %v", cond.Reason, tt.wantReason)
-			}
-			if tt.wantMsgPart != "" && !strings.Contains(cond.Message, tt.wantMsgPart) {
-				t.Errorf("message %q does not contain %q", cond.Message, tt.wantMsgPart)
+					if cond.Status != tt.wantStatus {
+						t.Errorf("got status %v, want %v", cond.Status, tt.wantStatus)
+					}
+					if cond.Reason != tt.wantReason {
+						t.Errorf("got reason %v, want %v", cond.Reason, tt.wantReason)
+					}
+					if tt.wantMsgPart != "" && !strings.Contains(cond.Message, tt.wantMsgPart) {
+						t.Errorf("message %q does not contain %q", cond.Message, tt.wantMsgPart)
+					}
+				})
 			}
 		})
 	}
 
 	// Run error tests that expect the function to return an error.
-	for _, tt := range errorTests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := runtime.NewScheme()
-			_ = corev1.AddToScheme(s)
-			_ = gatewayv1.Install(s)
-			_ = configurationv1.AddToScheme(s)
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range errorTests {
+				t.Run(tt.name, func(t *testing.T) {
+					s := runtime.NewScheme()
+					_ = corev1.AddToScheme(s)
+					_ = gatewayv1.Install(s)
+					_ = gatewayv1beta1.Install(s)
+					_ = configurationv1.AddToScheme(s)
 
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
-				WithObjects(tt.clientObjs...).
-				WithInterceptorFuncs(tt.interceptor).
-				Build()
+					cl := fake.NewClientBuilder().
+						WithScheme(s).
+						WithObjects(referencegranthelpers.AsVersion(gv, tt.clientObjs)...).
+						WithInterceptorFuncs(tt.interceptor).
+						Build()
 
-			cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, tt.route)
-			if tt.wantError {
-				require.Error(t, err)
-				require.Nil(t, cond)
-				if tt.wantErrorContains != "" {
-					require.Contains(t, err.Error(), tt.wantErrorContains)
-				}
-			} else {
-				require.NoError(t, err)
-				require.NotNil(t, cond)
+					cond, err := BuildResolvedRefsConditionForHTTPRoute(ctx, logger, cl, gv, tt.route)
+					if tt.wantError {
+						require.Error(t, err)
+						require.Nil(t, cond)
+						if tt.wantErrorContains != "" {
+							require.Contains(t, err.Error(), tt.wantErrorContains)
+						}
+					} else {
+						require.NoError(t, err)
+						require.NotNil(t, cond)
+					}
+				})
 			}
 		})
 	}
@@ -3039,7 +3058,7 @@ func TestBuildResolvedRefsConditionForGRPCRoute(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
 
-			cond, err := BuildResolvedRefsConditionForGRPCRoute(ctx, logger, cl, tt.route)
+			cond, err := BuildResolvedRefsConditionForGRPCRoute(ctx, logger, cl, testReferenceGrantVersion, tt.route)
 			require.NoError(t, err)
 			require.NotNil(t, cond)
 			require.Equal(t, tt.wantStatus, cond.Status)
@@ -3132,7 +3151,7 @@ func TestBuildResolvedRefsConditionForTCPRoute(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(s))
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(service).Build()
 
-	cond, err := BuildResolvedRefsConditionForTCPRoute(ctx, logger, cl, route)
+	cond, err := BuildResolvedRefsConditionForTCPRoute(ctx, logger, cl, testReferenceGrantVersion, route)
 	require.NoError(t, err)
 	require.NotNil(t, cond)
 	require.Equal(t, metav1.ConditionTrue, cond.Status)
@@ -3211,7 +3230,7 @@ func TestBuildResolvedRefsConditionForUDPRoute(t *testing.T) {
 	require.NoError(t, gatewayv1.Install(s))
 	cl := fake.NewClientBuilder().WithScheme(s).WithObjects(service).Build()
 
-	cond, err := BuildResolvedRefsConditionForUDPRoute(ctx, logger, cl, route)
+	cond, err := BuildResolvedRefsConditionForUDPRoute(ctx, logger, cl, testReferenceGrantVersion, route)
 	require.NoError(t, err)
 	require.NotNil(t, cond)
 	require.Equal(t, metav1.ConditionTrue, cond.Status)
@@ -3524,57 +3543,67 @@ func TestCheckReferenceGrant(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := runtime.NewScheme()
-			_ = corev1.AddToScheme(s)
-			_ = gatewayv1.Install(s)
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					s := runtime.NewScheme()
+					_ = corev1.AddToScheme(s)
+					_ = gatewayv1.Install(s)
+					_ = gatewayv1beta1.Install(s)
 
-			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.clientObjs...).Build()
+					cl := fake.NewClientBuilder().WithScheme(s).WithObjects(referencegranthelpers.AsVersion(gv, tt.clientObjs)...).Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
+					permitted, found, err := CheckReferenceGrant(ctx, cl, gv, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
-			if tt.wantError {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErrorMessage)
-				require.False(t, permitted)
-				require.False(t, found)
-			} else {
-				require.NoError(t, err)
-				require.Equal(t, tt.wantPermitted, permitted, "permitted mismatch")
-				require.Equal(t, tt.wantFound, found, "found mismatch")
+					if tt.wantError {
+						require.Error(t, err)
+						require.Contains(t, err.Error(), tt.wantErrorMessage)
+						require.False(t, permitted)
+						require.False(t, found)
+					} else {
+						require.NoError(t, err)
+						require.Equal(t, tt.wantPermitted, permitted, "permitted mismatch")
+						require.Equal(t, tt.wantFound, found, "found mismatch")
+					}
+				})
 			}
 		})
 	}
 
 	// Test error cases with error client.
-	for _, tt := range errorTests {
-		t.Run(tt.name, func(t *testing.T) {
-			s := runtime.NewScheme()
-			_ = corev1.AddToScheme(s)
-			_ = gatewayv1.Install(s)
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range errorTests {
+				t.Run(tt.name, func(t *testing.T) {
+					s := runtime.NewScheme()
+					_ = corev1.AddToScheme(s)
+					_ = gatewayv1.Install(s)
+					_ = gatewayv1beta1.Install(s)
 
-			cl := fake.NewClientBuilder().
-				WithScheme(s).
-				WithInterceptorFuncs(interceptor.Funcs{
-					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-						if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
-							return fmt.Errorf("failed to list ReferenceGrants in namespace target-ns")
-						}
-						return client.List(ctx, list, opts...)
-					},
-				}).
-				Build()
+					cl := fake.NewClientBuilder().
+						WithScheme(s).
+						WithInterceptorFuncs(interceptor.Funcs{
+							List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+								if referencegranthelpers.IsList(list) {
+									return fmt.Errorf("failed to list ReferenceGrants in namespace target-ns")
+								}
+								return client.List(ctx, list, opts...)
+							},
+						}).
+						Build()
 
-			permitted, found, err := CheckReferenceGrant(ctx, cl, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
+					permitted, found, err := CheckReferenceGrant(ctx, cl, gv, &tt.bRef.BackendRef, "HTTPRoute", tt.routeNamespace)
 
-			if tt.wantError {
-				require.Error(t, err)
-				require.Contains(t, err.Error(), tt.wantErrorMessage)
-				require.False(t, permitted)
-				require.False(t, found)
-			} else {
-				require.NoError(t, err)
+					if tt.wantError {
+						require.Error(t, err)
+						require.Contains(t, err.Error(), tt.wantErrorMessage)
+						require.False(t, permitted)
+						require.False(t, found)
+					} else {
+						require.NoError(t, err)
+					}
+				})
 			}
 		})
 	}

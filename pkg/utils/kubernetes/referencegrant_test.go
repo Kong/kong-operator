@@ -6,15 +6,28 @@ import (
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 var referenceGrantTypeMeta = metav1.TypeMeta{
 	APIVersion: gatewayv1.GroupVersion.String(),
 	Kind:       "ReferenceGrant",
+}
+
+// referenceGrantScheme is a scheme serving both ReferenceGrant versions, so the
+// fake client can hold whichever one a subtest uses.
+func referenceGrantScheme(t *testing.T) *runtime.Scheme {
+	t.Helper()
+	s := runtime.NewScheme()
+	require.NoError(t, gatewayv1.Install(s))
+	require.NoError(t, gatewayv1beta1.Install(s))
+	return s
 }
 
 func TestAllowedByReferenceGrants(t *testing.T) {
@@ -23,7 +36,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 		from            gwtypes.ReferenceGrantFrom
 		targetNamespace string
 		to              gwtypes.ReferenceGrantTo
-		objs            []runtime.Object
+		objs            []client.Object
 		allow           bool
 	}{
 		{
@@ -52,7 +65,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 				Kind:  "AnotherKind",
 			},
 			targetNamespace: "target-namespace",
-			objs: []runtime.Object{
+			objs: []client.Object{
 				&gwtypes.ReferenceGrant{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "target-namespace",
@@ -107,7 +120,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 				Kind:  "Secret",
 			},
 			targetNamespace: "target-namespace",
-			objs: []runtime.Object{
+			objs: []client.Object{
 				&gwtypes.ReferenceGrant{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "target-namespace",
@@ -149,7 +162,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 				Name:  new(gatewayv1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
-			objs: []runtime.Object{
+			objs: []client.Object{
 				&gwtypes.ReferenceGrant{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "target-namespace",
@@ -187,7 +200,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 				Name:  new(gatewayv1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
-			objs: []runtime.Object{
+			objs: []client.Object{
 				&gwtypes.ReferenceGrant{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "target-namespace",
@@ -246,7 +259,7 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 				Name:  new(gatewayv1.ObjectName("some-name")),
 			},
 			targetNamespace: "target-namespace",
-			objs: []runtime.Object{
+			objs: []client.Object{
 				&gwtypes.ReferenceGrant{
 					TypeMeta:  referenceGrantTypeMeta,
 					Namespace: "target-namespace",
@@ -272,13 +285,21 @@ func TestAllowedByReferenceGrants(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewFakeClient(tc.objs...)
-			require.NoError(t, gatewayv1.Install(cl.Scheme()))
-			allow, err := AllowedByReferenceGrants(t.Context(), cl, tc.from, tc.targetNamespace, tc.to)
-			require.NoError(t, err)
-			require.Equal(t, tc.allow, allow)
+	// The same expectations must hold whichever ReferenceGrant version the
+	// cluster serves.
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fake.NewClientBuilder().
+						WithScheme(referenceGrantScheme(t)).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objs)...).
+						Build()
+					allow, err := AllowedByReferenceGrants(t.Context(), cl, gv, tc.from, tc.targetNamespace, tc.to)
+					require.NoError(t, err)
+					require.Equal(t, tc.allow, allow)
+				})
+			}
 		})
 	}
 }

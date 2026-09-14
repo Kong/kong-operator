@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func newTCPRoute(backendRef gatewayapi.BackendRef) gatewayapi.TCPRoute {
@@ -125,27 +126,35 @@ func TestGetTCPRouteRuleReason(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).
-				WithObjects(tc.objects...).
-				Build()
-			reconciler := &TCPRouteReconciler{
-				Client: cl,
-				Log:    logger,
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fakeclient.NewClientBuilder().
+						WithScheme(scheme.Get()).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objects)...).
+						Build()
+					reconciler := &TCPRouteReconciler{
+						Client:                cl,
+						Log:                   logger,
+						ReferenceGrantVersion: gv,
+					}
 
-			reason, msg, err := reconciler.getTCPRouteRuleReason(ctx, tc.route)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantReason, reason)
-			if tc.wantMessageContain != "" {
-				assert.Contains(t, msg, tc.wantMessageContain)
+					reason, msg, err := reconciler.getTCPRouteRuleReason(ctx, tc.route)
+					require.NoError(t, err)
+					assert.Equal(t, tc.wantReason, reason)
+					if tc.wantMessageContain != "" {
+						assert.Contains(t, msg, tc.wantMessageContain)
+					}
+				})
 			}
 		})
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test lists ReferenceGrants
+// but never seeds one, so it asserts denial and gets an empty list at either version.
+// The grant-permitted path is covered against both versions by TestGetTCPRouteRuleReason.
 func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
@@ -168,7 +177,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses()
 
@@ -188,7 +197,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -211,7 +220,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -229,7 +238,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{Name: "svc", Namespace: "other"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(&otherNS))
 		parentStatuses := newParentStatuses()
 

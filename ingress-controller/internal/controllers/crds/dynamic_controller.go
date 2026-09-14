@@ -76,6 +76,9 @@ func (r *DynamicCRDController) Reconcile(ctx context.Context, crd *apiextensions
 
 	log.V(logging.DebugLevel).Info("Processing CustomResourceDefinition", "name", crd.Name)
 
+	// The watch predicate matches any one of the required CRDs, so reaching here only
+	// means one of them showed up - not all of them. Re-check the full set before
+	// starting the wrapped controller.
 	installed, err := r.allRequiredCRDsInstalled()
 	if err != nil {
 		return ctrl.Result{}, err

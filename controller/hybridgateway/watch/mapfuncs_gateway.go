@@ -11,6 +11,7 @@ import (
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // MapGatewayForTLSSecret returns a handler.MapFunc that, given a Secret object,
@@ -55,7 +56,7 @@ func MapGatewayForTLSSecret(cl client.Client) handler.MapFunc {
 // event handling and reconciliation when a ReferenceGrant changes.
 func MapGatewayForReferenceGrant(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		rg, ok := obj.(*gwtypes.ReferenceGrant)
+		rg, ok := k8sutils.AsReferenceGrant(obj)
 		if !ok {
 			return nil
 		}

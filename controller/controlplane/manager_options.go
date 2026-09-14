@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/samber/mo"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 
@@ -615,5 +616,17 @@ func WithKonnectOptions(konnectOptions *operatorv2beta1.ControlPlaneKonnectOptio
 		if konnectOptions.ConfigUploadConcurrency != nil {
 			c.Konnect.UploadConfigConcurrency = int(*konnectOptions.ConfigUploadConcurrency)
 		}
+	}
+}
+
+// WithReferenceGrantVersion sets the ReferenceGrant API version (v1 or v1beta1) that
+// the cluster serves, resolved once at operator startup. In case of empty gv skips setting it
+// and relies on the default v1.
+func WithReferenceGrantVersion(gv schema.GroupVersion) managercfg.Opt {
+	return func(c *managercfg.Config) {
+		if gv.Empty() {
+			return
+		}
+		c.ReferenceGrantVersion = gv
 	}
 }
