@@ -27,7 +27,6 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
@@ -55,7 +54,6 @@ type Reconciler struct {
 
 type sharedReconciler = shareddataplane.Reconciler[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]
 

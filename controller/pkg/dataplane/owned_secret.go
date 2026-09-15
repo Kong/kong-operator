@@ -32,7 +32,7 @@ import (
 
 // ensureCertificateSecret provisions (or finds) the mTLS client certificate
 // Secret for the given DataPlane, signed by the cluster CA.
-func (r *Reconciler[T, CP, Cert]) ensureCertificateSecret(
+func (r *Reconciler[T, Cert]) ensureCertificateSecret(
 	ctx context.Context,
 	dp T,
 ) (op.Result, *corev1.Secret, error) {

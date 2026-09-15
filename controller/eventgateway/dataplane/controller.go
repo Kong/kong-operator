@@ -27,7 +27,6 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	eventgatewayv1alpha1 "github.com/kong/kong-operator/v2/api/eventgateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 )
@@ -55,7 +54,6 @@ type Reconciler struct {
 
 type sharedReconciler = shareddataplane.Reconciler[
 	*eventgatewayv1alpha1.KegDataPlane,
-	*konnectv1alpha1.KonnectEventGateway,
 	*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 ]
 

@@ -93,7 +93,7 @@ func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := EnqueueDataPlanesForControlPlane(tc.cl, testConfig.NewObjectList, testConfig.ControlPlaneRefIndexField, testConfig.Kind, testConfig.ControlPlaneKind)
+			mapFunc := EnqueueDataPlanesForControlPlane(tc.cl, testConfig.NewObjectList, testControlPlaneKind.ControlPlaneRefIndexField, testConfig.Kind, testControlPlaneKind.Kind)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)
