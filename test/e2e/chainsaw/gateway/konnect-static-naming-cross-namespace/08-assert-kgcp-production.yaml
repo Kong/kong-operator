@@ -1,0 +1,16 @@
+# The regression assertion of #4079. The spec check alone would pass even with Konnect
+# rejecting the request, as it only inspects what the operator wrote locally; Programmed
+# plus a Konnect ID on THIS second Control Plane is what proves the create succeeded.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($gateway_name)
+  namespace: ($production_namespace)
+spec:
+  createControlPlaneRequest:
+    name: (join('_', [($production_namespace), ($gateway_name)]))
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true

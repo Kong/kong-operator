@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -5258,6 +5259,11 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 	ns := func(s string) *string { return &s }
 
+	// The unqualified name a Control Plane created before the #4079 fix carries. Every case
+	// seeds it and asserts it survives: renaming it here would rename every Control Plane
+	// already created in Konnect, on the first reconcile after an upgrade.
+	const legacyKonnectName = "test-kgcp"
+
 	authRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
 		Name:      "my-auth",
 		Namespace: ns("my-ns"),
@@ -5273,6 +5279,9 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 		kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
 			Namespace: "default",
 			Name:      "test-kgcp",
+		}
+		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
+			Name: legacyKonnectName,
 		}
 		kgcp.Spec.KonnectConfiguration.APIAuthConfigurationRef = currentAuthRef
 		if programmed {
@@ -5397,6 +5406,136 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 			var got konnectv1alpha2.KonnectGatewayControlPlane
 			require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(tt.kgcp), &got))
 			assert.Equal(t, tt.wantAuthRef, got.Spec.KonnectConfiguration.APIAuthConfigurationRef)
+
+			// The Konnect-side name is write-once at creation, patched authRef or not.
+			require.NotNil(t, got.Spec.CreateControlPlaneRequest)
+			assert.Equal(t, legacyKonnectName, got.Spec.CreateControlPlaneRequest.Name,
+				"spec.createControlPlaneRequest.name must not be modified on an existing KonnectGatewayControlPlane")
+		})
+	}
+}
+
+func TestHasStaticNaming(t *testing.T) {
+	testCases := []struct {
+		name        string
+		annotations map[string]string
+		expected    bool
+	}{
+		{
+			name:        "annotation set to true",
+			annotations: map[string]string{consts.GatewayStaticNamingAnnotation: "true"},
+			expected:    true,
+		},
+		{
+			name:        "annotation set to false",
+			annotations: map[string]string{consts.GatewayStaticNamingAnnotation: "false"},
+			expected:    false,
+		},
+		{
+			name:        "annotation absent",
+			annotations: map[string]string{"some-other": "annotation"},
+			expected:    false,
+		},
+		{
+			name:        "annotations map is nil",
+			annotations: nil,
+			expected:    false,
+		},
+		{
+			name:        "annotation set to True is not opting in",
+			annotations: map[string]string{consts.GatewayStaticNamingAnnotation: "True"},
+			expected:    false,
+		},
+		{
+			name:        "annotation set to 1 is not opting in",
+			annotations: map[string]string{consts.GatewayStaticNamingAnnotation: "1"},
+			expected:    false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &gwtypes.Gateway{
+				Namespace:   "staging",
+				Name:        "edge-gw",
+				Annotations: tc.annotations,
+			}
+			assert.Equal(t, tc.expected, hasStaticNaming(gateway))
+		})
+	}
+}
+
+// TestKonnectControlPlaneName covers the derivation of the Konnect-side Control Plane name:
+// namespace-qualified under static naming (#4079), identical to the Kubernetes name on the
+// dynamic path (#3357).
+func TestKonnectControlPlaneName(t *testing.T) {
+	testCases := []struct {
+		name        string
+		annotations map[string]string
+		// When false, the Konnect name must equal the generated Kubernetes name, which
+		// carries a random suffix and cannot be asserted as a literal.
+		staticNaming        bool
+		expectedKonnectName string
+	}{
+		{
+			name:                "static naming qualifies the Konnect name with the namespace",
+			annotations:         map[string]string{consts.GatewayStaticNamingAnnotation: "true"},
+			staticNaming:        true,
+			expectedKonnectName: "staging_edge-gw",
+		},
+		{
+			name:         "annotation set to false leaves the dynamic name untouched",
+			annotations:  map[string]string{consts.GatewayStaticNamingAnnotation: "false"},
+			staticNaming: false,
+		},
+		{
+			name:         "annotation absent leaves the dynamic name untouched",
+			annotations:  map[string]string{"some-other": "annotation"},
+			staticNaming: false,
+		},
+		{
+			name:         "nil annotations map leaves the dynamic name untouched",
+			annotations:  nil,
+			staticNaming: false,
+		},
+		{
+			name:         "annotation set to True is not opting in",
+			annotations:  map[string]string{consts.GatewayStaticNamingAnnotation: "True"},
+			staticNaming: false,
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			gateway := &gwtypes.Gateway{
+				Namespace:   "staging",
+				Name:        "edge-gw",
+				Annotations: tc.annotations,
+			}
+
+			// Derived exactly as createKonnectGatewayControlPlane does it.
+			kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
+			kgcpName := setObjectNamespaceName(gateway, kgcp)
+			konnectName := konnectControlPlaneName(gateway, kgcpName)
+
+			assert.Equal(t, gateway.Namespace, kgcp.Namespace)
+
+			if tc.staticNaming {
+				// Unqualified Kubernetes name: the point of the annotation.
+				assert.Equal(t, gateway.Name, kgcp.Name)
+				assert.Equal(t, tc.expectedKonnectName, konnectName)
+				assert.NotEqual(t, kgcpName, konnectName,
+					"under static naming the Konnect name must differ from the Kubernetes name")
+				return
+			}
+
+			// Random suffix: assert the relationship between the names, not a literal.
+			assert.Equal(t, kgcpName, konnectName,
+				"under dynamic naming the Konnect name must equal the Kubernetes name (#3357)")
+			assert.NotEqual(t, gateway.Name, kgcpName,
+				"the dynamic Kubernetes name must carry a random suffix")
+			assert.NotEqual(t, gateway.Namespace+"-"+gateway.Name, konnectName,
+				"the dynamic Konnect name must not be qualified with the namespace")
 		})
 	}
 }
