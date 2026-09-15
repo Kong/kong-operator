@@ -103,6 +103,13 @@
   (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
   with the SNI associated to an `AIGatewayCertificate` by certificate reference.
   [#5667](https://github.com/Kong/kong-operator/pull/5667)
+- `OnPremAIGateway`: the reconciler now lists the `AIGatewayModel`s referencing it,
+  translates each into `github.com/Kong/ai-deck-converter`'s entity model, and
+  renders the result into a dbless configuration payload, restarting the control
+  plane instance when it changes. The other nine `aiconfiguration` entity kinds
+  aren't translated yet, so the rendered payload isn't a complete, pushable
+  configuration on its own; pushing it to data planes is also not wired yet.
+  [#5661](https://github.com/Kong/kong-operator/pull/5661)
 
 ### Breaking changes
 

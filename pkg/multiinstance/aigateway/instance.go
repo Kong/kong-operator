@@ -1,26 +1,28 @@
-package multiinstanceai
+package aigateway
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 
-	"github.com/cnf/structhash"
 	"github.com/go-logr/logr"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
-	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/instances"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/manager"
 )
 
 // Config is the resolved configuration of a single on-prem AI Gateway control plane instance.
-//
-// It is intentionally empty for now: fields land alongside the OnPremAIGateway spec fields that feed them
-// and the configuration assembly that consumes them.
-// TODO: https://github.com/Kong/kong-operator/issues/5569
-type Config struct{}
+type Config struct {
+	// DBLessConfig is the rendered dbless declarative payload for this gateway, ready to be
+	// pushed to its data planes' Admin API.
+	DBLessConfig []byte
+}
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
 func Hash(cfg Config) (string, error) {
-	return structhash.Hash(cfg, 1)
+	sum := sha256.Sum256(cfg.DBLessConfig)
+	return hex.EncodeToString(sum[:]), nil
 }
 
 // Instance is a single on-prem AI Gateway control plane instance.
