@@ -152,14 +152,13 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
-	crdChecker := k8sutils.CRDChecker{Client: r.Client}
 	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tlsroutes",
 	}
-	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	tlsRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tlsRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
 	}
@@ -178,7 +177,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "grpcroutes",
 	}
-	grpcRouteExist, err := crdChecker.CRDExists(grpcRouteGVR)
+	grpcRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), grpcRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
 	}
@@ -197,7 +196,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "udproutes",
 	}
-	udpRouteExist, err := crdChecker.CRDExists(udpRouteGVR)
+	udpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), udpRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
 	}
@@ -216,7 +215,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tcproutes",
 	}
-	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)
+	tcpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tcpRouteGVR)
 	if err != nil {
 		return err
 	}

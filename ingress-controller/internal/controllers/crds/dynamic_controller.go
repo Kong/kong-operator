@@ -17,8 +17,8 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // +kubebuilder:rbac:groups="apiextensions.k8s.io",resources=customresourcedefinitions,verbs=list;watch
@@ -43,7 +43,13 @@ type DynamicCRDController struct {
 }
 
 func (r *DynamicCRDController) SetupWithManager(mgr ctrl.Manager) error {
-	if r.allRequiredCRDsInstalled() {
+	// A lookup failure here is not fatal: fall through to the CustomResourceDefinition
+	// watch below, which will retry once the apiserver is reachable again.
+	installed, err := r.allRequiredCRDsInstalled()
+	if err != nil {
+		r.Log.Error(err, "Failed to check whether the required CustomResourceDefinitions are installed, falling back to watching them")
+	}
+	if installed {
 		r.Log.V(logging.DebugLevel).Info("All required CustomResourceDefinitions are installed, skipping DynamicCRDController set up")
 		return r.setupController(mgr)
 	}
@@ -70,7 +76,11 @@ func (r *DynamicCRDController) Reconcile(ctx context.Context, crd *apiextensions
 
 	log.V(logging.DebugLevel).Info("Processing CustomResourceDefinition", "name", crd.Name)
 
-	if !r.allRequiredCRDsInstalled() {
+	installed, err := r.allRequiredCRDsInstalled()
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	if !installed {
 		log.V(logging.DebugLevel).Info("Still not all required CustomResourceDefinitions are installed, waiting")
 		return ctrl.Result{}, nil
 	}
@@ -91,10 +101,14 @@ func (r *DynamicCRDController) SetLogger(logger logr.Logger) {
 	r.Log = logger
 }
 
-func (r *DynamicCRDController) allRequiredCRDsInstalled() bool {
-	return lo.EveryBy(r.RequiredCRDs, func(gvr schema.GroupVersionResource) bool {
-		return utils.CRDExists(r.Manager.GetClient().RESTMapper(), gvr)
-	})
+func (r *DynamicCRDController) allRequiredCRDsInstalled() (bool, error) {
+	for _, gvr := range r.RequiredCRDs {
+		exists, err := k8sutils.CRDExists(r.Manager.GetClient().RESTMapper(), gvr)
+		if err != nil || !exists {
+			return false, err
+		}
+	}
+	return true, nil
 }
 
 func (r *DynamicCRDController) isOneOfRequiredCRDs(obj client.Object) bool {

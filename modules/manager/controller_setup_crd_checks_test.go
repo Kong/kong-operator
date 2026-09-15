@@ -1,6 +1,7 @@
 package manager
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,13 +14,11 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
 
-type fakeCRDChecker struct {
-	missing map[schema.GroupVersionResource]struct{}
-}
-
-func (f *fakeCRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
-	_, missing := f.missing[gvr]
-	return !missing, nil
+// crdCheckerMissing reports every CRD as installed except the given ones.
+func crdCheckerMissing(missing ...schema.GroupVersionResource) crdExistenceChecker {
+	return func(gvr schema.GroupVersionResource) (bool, error) {
+		return !slices.Contains(missing, gvr), nil
+	}
 }
 
 func defaultConfigWithDisabledControllers() Config {
@@ -43,11 +42,7 @@ func TestEnsureRequiredCRDsChecksGatewayConfigurationForGatewayController(t *tes
 	cfg.GatewayControllerEnabled = true
 
 	missingGVR := gwtypes.GatewayConfigurationGVR()
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			missingGVR: {},
-		},
-	}
+	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.Error(t, err)
@@ -65,11 +60,7 @@ func TestEnsureRequiredCRDsChecksWatchNamespaceGrantForControlPlaneController(t 
 		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
 		Resource: "watchnamespacegrants",
 	}
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			missingGVR: {},
-		},
-	}
+	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.Error(t, err)
@@ -87,11 +78,7 @@ func TestEnsureRequiredCRDsChecksDataPlaneMetricsExtensionForControlPlaneExtensi
 		Version:  operatorv1alpha1.SchemeGroupVersion.Version,
 		Resource: "dataplanemetricsextensions",
 	}
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			missingGVR: {},
-		},
-	}
+	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.Error(t, err)
@@ -109,11 +96,7 @@ func TestEnsureRequiredCRDsChecksKonnectCloudGatewayTransitGatewayForKonnectCont
 		Version:  konnectv1alpha1.SchemeGroupVersion.Version,
 		Resource: "konnectcloudgatewaytransitgateways",
 	}
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			missingGVR: {},
-		},
-	}
+	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.Error(t, err)
@@ -131,11 +114,7 @@ func TestEnsureRequiredCRDsChecksKegDataPlaneForKEGDataPlaneController(t *testin
 		Version:  eventgatewayv1alpha1.SchemeGroupVersion.Version,
 		Resource: "kegdataplanes",
 	}
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			missingGVR: {},
-		},
-	}
+	checker := crdCheckerMissing(missingGVR)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.Error(t, err)
@@ -148,16 +127,14 @@ func TestEnsureRequiredCRDsSkipsDisabledControllerChecks(t *testing.T) {
 	cfg := defaultConfigWithDisabledControllers()
 
 	skippedGVR := gwtypes.GatewayConfigurationGVR()
-	checker := &fakeCRDChecker{
-		missing: map[schema.GroupVersionResource]struct{}{
-			skippedGVR: {},
-			{
-				Group:    configurationv1alpha1.SchemeGroupVersion.Group,
-				Version:  configurationv1alpha1.SchemeGroupVersion.Version,
-				Resource: "kongreferencegrants",
-			}: {},
+	checker := crdCheckerMissing(
+		skippedGVR,
+		schema.GroupVersionResource{
+			Group:    configurationv1alpha1.SchemeGroupVersion.Group,
+			Version:  configurationv1alpha1.SchemeGroupVersion.Version,
+			Resource: "kongreferencegrants",
 		},
-	}
+	)
 
 	err := ensureRequiredCRDs(&cfg, checker)
 	require.NoError(t, err)
