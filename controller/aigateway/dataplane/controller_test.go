@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -42,6 +43,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // -----------------------------------------------------------------
@@ -49,10 +51,53 @@ import (
 // -----------------------------------------------------------------
 
 const (
+	testCASecretName      = "test-ca"
+	testCASecretNamespace = "test-ns"
+	testDPName            = "my-dp"
+
 	reconcileTestNS         = testCASecretNamespace
 	reconcileTestDPName     = testDPName
 	reconcileTestAIGWCPName = "my-aigwcp"
 )
+
+func TestCertEntityName(t *testing.T) {
+	const checksum = "abcdef1234567890"
+
+	t.Run("short name remains readable", func(t *testing.T) {
+		aigwdp := newReconcileAIGWDP()
+		assert.Equal(t, aigwdp.Name+"-abcdef1234", certEntityName(aigwdp, checksum))
+	})
+
+	t.Run("truncated names remain distinct", func(t *testing.T) {
+		commonPrefix := strings.Repeat("a", 252)
+		first := newReconcileAIGWDP()
+		first.Name = commonPrefix + "a"
+		second := newReconcileAIGWDP()
+		second.Name = commonPrefix + "b"
+
+		firstCertName := certEntityName(first, checksum)
+		secondCertName := certEntityName(second, checksum)
+
+		assert.NotEqual(t, firstCertName, secondCertName)
+		assert.LessOrEqual(t, len(firstCertName), 253)
+		assert.LessOrEqual(t, len(secondCertName), 253)
+	})
+}
+
+// caSecret builds the cluster CA Secret used across Reconcile tests.
+func caSecret() *corev1.Secret {
+	cert, key := certificate.MustGenerateCertPEMFormat(
+		certificate.WithCommonName("Kong Test CA"),
+		certificate.WithCATrue(),
+	)
+	return &corev1.Secret{
+		Namespace: testCASecretNamespace, Name: testCASecretName,
+		Data: map[string][]byte{
+			"tls.crt": cert,
+			"tls.key": key,
+		},
+	}
+}
 
 // newReconcileAIGWDP builds the standard AIGatewayDataPlane used across Reconcile tests.
 func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
@@ -143,10 +188,10 @@ func newNotProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	return aigwcp
 }
 
-// newTestReconciler builds a Reconciler wired to cl and recorder.
+// newTestReconciler builds a shared reconciler wired to cl and recorder.
 // The fake client is wrapped with an interceptor that populates TypeMeta on
 // AIGatewayDataPlane objects after Get, because the fake client does not set it.
-func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reconciler {
+func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *sharedReconciler {
 	wrapped := interceptor.NewClient(cl, interceptor.Funcs{
 		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			if err := c.Get(ctx, key, obj, opts...); err != nil {
@@ -164,14 +209,14 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 			return nil
 		},
 	})
-	return &Reconciler{
+	return (&Reconciler{
 		Client:                   wrapped,
 		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
 		CertTTL:                  pkgconsts.DefaultCertTTL,
-	}
+	}).base()
 }
 
 // getAIGWDP fetches the fresh AIGatewayDataPlane from the fake client.
@@ -334,13 +379,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "KonnectAIGateway not found: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
+			name: "KonnectAIGateway not found: no error (watch re-triggers), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -352,14 +396,13 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectAIGateway not yet programmed: error returned (runtime handles backoff), KonnectAIGatewayResolved=False",
+			name: "KonnectAIGateway not yet programmed: no error (watch re-triggers), KonnectAIGatewayResolved=False",
 			objects: []client.Object{
 				newReconcileAIGWDP(),
 				newNotProgrammedKonnectAIGateway(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -555,12 +598,12 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "Manual certificate: referenced secret not found, error returned",
+			name: "Manual certificate: referenced secret not found, no error, no Deployment",
 			objects: []client.Object{
 				newReconcileAIGWDPManualCertWithControlPlane(),
 				newProgrammedKonnectAIGateway(),
 			},
-			wantErr: true,
+			wantResult: ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				aigwdp := getAIGWDP(t, cl)
@@ -569,6 +612,11 @@ func TestReconciler_Reconcile(t *testing.T) {
 					metav1.ConditionFalse,
 					aigatewayv1alpha1.CertificateSecretRefNotFoundReason,
 				)
+				deploy := &appsv1.Deployment{}
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy)
+				assert.True(t, apierrors.IsNotFound(err))
 			},
 		},
 		{
@@ -715,110 +763,6 @@ func TestReconciler_Reconcile(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestIngressServiceIsReady(t *testing.T) {
-	tests := []struct {
-		name string
-		svc  *corev1.Service
-		want bool
-	}{
-		{
-			name: "ClusterIP service is always ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP}},
-			want: true,
-		},
-		{
-			name: "NodePort service is always ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeNodePort}},
-			want: true,
-		},
-		{
-			name: "LoadBalancer with no ingress is not ready",
-			svc:  &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}},
-			want: false,
-		},
-		{
-			name: "LoadBalancer with IP is ready",
-			svc: &corev1.Service{
-				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-				Status: corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{IP: "1.2.3.4"}},
-					},
-				},
-			},
-			want: true,
-		},
-		{
-			name: "LoadBalancer with hostname is ready",
-			svc: &corev1.Service{
-				Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-				Status: corev1.ServiceStatus{
-					LoadBalancer: corev1.LoadBalancerStatus{
-						Ingress: []corev1.LoadBalancerIngress{{Hostname: "lb.example.com"}},
-					},
-				},
-			},
-			want: true,
-		},
-	}
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			assert.Equal(t, tc.want, ingressServiceIsReady(tc.svc))
-		})
-	}
-}
-
-func TestEnsureServiceReadyCondition(t *testing.T) {
-	r := &Reconciler{}
-
-	t.Run("ClusterIP sets ServiceReady=True and reports the ClusterIP", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{
-			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},
-		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		assert.Equal(t, string(aigatewayv1alpha1.ServiceReadyReason), cond.Reason)
-		assert.Len(t, aigwdp.Status.Addresses, 1)
-		assert.Equal(t, aigatewayv1alpha1.PrivateIPAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
-	})
-
-	t.Run("LoadBalancer with no ingress sets ServiceReady=False", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionFalse, cond.Status)
-		assert.Equal(t, string(aigatewayv1alpha1.WaitingForAddressReason), cond.Reason)
-		assert.Empty(t, aigwdp.Status.Addresses)
-	})
-
-	t.Run("LoadBalancer with IP sets ServiceReady=True and populates addresses", func(t *testing.T) {
-		aigwdp := newReconcileAIGWDP()
-		svc := &corev1.Service{
-			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer},
-			Status: corev1.ServiceStatus{
-				LoadBalancer: corev1.LoadBalancerStatus{
-					Ingress: []corev1.LoadBalancerIngress{{IP: "203.0.113.5"}},
-				},
-			},
-		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
-
-		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
-		require.NotNil(t, cond)
-		assert.Equal(t, metav1.ConditionTrue, cond.Status)
-		require.Len(t, aigwdp.Status.Addresses, 1)
-		assert.Equal(t, "203.0.113.5", aigwdp.Status.Addresses[0].Value)
-		assert.Equal(t, aigatewayv1alpha1.PublicLoadBalancerAddressSourceType, aigwdp.Status.Addresses[0].SourceType)
-	})
 }
 
 // TestReconciler_KonnectCertificateBlueGreenRotation verifies that when the

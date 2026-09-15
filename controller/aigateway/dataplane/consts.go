@@ -21,6 +21,7 @@ import (
 
 	corev1 "k8s.io/api/core/v1"
 
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
@@ -32,10 +33,10 @@ const (
 	DefaultIngressPort int32 = 8443
 
 	// KonnectCertVolumeName is the name of the volume that holds the Konnect mTLS certificate.
-	KonnectCertVolumeName = "konnect-cert"
+	KonnectCertVolumeName = shareddataplane.KonnectCertVolumeName
 
 	// KonnectCertMountPath is the path where the Konnect certificate Secret is mounted in the AI Gateway container.
-	KonnectCertMountPath = "/var/konnect-client-certificate/"
+	KonnectCertMountPath = shareddataplane.KonnectCertMountPath
 )
 
 // -----------------------------------------------------------------------------
