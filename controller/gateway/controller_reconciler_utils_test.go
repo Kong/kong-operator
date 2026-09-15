@@ -5456,11 +5456,9 @@ func TestHasStaticNaming(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			gateway := &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   "staging",
-					Name:        "edge-gw",
-					Annotations: tc.annotations,
-				},
+				Namespace:   "staging",
+				Name:        "edge-gw",
+				Annotations: tc.annotations,
 			}
 			assert.Equal(t, tc.expected, hasStaticNaming(gateway))
 		})
@@ -5510,11 +5508,9 @@ func TestKonnectControlPlaneName(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			gateway := &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:   "staging",
-					Name:        "edge-gw",
-					Annotations: tc.annotations,
-				},
+				Namespace:   "staging",
+				Name:        "edge-gw",
+				Annotations: tc.annotations,
 			}
 
 			// Derived exactly as createKonnectGatewayControlPlane does it.

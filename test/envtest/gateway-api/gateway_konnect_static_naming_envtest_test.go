@@ -156,10 +156,8 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 
 	t.Log("seeding a pre-fix KonnectGatewayControlPlane with the old unqualified Konnect name")
 	existing := &konnectv1alpha2.KonnectGatewayControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gwNs.Name,
-			Name:      gatewayName,
-		},
+		Namespace: gwNs.Name,
+		Name:      gatewayName,
 	}
 	existing.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
 		Name: legacyKonnectName,
