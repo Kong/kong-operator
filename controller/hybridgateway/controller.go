@@ -8,6 +8,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8smanagedfields "k8s.io/apimachinery/pkg/util/managedfields"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -80,17 +81,27 @@ type HybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPt
 	// typeConverter is the shared, live-rebuilding managedfields.TypeConverter used for
 	// server-side apply structured-merge-diff comparisons/extractions in enforceState.
 	typeConverter k8smanagedfields.TypeConverter
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	referenceGrantVersion schema.GroupVersion
 }
 
 // NewHybridGatewayReconciler creates a new instance of GatewayAPIHybridReconciler for the specified
 // generic types t and tPtr. It initializes the reconciler with the client from the provided manager.
-func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, typeConverter k8smanagedfields.TypeConverter) *HybridGatewayReconciler[t, tPtr] {
+func NewHybridGatewayReconciler[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	mgr ctrl.Manager,
+	fqdnMode bool,
+	clusterDomain string,
+	typeConverter k8smanagedfields.TypeConverter,
+	referenceGrantVersion schema.GroupVersion,
+) *HybridGatewayReconciler[t, tPtr] {
 	return &HybridGatewayReconciler[t, tPtr]{
-		Client:        mgr.GetClient(),
-		eventRecorder: events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
-		fqdnMode:      fqdnMode,
-		clusterDomain: clusterDomain,
-		typeConverter: typeConverter,
+		Client:                mgr.GetClient(),
+		eventRecorder:         events.NewTypedEventRecorder(mgr.GetEventRecorder(ControllerName)),
+		fqdnMode:              fqdnMode,
+		clusterDomain:         clusterDomain,
+		typeConverter:         typeConverter,
+		referenceGrantVersion: referenceGrantVersion,
 	}
 }
 
@@ -114,7 +125,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) SetupWithManager(ctx context.Context,
 	}
 
 	// Add watches for other resources.
-	for _, w := range watch.Watches(obj, r.Client) {
+	for _, w := range watch.Watches(obj, r.Client, r.referenceGrantVersion) {
 		builder = builder.Watches(w.Object, handler.EnqueueRequestsFromMapFunc(w.MapFunc))
 	}
 
@@ -157,7 +168,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain, r.referenceGrantVersion)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
@@ -349,7 +360,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	log.Debug(logger, "Handling resource deletion")
 
 	// Create converter to get the cleanup logic
-	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain)
+	conv, err := converter.NewConverter(rootObj, r.Client, r.fqdnMode, r.clusterDomain, r.referenceGrantVersion)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to create converter for cleanup: %w", err)
 	}

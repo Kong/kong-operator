@@ -7,8 +7,10 @@ import (
 
 	"github.com/cnf/structhash"
 	"github.com/samber/mo"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/manager/consts"
@@ -100,14 +102,21 @@ func NewConfig(opts ...Opt) Config {
 		UpdateStatusQueueBufferSize: status.DefaultBufferSize,
 
 		// Kubernetes API toggling - all enabled by default
-		IngressNetV1Enabled:                 true,
-		IngressClassNetV1Enabled:            true,
-		IngressClassParametersEnabled:       true,
-		KongClusterPluginEnabled:            true,
-		KongPluginEnabled:                   true,
-		KongConsumerEnabled:                 true,
-		ServiceEnabled:                      true,
-		KongUpstreamPolicyEnabled:           true,
+		IngressNetV1Enabled:           true,
+		IngressClassNetV1Enabled:      true,
+		IngressClassParametersEnabled: true,
+		KongClusterPluginEnabled:      true,
+		KongPluginEnabled:             true,
+		KongConsumerEnabled:           true,
+		ServiceEnabled:                true,
+		KongUpstreamPolicyEnabled:     true,
+
+		// Default to the v1 version, kept as parameter to support
+		// both v1 and v1beta1 (GWAPI < 1.5) versions.
+		// The operator overrides this with whatever the cluster actually serves
+		// (see controlplane.WithReferenceGrantVersion).
+		ReferenceGrantVersion: schema.GroupVersion(gatewayv1.GroupVersion),
+
 		GatewayAPIGatewayController:         true,
 		GatewayAPIHTTPRouteController:       true,
 		GatewayAPIReferenceGrantController:  true,
@@ -235,6 +244,16 @@ type Config struct {
 	KongVaultEnabled              bool
 	KongLicenseEnabled            bool
 	KongCustomEntityEnabled       bool
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's a property of the cluster, resolved once at operator
+	// startup and handed down so that each instance does not have to rediscover it.
+
+	// Default to the v1 version, kept as parameter to support
+	// both v1 and v1beta1 (GWAPI < 1.5) versions.
+	// The operator overrides this with whatever the cluster actually serves
+	// (see controlplane.WithReferenceGrantVersion).
+	ReferenceGrantVersion schema.GroupVersion
 
 	// Gateway API toggling.
 	GatewayAPIGatewayController         bool

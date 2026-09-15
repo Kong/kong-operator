@@ -59,8 +59,9 @@ func TestTLSRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	dataplane.SetObjectStatus(ns.Name, "tlsroute-1", "Succeeded")
 
 	reconciler := &gateway.TLSRouteReconciler{
-		Client:          client,
-		DataplaneClient: dataplane,
+		Client:                client,
+		DataplaneClient:       dataplane,
+		ReferenceGrantVersion: ReferenceGrantVersion,
 	}
 	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 

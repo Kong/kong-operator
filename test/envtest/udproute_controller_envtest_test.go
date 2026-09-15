@@ -64,8 +64,9 @@ func TestUDPRouteReconcilerTranslatesAndUpdatesProgrammedCondition(t *testing.T)
 	dataplane.SetObjectStatus(ns.Name, "udproute-2", "Succeeded")
 
 	reconciler := &gateway.UDPRouteReconciler{
-		Client:          client,
-		DataplaneClient: dataplane,
+		Client:                client,
+		DataplaneClient:       dataplane,
+		ReferenceGrantVersion: ReferenceGrantVersion,
 	}
 	StartReconciler(ctx, t, client.Scheme(), cfg, reconciler)
 

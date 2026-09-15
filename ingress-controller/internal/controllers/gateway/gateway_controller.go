@@ -32,10 +32,10 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -62,9 +62,9 @@ type GatewayReconciler struct {
 	// AddressOverridesUDP are addresses to use in Gateway status instead of the PublishServiceUDPRef addresses.
 	AddressOverridesUDP []string
 
-	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
-	// served by the cluster, resolved on SetupWithManager call.
-	referenceGrantVersion schema.GroupVersion
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -77,15 +77,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
 		return fmt.Errorf("publish service must be configured")
 	}
-
-	// The ReferenceGrant CRD is a hard requirement of this reconciler: it is needed to
-	// validate cross-namespace TLSConfigs in Gateways. Resolve which version the cluster
-	// serves at setup, and fail loudly if neither is installed.
-	gv, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
-	if err != nil {
-		return err
-	}
-	r.referenceGrantVersion = gv
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
@@ -122,7 +113,7 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
+	blder.Watches(k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
 	)
@@ -232,7 +223,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := gatewayapi.AsReferenceGrant(obj)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
@@ -372,7 +363,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := gatewayapi.AsReferenceGrant(obj)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -639,12 +630,12 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
-	referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
+	referenceGrantList := k8sutils.NewReferenceGrantList(r.ReferenceGrantVersion)
 	if err := r.List(ctx, referenceGrantList); err != nil {
 		return ctrl.Result{}, err
 	}
 
-	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, gatewayapi.ReferenceGrantItems(referenceGrantList), r.Client)
+	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, k8sutils.ReferenceGrantItems(referenceGrantList), r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

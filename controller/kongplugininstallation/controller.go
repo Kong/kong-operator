@@ -11,6 +11,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	orascreds "oras.land/oras-go/v2/registry/remote/credentials"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
@@ -27,7 +28,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/kongplugininstallation/image"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
-	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	mgrconfig "github.com/kong/kong-operator/v2/modules/manager/config"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -46,6 +46,10 @@ type Reconciler struct {
 	// ConfigMapLabelSelector is the label selector configured at the oprator level.
 	// When not empty, it is used as the config map label selector of all reconcilers.
 	ConfigMapLabelSelector string
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -81,7 +85,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			),
 		).
 		Watches(
-			&gwtypes.ReferenceGrant{},
+			k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForKongPluginInstallation),
 			builder.WithPredicates(
 				ref.ReferenceGrantForSecretFrom(
@@ -89,7 +93,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 				),
 			),
 		).
-		Complete(reconcile.AsReconciler[*operatorv1alpha1.KongPluginInstallation](r.Client, r))
+		Complete(reconcile.AsReconciler(r.Client, r))
 }
 
 // Reconcile moves the current state of an object to the intended state.
@@ -114,7 +118,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, kpi *operatorv1alpha1.KongPl
 			return ctrl.Result{}, setStatusConditionFailedForKongPluginInstallation(ctx, r.Client, kpi, err.Error())
 		}
 		whyNotGrantedMsg, isReferenceGranted, refErr := ref.CheckReferenceGrantForSecret(
-			ctx, r.Client, kpi, *imagePullSecretRef,
+			ctx, r.Client, r.ReferenceGrantVersion, kpi, *imagePullSecretRef,
 		)
 		if refErr != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to resolve reference: %w", refErr)
@@ -232,7 +236,7 @@ func (r *Reconciler) listKongPluginInstallationsForSecret(ctx context.Context, o
 func (r *Reconciler) listReferenceGrantsForKongPluginInstallation(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	grant, ok := obj.(*gwtypes.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),
