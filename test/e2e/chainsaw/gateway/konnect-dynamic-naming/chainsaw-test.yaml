@@ -70,7 +70,7 @@ spec:
         The Konnect name equals the generated Kubernetes name (#3357) and is not qualified
         with the namespace. A script rather than an assertion tree because it compares two
         fields of the same resource, whose values are not known up front. The preceding step
-        already waited for the resource, so one read is enough -- scripts do not retry.
+        already waited for the resource, so the script's single read is enough.
       try:
         - script:
             env:
@@ -79,42 +79,7 @@ spec:
               - name: GATEWAY_NAME
                 value: ($gateway_name)
             content: |
-              set -euo pipefail
-
-              SELECTOR="gateway-operator.konghq.com/managed-by=gateway,gateway.networking.k8s.io/gateway-name=${GATEWAY_NAME}"
-
-              K8S_NAME=$(kubectl get konnectgatewaycontrolplanes.konnect.konghq.com \
-                -n "${NAMESPACE}" -l "${SELECTOR}" \
-                -o jsonpath='{.items[0].metadata.name}')
-              KONNECT_NAME=$(kubectl get konnectgatewaycontrolplanes.konnect.konghq.com \
-                -n "${NAMESPACE}" -l "${SELECTOR}" \
-                -o jsonpath='{.items[0].spec.createControlPlaneRequest.name}')
-
-              echo "kubernetes name: ${K8S_NAME}"
-              echo "konnect name:    ${KONNECT_NAME}"
-
-              if [ -z "${K8S_NAME}" ] || [ -z "${KONNECT_NAME}" ]; then
-                echo "FAIL: could not read both names from the KonnectGatewayControlPlane" >&2
-                exit 1
-              fi
-
-              # #3357: on the dynamic path the two names are the same string.
-              if [ "${K8S_NAME}" != "${KONNECT_NAME}" ]; then
-                echo "FAIL: the Konnect name must equal the Kubernetes name on the dynamic naming path (#3357)" >&2
-                exit 1
-              fi
-
-              # #4079 qualifies the Konnect name ONLY under static naming.
-              if [ "${KONNECT_NAME}" = "${NAMESPACE}-${GATEWAY_NAME}" ]; then
-                echo "FAIL: the dynamic Konnect name must not be qualified with the namespace" >&2
-                exit 1
-              fi
-
-              # Dynamic naming appends a random suffix.
-              if [ "${K8S_NAME}" = "${GATEWAY_NAME}" ]; then
-                echo "FAIL: the dynamic Kubernetes name must carry a random suffix" >&2
-                exit 1
-              fi
+              bash ../../common/scripts/assert_konnect_dynamic_naming.sh
 
     - name: 07-cleanup
       description: |
