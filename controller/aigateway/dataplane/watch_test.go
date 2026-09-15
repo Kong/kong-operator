@@ -38,7 +38,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 		Namespace: ns, Name: "dp-match",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpNM},
 			},
 		},
 	}
@@ -47,7 +47,7 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 		Namespace: ns, Name: "dp-other",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: "other-aigwcp"},
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: "other-aigwcp"},
 			},
 		},
 	}
@@ -102,6 +102,100 @@ func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			mapFunc := enqueueForKonnectAIGatewayRef(tc.cl)
+			requests := mapFunc(t.Context(), tc.obj)
+			if tc.wantNil {
+				require.Nil(t, requests)
+				return
+			}
+			require.Len(t, requests, len(tc.wantNames))
+			for i, name := range tc.wantNames {
+				assert.Equal(t, tc.wantNamespace, requests[i].Namespace)
+				assert.Equal(t, name, requests[i].Name)
+			}
+		})
+	}
+}
+
+func Test_enqueueForOnPremAIGatewayRef(t *testing.T) {
+	const (
+		ns       = "test-ns"
+		onpremNM = "my-onprem-aigwcp"
+	)
+
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{
+		Namespace: ns, Name: onpremNM,
+	}
+
+	aigwdpMatching := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Namespace: ns, Name: "dp-match",
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+				Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+				OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: onpremNM},
+			},
+		},
+	}
+
+	aigwdpOther := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Namespace: ns, Name: "dp-other",
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+				Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+				OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: "other-onprem-aigwcp"},
+			},
+		},
+	}
+
+	scheme := managerscheme.Get()
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme).
+		WithObjects(onprem, aigwdpMatching, aigwdpOther).
+		WithIndex(
+			&aigatewayv1alpha1.AIGatewayDataPlane{},
+			index.IndexFieldAIGatewayDataPlaneOnOnPremAIGateway,
+			func(obj client.Object) []string {
+				dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
+				if !ok || dp.Spec.ControlPlaneRef == nil || dp.Spec.ControlPlaneRef.OnPremNamespacedRef == nil {
+					return nil
+				}
+				return []string{dp.Namespace + "/" + dp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name}
+			},
+		).
+		Build()
+
+	tests := []struct {
+		name          string
+		cl            client.Client
+		obj           client.Object
+		wantNil       bool
+		wantNames     []string
+		wantNamespace string
+	}{
+		{
+			name:          "returns requests for matching DataPlanes",
+			cl:            cl,
+			obj:           onprem,
+			wantNames:     []string{"dp-match"},
+			wantNamespace: ns,
+		},
+		{
+			name:    "returns nil when obj is not OnPremAIGateway",
+			cl:      cl,
+			obj:     &corev1.ConfigMap{},
+			wantNil: true,
+		},
+		{
+			name:    "returns nil when List fails",
+			cl:      &errListClient{},
+			obj:     onprem,
+			wantNil: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			mapFunc := enqueueForOnPremAIGatewayRef(tc.cl)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)

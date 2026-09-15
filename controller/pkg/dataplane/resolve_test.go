@@ -44,7 +44,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			Namespace: ns, Name: "my-dp",
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-					KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
+					KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpNM},
 				},
 			},
 		}
@@ -69,7 +69,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			wantCP:            false,
 			wantErr:           true,
 			wantConditionTrue: false,
-			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
 			name:              "aigwcp not yet programmed: sets NotProgrammed condition and returns error",
@@ -85,7 +85,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			wantCP:            true,
 			wantErr:           false,
 			wantConditionTrue: true,
-			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 		},
 		{
 			name:    "GET returns unexpected error: propagated to caller",

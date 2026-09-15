@@ -27,37 +27,37 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 )
 
-// resolveKonnectAIGateway resolves the KonnectAIGateway referenced by the
-// AIGatewayDataPlane. It sets the KonnectAIGatewayResolved condition on the
-// AIGatewayDataPlane and returns the resolved KonnectAIGateway if successful.
-func (r *Reconciler) resolveKonnectAIGateway(
+// resolveOnPremAIGateway resolves the OnPremAIGateway referenced by the
+// AIGatewayDataPlane via spec.controlPlaneRef.onpremNamespacedRef. It sets the
+// OnPremAIGatewayResolved condition on the AIGatewayDataPlane and returns the
+// resolved OnPremAIGateway if it exists and is Ready.
+func (r *Reconciler) resolveOnPremAIGateway(
 	ctx context.Context,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-) (*konnectv1alpha1.KonnectAIGateway, error) {
-	if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
+) (*aigatewayv1alpha1.OnPremAIGateway, error) {
+	if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.OnPremNamespacedRef == nil {
 		return nil, nil
 	}
 
-	aigwcp := &konnectv1alpha1.KonnectAIGateway{}
+	onprem := &aigatewayv1alpha1.OnPremAIGateway{}
 	err := r.Get(ctx, types.NamespacedName{
-		Name:      aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+		Name:      aigwdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name,
 		Namespace: aigwdp.Namespace,
-	}, aigwcp)
+	}, onprem)
 
 	if apierrors.IsNotFound(err) {
-		log.Debug(logger, "referenced KonnectAIGateway not found",
-			"ref", aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
+		log.Debug(logger, "referenced OnPremAIGateway not found",
+			"ref", aigwdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name)
 
 		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
-			Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+			Type:               string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
 			Status:             metav1.ConditionFalse,
 			Reason:             string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
-			Message:            aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+			Message:            aigatewayv1alpha1.OnPremAIGatewayNotFoundMessage,
 			ObservedGeneration: aigwdp.Generation,
 		})
 
@@ -67,30 +67,31 @@ func (r *Reconciler) resolveKonnectAIGateway(
 		return nil, err
 	}
 
-	// Check that the KonnectAIGateway is Programmed (i.e. exists in Konnect).
-	if !apimeta.IsStatusConditionTrue(aigwcp.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType) {
-		log.Debug(logger, "referenced KonnectAIGateway is not yet Programmed",
-			"ref", aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
+	// Check that the OnPremAIGateway is Ready (i.e. its control plane instance
+	// is up and able to push configuration to the data planes referencing it).
+	if !apimeta.IsStatusConditionTrue(onprem.Status.Conditions, string(aigatewayv1alpha1.ReadyType)) {
+		log.Debug(logger, "referenced OnPremAIGateway is not yet Ready",
+			"ref", aigwdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name)
 
 		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
-			Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+			Type:               string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-			Message:            aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+			Reason:             string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
+			Message:            aigatewayv1alpha1.OnPremAIGatewayNotReadyMessage,
 			ObservedGeneration: aigwdp.Generation,
 		})
 
-		return nil, fmt.Errorf("referenced KonnectAIGateway %q is not yet Programmed",
-			aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name)
+		return nil, fmt.Errorf("referenced OnPremAIGateway %q is not yet Ready",
+			aigwdp.Spec.ControlPlaneRef.OnPremNamespacedRef.Name)
 	}
 
 	apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
-		Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		Type:               string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(aigatewayv1alpha1.ControlPlaneResolvedReason),
-		Message:            aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		Message:            aigatewayv1alpha1.OnPremAIGatewayResolvedMessage,
 		ObservedGeneration: aigwdp.Generation,
 	})
 
-	return aigwcp, nil
+	return onprem, nil
 }

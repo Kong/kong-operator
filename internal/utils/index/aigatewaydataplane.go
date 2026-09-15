@@ -26,6 +26,9 @@ const (
 	// IndexFieldAIGatewayDataPlaneOnKonnectAIGateway is the index field for
 	// AIGatewayDataPlane -> KonnectAIGateway (via spec.controlPlaneRef.konnectNamespacedRef.name).
 	IndexFieldAIGatewayDataPlaneOnKonnectAIGateway = "aiGatewayDataPlaneKonnectAIGatewayRef"
+	// IndexFieldAIGatewayDataPlaneOnOnPremAIGateway is the index field for
+	// AIGatewayDataPlane -> OnPremAIGateway (via spec.controlPlaneRef.onpremNamespacedRef.name).
+	IndexFieldAIGatewayDataPlaneOnOnPremAIGateway = "aiGatewayDataPlaneOnPremAIGatewayRef"
 	// IndexFieldAIGatewayDataPlaneOnCertificateSecret is the index field for
 	// AIGatewayDataPlane -> Secret (via spec.certificateSecret.secretRef.name),
 	// used to reconcile when a manually-referenced certificate Secret changes.
@@ -39,6 +42,11 @@ func OptionsForAIGatewayDataPlane() []Option {
 			Object:         &aigatewayv1alpha1.AIGatewayDataPlane{},
 			Field:          IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
 			ExtractValueFn: aiGatewayDataPlaneControlPlaneRef,
+		},
+		{
+			Object:         &aigatewayv1alpha1.AIGatewayDataPlane{},
+			Field:          IndexFieldAIGatewayDataPlaneOnOnPremAIGateway,
+			ExtractValueFn: aiGatewayDataPlaneOnPremAIGatewayRef,
 		},
 		{
 			Object:         &aigatewayv1alpha1.AIGatewayDataPlane{},
@@ -66,4 +74,16 @@ func aiGatewayDataPlaneControlPlaneRef(object client.Object) []string {
 		return nil
 	}
 	return []string{aigwdp.Namespace + "/" + aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}
+}
+
+func aiGatewayDataPlaneOnPremAIGatewayRef(object client.Object) []string {
+	aigwdp, ok := object.(*aigatewayv1alpha1.AIGatewayDataPlane)
+	if !ok {
+		return nil
+	}
+	ref := aigwdp.Spec.ControlPlaneRef
+	if !ref.IsOnPremNamespacedRef() {
+		return nil
+	}
+	return []string{aigwdp.Namespace + "/" + ref.OnPremNamespacedRef.Name}
 }

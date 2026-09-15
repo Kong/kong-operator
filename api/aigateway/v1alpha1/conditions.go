@@ -90,7 +90,8 @@ const CertificateSecretInvalidMessage = "Referenced certificate Secret does not 
 const CertificateControlPlaneRefMissingMessage = "certificateSecret is configured but controlPlaneRef is unset: there is no control plane to use the certificate against"
 
 // -----------------------------------------------------------------------------
-// DataPlane - KonnectAIGateway (controlplane) Resolved Condition Constants
+// DataPlane - ControlPlane (KonnectAIGateway / OnPremAIGateway) Resolved
+// Condition Constants
 // -----------------------------------------------------------------------------
 
 const (
@@ -98,15 +99,22 @@ const (
 	// KonnectAIGateway has been resolved and is Programmed.
 	KonnectAIGatewayResolvedType consts.ConditionType = "KonnectAIGatewayResolved"
 
-	// KonnectAIGatewayResolvedReason indicates the KonnectAIGateway has
-	// been resolved successfully.
-	KonnectAIGatewayResolvedReason consts.ConditionReason = "Resolved"
-	// KonnectAIGatewayNotFoundReason indicates the referenced
-	// KonnectAIGateway was not found.
-	KonnectAIGatewayNotFoundReason consts.ConditionReason = "NotFound"
+	// OnPremAIGatewayResolvedType indicates whether the referenced
+	// OnPremAIGateway has been resolved and is Ready.
+	OnPremAIGatewayResolvedType consts.ConditionType = "OnPremAIGatewayResolved"
+
+	// ControlPlaneResolvedReason indicates the referenced control plane has
+	// been resolved successfully. Shared by both control plane kinds.
+	ControlPlaneResolvedReason consts.ConditionReason = "Resolved"
+	// ControlPlaneNotFoundReason indicates the referenced control plane
+	// was not found. Shared by both control plane kinds.
+	ControlPlaneNotFoundReason consts.ConditionReason = "NotFound"
 	// KonnectAIGatewayNotProgrammedReason indicates the referenced
 	// KonnectAIGateway exists but is not yet Programmed on Konnect.
 	KonnectAIGatewayNotProgrammedReason consts.ConditionReason = "NotProgrammed"
+	// OnPremAIGatewayNotReadyReason indicates the referenced
+	// OnPremAIGateway exists but is not yet Ready.
+	OnPremAIGatewayNotReadyReason consts.ConditionReason = "NotReady"
 )
 
 // -----------------------------------------------------------------------------
@@ -132,6 +140,16 @@ const (
 	// KonnectAIGatewayResolvedMessage indicates the KonnectAIGateway has
 	// been resolved.
 	KonnectAIGatewayResolvedMessage = "Referenced KonnectAIGateway is resolved and Programmed"
+
+	// OnPremAIGatewayNotFoundMessage indicates the referenced
+	// OnPremAIGateway was not found.
+	OnPremAIGatewayNotFoundMessage = "Referenced OnPremAIGateway not found"
+	// OnPremAIGatewayNotReadyMessage indicates the referenced
+	// OnPremAIGateway is not yet Ready.
+	OnPremAIGatewayNotReadyMessage = "Referenced OnPremAIGateway is not yet Ready"
+	// OnPremAIGatewayResolvedMessage indicates the OnPremAIGateway has
+	// been resolved.
+	OnPremAIGatewayResolvedMessage = "Referenced OnPremAIGateway is resolved and Ready"
 )
 
 // -----------------------------------------------------------------------------

@@ -36,7 +36,7 @@ func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
 		Namespace: ns, Name: "dp-match",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpNM},
 			},
 		},
 	}
@@ -45,7 +45,7 @@ func Test_EnqueueDataPlanesForControlPlane(t *testing.T) {
 		Namespace: ns, Name: "dp-other",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: "other-aigwcp"},
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: "other-aigwcp"},
 			},
 		},
 	}

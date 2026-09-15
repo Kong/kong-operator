@@ -21,9 +21,10 @@ package v1alpha1
 //
 // +kubebuilder:object:generate=true
 // +kubebuilder:validation:XValidation:rule="self.type == 'konnectNamespacedRef' ? has(self.konnectNamespacedRef) : true",message="konnectNamespacedRef must be set when type is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="self.type == 'onpremNamespacedRef' ? has(self.onpremNamespacedRef) : true",message="onpremNamespacedRef must be set when type is onpremNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.konnectNamespacedRef) && has(self.onpremNamespacedRef))",message="only one of konnectNamespacedRef or onpremNamespacedRef can be set"
 type ControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced.
-	// Currently only konnectNamespacedRef is supported.
 	//
 	// +required
 	Type ControlPlaneRefType `json:"type,omitempty"`
@@ -32,25 +33,37 @@ type ControlPlaneRef struct {
 	// Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
 	//
 	// +optional
-	KonnectNamespacedRef *KonnectNamespacedRef `json:"konnectNamespacedRef,omitempty"`
+	KonnectNamespacedRef *NamespacedRef `json:"konnectNamespacedRef,omitempty"`
+
+	// OnPremNamespacedRef references an OnPremAIGateway (controlplane) resource in the same namespace.
+	// Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
+	//
+	// +optional
+	OnPremNamespacedRef *NamespacedRef `json:"onpremNamespacedRef,omitempty"`
 }
 
 // ControlPlaneRefType identifies the kind of control plane being referenced.
 //
-// +kubebuilder:validation:Enum=konnectNamespacedRef
+// +kubebuilder:validation:Enum=konnectNamespacedRef;onpremNamespacedRef
 type ControlPlaneRefType string
 
 const (
 	// ControlPlaneRefTypeKonnectNamespacedRef references a KonnectAIGateway
 	// resource in the same namespace as the DataPlane.
 	ControlPlaneRefTypeKonnectNamespacedRef ControlPlaneRefType = "konnectNamespacedRef"
+
+	// ControlPlaneRefTypeOnPremNamespacedRef references an OnPremAIGateway
+	// resource in the same namespace as the DataPlane.
+	ControlPlaneRefTypeOnPremNamespacedRef ControlPlaneRefType = "onpremNamespacedRef"
 )
 
-// KonnectNamespacedRef is a reference to a KonnectAIGateway resource in the same namespace.
+// NamespacedRef is a reference to a namespaced resource. It is shared by the
+// different ControlPlaneRef types, which reference control planes in the same
+// namespace as the referencing AIGatewayDataPlane.
 //
 // +kubebuilder:object:generate=true
-type KonnectNamespacedRef struct {
-	// Name is the name of the KonnectAIGateway (controlplane) resource.
+type NamespacedRef struct {
+	// Name is the name of the referenced resource.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

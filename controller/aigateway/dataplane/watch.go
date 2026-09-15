@@ -59,6 +59,35 @@ func enqueueForKonnectAIGatewayRef(cl client.Client) handler.MapFunc {
 	}
 }
 
+// enqueueForOnPremAIGatewayRef returns a MapFunc that enqueues reconcile requests
+// for all AIGatewayDataPlanes in the same namespace whose
+// spec.controlPlaneRef.onpremNamespacedRef.name matches the changed OnPremAIGateway.
+func enqueueForOnPremAIGatewayRef(cl client.Client) handler.MapFunc {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		onprem, ok := obj.(*aigatewayv1alpha1.OnPremAIGateway)
+		if !ok {
+			return nil
+		}
+
+		aigwdpList := &aigatewayv1alpha1.AIGatewayDataPlaneList{}
+		if err := cl.List(ctx, aigwdpList,
+			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnOnPremAIGateway: onprem.Namespace + "/" + onprem.Name},
+		); err != nil {
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for OnPremAIGateway",
+				"OnPremAIGateway", onprem.Name)
+			return nil
+		}
+
+		requests := make([]reconcile.Request, 0, len(aigwdpList.Items))
+		for _, aigwdp := range aigwdpList.Items {
+			requests = append(requests, reconcile.Request{
+				NamespacedName: client.ObjectKeyFromObject(&aigwdp),
+			})
+		}
+		return requests
+	}
+}
+
 // enqueueForAIGatewayDataPlaneCertificateSecretRef returns a MapFunc that
 // enqueues reconcile requests for all AIGatewayDataPlanes in the same
 // namespace as the changed Secret whose spec.certificateSecret.secretRef

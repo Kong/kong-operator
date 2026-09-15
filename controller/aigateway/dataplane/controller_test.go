@@ -49,9 +49,10 @@ import (
 // -----------------------------------------------------------------
 
 const (
-	reconcileTestNS         = testCASecretNamespace
-	reconcileTestDPName     = testDPName
-	reconcileTestAIGWCPName = "my-aigwcp"
+	reconcileTestNS           = testCASecretNamespace
+	reconcileTestDPName       = testDPName
+	reconcileTestAIGWCPName   = "my-aigwcp"
+	reconcileTestOnPremCPName = "my-onprem-aigwcp"
 )
 
 // newReconcileAIGWDP builds the standard AIGatewayDataPlane used across Reconcile tests.
@@ -65,7 +66,7 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: reconcileTestAIGWCPName,
 				},
 			},
@@ -78,6 +79,19 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 func newReconcileAIGWDPNoControlPlaneRef() *aigatewayv1alpha1.AIGatewayDataPlane {
 	aigwdp := newReconcileAIGWDP()
 	aigwdp.Spec.ControlPlaneRef = nil
+	return aigwdp
+}
+
+// newReconcileAIGWDPOnPrem builds an AIGatewayDataPlane referencing an
+// OnPremAIGateway control plane via spec.controlPlaneRef.onpremNamespacedRef.
+func newReconcileAIGWDPOnPrem() *aigatewayv1alpha1.AIGatewayDataPlane {
+	aigwdp := newReconcileAIGWDP()
+	aigwdp.Spec.ControlPlaneRef = &aigatewayv1alpha1.ControlPlaneRef{
+		Type: aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+		OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+			Name: reconcileTestOnPremCPName,
+		},
+	}
 	return aigwdp
 }
 
@@ -141,6 +155,30 @@ func newNotProgrammedKonnectAIGateway() *konnectv1alpha1.KonnectAIGateway {
 	aigwcp := newProgrammedKonnectAIGateway()
 	aigwcp.Status.Conditions[0].Status = metav1.ConditionFalse
 	return aigwcp
+}
+
+// newReadyOnPremAIGateway builds an OnPremAIGateway (controlplane) with Ready=True.
+func newReadyOnPremAIGateway() *aigatewayv1alpha1.OnPremAIGateway {
+	return &aigatewayv1alpha1.OnPremAIGateway{
+		Namespace: reconcileTestNS,
+		Name:      reconcileTestOnPremCPName,
+		Status: aigatewayv1alpha1.OnPremAIGatewayStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:   string(aigatewayv1alpha1.ReadyType),
+					Status: metav1.ConditionTrue,
+					Reason: "Ready",
+				},
+			},
+		},
+	}
+}
+
+// newNotReadyOnPremAIGateway builds an OnPremAIGateway with Ready=False.
+func newNotReadyOnPremAIGateway() *aigatewayv1alpha1.OnPremAIGateway {
+	onprem := newReadyOnPremAIGateway()
+	onprem.Status.Conditions[0].Status = metav1.ConditionFalse
+	return onprem
 }
 
 // newTestReconciler builds a Reconciler wired to cl and recorder.
@@ -347,7 +385,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionFalse,
-					aigatewayv1alpha1.KonnectAIGatewayNotFoundReason,
+					aigatewayv1alpha1.ControlPlaneNotFoundReason,
 				)
 			},
 		},
@@ -401,7 +439,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionTrue,
-					aigatewayv1alpha1.KonnectAIGatewayResolvedReason,
+					aigatewayv1alpha1.ControlPlaneResolvedReason,
 				)
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.CertificateProvisionedType,
@@ -443,7 +481,7 @@ func TestReconciler_Reconcile(t *testing.T) {
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.KonnectAIGatewayResolvedType,
 					metav1.ConditionTrue,
-					aigatewayv1alpha1.KonnectAIGatewayResolvedReason,
+					aigatewayv1alpha1.ControlPlaneResolvedReason,
 				)
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.CertificateProvisionedType,
@@ -552,6 +590,128 @@ func TestReconciler_Reconcile(t *testing.T) {
 				secretList := &corev1.SecretList{}
 				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
 				assert.Empty(t, secretList.Items)
+			},
+		},
+		{
+			name: "OnPremAIGateway not found: error returned (runtime handles backoff), OnPremAIGatewayResolved=False",
+			objects: []client.Object{
+				newReconcileAIGWDPOnPrem(),
+			},
+			wantResult: ctrl.Result{},
+			wantErr:    true,
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.OnPremAIGatewayResolvedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.ControlPlaneNotFoundReason,
+				)
+			},
+		},
+		{
+			name: "OnPremAIGateway not yet Ready: error returned (runtime handles backoff), OnPremAIGatewayResolved=False",
+			objects: []client.Object{
+				newReconcileAIGWDPOnPrem(),
+				newNotReadyOnPremAIGateway(),
+			},
+			wantResult: ctrl.Result{},
+			wantErr:    true,
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.OnPremAIGatewayResolvedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.OnPremAIGatewayNotReadyReason,
+				)
+			},
+		},
+		{
+			name: "on-prem happy path: Deployment and Service created without Konnect resolution or cert wiring",
+			objects: []client.Object{
+				newReconcileAIGWDPOnPrem(),
+				newReadyOnPremAIGateway(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+
+				// Deployment exists, without the Konnect endpoint env vars or any cert wiring.
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+				var envNames []string
+				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+					envNames = append(envNames, e.Name)
+				}
+				assert.NotContains(t, envNames, EnvKongClusterControlPlane)
+				assert.NotContains(t, envNames, EnvKongClusterServerName)
+				assert.NotContains(t, envNames, EnvClientCertPath)
+				assert.NotContains(t, envNames, EnvKonnectClientCertKey)
+				for _, vm := range deploy.Spec.Template.Spec.Containers[0].VolumeMounts {
+					assert.NotEqual(t, KonnectCertVolumeName, vm.Name)
+				}
+				for _, v := range deploy.Spec.Template.Spec.Volumes {
+					assert.NotEqual(t, KonnectCertVolumeName, v.Name)
+				}
+				assert.NotContains(t, deploy.Spec.Template.Annotations, pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation)
+
+				// Service exists.
+				svc := &corev1.Service{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName + "-ingress",
+				}, svc))
+
+				// No certificate Secret is provisioned for an on-prem control plane ref.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
+				assert.Empty(t, secretList.Items)
+
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.OnPremAIGatewayResolvedType,
+					metav1.ConditionTrue,
+					aigatewayv1alpha1.ControlPlaneResolvedReason,
+				)
+				// Konnect-specific conditions are never set for an on-prem control plane ref.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)))
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectCertificateRegisteredType)))
+				// No certificate was requested, so no certificate condition is set either.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
+			},
+		},
+		{
+			name: "on-prem with certificateSecret configured: no cert artifacts, Deployment created",
+			objects: []client.Object{
+				func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					aigwdp := newReconcileAIGWDPOnPrem()
+					aigwdp.Spec.CertificateSecret = &aigatewayv1alpha1.CertificateSecret{
+						Provisioning: new(aigatewayv1alpha1.AutomaticCertificateProvisioning),
+					}
+					return aigwdp
+				}(),
+				newReadyOnPremAIGateway(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+
+				// The certificate path is skipped entirely for on-prem control plane
+				// refs: no Secret is provisioned and the Deployment is still created.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
+				assert.Empty(t, secretList.Items)
+
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				for _, v := range deploy.Spec.Template.Spec.Volumes {
+					assert.NotEqual(t, KonnectCertVolumeName, v.Name)
+				}
 			},
 		},
 		{

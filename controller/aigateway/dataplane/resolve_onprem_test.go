@@ -1,3 +1,19 @@
+/*
+Copyright 2026 Kong, Inc.
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+*/
+
 package dataplane
 
 import (
@@ -14,26 +30,25 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
-func newKonnectAIGW(ns, name string, programmed metav1.ConditionStatus) *konnectv1alpha1.KonnectAIGateway {
-	return &konnectv1alpha1.KonnectAIGateway{
+func newOnPremAIGW(ns, name string, ready metav1.ConditionStatus) *aigatewayv1alpha1.OnPremAIGateway {
+	return &aigatewayv1alpha1.OnPremAIGateway{
 		Namespace: ns, Name: name,
-		Status: konnectv1alpha1.KonnectAIGatewayStatus{
+		Status: aigatewayv1alpha1.OnPremAIGatewayStatus{
 			Conditions: []metav1.Condition{
 				{
-					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
-					Status: programmed,
-					Reason: string(programmed),
+					Type:   string(aigatewayv1alpha1.ReadyType),
+					Status: ready,
+					Reason: string(ready),
 				},
 			},
 		},
 	}
 }
 
-func Test_resolveKonnectAIGateway_NoControlPlaneRef(t *testing.T) {
+func Test_resolveOnPremAIGateway_NoControlPlaneRef(t *testing.T) {
 	r := &Reconciler{Client: fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()}
 
 	tests := []struct {
@@ -41,7 +56,7 @@ func Test_resolveKonnectAIGateway_NoControlPlaneRef(t *testing.T) {
 		controlPlaneRef *aigatewayv1alpha1.ControlPlaneRef
 	}{
 		{name: "ControlPlaneRef is nil"},
-		{name: "ControlPlaneRef set but KonnectNamespacedRef is nil", controlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{}},
+		{name: "ControlPlaneRef set but OnPremNamespacedRef is nil", controlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{}},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
@@ -50,20 +65,20 @@ func Test_resolveKonnectAIGateway_NoControlPlaneRef(t *testing.T) {
 				Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{ControlPlaneRef: tc.controlPlaneRef},
 			}
 
-			gotCP, err := r.resolveKonnectAIGateway(context.Background(), zap.New(), aigwdp)
+			gotCP, err := r.resolveOnPremAIGateway(context.Background(), zap.New(), aigwdp)
 
 			require.NoError(t, err)
 			assert.Nil(t, gotCP)
-			assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)),
-				"no condition should be set when ControlPlaneRef is not configured")
+			assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayResolvedType)),
+				"no condition should be set when OnPremNamespacedRef is not configured")
 		})
 	}
 }
 
-func Test_resolveKonnectAIGateway(t *testing.T) {
+func Test_resolveOnPremAIGateway(t *testing.T) {
 	const (
 		ns       = "test-ns"
-		aigwcpNM = "my-aigwcp"
+		onpremNM = "my-onprem-aigwcp"
 	)
 
 	newAIGWDP := func() *aigatewayv1alpha1.AIGatewayDataPlane {
@@ -71,7 +86,8 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 			Namespace: ns, Name: "my-dp",
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-					KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpNM},
+					Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+					OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: onpremNM},
 				},
 			},
 		}
@@ -83,7 +99,7 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 	tests := []struct {
 		name string
 		// nil = not in cluster
-		aigwcp            *konnectv1alpha1.KonnectAIGateway
+		onprem            *aigatewayv1alpha1.OnPremAIGateway
 		getErr            error // non-nil injects a GET error via interceptor
 		wantCP            bool
 		wantErr           bool
@@ -91,24 +107,24 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 		wantReason        string
 	}{
 		{
-			name:              "aigwcp not found: sets NotFound condition and returns error",
-			aigwcp:            nil,
+			name:              "onprem not found: sets NotFound condition and returns error",
+			onprem:            nil,
 			wantCP:            false,
 			wantErr:           true,
 			wantConditionTrue: false,
 			wantReason:        string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
-			name:              "aigwcp not yet programmed: sets NotProgrammed condition and returns error",
-			aigwcp:            newKonnectAIGW(ns, aigwcpNM, metav1.ConditionFalse),
+			name:              "onprem not yet Ready: sets NotReady condition and returns error",
+			onprem:            newOnPremAIGW(ns, onpremNM, metav1.ConditionFalse),
 			wantCP:            false,
 			wantErr:           true,
 			wantConditionTrue: false,
-			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+			wantReason:        string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
 		},
 		{
-			name:              "aigwcp programmed: returns aigwcp and sets Resolved condition",
-			aigwcp:            newKonnectAIGW(ns, aigwcpNM, metav1.ConditionTrue),
+			name:              "onprem Ready: returns onprem and sets Resolved condition",
+			onprem:            newOnPremAIGW(ns, onpremNM, metav1.ConditionTrue),
 			wantCP:            true,
 			wantErr:           false,
 			wantConditionTrue: true,
@@ -124,8 +140,8 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			var objects []client.Object
-			if tc.aigwcp != nil {
-				objects = append(objects, tc.aigwcp)
+			if tc.onprem != nil {
+				objects = append(objects, tc.onprem)
 			}
 			base := fake.NewClientBuilder().
 				WithScheme(scheme).
@@ -144,14 +160,14 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 			r := &Reconciler{Client: cl}
 
 			aigwdp := newAIGWDP()
-			gotCP, err := r.resolveKonnectAIGateway(context.Background(), logger, aigwdp)
+			gotCP, err := r.resolveOnPremAIGateway(context.Background(), logger, aigwdp)
 
 			if tc.wantErr {
 				require.Error(t, err)
-				// Condition is only set for domain errors (not-found / not-programmed), not API errors.
+				// Condition is only set for domain errors (not-found / not-ready), not API errors.
 				if tc.wantReason != "" {
-					cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType))
-					require.NotNil(t, cond, "KonnectAIGatewayResolved condition must be set")
+					cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayResolvedType))
+					require.NotNil(t, cond, "OnPremAIGatewayResolved condition must be set")
 					assert.Equal(t, tc.wantReason, cond.Reason)
 					assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				}
@@ -165,8 +181,8 @@ func Test_resolveKonnectAIGateway(t *testing.T) {
 				assert.Nil(t, gotCP)
 			}
 
-			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType))
-			require.NotNil(t, cond, "KonnectAIGatewayResolved condition must be set")
+			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayResolvedType))
+			require.NotNil(t, cond, "OnPremAIGatewayResolved condition must be set")
 			assert.Equal(t, tc.wantReason, cond.Reason)
 			if tc.wantConditionTrue {
 				assert.Equal(t, metav1.ConditionTrue, cond.Status)

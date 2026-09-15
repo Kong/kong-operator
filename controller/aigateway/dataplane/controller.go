@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
@@ -81,6 +82,10 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 			handler.EnqueueRequestsFromMapFunc(enqueueForKonnectAIGatewayRef(mgr.GetClient())),
 		).
 		Watches(
+			&aigatewayv1alpha1.OnPremAIGateway{},
+			handler.EnqueueRequestsFromMapFunc(enqueueForOnPremAIGatewayRef(mgr.GetClient())),
+		).
+		Watches(
 			&corev1.Secret{},
 			handler.EnqueueRequestsFromMapFunc(enqueueForAIGatewayDataPlaneCertificateSecretRef(mgr.GetClient())),
 		).
@@ -98,65 +103,41 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 		err = errors.Join(err, r.applyStatus(ctx, logger, aigwdp))
 	}()
 
-	// Resolve referenced KonnectAIGateway and set resolution condition.
-	aigatewaycp, err := r.resolveKonnectAIGateway(ctx, logger, aigwdp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
+	// Resolve the referenced control plane and set its resolution condition.
+	// An on-prem control plane (OnPremAIGateway) skips the entire certificate
+	// and Konnect registration path below: the mTLS certificate is the
+	// DataPlane's client identity for the outbound connection to Konnect,
+	// whereas an on-prem control plane pushes configuration to the DataPlane's
+	// ingress Service, so nothing consumes a provisioned certificate. The
+	// resolved OnPremAIGateway is not consumed further yet: no endpoints need
+	// to be wired into the Deployment.
+	onPremControlPlaneRef := aigwdp.Spec.ControlPlaneRef.IsOnPremNamespacedRef()
 
-	// Resolve the mTLS client certificate secret (automatically-provisioned
-	// or a manually-referenced one, per spec.certificateSecret) and set the
-	// certificate condition.
-	certResult, certSecret, err := r.getCertificateSecret(ctx, aigwdp, aigatewaycp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-
-	// Return early if the Secret was just created/updated so the Deployment
-	// picks up the correct Secret name on the next reconcile. No explicit
-	// requeue is needed, the watch on the owned Secret triggers it.
-	if certResult != op.Noop {
-		return ctrl.Result{}, nil
-	}
-
-	// certSecret is nil either because spec.certificateSecret was configured
-	// (Manual and invalid/missing, or configured at all with no
-	// ControlPlaneRef): a condition is already set in both cases, and there's
-	// nothing more to do until the user fixes it; or because nothing was
-	// configured and there's no ControlPlaneRef either (no condition is set,
-	// same as the Konnect conditions below; the Deployment proceeds below
-	// without any cert wiring at all). Only the former should block.
-	if certSecret == nil && aigwdp.Spec.CertificateSecret != nil {
-		return ctrl.Result{}, nil
-	}
-
-	// certChecksum identifies the certificate's content: it names the Konnect
-	// certificate entity (see certEntityName) and, further down, the Pod
-	// template's rollout-trigger annotation. Computed once so both stay in
-	// sync with exactly the Secret content read above. Both are left empty
-	// when no certificate was provisioned at all (see above).
-	var certSecretName, certChecksum string
-	if certSecret != nil {
-		certSecretName = certSecret.Name
-		certChecksum = certificateChecksum(certSecret)
-	}
-
-	// Ensure the AIGatewayDataPlaneCertificate is registered with Konnect.
-	// Return early if not yet programmed; the Owns() watch retriggeres once
-	// the Konnect controller flips Programmed to True.
-	// When no ControlPlaneRef is configured, there's no KonnectAIGateway to
-	// register the certificate against, so Konnect cert automation is skipped.
-	certProgrammed := true
-	if aigatewaycp != nil {
-		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret, certChecksum)
+	var aigatewaycp *konnectv1alpha1.KonnectAIGateway
+	if onPremControlPlaneRef {
+		if _, err := r.resolveOnPremAIGateway(ctx, logger, aigwdp); err != nil {
+			return ctrl.Result{}, err
+		}
+	} else {
+		var err error
+		aigatewaycp, err = r.resolveKonnectAIGateway(ctx, logger, aigwdp)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 	}
-	// If the certificate is not yet programmed on Konnect, return early.
-	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.
-	if !certProgrammed {
-		return ctrl.Result{}, nil
+
+	// certSecretName/certChecksum stay empty for on-prem control plane refs:
+	// no certificate is provisioned or mounted (see above).
+	var certSecretName, certChecksum string
+	if !onPremControlPlaneRef {
+		name, checksum, done, err := r.reconcileCertificate(ctx, logger, aigwdp, aigatewaycp)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if done {
+			return ctrl.Result{}, nil
+		}
+		certSecretName, certChecksum = name, checksum
 	}
 
 	// Reconcile the full AI Gateway Deployment spec.
@@ -164,38 +145,12 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 		return ctrl.Result{}, err
 	}
 
-	// Once the rollout to the current certificate is confirmed complete (no
-	// replica can still be relying on a previous one), it's safe to remove
-	// any other Konnect certificate entities left over from an earlier
-	// rotation. Until then they're deliberately left registered so replicas
-	// still running the old certificate keep a Konnect-trusted identity. The
-	// same rollout-complete gate applies to removing an operator-provisioned
-	// Secret left behind by a switch away from Automatic provisioning. This
-	// must run regardless of aigatewaycp: a controlPlaneRef-less
-	// AIGatewayDataPlane can still have an orphaned operator-provisioned
-	// Secret left behind by an upgrade or a switch to Manual provisioning,
-	// and for it both the Pod annotation and certChecksum are "", so the
-	// rollout-complete gate below already passes trivially.
-	deployment := &appsv1.Deployment{}
-	if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
-		if !apierrors.IsNotFound(err) {
+	// On-prem control plane refs never provision any certificate artifacts
+	// (and controlPlaneRef is immutable, so a DataPlane can never migrate
+	// between control plane kinds), so there's nothing to clean up for them.
+	if !onPremControlPlaneRef {
+		if err := r.cleanupStaleCertificateArtifacts(ctx, logger, aigwdp, aigatewaycp, certChecksum); err != nil {
 			return ctrl.Result{}, err
-		}
-	} else if k8sutils.DeploymentRolloutComplete(deployment) &&
-		deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] == certChecksum {
-		if aigatewaycp != nil {
-			if err := r.cleanupStaleKonnectCertificates(ctx, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
-				return ctrl.Result{}, err
-			}
-		}
-		// No controlPlaneRef at all means no Automatic Secret is ever
-		// provisioned (see getCertificateSecret), so any that still exists is
-		// stale regardless of spec.certificateSecret.
-		cs := aigwdp.Spec.CertificateSecret
-		if aigatewaycp == nil || (cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning) {
-			if err := r.cleanupStaleAutomaticCertificateSecret(ctx, logger, aigwdp); err != nil {
-				return ctrl.Result{}, err
-			}
 		}
 	}
 
@@ -219,6 +174,132 @@ func (r *Reconciler) Reconcile(ctx context.Context, aigwdp *aigatewayv1alpha1.AI
 
 	log.Debug(logger, "reconciliation complete for AIGatewayDataPlane resource")
 	return ctrl.Result{}, nil
+}
+
+// reconcileCertificate reconciles the mTLS client certificate for the
+// DataPlane's outbound connection to Konnect: it resolves the certificate
+// Secret (automatically-provisioned or manually-referenced per
+// spec.certificateSecret) and ensures the AIGatewayDataPlaneCertificate is
+// registered with Konnect.
+//
+// It returns the certificate Secret name and content checksum to wire into
+// the Deployment (both empty when no certificate was provisioned at all).
+// done is true when the reconcile must return early with no error and no
+// explicit requeue: the Secret was just created/updated (the owned Secret
+// watch retriggers), a configured certificateSecret is invalid or missing
+// (a condition is set), or the certificate is not yet Programmed on Konnect
+// (the Owns() watch retriggers once the Konnect controller flips Programmed
+// to True).
+func (r *Reconciler) reconcileCertificate(
+	ctx context.Context,
+	logger logr.Logger,
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+) (certSecretName string, certChecksum string, done bool, err error) {
+	// Resolve the mTLS client certificate secret (automatically-provisioned
+	// or a manually-referenced one, per spec.certificateSecret) and set the
+	// certificate condition.
+	certResult, certSecret, err := r.getCertificateSecret(ctx, aigwdp, aigatewaycp)
+	if err != nil {
+		return "", "", false, err
+	}
+
+	// Return early if the Secret was just created/updated so the Deployment
+	// picks up the correct Secret name on the next reconcile. No explicit
+	// requeue is needed, the watch on the owned Secret triggers it.
+	if certResult != op.Noop {
+		return "", "", true, nil
+	}
+
+	// certSecret is nil either because spec.certificateSecret was configured
+	// (Manual and invalid/missing, or configured at all with no
+	// ControlPlaneRef): a condition is already set in both cases, and there's
+	// nothing more to do until the user fixes it; or because nothing was
+	// configured and there's no ControlPlaneRef either (no condition is set,
+	// same as the Konnect conditions below; the Deployment proceeds below
+	// without any cert wiring at all). Only the former should block.
+	if certSecret == nil && aigwdp.Spec.CertificateSecret != nil {
+		return "", "", true, nil
+	}
+
+	// certChecksum identifies the certificate's content: it names the Konnect
+	// certificate entity (see certEntityName) and the Pod template's
+	// rollout-trigger annotation. Computed once so both stay in sync with
+	// exactly the Secret content read above. Both are left empty when no
+	// certificate was provisioned at all (see above).
+	if certSecret != nil {
+		certSecretName = certSecret.Name
+		certChecksum = certificateChecksum(certSecret)
+	}
+
+	// Ensure the AIGatewayDataPlaneCertificate is registered with Konnect.
+	// Return early if not yet programmed; the Owns() watch retriggeres once
+	// the Konnect controller flips Programmed to True.
+	// When no ControlPlaneRef is configured, there's no KonnectAIGateway to
+	// register the certificate against, so Konnect cert automation is skipped.
+	certProgrammed := true
+	if aigatewaycp != nil {
+		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, aigwdp, aigatewaycp, certSecret, certChecksum)
+		if err != nil {
+			return "", "", false, err
+		}
+	}
+	// If the certificate is not yet programmed on Konnect, return early.
+	// Without this, we would create a deployment that uses a cert secret not yet present in Konnect.
+	if !certProgrammed {
+		return "", "", true, nil
+	}
+
+	return certSecretName, certChecksum, false, nil
+}
+
+// cleanupStaleCertificateArtifacts removes stale certificate artifacts once
+// the rollout to the current certificate is confirmed complete (no replica
+// can still be relying on a previous one): Konnect certificate entities left
+// over from an earlier rotation, and operator-provisioned Secrets left behind
+// by a switch away from Automatic provisioning. Until the rollout completes
+// the old Konnect certificates are deliberately left registered so replicas
+// still running the old certificate keep a Konnect-trusted identity.
+//
+// This must be called regardless of aigatewaycp: a controlPlaneRef-less
+// AIGatewayDataPlane can still have an orphaned operator-provisioned Secret
+// left behind by an upgrade or a switch to Manual provisioning, and for it
+// both the Pod annotation and certChecksum are "", so the rollout-complete
+// gate already passes trivially.
+func (r *Reconciler) cleanupStaleCertificateArtifacts(
+	ctx context.Context,
+	logger logr.Logger,
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	certChecksum string,
+) error {
+	deployment := &appsv1.Deployment{}
+	if err := r.Get(ctx, client.ObjectKey{Namespace: aigwdp.Namespace, Name: aigwdp.Name}, deployment); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return err
+	}
+	if !k8sutils.DeploymentRolloutComplete(deployment) ||
+		deployment.Spec.Template.Annotations[consts.AIGatewayDataPlaneCertificateChecksumAnnotation] != certChecksum {
+		return nil
+	}
+
+	if aigatewaycp != nil {
+		if err := r.cleanupStaleKonnectCertificates(ctx, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
+			return err
+		}
+	}
+	// No controlPlaneRef at all means no Automatic Secret is ever
+	// provisioned (see getCertificateSecret), so any that still exists is
+	// stale regardless of spec.certificateSecret.
+	cs := aigwdp.Spec.CertificateSecret
+	if aigatewaycp == nil || (cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning) {
+		if err := r.cleanupStaleAutomaticCertificateSecret(ctx, logger, aigwdp); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ensureServiceReadyCondition sets the ServiceReady condition and populates

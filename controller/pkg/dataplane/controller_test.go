@@ -42,7 +42,7 @@ func TestReconcile_ControlPlaneNotReady(t *testing.T) {
 	}{
 		{
 			name:       "control plane not found: no error retry, resolution condition set",
-			wantReason: string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+			wantReason: string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
 			name:       "control plane not yet Programmed: no error retry, resolution condition set",

@@ -111,9 +111,9 @@ var testConfig = Config[
 		CertificateProvisionedReason: string(aigatewayv1alpha1.CertificateProvisionedReason),
 
 		ControlPlaneResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 		ControlPlaneResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		ControlPlaneNotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
 		ControlPlaneNotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
 		ControlPlaneNotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
@@ -428,7 +428,7 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: reconcileTestAIGWCPName,
 				},
 			},
