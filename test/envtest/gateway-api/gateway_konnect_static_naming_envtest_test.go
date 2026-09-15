@@ -203,7 +203,7 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 		return cond != nil && cond.Status == metav1.ConditionFalse
 	}, envtestconsts.WaitTime, envtestconsts.TickTime, "the Gateway should report the existing KonnectGatewayControlPlane as not programmed")
 
-	t.Log("asserting the pre-existing Konnect name is never rewritten and no duplicate is created")
+	t.Log("asserting the pre-existing Konnect name is never rewritten")
 	require.Never(t, func() bool {
 		var l konnectv1alpha2.KonnectGatewayControlPlaneList
 		if err := c.List(ctx, &l, client.InNamespace(gwNs.Name)); err != nil {
@@ -220,5 +220,45 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 		}
 		return false
 	}, envtestconsts.WaitTime, envtestconsts.TickTime,
-		"an existing KonnectGatewayControlPlane must be neither renamed nor duplicated")
+		"an existing KonnectGatewayControlPlane must not be renamed")
+
+	// Resources referring to the Control Plane do so by Kubernetes name, which the fix leaves
+	// alone -- so an old-naming Control Plane must keep resolving. The KonnectExtension is the
+	// reference the operator itself creates, and it is only reached once the Control Plane is
+	// Programmed, which has to be faked here because envtest has no Konnect backend.
+	t.Log("marking the existing KonnectGatewayControlPlane as Programmed")
+	require.Eventually(t, func() bool {
+		var got konnectv1alpha2.KonnectGatewayControlPlane
+		if err := c.Get(ctx, client.ObjectKeyFromObject(existing), &got); err != nil {
+			return false
+		}
+		got.SetConditions([]metav1.Condition{
+			{
+				Type:               string(gatewayv1.GatewayConditionProgrammed),
+				Status:             metav1.ConditionTrue,
+				Reason:             string(gatewayv1.GatewayReasonProgrammed),
+				LastTransitionTime: metav1.Now(),
+				ObservedGeneration: got.Generation,
+			},
+		})
+		return c.Status().Update(ctx, &got) == nil
+	}, envtestconsts.WaitTime, envtestconsts.TickTime, "failed marking the KonnectGatewayControlPlane as Programmed")
+
+	t.Log("waiting for the KonnectExtension to reference the Control Plane by its unqualified Kubernetes name")
+	require.Eventually(t, func() bool {
+		var l konnectv1alpha2.KonnectExtensionList
+		if err := c.List(ctx, &l, client.InNamespace(gwNs.Name)); err != nil {
+			return false
+		}
+		if len(l.Items) != 1 {
+			return false
+		}
+		ref := l.Items[0].Spec.Konnect.ControlPlane.Ref
+		if ref.KonnectNamespacedRef == nil {
+			return false
+		}
+		// The Kubernetes name, not the Konnect name: unchanged by the #4079 fix.
+		return ref.KonnectNamespacedRef.Name == gatewayName
+	}, envtestconsts.WaitTime, envtestconsts.TickTime,
+		"the KonnectExtension must reference the existing Control Plane by its Kubernetes name")
 }
