@@ -38,9 +38,7 @@ func PrepareClusterForRunningControllerManager(
 	cluster clusters.Cluster,
 ) error {
 	ns := &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.ControllerNamespace,
-		},
+		Name: consts.ControllerNamespace,
 	}
 	nsClient := cluster.Client().CoreV1().Namespaces()
 	if _, err := nsClient.Create(ctx, ns, metav1.CreateOptions{}); err != nil {

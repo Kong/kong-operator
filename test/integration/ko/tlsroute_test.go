@@ -98,12 +98,10 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(host))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      certSecretName,
-			Labels: map[string]string{
-				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
-			},
+		Namespace: namespace.Name,
+		Name:      certSecretName,
+		Labels: map[string]string{
+			config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -170,11 +168,9 @@ func TestTLSRoutePassthrough(t *testing.T) {
 	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 		{
 			Name: "cert-secret",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secret.Name,
-					DefaultMode: new(int32(0o644)),
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secret.Name,
+				DefaultMode: new(int32(0o644)),
 			},
 		},
 	}
@@ -249,12 +245,10 @@ func TestTLSRouteTerminate(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(host))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      certSecretName,
-			Labels: map[string]string{
-				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
-			},
+		Namespace: namespace.Name,
+		Name:      certSecretName,
+		Labels: map[string]string{
+			config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -382,12 +376,10 @@ func TestTLSRouteHostnameIntersection(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(listenerHostname, probeSNI))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      certSecretName,
-			Labels: map[string]string{
-				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
-			},
+		Namespace: namespace.Name,
+		Name:      certSecretName,
+		Labels: map[string]string{
+			config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{
@@ -435,11 +427,9 @@ func TestTLSRouteHostnameIntersection(t *testing.T) {
 	deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 		{
 			Name: "cert-secret",
-			VolumeSource: corev1.VolumeSource{
-				Secret: &corev1.SecretVolumeSource{
-					SecretName:  secret.Name,
-					DefaultMode: new(int32(0o644)),
-				},
+			Secret: &corev1.SecretVolumeSource{
+				SecretName:  secret.Name,
+				DefaultMode: new(int32(0o644)),
 			},
 		},
 	}

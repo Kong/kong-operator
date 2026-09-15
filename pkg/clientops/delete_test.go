@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -60,10 +59,8 @@ func TestDeleteAll(t *testing.T) {
 	testDeleteAll(t, "1 pod", scheme,
 		[]corev1.Pod{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod1",
-					Namespace: "default",
-				},
+				Name:      "pod1",
+				Namespace: "default",
 			},
 		},
 	)
@@ -71,16 +68,12 @@ func TestDeleteAll(t *testing.T) {
 	testDeleteAll(t, "2 pods", scheme,
 		[]corev1.Pod{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod1",
-					Namespace: "default",
-				},
+				Name:      "pod1",
+				Namespace: "default",
 			},
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "pod2",
-					Namespace: "default",
-				},
+				Name:      "pod2",
+				Namespace: "default",
 			},
 		},
 	)
@@ -139,10 +132,8 @@ func TestDeleteAllFromList(t *testing.T) {
 		&konnectv1alpha2.KonnectGatewayControlPlaneList{
 			Items: []konnectv1alpha2.KonnectGatewayControlPlane{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 				},
 			},
 		},
@@ -152,16 +143,12 @@ func TestDeleteAllFromList(t *testing.T) {
 		&konnectv1alpha2.KonnectGatewayControlPlaneList{
 			Items: []konnectv1alpha2.KonnectGatewayControlPlane{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-1",
-						Namespace: "default",
-					},
+					Name:      "cp-1",
+					Namespace: "default",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cp-2",
-						Namespace: "default",
-					},
+					Name:      "cp-2",
+					Namespace: "default",
 				},
 			},
 		},

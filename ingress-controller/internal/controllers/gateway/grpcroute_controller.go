@@ -12,7 +12,6 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -38,15 +37,11 @@ import (
 type GRPCRouteReconciler struct {
 	client.Client
 
-	Log             logr.Logger
-	Scheme          *runtime.Scheme
-	DataplaneClient controllers.DataPlane
-	StatusQueue     *status.Queue
-	// If EnableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	EnableReferenceGrant bool
-	CacheSyncTimeout     time.Duration
+	Log              logr.Logger
+	Scheme           *runtime.Scheme
+	DataplaneClient  controllers.DataPlane
+	StatusQueue      *status.Queue
+	CacheSyncTimeout time.Duration
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -182,10 +177,8 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGatewayClass(ctx context.Context,
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: grpcroute.Namespace,
-							Name:      grpcroute.Name,
-						},
+						Namespace: grpcroute.Namespace,
+						Name:      grpcroute.Name,
 					})
 				}
 			}
@@ -244,10 +237,8 @@ func (r *GRPCRouteReconciler) listGRPCRoutesForGateway(ctx context.Context, obj 
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: grpcroute.Namespace,
-						Name:      grpcroute.Name,
-					},
+					Namespace: grpcroute.Namespace,
+					Name:      grpcroute.Name,
 				})
 			}
 		}

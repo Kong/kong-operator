@@ -35,10 +35,8 @@ type handleCertRefTestCase[T constraints.SupportedKonnectEntityType, TEnt constr
 }
 
 var testKongCertOK = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-ok",
-		Namespace: "default",
-	},
+	Name:      "cert-ok",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongCertificateSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -53,9 +51,7 @@ var testKongCertOK = &configurationv1alpha1.KongCertificate{
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -68,10 +64,8 @@ var testKongCertOK = &configurationv1alpha1.KongCertificate{
 }
 
 var testKongCertNotProgrammed = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-not-programmed",
-		Namespace: "default",
-	},
+	Name:      "cert-not-programmed",
+	Namespace: "default",
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Conditions: []metav1.Condition{
 			{
@@ -83,10 +77,8 @@ var testKongCertNotProgrammed = &configurationv1alpha1.KongCertificate{
 }
 
 var testKongCertNoControlPlaneRef = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-no-cp-ref",
-		Namespace: "default",
-	},
+	Name:      "cert-no-cp-ref",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongCertificateSpec{
 		KongCertificateAPISpec: configurationv1alpha1.KongCertificateAPISpec{
 			Cert: "===== BEGIN CERTIFICATE",
@@ -104,10 +96,8 @@ var testKongCertNoControlPlaneRef = &configurationv1alpha1.KongCertificate{
 }
 
 var testKongCertOKInOtherNS = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-xns-ok",
-		Namespace: "other-namespace",
-	},
+	Name:      "cert-xns-ok",
+	Namespace: "other-namespace",
 	Spec: configurationv1alpha1.KongCertificateSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -122,9 +112,7 @@ var testKongCertOKInOtherNS = &configurationv1alpha1.KongCertificate{
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "99999",
-			},
+			ID:             "99999",
 			ControlPlaneID: "987654321",
 		},
 		Conditions: []metav1.Condition{
@@ -137,10 +125,8 @@ var testKongCertOKInOtherNS = &configurationv1alpha1.KongCertificate{
 }
 
 var testControlPlaneOKInOtherNS = &konnectv1alpha2.KonnectGatewayControlPlane{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cp-other",
-		Namespace: "other-namespace",
-	},
+	Name:      "cp-other",
+	Namespace: "other-namespace",
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID: "987654321",
@@ -155,19 +141,15 @@ var testControlPlaneOKInOtherNS = &konnectv1alpha2.KonnectGatewayControlPlane{
 }
 
 var testKongCertBeingDeleted = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:              "cert-being-deleted",
-		Namespace:         "default",
-		DeletionTimestamp: &metav1.Time{Time: time.Now()},
-		Finalizers:        []string{"sni-0"},
-	},
+	Name:              "cert-being-deleted",
+	Namespace:         "default",
+	DeletionTimestamp: &metav1.Time{Time: time.Now()},
+	Finalizers:        []string{"sni-0"},
 }
 
 var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-cpref-not-found",
-		Namespace: "default",
-	},
+	Name:      "cert-cpref-not-found",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongCertificateSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -178,9 +160,7 @@ var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCert
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -193,10 +173,8 @@ var testKongCertificateControlPlaneRefNotFound = &configurationv1alpha1.KongCert
 }
 
 var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertificate{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cert-cpref-not-programmed",
-		Namespace: "default",
-	},
+	Name:      "cert-cpref-not-programmed",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongCertificateSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -207,9 +185,7 @@ var testKongCertControlPlaneRefNotProgrammed = &configurationv1alpha1.KongCertif
 	},
 	Status: configurationv1alpha1.KongCertificateStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -226,10 +202,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "has certificate ref and control plane ref",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-ok",
-					Namespace: "default",
-				},
+				Name:      "sni-ok",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-ok",
@@ -263,10 +237,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "certificate ref not found",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cert-ref-not-found",
-					Namespace: "default",
-				},
+				Name:      "cert-ref-not-found",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-nonexist",
@@ -286,10 +258,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "referenced KongCertificate not programmed",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-cert-ref-not-programmed",
-					Namespace: "default",
-				},
+				Name:      "sni-cert-ref-not-programmed",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-not-programmed",
@@ -314,10 +284,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "referenced KongCertificate has no ControlPlaneRef",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-cert-no-cpref",
-					Namespace: "default",
-				},
+				Name:      "sni-cert-no-cpref",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-no-cp-ref",
@@ -341,10 +309,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "referenced KongCertificate is being deleted",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-cert-being-deleted",
-					Namespace: "default",
-				},
+				Name:      "sni-cert-being-deleted",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-being-deleted",
@@ -360,10 +326,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "ControlPlaneRef not found",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "sni-cp-ref-not-found",
-				},
+				Namespace: "default",
+				Name:      "sni-cp-ref-not-found",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-cpref-not-found",
@@ -381,14 +345,10 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "cross-namespace certificate ref with no KongReferenceGrant",
 			ent: &configurationv1alpha1.KongSNI{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "configuration.konghq.com/v1alpha1",
-					Kind:       "KongSNI",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-xns-no-grant",
-					Namespace: "default",
-				},
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Kind:       "KongSNI",
+				Name:       "sni-xns-no-grant",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name:      "cert-xns-ok",
@@ -412,14 +372,10 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "cross-namespace certificate ref with KongReferenceGrant",
 			ent: &configurationv1alpha1.KongSNI{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "configuration.konghq.com/v1alpha1",
-					Kind:       "KongSNI",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "sni-xns-with-grant",
-					Namespace: "default",
-				},
+				APIVersion: "configuration.konghq.com/v1alpha1",
+				Kind:       "KongSNI",
+				Name:       "sni-xns-with-grant",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name:      "cert-xns-ok",
@@ -431,10 +387,8 @@ func TestHandleCertificateRef(t *testing.T) {
 				testKongCertOKInOtherNS,
 				testControlPlaneOKInOtherNS,
 				&configurationv1alpha1.KongReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "sni-to-cert",
-						Namespace: "other-namespace",
-					},
+					Name:      "sni-to-cert",
+					Namespace: "other-namespace",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -477,10 +431,8 @@ func TestHandleCertificateRef(t *testing.T) {
 		{
 			name: "ControlPlaneRef not programmed",
 			ent: &configurationv1alpha1.KongSNI{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-					Name:      "sni-cp-ref-not-programmed",
-				},
+				Namespace: "default",
+				Name:      "sni-cp-ref-not-programmed",
 				Spec: configurationv1alpha1.KongSNISpec{
 					CertificateRef: commonv1alpha1.NamespacedRef{
 						Name: "cert-cpref-not-programmed",
@@ -558,7 +510,7 @@ func TestHandleCertificateRefKongService(t *testing.T) {
 		{
 			name: "same-NS cert ref, cert found",
 			ent: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+				Name: "svc", Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ok"},
@@ -587,7 +539,7 @@ func TestHandleCertificateRefKongService(t *testing.T) {
 		{
 			name: "cert not found",
 			ent: &configurationv1alpha1.KongService{
-				ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+				Name: "svc", Namespace: "default",
 				Spec: configurationv1alpha1.KongServiceSpec{
 					KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-nonexist"},
@@ -618,10 +570,8 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 	s := scheme.Get()
 
 	certInOtherNS := &configurationv1alpha1.KongCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cert-ok",
-			Namespace: "other-ns",
-		},
+		Name:      "cert-ok",
+		Namespace: "other-ns",
 		Spec: configurationv1alpha1.KongCertificateSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -636,9 +586,7 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 		},
 		Status: configurationv1alpha1.KongCertificateStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-					ID: "cross-ns-cert-id",
-				},
+				ID:             "cross-ns-cert-id",
 				ControlPlaneID: "123456789",
 			},
 			Conditions: []metav1.Condition{
@@ -652,7 +600,7 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 
 	svcEntity := func() *configurationv1alpha1.KongService {
 		return &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"},
+			Name: "svc", Namespace: "default",
 			Spec: configurationv1alpha1.KongServiceSpec{
 				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 					ClientCertificateRef: &commonv1alpha1.NamespacedRef{
@@ -670,10 +618,8 @@ func TestHandleCertificateRefKongServiceCrossNS(t *testing.T) {
 	}
 
 	grant := &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "svc-to-cert",
-			Namespace: "other-ns",
-		},
+		Name:      "svc-to-cert",
+		Namespace: "other-ns",
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{
@@ -751,7 +697,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "same-NS cert ref, cert found",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-ok"},
@@ -779,7 +725,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "cert not found",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-nonexist"},
@@ -803,7 +749,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "cert ref nil — no conditions set",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 						Type:                 configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -824,7 +770,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "referenced KongCertificate not programmed",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-not-programmed"},
@@ -849,7 +795,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "referenced KongCertificate is being deleted",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-being-deleted"},
@@ -874,7 +820,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "referenced KongCertificate has no ControlPlaneRef",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+				Name: "upstream", Namespace: "default",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-no-cp-ref"},
@@ -900,7 +846,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "ControlPlaneRef not found",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "upstream-cp-not-found"},
+				Namespace: "default", Name: "upstream-cp-not-found",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-cpref-not-found"},
@@ -919,7 +865,7 @@ func TestHandleCertificateRefKongUpstream(t *testing.T) {
 		{
 			name: "ControlPlaneRef not programmed",
 			ent: &configurationv1alpha1.KongUpstream{
-				ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "upstream-cp-not-programmed"},
+				Namespace: "default", Name: "upstream-cp-not-programmed",
 				Spec: configurationv1alpha1.KongUpstreamSpec{
 					KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 						ClientCertificateRef: &commonv1alpha1.NamespacedRef{Name: "cert-cpref-not-programmed"},
@@ -954,10 +900,8 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 	s := scheme.Get()
 
 	certInOtherNS := &configurationv1alpha1.KongCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "cert-ok",
-			Namespace: "other-ns",
-		},
+		Name:      "cert-ok",
+		Namespace: "other-ns",
 		Spec: configurationv1alpha1.KongCertificateSpec{
 			ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 				Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -972,9 +916,7 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 		},
 		Status: configurationv1alpha1.KongCertificateStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-					ID: "cross-ns-cert-id",
-				},
+				ID:             "cross-ns-cert-id",
 				ControlPlaneID: "123456789",
 			},
 			Conditions: []metav1.Condition{
@@ -988,7 +930,7 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 
 	upstreamEntity := func() *configurationv1alpha1.KongUpstream {
 		return &configurationv1alpha1.KongUpstream{
-			ObjectMeta: metav1.ObjectMeta{Name: "upstream", Namespace: "default"},
+			Name: "upstream", Namespace: "default",
 			Spec: configurationv1alpha1.KongUpstreamSpec{
 				KongUpstreamAPISpec: configurationv1alpha1.KongUpstreamAPISpec{
 					ClientCertificateRef: &commonv1alpha1.NamespacedRef{
@@ -1005,10 +947,8 @@ func TestHandleCertificateRefKongUpstreamCrossNS(t *testing.T) {
 	}
 
 	grant := &configurationv1alpha1.KongReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "upstream-to-cert",
-			Namespace: "other-ns",
-		},
+		Name:      "upstream-to-cert",
+		Namespace: "other-ns",
 		Spec: configurationv1alpha1.KongReferenceGrantSpec{
 			From: []configurationv1alpha1.ReferenceGrantFrom{
 				{

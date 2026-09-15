@@ -3,7 +3,6 @@ package envtest
 import (
 	"context"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
@@ -15,7 +14,6 @@ import (
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
-	"github.com/kong/kong-operator/v2/ingress-controller/test"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/helpers/conditions"
@@ -40,7 +38,11 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 		WithPublishService(ns.Name),
 		WithKongServiceFacadeFeatureEnabled(),
 	)
-	WaitForManagerStart(t, logs)
+	// Wait for the controllers owning the asserted types, and for the two that feed the
+	// store for the KongServiceFacade cases, to actually be running before asserting.
+	WaitForControllersStart(t, logs,
+		"KongConsumer", "KongConsumerGroup", "KongServiceFacade", "Ingress.netv1", "Service",
+	)
 
 	testCases := []struct {
 		name                        string
@@ -53,12 +55,10 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			name: "valid KongConsumer",
 			objects: []client.Object{
 				&configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "consumer",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Username: "username",
 				},
@@ -81,12 +81,10 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			name: "KongConsumer referencing non-existent secret",
 			objects: []client.Object{
 				&configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-with-secret",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "consumer-with-secret",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Username:    "username",
 					Credentials: []string{"non-existent-secret"},
@@ -110,12 +108,10 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			name: "valid KongConsumerGroup",
 			objects: []client.Object{
 				&configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "consumer-group",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "consumer-group",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 				},
 			},
@@ -137,12 +133,10 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			name: "valid KongServiceFacade with Ingress",
 			objects: []client.Object{
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-facade",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "svc-facade",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -152,10 +146,8 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					},
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc",
-						Namespace: ns.Name,
-					},
+					Name:      "svc",
+					Namespace: ns.Name,
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
 							{
@@ -165,27 +157,23 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					},
 				},
 				&netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ingress",
-						Namespace: ns.Name,
-					},
+					Name:      "ingress",
+					Namespace: ns.Name,
 					Spec: netv1.IngressSpec{
 						IngressClassName: new(annotations.DefaultIngressClass),
 						Rules: []netv1.IngressRule{{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{{
-										Path:     "/",
-										PathType: new(netv1.PathTypeImplementationSpecific),
-										Backend: netv1.IngressBackend{
-											Resource: &corev1.TypedLocalObjectReference{
-												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-												Name:     "svc-facade",
-											},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path:     "/",
+									PathType: new(netv1.PathTypeImplementationSpecific),
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+											Name:     "svc-facade",
 										},
-									}},
-								},
+									},
+								}},
 							},
 						}},
 					},
@@ -209,12 +197,10 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 			name: "KongServiceFacade with Ingress referring to non-existent Service",
 			objects: []client.Object{
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-facade-with-non-existent-service",
-						Namespace: ns.Name,
-						Annotations: map[string]string{
-							annotations.IngressClassKey: annotations.DefaultIngressClass,
-						},
+					Name:      "svc-facade-with-non-existent-service",
+					Namespace: ns.Name,
+					Annotations: map[string]string{
+						annotations.IngressClassKey: annotations.DefaultIngressClass,
 					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -224,27 +210,23 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					},
 				},
 				&netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ingress",
-						Namespace: ns.Name,
-					},
+					Name:      "ingress",
+					Namespace: ns.Name,
 					Spec: netv1.IngressSpec{
 						IngressClassName: new(annotations.DefaultIngressClass),
 						Rules: []netv1.IngressRule{{
-							IngressRuleValue: netv1.IngressRuleValue{
-								HTTP: &netv1.HTTPIngressRuleValue{
-									Paths: []netv1.HTTPIngressPath{{
-										Path:     "/",
-										PathType: new(netv1.PathTypeImplementationSpecific),
-										Backend: netv1.IngressBackend{
-											Resource: &corev1.TypedLocalObjectReference{
-												APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-												Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-												Name:     "svc-facade-with-non-existent-service",
-											},
+							HTTP: &netv1.HTTPIngressRuleValue{
+								Paths: []netv1.HTTPIngressPath{{
+									Path:     "/",
+									PathType: new(netv1.PathTypeImplementationSpecific),
+									Backend: netv1.IngressBackend{
+										Resource: &corev1.TypedLocalObjectReference{
+											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
+											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+											Name:     "svc-facade-with-non-existent-service",
 										},
-									}},
-								},
+									},
+								}},
 							},
 						}},
 					},
@@ -455,7 +437,7 @@ func TestKongCRDs_ProgrammedCondition(t *testing.T) {
 					return false
 				}
 				return true
-			}, test.RequestTimeout, 50*time.Millisecond)
+			}, waitTime, tickTime)
 		})
 	}
 }

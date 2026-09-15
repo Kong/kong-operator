@@ -2,13 +2,9 @@ package utils
 
 import (
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
@@ -75,37 +71,4 @@ func IsIngressClassEmpty(obj client.Object) bool {
 		}
 		return true
 	}
-}
-
-// CRDExists returns false if CRD does not exist.
-func CRDExists(restMapper meta.RESTMapper, gvr schema.GroupVersionResource) bool {
-	if _, err := restMapper.KindsFor(gvr); err == nil {
-		return true
-	} else if meta.IsNoMatchError(err) {
-		// The RESTMapper may have stale cached discovery data. Reset() forces it to
-		// re-discover resources, allowing it to find CRDs installed after initialization.
-		// meta.RESTMapper doesn't include Reset(), but some implementations (e.g. DynamicRESTMapper) do.
-		if resettable, ok := restMapper.(interface{ Reset() }); ok {
-			resettable.Reset()
-			_, err = restMapper.KindsFor(gvr)
-			return err == nil
-		}
-	}
-	return false
-}
-
-// DetectReferenceGrantVersion returns the GroupVersion of whichever ReferenceGrant
-// API version is served by the cluster, preferring v1 and falling back to v1beta1
-// (ReferenceGrant was promoted from v1beta1 to v1 in gateway-api v1.5.0; older
-// clusters only serve v1beta1). ok is false if neither is installed.
-func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (gv schema.GroupVersion, ok bool) {
-	v1GV := schema.GroupVersion(gatewayv1.GroupVersion)
-	if CRDExists(restMapper, v1GV.WithResource("referencegrants")) {
-		return v1GV, true
-	}
-	v1beta1GV := schema.GroupVersion(gatewayv1beta1.GroupVersion)
-	if CRDExists(restMapper, v1beta1GV.WithResource("referencegrants")) {
-		return v1beta1GV, true
-	}
-	return schema.GroupVersion{}, false
 }

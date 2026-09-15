@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/kong/go-database-reconciler/pkg/file"
-	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -19,26 +18,18 @@ func TestConsumerCmp(t *testing.T) {
 			name: "sort by username",
 			input: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("b"),
-					},
+					Username: new("b"),
 				},
 				{
-					Consumer: kong.Consumer{
-						Username: new("a"),
-					},
+					Username: new("a"),
 				},
 			},
 			expected: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("a"),
-					},
+					Username: new("a"),
 				},
 				{
-					Consumer: kong.Consumer{
-						Username: new("b"),
-					},
+					Username: new("b"),
 				},
 			},
 		},
@@ -46,26 +37,18 @@ func TestConsumerCmp(t *testing.T) {
 			name: "sort by custom_id",
 			input: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						CustomID: new("b"),
-					},
+					CustomID: new("b"),
 				},
 				{
-					Consumer: kong.Consumer{
-						CustomID: new("a"),
-					},
+					CustomID: new("a"),
 				},
 			},
 			expected: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						CustomID: new("a"),
-					},
+					CustomID: new("a"),
 				},
 				{
-					Consumer: kong.Consumer{
-						CustomID: new("b"),
-					},
+					CustomID: new("b"),
 				},
 			},
 		},
@@ -73,30 +56,22 @@ func TestConsumerCmp(t *testing.T) {
 			name: "sort by username and custom_id",
 			input: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("b"),
-						CustomID: new("b"),
-					},
+					Username: new("b"),
+					CustomID: new("b"),
 				},
 				{
-					Consumer: kong.Consumer{
-						Username: new("a"),
-						CustomID: new("a"),
-					},
+					Username: new("a"),
+					CustomID: new("a"),
 				},
 			},
 			expected: []file.FConsumer{
 				{
-					Consumer: kong.Consumer{
-						Username: new("a"),
-						CustomID: new("a"),
-					},
+					Username: new("a"),
+					CustomID: new("a"),
 				},
 				{
-					Consumer: kong.Consumer{
-						Username: new("b"),
-						CustomID: new("b"),
-					},
+					Username: new("b"),
+					CustomID: new("b"),
 				},
 			},
 		},

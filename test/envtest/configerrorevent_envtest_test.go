@@ -18,7 +18,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -58,12 +57,10 @@ func TestConfigErrorEventGenerationInMemoryMode(t *testing.T) {
 
 	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
 	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "echo-drain-policy",
-			Namespace: ns.Name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClassName,
-			},
+		Name:      "echo-drain-policy",
+		Namespace: ns.Name,
+		Annotations: map[string]string{
+			annotations.IngressClassKey: ingressClassName,
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: new("sticky-sessions"),
@@ -183,13 +180,11 @@ func TestConfigErrorEventGenerationDBMode(t *testing.T) {
 
 	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", ns.Name)
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "donenbai",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClassName,
-				// Referencing non-existent KongPlugin.
-				"konghq.com/plugins": "foo, n1:p1",
-			},
+		Name: "donenbai",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: ingressClassName,
+			// Referencing non-existent KongPlugin.
+			"konghq.com/plugins": "foo, n1:p1",
 		},
 		Username: "donenbai",
 	}
@@ -257,12 +252,10 @@ func TestStickySessionsNotSupportedEventGeneration(t *testing.T) {
 
 	t.Log("creating a KongUpstreamPolicy with sticky sessions configuration")
 	upstreamPolicy := &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "echo-drain-policy",
-			Namespace: ns.Name,
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClassName,
-			},
+		Name:      "echo-drain-policy",
+		Namespace: ns.Name,
+		Annotations: map[string]string{
+			annotations.IngressClassKey: ingressClassName,
 		},
 		Spec: configurationv1beta1.KongUpstreamPolicySpec{
 			Algorithm: new("sticky-sessions"),

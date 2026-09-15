@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 )
@@ -19,10 +18,8 @@ func TestFromK8sObject(t *testing.T) {
 		{
 			name: "empty annotations",
 			in: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "name",
-					Namespace: "namespace",
-				},
+				Name:      "name",
+				Namespace: "namespace",
 			},
 			want: K8sObjectInfo{
 				Name:      "name",
@@ -32,11 +29,9 @@ func TestFromK8sObject(t *testing.T) {
 		{
 			name: "has annotations",
 			in: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "namespace",
-					Annotations: map[string]string{"a": "1", "b": "2"},
-				},
+				Name:        "name",
+				Namespace:   "namespace",
+				Annotations: map[string]string{"a": "1", "b": "2"},
 			},
 			want: K8sObjectInfo{
 				Name:        "name",
@@ -47,15 +42,11 @@ func TestFromK8sObject(t *testing.T) {
 		{
 			name: "with group version kind",
 			in: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "namespace",
-					Annotations: map[string]string{"a": "1", "b": "2"},
-				},
-				TypeMeta: metav1.TypeMeta{
-					Kind:       "Ingress",
-					APIVersion: "networking.k8s.io/v1",
-				},
+				Name:        "name",
+				Namespace:   "namespace",
+				Annotations: map[string]string{"a": "1", "b": "2"},
+				Kind:        "Ingress",
+				APIVersion:  "networking.k8s.io/v1",
 			},
 			want: K8sObjectInfo{
 				Name:        "name",
@@ -78,15 +69,11 @@ func TestFromK8sObject(t *testing.T) {
 
 func BenchmarkFromK8sObject(b *testing.B) {
 	in := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:        "name",
-			Namespace:   "namespace",
-			Annotations: map[string]string{"a": "1", "b": "2"},
-		},
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Ingress",
-			APIVersion: "networking.k8s.io/v1",
-		},
+		Name:        "name",
+		Namespace:   "namespace",
+		Annotations: map[string]string{"a": "1", "b": "2"},
+		Kind:        "Ingress",
+		APIVersion:  "networking.k8s.io/v1",
 	}
 
 	for b.Loop() {
@@ -104,11 +91,9 @@ func TestFromK8sObjectReturnsADeepCopy(t *testing.T) {
 		{
 			name: "change annotation value",
 			obj: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "namespace",
-					Annotations: map[string]string{"a": "1", "b": "2"},
-				},
+				Name:        "name",
+				Namespace:   "namespace",
+				Annotations: map[string]string{"a": "1", "b": "2"},
 			},
 			updateFunc: func(info *K8sObjectInfo) {
 				info.Annotations["a"] = "3"
@@ -117,11 +102,9 @@ func TestFromK8sObjectReturnsADeepCopy(t *testing.T) {
 		{
 			name: "add new annotation",
 			obj: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "namespace",
-					Annotations: map[string]string{"a": "1", "b": "2"},
-				},
+				Name:        "name",
+				Namespace:   "namespace",
+				Annotations: map[string]string{"a": "1", "b": "2"},
 			},
 			updateFunc: func(info *K8sObjectInfo) {
 				info.Annotations["c"] = "3"
@@ -130,11 +113,9 @@ func TestFromK8sObjectReturnsADeepCopy(t *testing.T) {
 		{
 			name: "set annotations to nil",
 			obj: &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "name",
-					Namespace:   "namespace",
-					Annotations: map[string]string{"a": "1", "b": "2"},
-				},
+				Name:        "name",
+				Namespace:   "namespace",
+				Annotations: map[string]string{"a": "1", "b": "2"},
 			},
 			updateFunc: func(info *K8sObjectInfo) {
 				info.Annotations = nil

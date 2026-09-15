@@ -8,7 +8,6 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/assert"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -28,9 +27,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 		podKind            = gatewayapi.Kind("Pod")
 		gatewayClassName   = gatewayapi.ObjectName("kong")
 		gatewayClass       = &gatewayapi.GatewayClass{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: string(gatewayClassName),
-			},
+			Name: string(gatewayClassName),
 			Spec: gatewayapi.GatewayClassSpec{
 				ControllerName: gatewaycontroller.GetControllerName(),
 			},
@@ -49,18 +46,14 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "route with no parentRef is accepted with no validations",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 			}, // no parentRefs
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -82,10 +75,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "route with parentRef to non-gateway object is accepted with no validation",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -101,10 +92,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -126,10 +115,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "parentRefs which omit the namespace pass validation in the same namespace",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -141,10 +128,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -166,12 +151,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "valid HTTPRoute with multiple plugins of the same type attached - passes validation",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-					Annotations: map[string]string{
-						"konghq.com/plugins": "plugin1,plugin2,plugin3",
-					},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
+				Annotations: map[string]string{
+					"konghq.com/plugins": "plugin1,plugin2,plugin3",
 				},
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -184,10 +167,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -204,24 +185,18 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "bar",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin3",
-						Namespace: "default",
-					},
+					Name:       "plugin3",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 			},
@@ -230,12 +205,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "valid HTTPRoute with multiple plugins of different types and one no-existing attached - passes validation",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-					Annotations: map[string]string{
-						"konghq.com/plugins": "plugin1,plugin2,plugin3",
-					},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
+				Annotations: map[string]string{
+					"konghq.com/plugins": "plugin1,plugin2,plugin3",
 				},
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -248,10 +221,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -268,17 +239,13 @@ func TestValidateHTTPRoute(t *testing.T) {
 					},
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin1",
-						Namespace: "default",
-					},
+					Name:       "plugin1",
+					Namespace:  "default",
 					PluginName: "foo",
 				},
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "plugin2",
-						Namespace: "default",
-					},
+					Name:       "plugin2",
+					Namespace:  "default",
 					PluginName: "bar",
 				},
 			},
@@ -287,10 +254,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "if an HTTPRoute is using queryparams matching it fails validation due to only supporting expression router",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -305,11 +270,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 							}},
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Namespace: &defaultGWNamespace,
-								},
-							},
+							Namespace: &defaultGWNamespace,
 						}},
 					}},
 				},
@@ -317,10 +278,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -343,10 +302,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we don't support any group except core kubernetes for backendRefs",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -362,14 +319,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Group:     &exampleGroup,
-										Kind:      &podKind,
-										Namespace: &defaultGWNamespace,
-										Name:      "service1",
-									},
-								},
+								Group:     &exampleGroup,
+								Kind:      &podKind,
+								Namespace: &defaultGWNamespace,
+								Name:      "service1",
 							},
 						},
 					}},
@@ -378,10 +331,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -404,10 +355,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we don't support any core kind except Service for backendRefs",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -423,13 +372,9 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Kind:      &podKind,
-										Namespace: &defaultGWNamespace,
-										Name:      "service1",
-									},
-								},
+								Kind:      &podKind,
+								Namespace: &defaultGWNamespace,
+								Name:      "service1",
 							},
 						},
 					}},
@@ -438,10 +383,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -464,10 +407,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we do not support RequestMirror filter",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -483,11 +424,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Filters: []gatewayapi.HTTPRouteFilter{
@@ -501,10 +438,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -527,10 +462,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we do not support CORS filter",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -546,11 +479,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Filters: []gatewayapi.HTTPRouteFilter{
@@ -564,10 +493,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -590,10 +517,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we only support setting the timeout to the same value",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -609,11 +534,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
@@ -628,11 +549,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
@@ -644,10 +561,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{{
 							Name:     "http",
@@ -668,10 +583,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "supports setting the timeout to different values",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -687,11 +600,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
@@ -706,11 +615,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 							},
 						},
 						Timeouts: &gatewayapi.HTTPRouteTimeouts{
@@ -722,10 +627,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -747,10 +650,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "we do not support filters in backendRefs",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -766,11 +667,7 @@ func TestValidateHTTPRoute(t *testing.T) {
 						}},
 						BackendRefs: []gatewayapi.HTTPBackendRef{
 							{
-								BackendRef: gatewayapi.BackendRef{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "service1",
-									},
-								},
+								Name: "service1",
 								Filters: []gatewayapi.HTTPRouteFilter{
 									{
 										Type: gatewayapi.HTTPRouteFilterRequestHeaderModifier,
@@ -784,10 +681,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -810,12 +705,10 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "invalid protocols",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
-					},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.ProtocolsKey: "ohno",
 				},
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
@@ -829,10 +722,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -855,10 +746,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "HTTPRoute URLRewrite ReplaceFullPath",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -885,10 +774,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -910,10 +797,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "HTTPRoute URLRewrite Hostname",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -937,10 +822,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -962,10 +845,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			msg: "HTTPRoute URLRewrite ReplacePrefixMatch",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "testing-httproute",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "testing-httproute",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{
@@ -992,10 +873,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "testing-gateway",
-					},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "testing-gateway",
 					Spec: gatewayapi.GatewaySpec{
 						GatewayClassName: gatewayClassName,
 						Listeners: []gatewayapi.Listener{{
@@ -1019,18 +898,14 @@ func TestValidateHTTPRoute(t *testing.T) {
 			cachedObjects: []client.Object{
 				gatewayClass,
 				&gatewayapi.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: corev1.NamespaceDefault,
-						Name:      "existing-managed-gateway",
-					},
-					Spec: gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
+					Namespace: corev1.NamespaceDefault,
+					Name:      "existing-managed-gateway",
+					Spec:      gatewayapi.GatewaySpec{GatewayClassName: gatewayClassName},
 				},
 			},
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: corev1.NamespaceDefault,
-					Name:      "example-route",
-				},
+				Namespace: corev1.NamespaceDefault,
+				Name:      "example-route",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{
@@ -1090,10 +965,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "valid path regex",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -1110,10 +983,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "valid header regex",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -1131,10 +1002,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "invalid path regex with unclosed bracket",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -1152,10 +1021,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "invalid header regex with unclosed bracket",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -1174,10 +1041,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "exact path match type is not validated as regex",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{
@@ -1194,10 +1059,8 @@ func TestValidateHTTPRouteRegexes(t *testing.T) {
 		{
 			name: "exact header match type is not validated as regex",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-route",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{{
 						Matches: []gatewayapi.HTTPRouteMatch{{

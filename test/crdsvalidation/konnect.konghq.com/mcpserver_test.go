@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -17,10 +15,8 @@ const validUUID = "12345678-1234-1234-1234-123456789abc"
 
 func validMCPServer(ns string) *konnectv1alpha1.MCPServer {
 	return &konnectv1alpha1.MCPServer{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "MCPServer",
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-		},
+		Kind:       "MCPServer",
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: konnectv1alpha1.MCPServerSpec{
 			ControlPlaneRef: commonv1alpha1.ControlPlaneRef{

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -21,13 +20,11 @@ import (
 
 func baseTLSSecret(namespace string) *corev1.Secret {
 	return &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "secret-for-test",
-			Namespace:    namespace,
-			Labels:       map[string]string{},
-			Annotations:  map[string]string{},
-		},
-		Type: corev1.SecretTypeTLS,
+		GenerateName: "secret-for-test",
+		Namespace:    namespace,
+		Labels:       map[string]string{},
+		Annotations:  map[string]string{},
+		Type:         corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			"tls.crt": []byte("not-important-for-this-test"),
 			"tls.key": []byte("not-important-for-this-test"),

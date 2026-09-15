@@ -19,32 +19,36 @@ package dataplane
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
-// enqueueForKonnectAIGatewayRef returns a MapFunc that enqueues reconcile requests
-// for all AIGatewayDataPlanes in the same namespace whose
-// spec.controlPlaneRef.konnectNamespacedRef.name matches the changed KonnectAIGateway.
-func enqueueForKonnectAIGatewayRef(cl client.Client) handler.MapFunc {
+// enqueueForAIGatewayDataPlaneCertificateSecretRef returns a MapFunc that
+// enqueues reconcile requests for all AIGatewayDataPlanes in the same
+// namespace as the changed Secret whose spec.certificateSecret.secretRef
+// resolves to it. Operator-owned (automatically-provisioned) certificate
+// Secrets are already covered by the controller's Owns(&corev1.Secret{});
+// this watch exists solely so edits to a manually-referenced, user-owned
+// Secret also trigger a reconcile.
+func enqueueForAIGatewayDataPlaneCertificateSecretRef(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		aigwcp, ok := obj.(*konnectv1alpha1.KonnectAIGateway)
+		secret, ok := obj.(*corev1.Secret)
 		if !ok {
 			return nil
 		}
 
 		aigwdpList := &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 		if err := cl.List(ctx, aigwdpList,
-			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway: aigwcp.Namespace + "/" + aigwcp.Name},
+			client.MatchingFields{index.IndexFieldAIGatewayDataPlaneOnCertificateSecret: secret.Namespace + "/" + secret.Name},
 		); err != nil {
-			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for KonnectAIGateway",
-				"KonnectAIGateway", aigwcp.Name)
+			ctrl.LoggerFrom(ctx).Error(err, "failed to list AIGatewayDataPlanes for certificate Secret",
+				"Secret", secret.Name)
 			return nil
 		}
 

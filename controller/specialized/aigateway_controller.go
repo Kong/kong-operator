@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -18,7 +19,6 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/watch"
 	operatorerrors "github.com/kong/kong-operator/v2/internal/errors"
-	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -35,6 +35,10 @@ type AIGatewayReconciler struct {
 
 	ControllerOptions controller.Options
 	LoggingMode       logging.Mode
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -51,7 +55,7 @@ func (r *AIGatewayReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Man
 			builder.WithPredicates(predicate.NewPredicateFuncs(watch.GatewayClassMatchesController)),
 		).
 		Watches(
-			&gwtypes.ReferenceGrant{},
+			k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listAIGatewaysForReferenceGrants),
 			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantReferencesAIGateway)),
 		).

@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -94,11 +95,9 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 	// Helper to generate a DataPlane with specified image and volumes
 	dataplaneGen := func(params dataplaneGenParams) *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-dataplane",
-				Namespace: "default",
-				UID:       "test-uid",
-			},
+			Name:      "test-dataplane",
+			Namespace: "default",
+			UID:       "test-uid",
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -168,10 +167,8 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 					volumes: []corev1.Volume{
 						{
 							Name: "custom-volume",
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{
-									Medium: corev1.StorageMediumMemory,
-								},
+							EmptyDir: &corev1.EmptyDirVolumeSource{
+								Medium: corev1.StorageMediumMemory,
 							},
 						},
 					},
@@ -202,6 +199,7 @@ func TestDeploymentBuilder_BuildAndDeploy(t *testing.T) {
 				WithClusterCertificate("test-cert").
 				WithAdditionalLabels(map[string]string{"app": "test"}).
 				WithSecretLabelSelector("test-selector").
+				WithIPFamily(ipfamily.IPv4).
 				WithOpts(
 					labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(tc.dataplane),
 				)
@@ -243,11 +241,9 @@ func TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations(t *testing.T) {
 	require.NoError(t, operatorv1beta1.AddToScheme(scheme))
 
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dataplane",
-			Namespace: "default",
-			UID:       "test-uid",
-		},
+		Name:      "test-dataplane",
+		Namespace: "default",
+		UID:       "test-uid",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -279,6 +275,7 @@ func TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations(t *testing.T) {
 	newBuilder := func() *DeploymentBuilder {
 		return NewDeploymentBuilder(logger, fakeClient).
 			WithDefaultImage("kong:3.0").
+			WithIPFamily(ipfamily.IPv4).
 			WithClusterCertificate("test-cert")
 	}
 
@@ -324,11 +321,9 @@ func TestDeploymentBuilder_BuildAndDeploy_LabelsAndAnnotations(t *testing.T) {
 // op.Updated and pre-empt the DataPlane controller's HPA reconciliation for a pass.
 func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) {
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dataplane",
-			Namespace: "default",
-			UID:       "test-uid",
-		},
+		Name:      "test-dataplane",
+		Namespace: "default",
+		UID:       "test-uid",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -369,6 +364,7 @@ func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) 
 
 	builder := NewDeploymentBuilder(logger, fakeClient).
 		WithDefaultImage("kong:3.0").
+		WithIPFamily(ipfamily.IPv4).
 		WithClusterCertificate("test-cert").
 		WithOpts(
 			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
@@ -407,11 +403,9 @@ func TestDeploymentBuilder_BuildAndDeploy_ScalingOnlyChangeIsNoop(t *testing.T) 
 // hash never changed and the probe was never actually removed from the Deployment.
 func TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig(t *testing.T) {
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dataplane",
-			Namespace: "default",
-			UID:       "test-uid",
-		},
+		Name:      "test-dataplane",
+		Namespace: "default",
+		UID:       "test-uid",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -440,6 +434,7 @@ func TestDeploymentBuilder_BuildAndDeploy_ProbeDeleteWithoutEnforceConfig(t *tes
 
 	builder := NewDeploymentBuilder(logr.Discard(), fakeClient).
 		WithDefaultImage("kong:3.0").
+		WithIPFamily(ipfamily.IPv4).
 		WithClusterCertificate("test-cert").
 		WithOpts(
 			labelSelectorFromDataPlaneStatusSelectorDeploymentOpt(dataplane),
@@ -492,11 +487,9 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 		{
 			name: "default image is used when not specified in dataplane",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "default",
-					UID:       "test-uid",
-				},
+				Name:      "test-dataplane",
+				Namespace: "default",
+				UID:       "test-uid",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -524,11 +517,9 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 		{
 			name: "dataplane image is used when specified",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "default",
-					UID:       "test-uid",
-				},
+				Name:      "test-dataplane",
+				Namespace: "default",
+				UID:       "test-uid",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -593,11 +584,9 @@ func TestGenerateDataPlaneDeployment(t *testing.T) {
 
 func TestGenerateDataPlaneDeployment_LabelsAndAnnotations(t *testing.T) {
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-dataplane",
-			Namespace: "default",
-			UID:       "test-uid",
-		},
+		Name:      "test-dataplane",
+		Namespace: "default",
+		UID:       "test-uid",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -819,7 +808,7 @@ func TestWarnOperatorManagedEnvVars(t *testing.T) {
 
 	makeDP := func(envVars ...corev1.EnvVar) *operatorv1beta1.DataPlane {
 		return &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{Name: "dp", Namespace: "default"},
+			Name: "dp", Namespace: "default",
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -898,10 +887,8 @@ func TestPodTemplateSpecHasRestartAnnotation(t *testing.T) {
 		{
 			name: "pod template with empty restart annotation",
 			podTemplate: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						restartAnnotationKey: "",
-					},
+				Annotations: map[string]string{
+					restartAnnotationKey: "",
 				},
 			},
 			expectedValue:  "",
@@ -910,10 +897,8 @@ func TestPodTemplateSpecHasRestartAnnotation(t *testing.T) {
 		{
 			name: "pod template with valid restart annotation",
 			podTemplate: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						restartAnnotationKey: "2023-10-01T10:00:00Z",
-					},
+				Annotations: map[string]string{
+					restartAnnotationKey: "2023-10-01T10:00:00Z",
 				},
 			},
 			expectedValue:  "2023-10-01T10:00:00Z",
@@ -949,19 +934,17 @@ func TestListOrReduceDataPlaneDeployments(t *testing.T) {
 			name: "one deployment",
 			existingDeployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "deployment-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app":                                    "test",
-							"gateway-operator.konghq.com/managed-by": "dataplane",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway-operator.konghq.com/v1beta1",
-								Kind:       "DataPlane",
-								UID:        "test-uid",
-							},
+					Name:      "deployment-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						"app":                                    "test",
+						"gateway-operator.konghq.com/managed-by": "dataplane",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway-operator.konghq.com/v1beta1",
+							Kind:       "DataPlane",
+							UID:        "test-uid",
 						},
 					},
 				},
@@ -974,36 +957,32 @@ func TestListOrReduceDataPlaneDeployments(t *testing.T) {
 			name: "multiple deployments",
 			existingDeployments: []appsv1.Deployment{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "deployment-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app":                                    "test",
-							"gateway-operator.konghq.com/managed-by": "dataplane",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway-operator.konghq.com/v1beta1",
-								Kind:       "DataPlane",
-								UID:        "test-uid",
-							},
+					Name:      "deployment-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						"app":                                    "test",
+						"gateway-operator.konghq.com/managed-by": "dataplane",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway-operator.konghq.com/v1beta1",
+							Kind:       "DataPlane",
+							UID:        "test-uid",
 						},
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "deployment-2",
-						Namespace: "default",
-						Labels: map[string]string{
-							"app":                                    "test",
-							"gateway-operator.konghq.com/managed-by": "dataplane",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway-operator.konghq.com/v1beta1",
-								Kind:       "DataPlane",
-								UID:        "test-uid",
-							},
+					Name:      "deployment-2",
+					Namespace: "default",
+					Labels: map[string]string{
+						"app":                                    "test",
+						"gateway-operator.konghq.com/managed-by": "dataplane",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway-operator.konghq.com/v1beta1",
+							Kind:       "DataPlane",
+							UID:        "test-uid",
 						},
 					},
 				},
@@ -1023,11 +1002,9 @@ func TestListOrReduceDataPlaneDeployments(t *testing.T) {
 			require.NoError(t, gatewayv1.Install(scheme))
 
 			dataplane := &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test",
-					Namespace: "default",
-					UID:       "test-uid",
-				},
+				Name:      "test",
+				Namespace: "default",
+				UID:       "test-uid",
 			}
 
 			clientBuilder := fakectrlruntimeclient.NewClientBuilder().
@@ -1077,10 +1054,8 @@ func TestIsRecentDeploymentRestart(t *testing.T) {
 		{
 			name: "pod template with recent restart annotation",
 			podTemplate: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						restartAnnotationKey: currentTime.Format(time.RFC3339),
-					},
+				Annotations: map[string]string{
+					restartAnnotationKey: currentTime.Format(time.RFC3339),
 				},
 			},
 			expectedResult: true,
@@ -1088,10 +1063,8 @@ func TestIsRecentDeploymentRestart(t *testing.T) {
 		{
 			name: "pod template with old restart annotation",
 			podTemplate: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						restartAnnotationKey: oldTime.Format(time.RFC3339),
-					},
+				Annotations: map[string]string{
+					restartAnnotationKey: oldTime.Format(time.RFC3339),
 				},
 			},
 			expectedResult: false,
@@ -1099,10 +1072,8 @@ func TestIsRecentDeploymentRestart(t *testing.T) {
 		{
 			name: "pod template with invalid restart annotation",
 			podTemplate: &corev1.PodTemplateSpec{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						restartAnnotationKey: "invalid-time",
-					},
+				Annotations: map[string]string{
+					restartAnnotationKey: "invalid-time",
 				},
 			},
 			expectedResult: true, // Unparseable times are treated as restart for safety

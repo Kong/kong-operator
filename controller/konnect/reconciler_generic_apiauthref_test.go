@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -26,11 +25,9 @@ func TestReconcileRemovesFinalizerWhenControlPlaneDisappearsBeforeAPIAuthLookup(
 	upstream := testKongUpstreamOK.DeepCopy()
 	controlPlane := testControlPlaneOK.DeepCopy()
 	target := &configurationv1alpha1.KongTarget{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "target",
-			Namespace:  "default",
-			Finalizers: []string{KonnectCleanupFinalizer},
-		},
+		Name:       "target",
+		Namespace:  "default",
+		Finalizers: []string{KonnectCleanupFinalizer},
 		Spec: configurationv1alpha1.KongTargetSpec{
 			UpstreamRef: commonv1alpha1.NamespacedRef{Name: upstream.Name},
 		},
@@ -79,11 +76,9 @@ func TestReconcileRemovesFinalizerWhenControlPlaneDisappearsBeforeAPIAuthLookup(
 func TestRemoveCleanupFinalizerIfControlPlaneIsGone(t *testing.T) {
 	newTarget := func() *configurationv1alpha1.KongTarget {
 		return &configurationv1alpha1.KongTarget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:       "target",
-				Namespace:  "default",
-				Finalizers: []string{KonnectCleanupFinalizer},
-			},
+			Name:       "target",
+			Namespace:  "default",
+			Finalizers: []string{KonnectCleanupFinalizer},
 		}
 	}
 	missingControlPlaneErr := controlplane.ReferencedControlPlaneDoesNotExistError{

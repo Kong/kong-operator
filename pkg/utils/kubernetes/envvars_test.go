@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 )
@@ -118,13 +117,13 @@ func TestUpdateEnvSource(t *testing.T) {
 func TestGetEnvValueFromContainer(t *testing.T) {
 	defaultObjects := []client.Object{
 		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm"},
+			Namespace: "default", Name: "test-cm",
 			Data: map[string]string{
 				"off": "off",
 			},
 		},
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret"},
+			Namespace: "default", Name: "test-secret",
 			// fake client does not encode fields in StringData to Data,
 			// so here we should use base64 encoded value in Data.
 			Data: map[string][]byte{
@@ -132,13 +131,13 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 			},
 		},
 		&corev1.ConfigMap{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-cm-2"},
+			Namespace: "default", Name: "test-cm-2",
 			Data: map[string]string{
 				"KONG_DATABASE": "xxx",
 			},
 		},
 		&corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "test-secret-2"},
+			Namespace: "default", Name: "test-secret-2",
 			// fake client does not encode fields in StringData to Data,
 			// so here we should use base64 encoded value in Data.
 			Data: map[string][]byte{
@@ -178,8 +177,8 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 						Name: "KONG_DATABASE",
 						ValueFrom: &corev1.EnvVarSource{
 							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm"},
-								Key:                  "off",
+								Name: "test-cm",
+								Key:  "off",
 							},
 						},
 					},
@@ -198,8 +197,8 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 						Name: "KONG_DATABASE",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
-								Key:                  "postgres",
+								Name: "test-secret",
+								Key:  "postgres",
 							},
 						},
 					},
@@ -218,8 +217,8 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 						Name: "KONG_DATABASE",
 						ValueFrom: &corev1.EnvVarSource{
 							SecretKeyRef: &corev1.SecretKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret"},
-								Key:                  "secret",
+								Name: "test-secret",
+								Key:  "secret",
 							},
 						},
 					},
@@ -238,8 +237,8 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 						Name: "KONG_DATABASE",
 						ValueFrom: &corev1.EnvVarSource{
 							ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-								LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-notexist"},
-								Key:                  "off",
+								Name: "test-cm-notexist",
+								Key:  "off",
 							},
 						},
 					},
@@ -255,7 +254,7 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 					{
 						Prefix: "",
 						ConfigMapRef: &corev1.ConfigMapEnvSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: "test-cm-2"},
+							Name: "test-cm-2",
 						},
 					},
 				},
@@ -272,7 +271,7 @@ func TestGetEnvValueFromContainer(t *testing.T) {
 					{
 						Prefix: "KONG_",
 						SecretRef: &corev1.SecretEnvSource{
-							LocalObjectReference: corev1.LocalObjectReference{Name: "test-secret-2"},
+							Name: "test-secret-2",
 						},
 					},
 				},

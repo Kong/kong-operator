@@ -7,7 +7,6 @@ import (
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
@@ -27,14 +26,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "without resources specified we get the defaults",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "1",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "1",
+				Namespace:  "test-namespace",
 			},
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
 				require.Len(t, deploymentSpec.Template.Spec.Containers, 1)
@@ -50,14 +45,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with hardening opted in, security context is applied",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "1",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "1",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -86,14 +77,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with CPU resources specified we get merged resources",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "1",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "1",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -135,14 +122,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with Memory resources specified",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "1",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "1",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -187,23 +170,17 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with Pod labels specified",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-name",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "dataplane-name",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 							DeploymentOptions: operatorv1beta1.DeploymentOptions{
 								PodTemplateSpec: &corev1.PodTemplateSpec{
-									ObjectMeta: metav1.ObjectMeta{
-										Labels: map[string]string{
-											"label-a": "value-a",
-										},
+									Labels: map[string]string{
+										"label-a": "value-a",
 									},
 									Spec: corev1.PodSpec{
 										Containers: []corev1.Container{{
@@ -236,14 +213,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with Affinity specified",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-name",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "dataplane-name",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -303,14 +276,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with volumes and volume mounts specified",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-name",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "dataplane-name",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -320,10 +289,8 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
 											{
-												Name: "test-volume",
-												VolumeSource: corev1.VolumeSource{
-													EmptyDir: &corev1.EmptyDirVolumeSource{},
-												},
+												Name:     "test-volume",
+												EmptyDir: &corev1.EmptyDirVolumeSource{},
 											},
 										},
 										Containers: []corev1.Container{
@@ -347,24 +314,18 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
 				expectedVolumes := []corev1.Volume{
 					{
-						Name: "test-volume",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
+						Name:     "test-volume",
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 					{
 						Name: "tmp",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{
-								SizeLimit: new(resource.MustParse("1Gi")),
-							},
+						EmptyDir: &corev1.EmptyDirVolumeSource{
+							SizeLimit: new(resource.MustParse("1Gi")),
 						},
 					},
 					{
-						Name: "var-kong",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
+						Name:     "var-kong",
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				}
 				actualVolumes := deploymentSpec.Template.Spec.Volumes
@@ -391,14 +352,10 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 		{
 			name: "with volumes and volume mounts specified but hardening not opted in, no extra volumes and security context are added",
 			dataplane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: "gateway-operator.konghq.com/v1beta1",
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-name",
-					Namespace: "test-namespace",
-				},
+				APIVersion: "gateway-operator.konghq.com/v1beta1",
+				Kind:       "DataPlane",
+				Name:       "dataplane-name",
+				Namespace:  "test-namespace",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -407,10 +364,8 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 									Spec: corev1.PodSpec{
 										Volumes: []corev1.Volume{
 											{
-												Name: "test-volume",
-												VolumeSource: corev1.VolumeSource{
-													EmptyDir: &corev1.EmptyDirVolumeSource{},
-												},
+												Name:     "test-volume",
+												EmptyDir: &corev1.EmptyDirVolumeSource{},
 											},
 										},
 										Containers: []corev1.Container{
@@ -434,10 +389,8 @@ func TestGenerateNewDeploymentForDataPlane(t *testing.T) {
 			testFunc: func(t *testing.T, deploymentSpec *appsv1.DeploymentSpec) {
 				expectedVolumes := []corev1.Volume{
 					{
-						Name: "test-volume",
-						VolumeSource: corev1.VolumeSource{
-							EmptyDir: &corev1.EmptyDirVolumeSource{},
-						},
+						Name:     "test-volume",
+						EmptyDir: &corev1.EmptyDirVolumeSource{},
 					},
 				}
 				actualVolumes := deploymentSpec.Template.Spec.Volumes
@@ -499,17 +452,13 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 			expectedVolumes: []corev1.Volume{
 				{
 					Name: "tmp",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{
-							SizeLimit: new(resource.MustParse("1Gi")),
-						},
+					EmptyDir: &corev1.EmptyDirVolumeSource{
+						SizeLimit: new(resource.MustParse("1Gi")),
 					},
 				},
 				{
-					Name: "var-kong",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{},
-					},
+					Name:     "var-kong",
+					EmptyDir: &corev1.EmptyDirVolumeSource{},
 				},
 			},
 			expectedEnvAppended: []corev1.EnvVar{
@@ -526,10 +475,8 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 			expectedVolumes: []corev1.Volume{
 				{
 					Name: "tmp",
-					VolumeSource: corev1.VolumeSource{
-						EmptyDir: &corev1.EmptyDirVolumeSource{
-							SizeLimit: new(resource.MustParse("1Gi")),
-						},
+					EmptyDir: &corev1.EmptyDirVolumeSource{
+						SizeLimit: new(resource.MustParse("1Gi")),
 					},
 				},
 			},

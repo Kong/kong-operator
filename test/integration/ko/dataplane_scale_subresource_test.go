@@ -44,10 +44,8 @@ func TestDataPlaneScaleSubresource(t *testing.T) {
 
 	t.Log("deploying dataplane resource with 2 replicas")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-scale-test-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-scale-test-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

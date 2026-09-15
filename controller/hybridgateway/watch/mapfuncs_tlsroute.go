@@ -23,10 +23,8 @@ func listTLSRoutesForGateway(ctx context.Context, cl client.Client, gatewayNames
 	requests := make([]reconcile.Request, len(tlsRoutes.Items))
 	for i, tlsRoute := range tlsRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: tlsRoute.Namespace,
-				Name:      tlsRoute.Name,
-			},
+			Namespace: tlsRoute.Namespace,
+			Name:      tlsRoute.Name,
 		}
 	}
 	return requests, nil
@@ -47,10 +45,8 @@ func listTLSRoutesForService(ctx context.Context, cl client.Client, svcNamespace
 	requests := make([]reconcile.Request, len(tlsRoutes.Items))
 	for i, tlsRoute := range tlsRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: tlsRoute.Namespace,
-				Name:      tlsRoute.Name,
-			},
+			Namespace: tlsRoute.Namespace,
+			Name:      tlsRoute.Name,
 		}
 	}
 	return requests, nil

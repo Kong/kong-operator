@@ -57,6 +57,7 @@ const (
 	configurationPackageName   = "configuration"
 	konnectPackageName         = "konnect"
 	gatewayOperatorPackageName = "gateway-operator"
+	aigatewayPackageName       = "aigateway"
 )
 
 func main() {
@@ -74,8 +75,8 @@ func main() {
 			packagename: configurationPackageName,
 			renders: []render{
 				{
-					templateContent: konnectFuncTemplate,
-					outputFile:      konnectFuncOutputFileName,
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
 					supportedTypes:  supportedKonnectTypesWithControlPlaneConfig,
 				},
 				{
@@ -94,8 +95,8 @@ func main() {
 			packagename: konnectPackageName,
 			renders: []render{
 				{
-					templateContent: konnectFuncTemplate,
-					outputFile:      konnectFuncOutputFileName,
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
 					supportedTypes:  supportedKonnectTypesWithControlPlaneRef,
 				},
 				{
@@ -127,6 +128,21 @@ func main() {
 					templateContent: listFuncTemplate,
 					outputFile:      listFuncOutputFileName,
 					supportedTypes:  supportedGatewayOperatorPackageTypesWithList,
+				},
+			},
+		},
+		{
+			packagename: aigatewayPackageName,
+			renders: []render{
+				{
+					templateContent: statusFuncTemplate,
+					outputFile:      statusFuncOutputFileName,
+					supportedTypes:  supportedAIGatewayTypes,
+				},
+				{
+					templateContent: listFuncTemplate,
+					outputFile:      listFuncOutputFileName,
+					supportedTypes:  supportedAIGatewayPackageTypesWithList,
 				},
 			},
 		},

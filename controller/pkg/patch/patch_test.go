@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -37,15 +36,11 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 		{
 			name: "when no changes are needed no patch is being made",
 			dataPlane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -103,15 +98,11 @@ func TestApplyPatchIfNonEmpty(t *testing.T) {
 		{
 			name: "when changes are applied to the generated HPA a patch is being made",
 			dataPlane: &operatorv1beta1.DataPlane{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
-					Kind:       "DataPlane",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-dataplane",
-					Namespace: "test-namespace",
-					UID:       types.UID(uuid.NewString()),
-				},
+				APIVersion: operatorv1beta1.SchemeGroupVersion.Group + "/" + operatorv1beta1.SchemeGroupVersion.Version,
+				Kind:       "DataPlane",
+				Name:       "test-dataplane",
+				Namespace:  "test-namespace",
+				UID:        types.UID(uuid.NewString()),
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{

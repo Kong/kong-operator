@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	incubatorv1alpha1 "github.com/kong/kong-operator/v2/api/incubator/v1alpha1"
@@ -54,31 +53,27 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with Ingress and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-ingress",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-ingress",
+					Namespace: "test-namespace",
 					Spec: netv1.IngressSpec{
 						IngressClassName: new("test-ingress-class"),
 						Rules: []netv1.IngressRule{
 							{
-								IngressRuleValue: netv1.IngressRuleValue{
-									HTTP: &netv1.HTTPIngressRuleValue{
-										Paths: []netv1.HTTPIngressPath{
-											{
-												Backend: netv1.IngressBackend{
-													Service: &netv1.IngressServiceBackend{
-														Name: "test-service",
-													},
+								HTTP: &netv1.HTTPIngressRuleValue{
+									Paths: []netv1.HTTPIngressPath{
+										{
+											Backend: netv1.IngressBackend{
+												Service: &netv1.IngressServiceBackend{
+													Name: "test-service",
 												},
 											},
-											{
-												Backend: netv1.IngressBackend{
-													Resource: &corev1.TypedLocalObjectReference{
-														Name:     "test-kong-service-facade",
-														Kind:     "KongServiceFacade",
-														APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
-													},
+										},
+										{
+											Backend: netv1.IngressBackend{
+												Resource: &corev1.TypedLocalObjectReference{
+													Name:     "test-kong-service-facade",
+													Kind:     "KongServiceFacade",
+													APIGroup: new(incubatorv1alpha1.GroupVersion.Group),
 												},
 											},
 										},
@@ -89,21 +84,15 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 					},
 				},
 				&netv1.IngressClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-ingress-class",
-					},
+					Name: "test-ingress-class",
 				},
 				&corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-service",
+					Namespace: "test-namespace",
 				},
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-kong-service-facade",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-kong-service-facade",
+					Namespace: "test-namespace",
 				},
 			),
 			expectedAdjacencyMap: map[string][]string{
@@ -123,24 +112,18 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with HTTPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&gatewayapi.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-						},
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
 								BackendRefs: []gatewayapi.HTTPBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "1",
-												Kind: new(gatewayapi.Kind("Service")),
-											},
-										},
+										Name: "1",
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -168,22 +151,18 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with TLSRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&gatewayapi.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-						},
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
 					Spec: gatewayapi.TLSRouteSpec{
 						Rules: []gatewayapi.TLSRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "1",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
+										Name: "1",
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -211,22 +190,18 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with TCPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&gatewayapi.TCPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-						},
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
 					Spec: gatewayapi.TCPRouteSpec{
 						Rules: []gatewayapi.TCPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "1",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
+										Name: "1",
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -254,22 +229,18 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with UDPRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&gatewayapi.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-						},
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
 					Spec: gatewayapi.UDPRouteSpec{
 						Rules: []gatewayapi.UDPRouteRule{
 							{
 								BackendRefs: []gatewayapi.BackendRef{
 									{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "1",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
+										Name: "1",
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -297,24 +268,18 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with GRPCRoute and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&gatewayapi.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-route",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
-						},
+					Name:      "test-route",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.PluginsKey: "1,cluster-1",
 					},
 					Spec: gatewayapi.GRPCRouteSpec{
 						Rules: []gatewayapi.GRPCRouteRule{
 							{
 								BackendRefs: []gatewayapi.GRPCBackendRef{
 									{
-										BackendRef: gatewayapi.BackendRef{
-											BackendObjectReference: gatewayapi.BackendObjectReference{
-												Name: "1",
-												Kind: new(gatewayapi.Kind("Service")),
-											},
-										},
+										Name: "1",
+										Kind: new(gatewayapi.Kind("Service")),
 									},
 								},
 							},
@@ -342,10 +307,8 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 			name: "cache with KongCustomEntities and its dependencies",
 			cache: cacheStoresFromObjs(t,
 				&configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-entity-kong-plugin",
-						Namespace: testNamespace,
-					},
+					Name:      "test-entity-kong-plugin",
+					Namespace: testNamespace,
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						ParentRef: &configurationv1alpha1.ObjectReference{
 							Kind:  new("KongPlugin"),
@@ -355,10 +318,8 @@ func TestDefaultCacheGraphProvider_CacheToGraph(t *testing.T) {
 					},
 				},
 				&configurationv1alpha1.KongCustomEntity{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-entity-kong-cluster-plugin",
-						Namespace: testNamespace,
-					},
+					Name:      "test-entity-kong-cluster-plugin",
+					Namespace: testNamespace,
 					Spec: configurationv1alpha1.KongCustomEntitySpec{
 						ParentRef: &configurationv1alpha1.ObjectReference{
 							Kind:  new("KongClusterPlugin"),

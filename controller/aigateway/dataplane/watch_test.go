@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -24,94 +24,91 @@ func (c *errListClient) List(_ context.Context, _ client.ObjectList, _ ...client
 	return assert.AnError
 }
 
-func Test_enqueueForKonnectAIGatewayRef(t *testing.T) {
+func Test_enqueueForAIGatewayDataPlaneCertificateSecretRef(t *testing.T) {
 	const (
-		ns       = "test-ns"
-		aigwcpNM = "my-aigwcp"
+		ns         = "test-ns"
+		secretName = "user-cert"
 	)
 
-	aigwcp := &konnectv1alpha1.KonnectAIGateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: aigwcpNM},
+	secret := &corev1.Secret{
+		Namespace: ns, Name: secretName,
 	}
 
 	aigwdpMatching := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-match"},
+		Namespace: ns, Name: "dp-match",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
+			CertificateSecret: &aigatewayv1alpha1.CertificateSecret{
+				Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+				SecretRef:    &aigatewayv1alpha1.SecretRef{Name: secretName},
 			},
 		},
 	}
 
 	aigwdpOther := &aigatewayv1alpha1.AIGatewayDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: ns, Name: "dp-other"},
+		Namespace: ns, Name: "dp-other",
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: "other-aigwcp"},
+			CertificateSecret: &aigatewayv1alpha1.CertificateSecret{
+				Provisioning: new(aigatewayv1alpha1.ManualCertificateProvisioning),
+				SecretRef:    &aigatewayv1alpha1.SecretRef{Name: "other-secret"},
 			},
 		},
 	}
 
 	scheme := managerscheme.Get()
 
-	cl := fake.NewClientBuilder().
+	builder := fake.NewClientBuilder().
 		WithScheme(scheme).
-		WithObjects(aigwcp, aigwdpMatching, aigwdpOther).
-		WithIndex(
-			&aigatewayv1alpha1.AIGatewayDataPlane{},
-			index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
-			func(obj client.Object) []string {
-				dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
-				if !ok || dp.Spec.ControlPlaneRef == nil || dp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
-					return nil
-				}
-				return []string{dp.Namespace + "/" + dp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name}
-			},
-		).
-		Build()
+		WithObjects(secret, aigwdpMatching, aigwdpOther)
+	for _, o := range index.OptionsForAIGatewayDataPlane() {
+		if o.Field == index.IndexFieldAIGatewayDataPlaneOnCertificateSecret {
+			builder = builder.WithIndex(o.Object, o.Field, o.ExtractValueFn)
+		}
+	}
+	cl := builder.Build()
 
 	tests := []struct {
-		name          string
-		cl            client.Client
-		obj           client.Object
-		wantNil       bool
-		wantNames     []string
-		wantNamespace string
+		name    string
+		cl      client.Client
+		obj     client.Object
+		wantNil bool
+		want    []types.NamespacedName
 	}{
 		{
-			name:          "returns requests for matching DataPlanes",
-			cl:            cl,
-			obj:           aigwcp,
-			wantNames:     []string{"dp-match"},
-			wantNamespace: ns,
+			name: "returns requests for matching DataPlanes",
+			cl:   cl,
+			obj:  secret,
+			want: []types.NamespacedName{
+				{Namespace: ns, Name: "dp-match"},
+			},
 		},
 		{
-			name:    "returns nil when obj is not KonnectAIGateway",
+			name:    "returns nil when obj is not a Secret",
 			cl:      cl,
-			obj:     &corev1.ConfigMap{},
+			obj:     &konnectv1alpha1.KonnectAIGateway{},
 			wantNil: true,
 		},
 		{
 			name:    "returns nil when List fails",
 			cl:      &errListClient{},
-			obj:     aigwcp,
+			obj:     secret,
 			wantNil: true,
 		},
 	}
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			mapFunc := enqueueForKonnectAIGatewayRef(tc.cl)
+			mapFunc := enqueueForAIGatewayDataPlaneCertificateSecretRef(tc.cl)
 			requests := mapFunc(t.Context(), tc.obj)
 			if tc.wantNil {
 				require.Nil(t, requests)
 				return
 			}
-			require.Len(t, requests, len(tc.wantNames))
-			for i, name := range tc.wantNames {
-				assert.Equal(t, tc.wantNamespace, requests[i].Namespace)
-				assert.Equal(t, name, requests[i].Name)
+			require.Len(t, requests, len(tc.want))
+			var got []types.NamespacedName
+			for _, r := range requests {
+				got = append(got, r.NamespacedName)
 			}
+			assert.ElementsMatch(t, tc.want, got)
 		})
 	}
 }

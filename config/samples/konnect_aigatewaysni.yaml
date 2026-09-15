@@ -1,0 +1,85 @@
+kind: KonnectAPIAuthConfiguration
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: konnect-api-auth-1
+  namespace: default
+spec:
+  type: token
+  token: kpat_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+  # For a complete list of available API URLs see:https://docs.konghq.com/konnect/network/#kong-gateway-hostnames
+  serverURL: us.api.konghq.com
+---
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ai-gw-serving-cert
+  namespace: default
+  labels:
+    konghq.com/secret: "true"
+type: kubernetes.io/tls
+stringData:
+  # Replace with your own PEM-encoded certificate and matching private key.
+  tls.crt: |
+    -----BEGIN CERTIFICATE-----
+    <PASTE YOUR PEM-ENCODED CERTIFICATE HERE>
+    -----END CERTIFICATE-----
+  tls.key: |
+    -----BEGIN PRIVATE KEY-----
+    <PASTE YOUR PEM-ENCODED PRIVATE KEY HERE>
+    -----END PRIVATE KEY-----
+---
+kind: AIGatewayCertificate
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-serving-cert
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    # Name of the certificate. The name must be unique within the AI Gateway.
+    name: ai-gw-serving-cert
+    cert:
+      type: secretRef
+      secretRef:
+        name: ai-gw-serving-cert
+        key: tls.crt
+    key:
+      type: secretRef
+      secretRef:
+        name: ai-gw-serving-cert
+        key: tls.key
+---
+kind: AIGatewaySNI
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-sni-1
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    # Name of the SNI. The name must be unique within the AI Gateway.
+    name: ai-gw-sni-1
+    displayName: AI Gateway SNI
+    hostname: api.example.com
+    certificate:
+      name: ai-gw-serving-cert

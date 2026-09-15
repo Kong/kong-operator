@@ -9,6 +9,7 @@
 Package v1alpha1 contains API Schema definitions for the aigateway.konghq.com v1alpha1 API group.
 
 - [AIGatewayDataPlane](#aigateway-konghq-com-v1alpha1-aigatewaydataplane)
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
 
 ### AIGatewayDataPlane
 
@@ -29,6 +30,24 @@ manually (e.g. via Deployment.PodTemplateSpec env vars).
 | `spec` _[AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)_ | Spec defines the desired state of AIGatewayDataPlane. |
 | `status` _[AIGatewayDataPlaneStatus](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanestatus)_ | Status defines the observed state of AIGatewayDataPlane. |
 
+### OnPremAIGateway
+
+
+OnPremAIGateway is the Schema for the on-prem AI Gateway control planes API.
+It acts as the non-Konnect control plane for AIGatewayDataPlane: it does not
+own any Deployment or Pod itself, it aggregates configuration targeting it
+and pushes it to the data planes that reference it.
+
+<!-- on_prem_ai_gateway description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `aigateway.konghq.com/v1alpha1`
+| `kind` _string_ | `OnPremAIGateway`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[OnPremAIGatewaySpec](#aigateway-konghq-com-v1alpha1-types-onpremaigatewayspec)_ | Spec defines the desired state of OnPremAIGateway. |
+| `status` _[OnPremAIGatewayStatus](#aigateway-konghq-com-v1alpha1-types-onpremaigatewaystatus)_ | Status defines the observed state of OnPremAIGateway. |
+
 ### Types
 
 In this section you will find types that the CRDs rely on.
@@ -44,6 +63,7 @@ AIGatewayDataPlaneSpec defines the desired state of AIGatewayDataPlane.
 | `controlPlaneRef` _[ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)_ | ControlPlaneRef references the control plane this AIGatewayDataPlane connects to. The type field identifies which kind of control plane is being referenced. Currently only konnectNamespacedRef is supported, which references a KonnectAIGateway resource in the same namespace.<br /><br />When unset, the operator performs no Konnect lookup or certificate automation for this AIGatewayDataPlane. The user is expected to configure Konnect (or any other) connectivity manually, e.g. by supplying the required env vars and cert volume through Deployment.PodTemplateSpec.<br /><br />This field is immutable once set: it can be added later, but not removed or changed to a different reference. |
 | `deployment` _[DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)_ | Deployment configures the AI Gateway Deployment: image, replicas, resources, extra env vars, volume mounts, etc. |
 | `network` _[NetworkOptions](#aigateway-konghq-com-v1alpha1-types-networkoptions)_ | Network configures how the AI Gateway pod is exposed to clients. |
+| `certificateSecret` _[CertificateSecret](#aigateway-konghq-com-v1alpha1-types-certificatesecret)_ | CertificateSecret configures how the mTLS client certificate Secret used by this AIGatewayDataPlane is provisioned.<br /><br />If left unset entirely, the effective provisioning depends on ControlPlaneRef: when ControlPlaneRef is set, it defaults to Automatic (operator-managed); when ControlPlaneRef is unset, no certificate is provisioned at all (there's no KonnectAIGateway to ever register one against), and mTLS, if the AI Gateway needs it for a manually-wired control plane, must be configured entirely by hand via Deployment.PodTemplateSpec. Setting this field while ControlPlaneRef is unset is rejected rather than ignored: CertificateProvisioned goes False/ControlPlaneRefMissing and the operator stops reconciling the Deployment, the HPA and the ingress Service entirely.<br /><br />When Provisioning is Manual, SecretRef must point to an existing Secret of type kubernetes.io/tls (tls.crt + tls.key) that the operator will use as-is: it will never create, modify, rotate, or delete it. The Secret must live in this AIGatewayDataPlane's own namespace and must carry the operator's secret label selector (default "konghq.com/secret: \"true\"", configurable via --secret-label-selector on the operator), or the operator cannot see it at all. Switching Provisioning from Automatic to Manual deletes the previously operator-provisioned Secret once the Deployment has rolled onto the Manual one; switching back to Automatic later provisions a new one rather than reusing the deleted one. |
 
 _Appears in:_
 
@@ -125,6 +145,44 @@ Allowed values:
 | --- | --- |
 | `IPAddress` | IPAddressType is a textual representation of a numeric IP address.<br /> |
 | `Hostname` | HostnameAddressType represents a DNS based ingress point.<br /> |
+
+#### CertificateProvisioningMethod
+
+_Underlying type:_ `string`
+
+CertificateProvisioningMethod is the method used to provision an
+AIGatewayDataPlane's mTLS client certificate Secret.
+
+
+
+
+_Appears in:_
+
+- [CertificateSecret](#aigateway-konghq-com-v1alpha1-types-certificatesecret)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Manual` | ManualCertificateProvisioning indicates the certificate Secret is<br />supplied by the user and must not be managed by the operator.<br /> |
+| `Automatic` | AutomaticCertificateProvisioning indicates the certificate Secret is<br />generated and managed by the operator.<br /> |
+
+#### CertificateSecret
+
+
+CertificateSecret configures how the mTLS client certificate Secret for an
+AIGatewayDataPlane is provisioned.
+
+
+
+| Field | Description |
+| --- | --- |
+| `provisioning` _[CertificateProvisioningMethod](#aigateway-konghq-com-v1alpha1-types-certificateprovisioningmethod)_ | Provisioning is the method used to provision the certificate. It can be either Manual or Automatic. In case manual provisioning is used, the certificate must be provided by the user via SecretRef. In case automatic provisioning is used, the certificate is generated by the operator. Left unset, it behaves as Automatic when ControlPlaneRef is set, or as "no certificate" when it isn't; see CertificateSecret's own doc for details. |
+| `secretRef` _[SecretRef](#aigateway-konghq-com-v1alpha1-types-secretref)_ | SecretRef is the reference to the Secret containing the mTLS client certificate. Only used (and required) when Provisioning is Manual. |
+
+_Appears in:_
+
+- [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
 #### ControlPlaneRef
 
@@ -257,6 +315,35 @@ _Appears in:_
 
 - [AIGatewayDataPlaneSpec](#aigateway-konghq-com-v1alpha1-types-aigatewaydataplanespec)
 
+#### OnPremAIGatewaySpec
+
+
+OnPremAIGatewaySpec defines the desired state of OnPremAIGateway.<br /><br />It is intentionally empty for now: fields land alongside the reconciler
+logic that consumes them.
+
+
+
+
+_Appears in:_
+
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
+
+#### OnPremAIGatewayStatus
+
+
+OnPremAIGatewayStatus defines the observed state of OnPremAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the OnPremAIGateway. |
+| `configHash` _string_ | ConfigHash is the hash of the configuration that was last pushed to the data planes referencing this OnPremAIGateway. |
+
+_Appears in:_
+
+- [OnPremAIGateway](#aigateway-konghq-com-v1alpha1-onpremaigateway)
+
 #### Scaling
 
 
@@ -271,6 +358,23 @@ Scaling defines the scaling options for the deployment.
 _Appears in:_
 
 - [DeploymentOptions](#aigateway-konghq-com-v1alpha1-types-deploymentoptions)
+
+#### SecretRef
+
+
+SecretRef references a Secret by name in the referencing resource's own
+namespace. Cross-namespace references are not supported: a Secret can only
+ever be mounted into a Pod's volumes from the Pod's own namespace.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced Secret. |
+
+_Appears in:_
+
+- [CertificateSecret](#aigateway-konghq-com-v1alpha1-types-certificatesecret)
 
 #### ServiceOptions
 

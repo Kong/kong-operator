@@ -11,7 +11,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,7 +43,7 @@ func TestGatewayConformance(t *testing.T) {
 		t.Cleanup(func() {
 			// NOTE: t.Context() is canceled before cleanup functions run (Go 1.24+),
 			// so we use context.Background() here instead.
-			ns := &corev1.Namespace{ObjectMeta: metav1.ObjectMeta{Name: conformanceInfraNamespace}}
+			ns := &corev1.Namespace{Name: conformanceInfraNamespace}
 			err := clients.MgrClient.Delete(context.Background(), ns)
 			if err != nil && !apierrors.IsNotFound(err) {
 				require.NoError(t, err)
@@ -292,9 +291,7 @@ func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 	}
 	if apierrors.IsNotFound(err) {
 		testNamespace := corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: conformanceInfraNamespace,
-			},
+			Name: conformanceInfraNamespace,
 		}
 		err := clients.MgrClient.Create(ctx, &testNamespace)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
@@ -318,9 +315,7 @@ func ensureConformanceNamespace(ctx context.Context, t *testing.T) {
 		require.NoError(t, err)
 
 		testNamespace := corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: conformanceInfraNamespace,
-			},
+			Name: conformanceInfraNamespace,
 		}
 		err = clients.MgrClient.Create(ctx, &testNamespace)
 		if err != nil && !apierrors.IsAlreadyExists(err) {
@@ -333,10 +328,8 @@ func createGatewayConfiguration(
 	ctx context.Context, t *testing.T, kongRouterFlavor consts.RouterFlavor, gatewayType gatewayType,
 ) *operatorv2beta1.GatewayConfiguration {
 	gwconf := operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ko-gwconf-conformance-",
-			Namespace:    conformanceInfraNamespace,
-		},
+		GenerateName: "ko-gwconf-conformance-",
+		Namespace:    conformanceInfraNamespace,
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -386,10 +379,8 @@ func createGatewayConfiguration(
 	if gatewayType == hybridGateway {
 		t.Log("configuring GatewayConfiguration with Konnect access token - Hybrid Gateway")
 		kapi := konnectv1alpha1.KonnectAPIAuthConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: "api-auth-config-",
-				Namespace:    conformanceInfraNamespace,
-			},
+			GenerateName: "api-auth-config-",
+			Namespace:    conformanceInfraNamespace,
 			Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 				Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 				Token:     test.KonnectAccessToken(),
@@ -419,9 +410,7 @@ func createGatewayConfiguration(
 
 func createGatewayClass(ctx context.Context, t *testing.T, gwconf *operatorv2beta1.GatewayConfiguration) *gatewayv1.GatewayClass {
 	gwc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ko-gwclass-conformance-",
-		},
+		GenerateName: "ko-gwclass-conformance-",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 			ParametersRef: &gatewayv1.ParametersReference{

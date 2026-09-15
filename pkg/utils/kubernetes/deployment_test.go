@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	appsv1 "k8s.io/api/apps/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestDeploymentRolloutComplete(t *testing.T) {
@@ -17,7 +16,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "fully rolled out",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 2},
+				Generation: 2,
 				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(2))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 2,
@@ -31,7 +30,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "stale observed generation",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 3},
+				Generation: 3,
 				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(2))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 2,
@@ -45,7 +44,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "rollout in progress: old replica still available, new one not yet",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 2},
+				Generation: 2,
 				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(2))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 2,
@@ -59,7 +58,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "rollout in progress: not all replicas available yet",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Generation: 1,
 				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(2))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 1,
@@ -73,7 +72,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "nil spec.replicas defaults to 1, fully rolled out",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Generation: 1,
 				Spec:       appsv1.DeploymentSpec{Replicas: nil},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 1,
@@ -92,7 +91,7 @@ func TestDeploymentRolloutComplete(t *testing.T) {
 		{
 			name: "explicit spec.replicas=0: not complete even though every counter matches",
 			deployment: &appsv1.Deployment{
-				ObjectMeta: metav1.ObjectMeta{Generation: 1},
+				Generation: 1,
 				Spec:       appsv1.DeploymentSpec{Replicas: new(int32(0))},
 				Status: appsv1.DeploymentStatus{
 					ObservedGeneration: 1,

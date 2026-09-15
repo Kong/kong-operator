@@ -14,11 +14,9 @@ func KonnectExtensionToExtensionRef(
 		return nil
 	}
 	return &commonv1alpha1.ExtensionRef{
-		Group: konnectv1alpha2.SchemeGroupVersion.Group,
-		Kind:  konnectv1alpha2.KonnectExtensionKind,
-		NamespacedRef: commonv1alpha1.NamespacedRef{
-			Name:      extension.Name,
-			Namespace: ns,
-		},
+		Group:     konnectv1alpha2.SchemeGroupVersion.Group,
+		Kind:      konnectv1alpha2.KonnectExtensionKind,
+		Name:      extension.Name,
+		Namespace: ns,
 	}
 }

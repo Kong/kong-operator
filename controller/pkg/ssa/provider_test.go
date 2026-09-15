@@ -29,7 +29,6 @@ import (
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	aexbuilder "k8s.io/apiextensions-apiserver/pkg/controller/openapi/builder"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/rest"
 	kubespec3 "k8s.io/kube-openapi/pkg/spec3"
@@ -55,10 +54,8 @@ func buildOpenAPIV3ForTest(t *testing.T, crd *apiextensionsv1.CustomResourceDefi
 func testCRD(group, kind, version, resourceVersion string) *apiextensionsv1.CustomResourceDefinition {
 	plural := fmt.Sprintf("%ss", kind)
 	return &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            fmt.Sprintf("%s.%s", plural, group),
-			ResourceVersion: resourceVersion,
-		},
+		Name:            fmt.Sprintf("%s.%s", plural, group),
+		ResourceVersion: resourceVersion,
 		Spec: apiextensionsv1.CustomResourceDefinitionSpec{
 			Group: group,
 			Names: apiextensionsv1.CustomResourceDefinitionNames{

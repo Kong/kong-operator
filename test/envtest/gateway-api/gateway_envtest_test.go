@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/require"
 	appsv1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -23,6 +22,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -153,12 +153,10 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	)
 	caSecretName := "cluster-ca-infra-labels-test"
 	caSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      caSecretName,
-			Labels:    map[string]string{"konghq.com/secret": "true"},
-		},
-		Type: corev1.SecretTypeTLS,
+		Namespace: ns.Name,
+		Name:      caSecretName,
+		Labels:    map[string]string{"konghq.com/secret": "true"},
+		Type:      corev1.SecretTypeTLS,
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       cert,
 			corev1.TLSPrivateKeyKey: key,
@@ -170,12 +168,15 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 	// Start KO Gateway and DataPlane reconcilers.
 	envtest.StartReconcilers(ctx, t, mgr, logs,
 		&kogateway.Reconciler{
+			DataPlaneIPFamily:     ipfamily.IPv4,
 			Client:                c,
 			Scheme:                scheme,
 			Namespace:             ns.Name,
 			DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+			ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 		},
 		&dpreconciler.Reconciler{
+			DataPlaneIPFamily:        ipfamily.IPv4,
 			Client:                   c,
 			ClusterCASecretName:      caSecretName,
 			ClusterCASecretNamespace: ns.Name,
@@ -190,7 +191,7 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 
 	// Create a GatewayClass accepted by the KO controller.
 	gc := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{Name: "gc-infra-labels"},
+		Name: "gc-infra-labels",
 		Spec: gatewayv1.GatewayClassSpec{
 			ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 		},
@@ -203,10 +204,8 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 
 	// Create a Gateway referencing the GatewayClass.
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: ns.Name,
-			Name:      "gw-infra-labels",
-		},
+		Namespace: ns.Name,
+		Name:      "gw-infra-labels",
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gc.Name),
 			Listeners: []gatewayv1.Listener{

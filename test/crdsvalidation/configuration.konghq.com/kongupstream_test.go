@@ -6,7 +6,6 @@ import (
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/samber/lo"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -23,10 +22,8 @@ func TestKongUpstream(t *testing.T) {
 	cfg, ns := envtest.Setup(t, ctx, scheme)
 
 	obj := &configurationv1alpha1.KongUpstream{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongUpstream",
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-		},
+		Kind:       "KongUpstream",
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		ObjectMeta: common.CommonObjectMeta(ns.Name),
 	}
 

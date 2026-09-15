@@ -38,12 +38,10 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	configMap := &corev1.ConfigMap{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-			Labels: map[string]string{
-				"konghq.com/configmap": "true",
-			},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+		Labels: map[string]string{
+			"konghq.com/configmap": "true",
 		},
 		Data: map[string]string{
 			testEnvVarFromKV: testEnvVarFromKV,
@@ -55,10 +53,8 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("deploying a GatewayConfiguration resource")
 	gatewayConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: operatorv2beta1.GatewayConfigurationSpec{
 			DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
 				Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -78,10 +74,8 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 												Name: testEnvVarFromName,
 												ValueFrom: &corev1.EnvVarSource{
 													ConfigMapKeyRef: &corev1.ConfigMapKeySelector{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: configMap.Name,
-														},
-														Key: testEnvVarFromKV,
+														Name: configMap.Name,
+														Key:  testEnvVarFromKV,
 													},
 												},
 											},
@@ -92,12 +86,10 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 											PeriodSeconds:       2,
 											SuccessThreshold:    2,
 											TimeoutSeconds:      9,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/status/ready",
-													Port:   intstr.FromInt(4567),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/status/ready",
+												Port:   intstr.FromInt(4567),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -108,12 +100,10 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 				},
 			},
 			ControlPlaneOptions: &operatorv2beta1.GatewayConfigControlPlaneOptions{
-				ControlPlaneOptions: gwtypes.ControlPlaneOptions{
-					Controllers: []gwtypes.ControlPlaneController{
-						{
-							Name:  controlplane.ControllerNameIngress,
-							State: gwtypes.ControlPlaneControllerStateDisabled,
-						},
+				Controllers: []gwtypes.ControlPlaneController{
+					{
+						Name:  controlplane.ControllerNameIngress,
+						State: gwtypes.ControlPlaneControllerStateDisabled,
 					},
 				},
 			},
@@ -125,9 +115,7 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("deploying a GatewayClass resource with the GatewayConfiguration attached via ParametersReference")
 	gatewayClass := &gatewayv1.GatewayClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: uuid.NewString(),
-		},
+		Name: uuid.NewString(),
 		Spec: gatewayv1.GatewayClassSpec{
 			ParametersRef: &gatewayv1.ParametersReference{
 				Group:     gatewayv1.Group(operatorv1beta1.SchemeGroupVersion.Group),
@@ -144,10 +132,8 @@ func TestGatewayConfigurationEssentials(t *testing.T) {
 
 	t.Log("deploying Gateway resource")
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: gatewayv1.ObjectName(gatewayClass.Name),
 			Listeners: []gatewayv1.Listener{{

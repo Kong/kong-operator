@@ -22,7 +22,7 @@ version = "2.13.2"
 
 [tools."github:kubernetes-sigs/controller-runtime"]
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-version = "0.25.0"
+version = "0.25.1"
 [tools."github:kubernetes-sigs/controller-runtime".platforms]
 darwin-arm64 = { asset_pattern = "setup-envtest-darwin-arm64" }
 linux-arm64 = { asset_pattern = "setup-envtest-linux-arm64" }
@@ -66,11 +66,14 @@ macos-arm64 = { asset_pattern = "telepresence-darwin-arm64" }
 
 [tools."aqua:helm/helm"]
 # renovate: datasource=github-releases depName=helm/helm
-version = "4.2.4"
+version = "4.3.0"
 
-[tools."go:sigs.k8s.io/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
+# NOTE: temporary override to work around:
+# export data version 4 is greater than maximum supported version 2
+# Upstream issue: https://github.com/kubernetes-sigs/kube-api-linter/issues/260
+[tools."go:github.com/pmalek/kube-api-linter/cmd/golangci-lint-kube-api-linter"]
 # renovate: datasource=git-refs packageName=https://github.com/kubernetes-sigs/kube-api-linter.git
-version = "092fe0c72997c3e7d6d78405211ed913e37a44e5"
+version = "f6c98d29c0424bdfa52de5b80af681f602625383"
 
 [tools."yq"]
 # renovate: datasource=github-releases depName=mikefarah/yq

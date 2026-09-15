@@ -25,7 +25,6 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestIngressClassValidatorFunc(t *testing.T) {
@@ -55,19 +54,15 @@ func TestIngressClassValidatorFunc(t *testing.T) {
 	}
 
 	ing := &extensions.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: corev1.NamespaceDefault,
-		},
+		Name:      "foo",
+		Namespace: corev1.NamespaceDefault,
 	}
 
 	ingv1 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "foo",
-			Namespace: "default",
-			Annotations: map[string]string{
-				IngressClassKey: DefaultIngressClass,
-			},
+		Name:      "foo",
+		Namespace: "default",
+		Annotations: map[string]string{
+			IngressClassKey: DefaultIngressClass,
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: nil,

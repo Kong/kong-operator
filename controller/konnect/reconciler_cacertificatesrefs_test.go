@@ -42,7 +42,7 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 	// A KongService entity used as the base for all tests. Returns a fresh copy each time.
 	makeSvc := func(refs ...commonv1alpha1.NamespacedRef) *configurationv1alpha1.KongService {
 		return &configurationv1alpha1.KongService{
-			ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: svcNS},
+			Name: "svc", Namespace: svcNS,
 			Spec: configurationv1alpha1.KongServiceSpec{
 				KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 					Host:              "example.com",
@@ -63,10 +63,8 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 	// A healthy KongCACertificate with a matching ControlPlane ID.
 	caCertOK := &configurationv1alpha1.KongCACertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      certName,
-			Namespace: svcNS,
-		},
+		Name:      certName,
+		Namespace: svcNS,
 		Spec: configurationv1alpha1.KongCACertificateSpec{
 			KongCACertificateAPISpec: configurationv1alpha1.KongCACertificateAPISpec{
 				Cert: "===== BEGIN CERTIFICATE",
@@ -78,8 +76,8 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		},
 		Status: configurationv1alpha1.KongCACertificateStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: caID},
-				ControlPlaneID:      cpID,
+				ID:             caID,
+				ControlPlaneID: cpID,
 			},
 			Conditions: []metav1.Condition{
 				{
@@ -155,12 +153,10 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 	t.Run("CA cert being deleted returns ReferencedObjectIsBeingDeletedError", func(t *testing.T) {
 		caCertBeingDeleted := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              certName,
-				Namespace:         svcNS,
-				DeletionTimestamp: &metav1.Time{Time: time.Now()},
-				Finalizers:        []string{"test-finalizer"},
-			},
+			Name:              certName,
+			Namespace:         svcNS,
+			DeletionTimestamp: &metav1.Time{Time: time.Now()},
+			Finalizers:        []string{"test-finalizer"},
 		}
 		svc := makeSvc(commonv1alpha1.NamespacedRef{Name: certName})
 		sc := testScheme(t)
@@ -178,10 +174,8 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 	t.Run("CA cert not programmed returns no error, condition False", func(t *testing.T) {
 		caCertNotProgrammed := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      certName,
-				Namespace: svcNS,
-			},
+			Name:      certName,
+			Namespace: svcNS,
 			Status: configurationv1alpha1.KongCACertificateStatus{
 				Conditions: []metav1.Condition{
 					{
@@ -212,14 +206,12 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 	t.Run("CA cert empty Konnect ID returns no error, condition False", func(t *testing.T) {
 		caCertEmptyID := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      certName,
-				Namespace: svcNS,
-			},
+			Name:      certName,
+			Namespace: svcNS,
 			Status: configurationv1alpha1.KongCACertificateStatus{
 				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: ""},
-					ControlPlaneID:      cpID,
+					ID:             "",
+					ControlPlaneID: cpID,
 				},
 				Conditions: []metav1.Condition{
 					{
@@ -250,14 +242,12 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 
 	t.Run("CA cert CP mismatch returns ReferencedKongCACertificateBelongsToWrongControlPlaneError", func(t *testing.T) {
 		caCertWrongCP := &configurationv1alpha1.KongCACertificate{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      certName,
-				Namespace: svcNS,
-			},
+			Name:      certName,
+			Namespace: svcNS,
 			Status: configurationv1alpha1.KongCACertificateStatus{
 				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: caID},
-					ControlPlaneID:      "different-cp-id",
+					ID:             caID,
+					ControlPlaneID: "different-cp-id",
 				},
 				Conditions: []metav1.Condition{
 					{
@@ -342,10 +332,8 @@ func TestHandleKongCACertificateRefs(t *testing.T) {
 		})
 
 		grant := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "svc-to-cacert",
-				Namespace: certNS,
-			},
+			Name:      "svc-to-cacert",
+			Namespace: certNS,
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{
 					{

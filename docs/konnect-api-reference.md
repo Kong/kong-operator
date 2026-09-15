@@ -1708,7 +1708,7 @@ PortalCustomizationAPISpec defines the API spec fields for PortalCustomization.
 | `layout` _string_ |  |
 | `menu` _[Menu](#konnect-konghq-com-v1alpha1-types-menu)_ |  |
 | `robots` _*string_ |  |
-| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ |  |
+| `specRenderer` _[SpecRenderer](#konnect-konghq-com-v1alpha1-types-specrenderer)_ | The spec renderer settings of this portal |
 | `theme` _[Theme](#konnect-konghq-com-v1alpha1-types-theme)_ |  |
 
 _Appears in:_
@@ -2217,7 +2217,7 @@ _Appears in:_
 #### SpecRenderer
 
 
-SpecRenderer is a type alias.
+SpecRenderer The spec renderer settings of this portal
 
 
 
@@ -2230,6 +2230,7 @@ SpecRenderer is a type alias.
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
+| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 

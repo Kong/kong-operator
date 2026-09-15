@@ -271,28 +271,24 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 	ingNameExtraForService := "statuscheck1"
 	for _, ing := range []*netv1.Ingress{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ingNameWithPeriods,
-				Annotations: map[string]string{
-					"konghq.com/strip-path": "true",
-				},
+			Name: ingNameWithPeriods,
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
 			},
 			Spec: netv1.IngressSpec{
 				IngressClassName: kong.String(consts.IngressClass),
 				Rules: []netv1.IngressRule{
 					{
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path:     "/statuscheck2",
-										PathType: &pathType,
-										Backend: netv1.IngressBackend{
-											Service: &netv1.IngressServiceBackend{
-												Name: service.Name,
-												Port: netv1.ServiceBackendPort{
-													Number: service.Spec.Ports[0].Port,
-												},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/statuscheck2",
+									PathType: &pathType,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
 											},
 										},
 									},
@@ -304,28 +300,24 @@ func TestIngressStatusUpdatesExtended(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: ingNameExtraForService,
-				Annotations: map[string]string{
-					"konghq.com/strip-path": "true",
-				},
+			Name: ingNameExtraForService,
+			Annotations: map[string]string{
+				"konghq.com/strip-path": "true",
 			},
 			Spec: netv1.IngressSpec{
 				IngressClassName: kong.String(consts.IngressClass),
 				Rules: []netv1.IngressRule{
 					{
-						IngressRuleValue: netv1.IngressRuleValue{
-							HTTP: &netv1.HTTPIngressRuleValue{
-								Paths: []netv1.HTTPIngressPath{
-									{
-										Path:     "/statuscheck1",
-										PathType: &pathType,
-										Backend: netv1.IngressBackend{
-											Service: &netv1.IngressServiceBackend{
-												Name: service.Name,
-												Port: netv1.ServiceBackendPort{
-													Number: service.Spec.Ports[0].Port,
-												},
+						HTTP: &netv1.HTTPIngressRuleValue{
+							Paths: []netv1.HTTPIngressPath{
+								{
+									Path:     "/statuscheck1",
+									PathType: &pathType,
+									Backend: netv1.IngressBackend{
+										Service: &netv1.IngressServiceBackend{
+											Name: service.Name,
+											Port: netv1.ServiceBackendPort{
+												Number: service.Spec.Ports[0].Port,
 											},
 										},
 									},
@@ -400,9 +392,7 @@ func TestIngressClassRegexToggle(t *testing.T) {
 
 	t.Logf("creating an IngressClassParameters with legacy regex detection enabled")
 	params := &configurationv1alpha1.IngressClassParameters{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: consts.IngressClass,
-		},
+		Name: consts.IngressClass,
 		Spec: configurationv1alpha1.IngressClassParametersSpec{
 			EnableLegacyRegexDetection: true,
 		},
@@ -439,28 +429,24 @@ func TestIngressClassRegexToggle(t *testing.T) {
 	require.NoError(t, err)
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-toggle",
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name: "regex-toggle",
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     `/~/test_ingress_class_regex_toggle/\d+`,
-									PathType: &pathTypeImplementationSpecific,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     `/~/test_ingress_class_regex_toggle/\d+`,
+								PathType: &pathTypeImplementationSpecific,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
@@ -523,28 +509,24 @@ func TestIngressRegexPrefix(t *testing.T) {
 	require.NoError(t, err)
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-prefix",
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name: "regex-prefix",
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     `/~/test_ingress_regex_prefix/\d+`,
-									PathType: &pathTypeImplementationSpecific,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     `/~/test_ingress_regex_prefix/\d+`,
+								PathType: &pathTypeImplementationSpecific,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
@@ -561,41 +543,37 @@ func TestIngressRegexPrefix(t *testing.T) {
 
 	t.Logf("creating an ingress with a non-default prefix for service %s", service.Name)
 	ingressMod := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-prefix-ns",
-			Annotations: map[string]string{
-				"konghq.com/strip-path":   "true",
-				"konghq.com/regex-prefix": "/@",
-			},
+		Name: "regex-prefix-ns",
+		Annotations: map[string]string{
+			"konghq.com/strip-path":   "true",
+			"konghq.com/regex-prefix": "/@",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     `/@/test_ingress_regex_prefix_nonstandard/\d+`,
-									PathType: &pathTypeImplementationSpecific,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     `/@/test_ingress_regex_prefix_nonstandard/\d+`,
+								PathType: &pathTypeImplementationSpecific,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
-								{
-									Path:     `/~/test_ingress_regex_prefix_nonstandard_default`,
-									PathType: &pathTypeImplementationSpecific,
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+							},
+							{
+								Path:     `/~/test_ingress_regex_prefix_nonstandard_default`,
+								PathType: &pathTypeImplementationSpecific,
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
@@ -692,28 +670,24 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 	pathTypePrefix := netv1.PathTypePrefix
 	pathTypeImplementationSpecific := netv1.PathTypeImplementationSpecific
 	ingress := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-prefix-ns",
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name: "regex-prefix-ns",
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									PathType: &pathTypePrefix,
-									Path:     "/foo",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								PathType: &pathTypePrefix,
+								Path:     "/foo",
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
@@ -753,40 +727,36 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("add an invalid path to ingress")
 	ingressInvalid := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-prefix-ns",
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name: "regex-prefix-ns",
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									PathType: &pathTypePrefix,
-									Path:     "/bar",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								PathType: &pathTypePrefix,
+								Path:     "/bar",
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
-								{
-									PathType: &pathTypeImplementationSpecific,
-									Path:     `/~^^/*$`, // invalid regex
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+							},
+							{
+								PathType: &pathTypeImplementationSpecific,
+								Path:     `/~^^/*$`, // invalid regex
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},
@@ -827,28 +797,24 @@ func TestIngressRecoverFromInvalidPath(t *testing.T) {
 
 	t.Log("reconfigure ingress with valid paths")
 	ingressRecover := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "regex-prefix-ns",
-			Annotations: map[string]string{
-				"konghq.com/strip-path": "true",
-			},
+		Name: "regex-prefix-ns",
+		Annotations: map[string]string{
+			"konghq.com/strip-path": "true",
 		},
 		Spec: netv1.IngressSpec{
 			IngressClassName: kong.String(consts.IngressClass),
 			Rules: []netv1.IngressRule{
 				{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									PathType: &pathTypePrefix,
-									Path:     "/bar",
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: service.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: service.Spec.Ports[0].Port,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								PathType: &pathTypePrefix,
+								Path:     "/bar",
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: service.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: service.Spec.Ports[0].Port,
 										},
 									},
 								},

@@ -57,9 +57,7 @@ func TestControlPlane(t *testing.T) {
 								{
 									Group: "konnect.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},
@@ -77,16 +75,12 @@ func TestControlPlane(t *testing.T) {
 								{
 									Group: "konnect.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 								{
 									Group: "gateway-operator.konghq.com",
 									Kind:  "DataPlaneMetricsExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-metrics-extension",
-									},
+									Name:  "my-metrics-extension",
 								},
 							},
 						},
@@ -103,9 +97,7 @@ func TestControlPlane(t *testing.T) {
 								{
 									Group: "invalid.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},

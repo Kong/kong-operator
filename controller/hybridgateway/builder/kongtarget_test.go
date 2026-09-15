@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -39,10 +38,8 @@ func TestKongTargetBuilder_WithNamespace(t *testing.T) {
 
 func TestKongTargetBuilder_WithLabels(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -162,10 +159,8 @@ func TestKongTargetBuilder_WithUpstreamRef(t *testing.T) {
 
 func TestKongTargetBuilder_WithAnnotations(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -182,11 +177,9 @@ func TestKongTargetBuilder_WithAnnotations(t *testing.T) {
 
 func TestKongTargetBuilder_WithOwner(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	t.Run("valid owner", func(t *testing.T) {
@@ -214,11 +207,9 @@ func TestKongTargetBuilder_WithOwner(t *testing.T) {
 
 	t.Run("owner reference error", func(t *testing.T) {
 		httpRouteWithoutTypeMeta := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-http-route",
-				Namespace: "test-namespace",
-				UID:       "test-uid",
-			},
+			Name:      "test-http-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
 		}
 
 		builder := NewKongTarget().WithOwner(httpRouteWithoutTypeMeta)
@@ -271,11 +262,9 @@ func TestKongTargetBuilder_MustBuild(t *testing.T) {
 
 func TestKongTargetBuilder_Chaining(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	parentRef := &gwtypes.ParentReference{

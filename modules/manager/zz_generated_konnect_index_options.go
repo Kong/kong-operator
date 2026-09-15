@@ -16,6 +16,8 @@ func generatedIndexOptionsForKonnectEntities(
 	return slices.Concat(
 		index.OptionsForAIGatewayAgent(),
 		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),
@@ -24,6 +26,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForAIGatewayModel(),
 		index.OptionsForAIGatewayModelProvider(),
 		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewaySNI(),
 		index.OptionsForEventGatewayBackendCluster(),
 		index.OptionsForEventGatewayDataPlaneCertificate(),
 		index.OptionsForEventGatewayListener(),

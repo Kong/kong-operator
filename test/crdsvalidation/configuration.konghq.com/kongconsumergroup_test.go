@@ -25,10 +25,8 @@ func TestKongConsumerGroup(t *testing.T) {
 
 	t.Run("cp ref", func(t *testing.T) {
 		obj := &configurationv1beta1.KongConsumerGroup{
-			TypeMeta: metav1.TypeMeta{
-				Kind:       "KongConsumerGroup",
-				APIVersion: configurationv1beta1.GroupVersion.String(),
-			},
+			Kind:       "KongConsumerGroup",
+			APIVersion: configurationv1beta1.GroupVersion.String(),
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: configurationv1beta1.KongConsumerGroupSpec{
 				Name: "group1",

@@ -3,7 +3,6 @@ package fallback_test
 import (
 	"testing"
 
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
@@ -15,10 +14,8 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testService(t, "1"),
@@ -33,29 +30,19 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute -> Service",
 			object: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.HTTPRouteSpec{
 					Rules: []gatewayapi.HTTPRouteRule{
 						{
 							BackendRefs: []gatewayapi.HTTPBackendRef{
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "1",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
-									},
+									Name: "1",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "2",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
-									},
+									Name: "2",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 							},
 						},
@@ -74,12 +61,10 @@ func TestResolveDependencies_HTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute -> KongPlugin, KongClusterPlugin",
 			object: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -107,10 +92,8 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &gatewayapi.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testService(t, "1"),
@@ -125,25 +108,19 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 		{
 			name: "TLSRoute -> Service",
 			object: &gatewayapi.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.TLSRouteSpec{
 					Rules: []gatewayapi.TLSRouteRule{
 						{
 							BackendRefs: []gatewayapi.BackendRef{
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "1",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "2",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "2",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 							},
 						},
@@ -162,12 +139,10 @@ func TestResolveDependencies_TLSRoute(t *testing.T) {
 		{
 			name: "TLSRoute -> KongPlugin, KongClusterPlugin",
 			object: &gatewayapi.TLSRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -195,10 +170,8 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testService(t, "1"),
@@ -213,25 +186,19 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 		{
 			name: "TCPRoute -> Service",
 			object: &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.TCPRouteSpec{
 					Rules: []gatewayapi.TCPRouteRule{
 						{
 							BackendRefs: []gatewayapi.BackendRef{
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "1",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "2",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "2",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 							},
 						},
@@ -250,12 +217,10 @@ func TestResolveDependencies_TCPRoute(t *testing.T) {
 		{
 			name: "TCPRoute -> KongPlugin, KongClusterPlugin",
 			object: &gatewayapi.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -283,10 +248,8 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testService(t, "1"),
@@ -301,25 +264,19 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 		{
 			name: "UDPRoute -> Service",
 			object: &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.UDPRouteSpec{
 					Rules: []gatewayapi.UDPRouteRule{
 						{
 							BackendRefs: []gatewayapi.BackendRef{
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "1",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "1",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 								{
-									BackendObjectReference: gatewayapi.BackendObjectReference{
-										Name: "2",
-										Kind: new(gatewayapi.Kind("Service")),
-									},
+									Name: "2",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 							},
 						},
@@ -338,12 +295,10 @@ func TestResolveDependencies_UDPRoute(t *testing.T) {
 		{
 			name: "UDPRoute -> KongPlugin, KongClusterPlugin",
 			object: &gatewayapi.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -371,10 +326,8 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &gatewayapi.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testService(t, "1"),
@@ -389,29 +342,19 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 		{
 			name: "GRPCRoute -> Service",
 			object: &gatewayapi.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-route",
+				Namespace: "test-namespace",
 				Spec: gatewayapi.GRPCRouteSpec{
 					Rules: []gatewayapi.GRPCRouteRule{
 						{
 							BackendRefs: []gatewayapi.GRPCBackendRef{
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "1",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
-									},
+									Name: "1",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 								{
-									BackendRef: gatewayapi.BackendRef{
-										BackendObjectReference: gatewayapi.BackendObjectReference{
-											Name: "2",
-											Kind: new(gatewayapi.Kind("Service")),
-										},
-									},
+									Name: "2",
+									Kind: new(gatewayapi.Kind("Service")),
 								},
 							},
 						},
@@ -430,12 +373,10 @@ func TestResolveDependencies_GRPCRoute(t *testing.T) {
 		{
 			name: "GRPCRoute -> KongPlugin, KongClusterPlugin",
 			object: &gatewayapi.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
-					},
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1,2,cluster-1,cluster-2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,

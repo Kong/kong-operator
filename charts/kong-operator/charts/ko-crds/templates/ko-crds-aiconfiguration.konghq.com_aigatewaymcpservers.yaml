@@ -128,8 +128,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
+                          AIGatewayMCPServerConversionListenerAccess represents a union type for access.
+                          Only one of the fields should be set based on the AclAttributeType.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -143,9 +143,6 @@ spec:
                             properties:
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying consumer groups.
                                   This is the
                                   top-level gate: a caller's consumer group must pass this check before any
@@ -180,9 +177,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying consumer
                                   groups access to
                                   tools.
@@ -267,9 +261,6 @@ spec:
                                 type: string
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying callers, evaluated
                                   against the
                                   value of the configured `access_token_claim_field`.
@@ -306,9 +297,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying callers access
                                   to tools,
                                   evaluated against the value of the configured `access_token_claim_field`.
@@ -386,18 +374,11 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Routing, logging, and server configuration for the MCP Server.
+                        description: Routing, logging, and server configuration for
+                          the MCP Server.
                         properties:
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -420,9 +401,6 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -430,11 +408,7 @@ spec:
                               incoming requests.
                             type: object
                           server:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Server-side configuration for the MCP Server.
+                            description: Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -473,11 +447,8 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Config for connecting to a Cloud Provider's Redis instance.
+                                    description: Config for connecting to a Cloud
+                                      Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -857,18 +828,12 @@ spec:
                             type: object
                           upstream:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
                             properties:
                               auth:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Authentication to use when proxying to the upstream service.
+                                description: Authentication to use when proxying to
+                                  the upstream service.
                                 properties:
                                   aws:
                                     description: AIGatewayUpstreamAuthAWS configuration.
@@ -986,9 +951,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1034,17 +996,10 @@ spec:
                             `conversion-only` or `conversion-listener` mode.
                           properties:
                             access:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Access-control rules for a tool.
+                              description: Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
-                                    **Pre-release Feature**
-                                    This feature is currently in beta and is subject to change.
-
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -1065,9 +1020,7 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
+                              description: AIGatewayMCPToolAnnotations is a type alias.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -1111,9 +1064,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -1146,9 +1096,6 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -1216,9 +1163,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -1227,9 +1171,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -1242,9 +1183,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -1282,18 +1220,11 @@ spec:
                     description: ConversionOnly configuration.
                     properties:
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Routing, logging, and request body size limits for the MCP Server.
+                        description: Routing, logging, and request body size limits
+                          for the MCP Server.
                         properties:
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -1314,9 +1245,6 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -1325,18 +1253,12 @@ spec:
                             type: object
                           upstream:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
                             properties:
                               auth:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Authentication to use when proxying to the upstream service.
+                                description: Authentication to use when proxying to
+                                  the upstream service.
                                 properties:
                                   aws:
                                     description: AIGatewayUpstreamAuthAWS configuration.
@@ -1454,9 +1376,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -1497,17 +1416,10 @@ spec:
                             `conversion-only` or `conversion-listener` mode.
                           properties:
                             access:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Access-control rules for a tool.
+                              description: Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
-                                    **Pre-release Feature**
-                                    This feature is currently in beta and is subject to change.
-
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -1528,9 +1440,7 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
+                              description: AIGatewayMCPToolAnnotations is a type alias.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive
@@ -1574,9 +1484,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The headers of the exported API.
                                 By default, Kong will extract the headers from API configuration.
                                 If the configured headers are not exactly matched, this field is required.
@@ -1609,9 +1516,6 @@ spec:
                               minLength: 1
                               type: string
                             parameters:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
                               items:
                                 description: |-
                                   AIGatewayMCPToolParameter An API parameter specification defined in OpenAPI
@@ -1679,9 +1583,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The query arguments of the exported API.
                                 If the generated query arguments are not exactly matched, this field is
                                 required.
@@ -1690,9 +1591,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The API requestBody specification defined in OpenAPI JSON format.
                                 For example,
                                 '{"content":{"application/x-www-form-urlencoded":{"schema":{"type":"object","properties":{"color":{"type":"array","items":{"type":"string"}}}}}}}'.
@@ -1705,9 +1603,6 @@ spec:
                               additionalProperties:
                                 type: string
                               description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
                                 The API responses specification defined in OpenAPI JSON format.
                                 This specification will be used to validate the upstream response and map it
                                 back to the structuredOutput.
@@ -1746,8 +1641,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
+                          AIGatewayMCPServerListenerAccess represents a union type for AIGatewayMCPServerListenerAccess.
+                          Only one of the fields should be set based on the AclAttributeType.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -1761,9 +1656,6 @@ spec:
                             properties:
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying consumer groups.
                                   This is the
                                   top-level gate: a caller's consumer group must pass this check before any
@@ -1798,9 +1690,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying consumer
                                   groups access to
                                   tools.
@@ -1885,9 +1774,6 @@ spec:
                                 type: string
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying callers, evaluated
                                   against the
                                   value of the configured `access_token_claim_field`.
@@ -1924,9 +1810,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying callers access
                                   to tools,
                                   evaluated against the value of the configured `access_token_claim_field`.
@@ -2004,18 +1887,11 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Routing, logging, and server configuration for the MCP Server.
+                        description: Routing, logging, and server configuration for
+                          the MCP Server.
                         properties:
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -2038,9 +1914,6 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -2048,11 +1921,7 @@ spec:
                               incoming requests.
                             type: object
                           server:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Server-side configuration for the MCP Server.
+                            description: Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -2091,11 +1960,8 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Config for connecting to a Cloud Provider's Redis instance.
+                                    description: Config for connecting to a Cloud
+                                      Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -2517,9 +2383,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -2576,8 +2439,8 @@ spec:
                     properties:
                       access:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
+                          AIGatewayMCPServerPassthroughListenerAccess represents a union type for access.
+                          Only one of the fields should be set based on the AclAttributeType.
                         properties:
                           aclAttributeType:
                             description: AclAttributeType designates the type of configuration.
@@ -2591,9 +2454,6 @@ spec:
                             properties:
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying consumer groups.
                                   This is the
                                   top-level gate: a caller's consumer group must pass this check before any
@@ -2628,9 +2488,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying consumer
                                   groups access to
                                   tools.
@@ -2715,9 +2572,6 @@ spec:
                                 type: string
                               acls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Server-level access control rules for allowing or denying callers, evaluated
                                   against the
                                   value of the configured `access_token_claim_field`.
@@ -2754,9 +2608,6 @@ spec:
                                 type: array
                               defaultToolAcls:
                                 description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
                                   Default per-tool access control rules for allowing or denying callers access
                                   to tools,
                                   evaluated against the value of the configured `access_token_claim_field`.
@@ -2834,18 +2685,11 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Routing, logging, and server configuration for the MCP Server.
+                        description: Routing, logging, and server configuration for
+                          the MCP Server.
                         properties:
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -2937,9 +2781,6 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -2947,11 +2788,7 @@ spec:
                               incoming requests.
                             type: object
                           server:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Server-side configuration for the MCP Server.
+                            description: Server-side configuration for the MCP Server.
                             properties:
                               forwardClientHeaders:
                                 description: |-
@@ -2990,11 +2827,8 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Config for connecting to a Cloud Provider's Redis instance.
+                                    description: Config for connecting to a Cloud
+                                      Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -3374,18 +3208,12 @@ spec:
                             type: object
                           upstream:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
                             properties:
                               auth:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Authentication to use when proxying to the upstream service.
+                                description: Authentication to use when proxying to
+                                  the upstream service.
                                 properties:
                                   aws:
                                     description: AIGatewayUpstreamAuthAWS configuration.
@@ -3503,9 +3331,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -3547,23 +3372,14 @@ spec:
                           are applied.
                         items:
                           description: |-
-                            AIGatewayMCPPassthroughTool **Pre-release Feature**
-                            This feature is currently in beta and is subject to change.
-
-                            A tool exposed by an MCP Server in `passthrough-listener` mode.
+                            AIGatewayMCPPassthroughTool A tool exposed by an MCP Server in
+                            `passthrough-listener` mode.
                           properties:
                             access:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Access-control rules for a tool.
+                              description: Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
-                                    **Pre-release Feature**
-                                    This feature is currently in beta and is subject to change.
-
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -3613,18 +3429,11 @@ spec:
                     description: UpstreamServer configuration.
                     properties:
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
-                          Routing, logging, and server configuration for the MCP Server.
+                        description: Routing, logging, and server configuration for
+                          the MCP Server.
                         properties:
                           logging:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Configuration for AI Gateway logging.
+                            description: Configuration for AI Gateway logging.
                             properties:
                               audits:
                                 enum:
@@ -3647,9 +3456,6 @@ spec:
                             additionalProperties:
                               type: string
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
@@ -3708,11 +3514,8 @@ spec:
                                     - Disabled
                                     type: string
                                   redis:
-                                    description: |-
-                                      **Pre-release Feature**
-                                      This feature is currently in beta and is subject to change.
-
-                                      Config for connecting to a Cloud Provider's Redis instance.
+                                    description: Config for connecting to a Cloud
+                                      Provider's Redis instance.
                                     properties:
                                       cloudAuthentication:
                                         description: Auth related config for connecting
@@ -4090,11 +3893,8 @@ spec:
                                 minimum: 0
                                 type: integer
                               toolsListAuth:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Configuration for an Upstream Server's MCP Server Tools' Authentication.
+                                description: Configuration for an Upstream Server's
+                                  MCP Server Tools' Authentication.
                                 properties:
                                   credentials:
                                     description: Credentials configuration.
@@ -4199,18 +3999,12 @@ spec:
                             type: integer
                           upstream:
                             description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
                               Configuration applied when proxying to the upstream service, including
                               authentication.
                             properties:
                               auth:
-                                description: |-
-                                  **Pre-release Feature**
-                                  This feature is currently in beta and is subject to change.
-
-                                  Authentication to use when proxying to the upstream service.
+                                description: Authentication to use when proxying to
+                                  the upstream service.
                                 properties:
                                   aws:
                                     description: AIGatewayUpstreamAuthAWS configuration.
@@ -4329,9 +4123,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this MCP server, used as a stable
                           human-readable reference.
                           This value is immutable after creation.
@@ -4378,17 +4169,10 @@ spec:
                             falls back to the remote tool's own definition.
                           properties:
                             access:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
-
-                                Access-control rules for a tool.
+                              description: Access-control rules for a tool.
                               properties:
                                 acls:
                                   description: |-
-                                    **Pre-release Feature**
-                                    This feature is currently in beta and is subject to change.
-
                                     Access control rules for allowing or denying consumer groups access to this
                                     tool.
                                     When configured, these will override the default access control rules
@@ -4409,9 +4193,7 @@ spec:
                                   type: object
                               type: object
                             annotations:
-                              description: |-
-                                **Pre-release Feature**
-                                This feature is currently in beta and is subject to change.
+                              description: AIGatewayMCPToolAnnotations is a type alias.
                               properties:
                                 destructiveHint:
                                   description: If true, the tool may perform destructive

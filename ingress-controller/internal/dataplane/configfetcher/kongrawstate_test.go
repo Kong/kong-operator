@@ -143,13 +143,11 @@ func TestKongRawStateToKongState(t *testing.T) {
 				},
 				BasicAuths: []*kong.BasicAuthOptions{
 					{
-						BasicAuth: kong.BasicAuth{
-							ID: new("basicAuth"),
-							Consumer: &kong.Consumer{
-								ID: new("consumer"),
-							},
-							Username: new("username"),
+						ID: new("basicAuth"),
+						Consumer: &kong.Consumer{
+							ID: new("consumer"),
 						},
+						Username: new("username"),
 					},
 				},
 				ACLGroups: []*kong.ACLGroup{
@@ -193,9 +191,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 			expectedKongState: &kongstate.KongState{
 				Services: []kongstate.Service{
 					{
-						Service: kong.Service{
-							Name: new("service"),
-						},
+						Name: new("service"),
 						Plugins: []kong.Plugin{
 							{
 								Name: new("plugin1"),
@@ -203,9 +199,7 @@ func TestKongRawStateToKongState(t *testing.T) {
 						},
 						Routes: []kongstate.Route{
 							{
-								Route: kong.Route{
-									Name: new("route"),
-								},
+								Name: new("route"),
 								Plugins: []kong.Plugin{
 									{
 										Name: new("plugin2"),
@@ -217,30 +211,22 @@ func TestKongRawStateToKongState(t *testing.T) {
 				},
 				Upstreams: []kongstate.Upstream{
 					{
-						Upstream: kong.Upstream{
-							Name: new("upstream"),
-						},
+						Name: new("upstream"),
 						Targets: []kongstate.Target{
 							{
-								Target: kong.Target{
-									Weight: new(999),
-								},
+								Weight: new(999),
 							},
 						},
 					},
 				},
 				Vaults: []kongstate.Vault{
 					{
-						Vault: kong.Vault{
-							Name: new("test-vault"), Prefix: new("test-vault"),
-						},
+						Name: new("test-vault"), Prefix: new("test-vault"),
 					},
 				},
 				Certificates: []kongstate.Certificate{
 					{
-						Certificate: kong.Certificate{
-							Cert: new("cert"),
-						},
+						Cert: new("cert"),
 					},
 				},
 				CACertificates: []kong.CACertificate{
@@ -250,63 +236,45 @@ func TestKongRawStateToKongState(t *testing.T) {
 				},
 				ConsumerGroups: []kongstate.ConsumerGroup{
 					{
-						ConsumerGroup: kong.ConsumerGroup{
-							Name: new("consumerGroup"),
-						},
+						Name: new("consumerGroup"),
 					},
 				},
 				Consumers: []kongstate.Consumer{
 					{
-						Consumer: kong.Consumer{
-							CustomID: new("customID"),
-						},
+						CustomID: new("customID"),
 						KeyAuths: []*kongstate.KeyAuth{
 							{
-								KeyAuth: kong.KeyAuth{
-									Key: new("key"),
-								},
+								Key: new("key"),
 							},
 						},
 						HMACAuths: []*kongstate.HMACAuth{
 							{
-								HMACAuth: kong.HMACAuth{
-									Username: new("username"),
-								},
+								Username: new("username"),
 							},
 						},
 						JWTAuths: []*kongstate.JWTAuth{
 							{
-								JWTAuth: kong.JWTAuth{
-									Key: new("key"),
-								},
+								Key: new("key"),
 							},
 						},
 						BasicAuths: []*kongstate.BasicAuth{
 							{
-								BasicAuth: kong.BasicAuth{
-									Username: new("username"),
-								},
+								Username: new("username"),
 							},
 						},
 						ACLGroups: []*kongstate.ACLGroup{
 							{
-								ACLGroup: kong.ACLGroup{
-									Group: new("group"),
-								},
+								Group: new("group"),
 							},
 						},
 						Oauth2Creds: []*kongstate.Oauth2Credential{
 							{
-								Oauth2Credential: kong.Oauth2Credential{
-									Name: new("name"),
-								},
+								Name: new("name"),
 							},
 						},
 						MTLSAuths: []*kongstate.MTLSAuth{
 							{
-								MTLSAuth: kong.MTLSAuth{
-									SubjectName: new("subjectName"),
-								},
+								SubjectName: new("subjectName"),
 							},
 						},
 					},

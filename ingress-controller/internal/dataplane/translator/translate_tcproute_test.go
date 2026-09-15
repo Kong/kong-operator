@@ -61,10 +61,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "TCPRoute with single rule, single backendref and Gateway in the same namespace",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-1",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
@@ -74,19 +72,15 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					Status: tcpProgrammedStatus("tcp80"),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "test-1",
-					},
+					Name:      "gateway-1",
+					Namespace: "test-1",
 				},
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  tcpRouteTypeMeta,
+					Name:      "tcproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -107,17 +101,13 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("tcproute.default.tcproute-1.0"),
-					},
+					Name: new("tcproute.default.tcproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").WithPortNumber(8080).MustBuild(),
 					},
@@ -126,12 +116,10 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.tcproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tcproute.default.tcproute-1.0.0"),
-							Expression:   new(`net.dst.port == 80`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tcp"),
-						},
+						Name:             new("tcproute.default.tcproute-1.0.0"),
+						Expression:       new(`net.dst.port == 80`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tcp"),
 						ExpressionRoutes: true,
 					},
 				},
@@ -141,10 +129,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "TCPRoute with single rule, multiple backendrefs and Gateway in the different namespace",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "test-1",
-					},
+					Name:      "gateway-1",
+					Namespace: "test-1",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
@@ -154,19 +140,15 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					Status: tcpProgrammedStatus("tcp80", "tcp443"),
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-1",
+					Namespace: "default",
 				},
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  tcpRouteTypeMeta,
+					Name:      "tcproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -189,23 +171,17 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("tcproute.default.tcproute-1.0"),
-					},
+					Name: new("tcproute.default.tcproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -217,12 +193,10 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.tcproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tcproute.default.tcproute-1.0.0"),
-							Expression:   new(`(net.dst.port == 80) || (net.dst.port == 443)`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tcp"),
-						},
+						Name:             new("tcproute.default.tcproute-1.0.0"),
+						Expression:       new(`(net.dst.port == 80) || (net.dst.port == 443)`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tcp"),
 						ExpressionRoutes: true,
 					},
 				},
@@ -232,10 +206,8 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "TCPRoute with multiple rules and multiple Gateways with multiple listeners and sectionName for Gateway specified",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-1",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							{
@@ -265,11 +237,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  tcpRouteTypeMeta,
+					Name:      "tcproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -295,11 +265,9 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tcproute-2",
-						Namespace: "default",
-					},
+					TypeMeta:  tcpRouteTypeMeta,
+					Name:      "tcproute-2",
+					Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -327,35 +295,25 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service3",
-					},
+					Namespace: "default",
+					Name:      "service3",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service4",
-					},
+					Namespace: "default",
+					Name:      "service4",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("tcproute.default.tcproute-1.0"),
-					},
+					Name: new("tcproute.default.tcproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -364,9 +322,7 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("tcproute.default.tcproute-2.0"),
-					},
+					Name: new("tcproute.default.tcproute-2.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service3").WithPortNumber(8080).MustBuild(),
 						builder.NewKongstateServiceBackend("service4").WithPortNumber(8443).MustBuild(),
@@ -376,23 +332,19 @@ func TestIngressRulesFromTCPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.tcproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tcproute.default.tcproute-1.0.0"),
-							Expression:   new(`(net.dst.port == 80) || (net.dst.port == 443)`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tcp"),
-						},
+						Name:             new("tcproute.default.tcproute-1.0.0"),
+						Expression:       new(`(net.dst.port == 80) || (net.dst.port == 443)`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tcp"),
 						ExpressionRoutes: true,
 					},
 				},
 				"tcproute.default.tcproute-2.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tcproute.default.tcproute-2.0.0"),
-							Expression:   new(`(net.dst.port == 8080) || (net.dst.port == 8443)`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tcp"),
-						},
+						Name:             new("tcproute.default.tcproute-2.0.0"),
+						Expression:       new(`(net.dst.port == 8080) || (net.dst.port == 8443)`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tcp"),
 						ExpressionRoutes: true,
 					},
 				},
@@ -467,10 +419,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			name: "single TCPRoute with single rule, single backendref and Gateway in the same namespace",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-1",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
@@ -482,11 +432,9 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "single-rule",
-						Namespace: "default",
-					},
+					TypeMeta:  tcpRouteTypeMeta,
+					Name:      "single-rule",
+					Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -507,18 +455,14 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name:     new("tcproute.default.single-rule.0"),
-						Protocol: new("tcp"),
-					},
+					Name:     new("tcproute.default.single-rule.0"),
+					Protocol: new("tcp"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -530,13 +474,11 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.single-rule.0": {
 					{
-						Route: kong.Route{
-							Name: new("tcproute.default.single-rule.0.0"),
-							Destinations: []*kong.CIDRPort{
-								{Port: new(80)},
-							},
-							Protocols: kong.StringSlice("tcp"),
+						Name: new("tcproute.default.single-rule.0.0"),
+						Destinations: []*kong.CIDRPort{
+							{Port: new(80)},
 						},
+						Protocols: kong.StringSlice("tcp"),
 					},
 				},
 			},
@@ -545,7 +487,7 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			name: "two TCPRoutes on the same listener — only the older one wins",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "tcp-gw"},
+					Namespace: "default", Name: "tcp-gw",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{{
 							Name:     "tcp",
@@ -558,12 +500,10 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "default",
-						Name:              "older",
-						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-					},
+					TypeMeta:          tcpRouteTypeMeta,
+					Namespace:         "default",
+					Name:              "older",
+					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
@@ -572,22 +512,18 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 						},
 						Rules: []gatewayapi.TCPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name: "svc-older",
-									Kind: new(gatewayv1.Kind("Service")),
-									Port: new(gatewayv1.PortNumber(8080)),
-								},
+								Name: "svc-older",
+								Kind: new(gatewayv1.Kind("Service")),
+								Port: new(gatewayv1.PortNumber(8080)),
 							}},
 						}},
 					},
 				},
 				{
-					TypeMeta: tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace:         "default",
-						Name:              "newer",
-						CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
-					},
+					TypeMeta:          tcpRouteTypeMeta,
+					Namespace:         "default",
+					Name:              "newer",
+					CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayv1.ParentReference{{
@@ -596,26 +532,22 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 						},
 						Rules: []gatewayapi.TCPRouteRule{{
 							BackendRefs: []gatewayv1.BackendRef{{
-								BackendObjectReference: gatewayv1.BackendObjectReference{
-									Name: "svc-newer",
-									Kind: new(gatewayv1.Kind("Service")),
-									Port: new(gatewayv1.PortNumber(9090)),
-								},
+								Name: "svc-newer",
+								Kind: new(gatewayv1.Kind("Service")),
+								Port: new(gatewayv1.PortNumber(9090)),
 							}},
 						}},
 					},
 				},
 			},
 			services: []*corev1.Service{
-				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
-				{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+				{Namespace: "default", Name: "svc-older"},
+				{Namespace: "default", Name: "svc-newer"},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name:     new("tcproute.default.older.0"),
-						Protocol: new("tcp"),
-					},
+					Name:     new("tcproute.default.older.0"),
+					Protocol: new("tcp"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("svc-older").
 							WithNamespace("default").
@@ -627,11 +559,9 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.older.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tcproute.default.older.0.0"),
-							Destinations: []*kong.CIDRPort{{Port: new(9999)}},
-							Protocols:    kong.StringSlice("tcp"),
-						},
+						Name:         new("tcproute.default.older.0.0"),
+						Destinations: []*kong.CIDRPort{{Port: new(9999)}},
+						Protocols:    kong.StringSlice("tcp"),
 					},
 				},
 			},
@@ -640,10 +570,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			name: "multiple TCPRoutes with translation errors",
 			gateways: []*gatewayapi.Gateway{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-1",
-						Namespace: "default",
-					},
+					Name:      "gateway-1",
+					Namespace: "default",
 					Spec: gatewayapi.GatewaySpec{
 						Listeners: []gatewayapi.Listener{
 							builder.NewListener("tcp80").WithPort(80).TCP().Build(),
@@ -655,8 +583,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			},
 			tcpRoutes: []*gatewayapi.TCPRoute{
 				{
-					TypeMeta:   tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "single-rule", Namespace: "default"},
+					TypeMeta: tcpRouteTypeMeta,
+					Name:     "single-rule", Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -676,8 +604,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta:   tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "single-rule-2", Namespace: "default"},
+					TypeMeta: tcpRouteTypeMeta,
+					Name:     "single-rule-2", Namespace: "default",
 					Spec: gatewayapi.TCPRouteSpec{
 						CommonRouteSpec: gatewayapi.CommonRouteSpec{
 							ParentRefs: []gatewayapi.ParentReference{
@@ -697,31 +625,25 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					},
 				},
 				{
-					TypeMeta:   tcpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{Name: "no-rule", Namespace: "default"},
-					Spec:       gatewayapi.TCPRouteSpec{},
+					TypeMeta: tcpRouteTypeMeta,
+					Name:     "no-rule", Namespace: "default",
+					Spec: gatewayapi.TCPRouteSpec{},
 				},
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name:     new("tcproute.default.single-rule.0"),
-						Protocol: new("tcp"),
-					},
+					Name:     new("tcproute.default.single-rule.0"),
+					Protocol: new("tcp"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -730,10 +652,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name:     new("tcproute.default.single-rule-2.0"),
-						Protocol: new("tcp"),
-					},
+					Name:     new("tcproute.default.single-rule-2.0"),
+					Protocol: new("tcp"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service2").WithPortNumber(8080).MustBuild(),
 					},
@@ -742,24 +662,20 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tcproute.default.single-rule.0": {
 					{
-						Route: kong.Route{
-							Name: new("tcproute.default.single-rule.0.0"),
-							Destinations: []*kong.CIDRPort{
-								{Port: new(80)},
-							},
-							Protocols: kong.StringSlice("tcp"),
+						Name: new("tcproute.default.single-rule.0.0"),
+						Destinations: []*kong.CIDRPort{
+							{Port: new(80)},
 						},
+						Protocols: kong.StringSlice("tcp"),
 					},
 				},
 				"tcproute.default.single-rule-2.0": {
 					{
-						Route: kong.Route{
-							Name: new("tcproute.default.single-rule-2.0.0"),
-							Destinations: []*kong.CIDRPort{
-								{Port: new(8080)},
-							},
-							Protocols: kong.StringSlice("tcp"),
+						Name: new("tcproute.default.single-rule-2.0.0"),
+						Destinations: []*kong.CIDRPort{
+							{Port: new(8080)},
 						},
+						Protocols: kong.StringSlice("tcp"),
 					},
 				},
 			},
@@ -767,8 +683,8 @@ func TestIngressRulesFromTCPRoutes(t *testing.T) {
 				newResourceFailure(
 					t, subtranslator.ErrRouteValidationNoRules.Error(),
 					&gatewayapi.TCPRoute{
-						TypeMeta:   tcpRouteTypeMeta,
-						ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "no-rule"},
+						TypeMeta:  tcpRouteTypeMeta,
+						Namespace: "default", Name: "no-rule",
 					},
 				),
 			},
@@ -838,7 +754,7 @@ func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
 	tcpRouteTypeMeta := metav1.TypeMeta{Kind: "TCPRoute", APIVersion: gatewayv1.GroupVersion.String()}
 
 	gw := &gatewayapi.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "tcp-gw"},
+		Namespace: "default", Name: "tcp-gw",
 		Spec: gatewayapi.GatewaySpec{
 			Listeners: []gatewayapi.Listener{{
 				Name:     "tcp",
@@ -849,41 +765,33 @@ func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
 		Status: tcpProgrammedStatus("tcp"),
 	}
 	older := &gatewayapi.TCPRoute{
-		TypeMeta: tcpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:         "default",
-			Name:              "older",
-			CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
-		},
+		TypeMeta:          tcpRouteTypeMeta,
+		Namespace:         "default",
+		Name:              "older",
+		CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 1, 0, 0, 0, 0, time.UTC)),
 		Spec: gatewayapi.TCPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
 			},
 			Rules: []gatewayapi.TCPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(8080)),
-					},
+					Name: "svc-older", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(8080)),
 				}},
 			}},
 		},
 	}
 	newer := &gatewayapi.TCPRoute{
-		TypeMeta: tcpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:         "default",
-			Name:              "newer",
-			CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
-		},
+		TypeMeta:          tcpRouteTypeMeta,
+		Namespace:         "default",
+		Name:              "newer",
+		CreationTimestamp: metav1.NewTime(time.Date(2025, 1, 2, 0, 0, 0, 0, time.UTC)),
 		Spec: gatewayapi.TCPRouteSpec{
 			CommonRouteSpec: gatewayapi.CommonRouteSpec{
 				ParentRefs: []gatewayv1.ParentReference{{Name: gatewayv1.ObjectName("tcp-gw")}},
 			},
 			Rules: []gatewayapi.TCPRouteRule{{
 				BackendRefs: []gatewayv1.BackendRef{{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(9090)),
-					},
+					Name: "svc-newer", Kind: new(gatewayv1.Kind("Service")), Port: new(gatewayv1.PortNumber(9090)),
 				}},
 			}},
 		},
@@ -894,8 +802,8 @@ func TestIngressRulesFromTCPRoutes_ArbitrationReporting(t *testing.T) {
 		Gateways:       []*gatewayapi.Gateway{gw},
 		TCPRoutes:      []*gatewayapi.TCPRoute{older, newer},
 		Services: []*corev1.Service{
-			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-older"}},
-			{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "svc-newer"}},
+			{Namespace: "default", Name: "svc-older"},
+			{Namespace: "default", Name: "svc-newer"},
 		},
 	})
 	require.NoError(t, err)

@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/license"
 )
@@ -26,9 +25,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "nil secret Data returns error",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 			},
 			expectError:    true,
 			expectedErrMsg: "secret test-secret doesn't contain data",
@@ -36,9 +33,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "empty Data map returns error with all missing keys",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{},
 			},
 			expectError:    true,
@@ -47,9 +42,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "missing payload key",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"id":         []byte("some-id"),
 					"updated_at": []byte(strconv.FormatInt(timeNowUnix, 10)),
@@ -61,9 +54,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "missing id key",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload":    []byte("some-payload"),
 					"updated_at": []byte(strconv.FormatInt(timeNowUnix, 10)),
@@ -75,9 +66,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "missing updated_at key",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload": []byte("some-payload"),
 					"id":      []byte("some-id"),
@@ -89,9 +78,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "missing multiple keys",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload": []byte("some-payload"),
 				},
@@ -102,9 +89,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "invalid updated_at value",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload":    []byte("some-payload"),
 					"id":         []byte("some-id"),
@@ -117,9 +102,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "valid secret returns license",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload":    []byte("some-license-payload"),
 					"id":         []byte("some-license-id"),
@@ -135,9 +118,7 @@ func TestKonnectLicenseFromSecret(t *testing.T) {
 		{
 			name: "secret with empty payload is invalid",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-secret",
-				},
+				Name: "test-secret",
 				Data: map[string][]byte{
 					"payload":    []byte(""),
 					"id":         []byte(""),

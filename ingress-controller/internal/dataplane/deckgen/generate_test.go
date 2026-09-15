@@ -39,9 +39,7 @@ func TestToDeckContent(t *testing.T) {
 				FormatVersion: versions.DeckFileFormatVersion,
 				Upstreams: []file.FUpstream{
 					{
-						Upstream: kong.Upstream{
-							Name: new(StubUpstreamName),
-						},
+						Name: new(StubUpstreamName),
 					},
 				},
 			},
@@ -52,13 +50,11 @@ func TestToDeckContent(t *testing.T) {
 			input: &kongstate.KongState{
 				Certificates: []kongstate.Certificate{
 					{
-						Certificate: kong.Certificate{
-							ID:   new("cert-id"),
-							Cert: new("cert-pem"),
-							Key:  new("cert-key"),
-							Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default", "k8s-uid:uid-1"),
-							SNIs: kong.StringSlice("example.com"),
-						},
+						ID:   new("cert-id"),
+						Cert: new("cert-pem"),
+						Key:  new("cert-key"),
+						Tags: kong.StringSlice("k8s-name:secret1", "k8s-namespace:default", "k8s-uid:uid-1"),
+						SNIs: kong.StringSlice("example.com"),
 					},
 				},
 			},
@@ -99,11 +95,9 @@ func TestFillPlugin(t *testing.T) {
 		{
 			name: "Required field provided for plugin",
 			plugin: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("plugin"),
-					Config: kong.Configuration{
-						"endpoint": "https://example.com",
-					},
+				Name: new("plugin"),
+				Config: kong.Configuration{
+					"endpoint": "https://example.com",
 				},
 			},
 			schemas: &mockPluginSchemaStore{
@@ -150,27 +144,23 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			expected: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("plugin"),
-					Protocols: []*string{
-						new("grpc"),
-						new("grpcs"),
-						new("http"),
-						new("https"),
-					},
-					Enabled: new(true),
-					Config: kong.Configuration{
-						"endpoint": "https://example.com",
-					},
+				Name: new("plugin"),
+				Protocols: []*string{
+					new("grpc"),
+					new("grpcs"),
+					new("http"),
+					new("https"),
+				},
+				Enabled: new(true),
+				Config: kong.Configuration{
+					"endpoint": "https://example.com",
 				},
 			},
 		},
 		{
 			name: "Required field not provided for plugin gets filled in with nil",
 			plugin: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("plugin"),
-				},
+				Name: new("plugin"),
 			},
 			schemas: &mockPluginSchemaStore{
 				map[string]any{
@@ -216,18 +206,16 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			expected: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("plugin"),
-					Protocols: []*string{
-						new("grpc"),
-						new("grpcs"),
-						new("http"),
-						new("https"),
-					},
-					Enabled: new(true),
-					Config: kong.Configuration{
-						"endpoint": nil,
-					},
+				Name: new("plugin"),
+				Protocols: []*string{
+					new("grpc"),
+					new("grpcs"),
+					new("http"),
+					new("https"),
+				},
+				Enabled: new(true),
+				Config: kong.Configuration{
+					"endpoint": nil,
 				},
 			},
 		},
@@ -235,9 +223,7 @@ func TestFillPlugin(t *testing.T) {
 			// NOTE: This would fail for go-kong v0.52.0 and older.
 			name: "OpenTelemetry plugin for Gateway 3.7.x",
 			plugin: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("opentelemetry"),
-				},
+				Name: new("opentelemetry"),
 			},
 			schemas: &mockPluginSchemaStore{
 				schema: map[string]any{
@@ -564,43 +550,41 @@ func TestFillPlugin(t *testing.T) {
 				},
 			},
 			expected: &file.FPlugin{
-				Plugin: kong.Plugin{
-					Name: new("opentelemetry"),
-					Protocols: []*string{
-						new("grpc"),
-						new("grpcs"),
-						new("http"),
-						new("https"),
+				Name: new("opentelemetry"),
+				Protocols: []*string{
+					new("grpc"),
+					new("grpcs"),
+					new("http"),
+					new("https"),
+				},
+				Enabled: new(true),
+				Config: kong.Configuration{
+					"endpoint":                         nil,
+					"batch_flush_delay":                nil,
+					"batch_span_count":                 nil,
+					"connect_timeout":                  float64(1000),
+					"header_type":                      "preserve",
+					"headers":                          nil,
+					"http_response_header_for_traceid": nil,
+					"propagation": map[string]any{
+						"clear":          nil,
+						"default_format": "w3c",
+						"extract":        nil,
+						"inject":         nil,
 					},
-					Enabled: new(true),
-					Config: kong.Configuration{
-						"endpoint":                         nil,
-						"batch_flush_delay":                nil,
-						"batch_span_count":                 nil,
-						"connect_timeout":                  float64(1000),
-						"header_type":                      "preserve",
-						"headers":                          nil,
-						"http_response_header_for_traceid": nil,
-						"propagation": map[string]any{
-							"clear":          nil,
-							"default_format": "w3c",
-							"extract":        nil,
-							"inject":         nil,
-						},
-						"queue": map[string]any{
-							"initial_retry_delay":  float64(0.01),
-							"max_batch_size":       float64(200),
-							"max_bytes":            nil,
-							"max_coalescing_delay": float64(1),
-							"max_entries":          float64(10000),
-							"max_retry_delay":      float64(60),
-							"max_retry_time":       float64(60),
-						},
-						"read_timeout":        float64(5000),
-						"resource_attributes": nil,
-						"sampling_rate":       nil,
-						"send_timeout":        float64(5000),
+					"queue": map[string]any{
+						"initial_retry_delay":  float64(0.01),
+						"max_batch_size":       float64(200),
+						"max_bytes":            nil,
+						"max_coalescing_delay": float64(1),
+						"max_entries":          float64(10000),
+						"max_retry_delay":      float64(60),
+						"max_retry_time":       float64(60),
 					},
+					"read_timeout":        float64(5000),
+					"resource_attributes": nil,
+					"sampling_rate":       nil,
+					"send_timeout":        float64(5000),
 				},
 			},
 		},

@@ -1424,6 +1424,19 @@ func TestAIGatewayUpstreamConfig_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAuthGCPWorkloadIdentityFederationAwsIam_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AuthGCPWorkloadIdentityFederationAwsIam
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestGCPModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1793,6 +1806,33 @@ func TestAIGatewayModelModelConfigBalancerUnmarshalJSON_NilReceiver(t *testing.T
 	}
 }
 
+func TestAIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws_iam", payload: []byte("{\"source\":\"awsIam\",\"awsIam\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederation: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestAIGatewayModelVectorDBConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -2001,6 +2041,33 @@ func TestAIGatewayUpstreamConfigAuthUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling AIGatewayUpstreamConfigAuth: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestAuthGCPWorkloadIdentityFederationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "aws_iam", payload: []byte("{\"source\":\"awsIam\",\"awsIam\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *AuthGCPWorkloadIdentityFederation
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling AuthGCPWorkloadIdentityFederation: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -2663,6 +2730,46 @@ func TestAIGatewayModelModelConfigUnmarshalJSON_DecodesUnionFields(t *testing.T)
 			t.Parallel()
 
 			var target AIGatewayModelModelConfig
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestAIGatewayModelProviderConfigAuthGCPUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, AIGatewayModelProviderConfigAuthGCP)
+	}{
+		{
+			name:    "WorkloadIdentityFederation/aws_iam",
+			payload: []byte("{\"workloadIdentityFederation\":{\"source\":\"awsIam\",\"awsIam\":{}}}"),
+			assert: func(t *testing.T, target AIGatewayModelProviderConfigAuthGCP) {
+				t.Helper()
+				if target.WorkloadIdentityFederation == nil {
+					t.Fatalf("WorkloadIdentityFederation should be allocated")
+				}
+				if got, want := target.WorkloadIdentityFederation.Source, AIGatewayModelProviderConfigAuthGCPWorkloadIdentityFederationTypeAuthGCPWorkloadIdentityFederationAwsIam; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.WorkloadIdentityFederation.AuthGCPWorkloadIdentityFederationAwsIam == nil {
+					t.Fatalf("WorkloadIdentityFederation.AuthGCPWorkloadIdentityFederationAwsIam should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target AIGatewayModelProviderConfigAuthGCP
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

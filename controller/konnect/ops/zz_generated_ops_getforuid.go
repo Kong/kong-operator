@@ -46,6 +46,10 @@ func getForUID[
 		return getAIGatewayAgentForUID(ctx, sdk.GetAIGatewayAgentsSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return getAIGatewayAuthStrategyForUID(ctx, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
+		return getAIGatewayCACertificateForUID(ctx, sdk.GetAIGatewayCACertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return getAIGatewayCertificateForUID(ctx, sdk.GetAIGatewayCertificatesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return getAIGatewayConsumerForUID(ctx, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -62,6 +66,8 @@ func getForUID[
 		return getAIGatewayModelProviderForUID(ctx, sdk.GetAIGatewayModelProvidersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return getAIGatewayPolicyForUID(ctx, sdk.GetAIGatewayPoliciesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewaySNI:
+		return getAIGatewaySNIForUID(ctx, sdk.GetAIGatewaySNIsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return getEventGatewayBackendClusterForUID(ctx, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

@@ -12,6 +12,8 @@ import (
 type generatedMockSDKWrapper struct {
 	AIGatewayAgentsSDK                           *mocks.MockAIGatewayAgentsSDK
 	AIGatewayAuthStrategiesSDK                   *mocks.MockAIGatewayAuthStrategiesSDK
+	AIGatewayCACertificatesSDK                   *mocks.MockAIGatewayCACertificatesSDK
+	AIGatewayCertificatesSDK                     *mocks.MockAIGatewayCertificatesSDK
 	AIGatewayConsumersSDK                        *mocks.MockAIGatewayConsumersSDK
 	AIGatewayConsumerGroupsSDK                   *mocks.MockAIGatewayConsumerGroupsSDK
 	AIGatewayDataPlaneCertificatesSDK            *mocks.MockAIGatewayDataPlaneCertificatesSDK
@@ -19,6 +21,7 @@ type generatedMockSDKWrapper struct {
 	AIGatewayModelsSDK                           *mocks.MockAIGatewayModelsSDK
 	AIGatewayModelProvidersSDK                   *mocks.MockAIGatewayModelProvidersSDK
 	AIGatewayPoliciesSDK                         *mocks.MockAIGatewayPoliciesSDK
+	AIGatewaySNIsSDK                             *mocks.MockAIGatewaySNIsSDK
 	EventGatewayBackendClustersSDK               *mocks.MockEventGatewayBackendClustersSDK
 	EventGatewayDataPlaneCertificatesSDK         *mocks.MockEventGatewayDataPlaneCertificatesSDK
 	EventGatewayListenersSDK                     *mocks.MockEventGatewayListenersSDK
@@ -45,6 +48,8 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 	return generatedMockSDKWrapper{
 		AIGatewayAgentsSDK:                           mocks.NewMockAIGatewayAgentsSDK(t),
 		AIGatewayAuthStrategiesSDK:                   mocks.NewMockAIGatewayAuthStrategiesSDK(t),
+		AIGatewayCACertificatesSDK:                   mocks.NewMockAIGatewayCACertificatesSDK(t),
+		AIGatewayCertificatesSDK:                     mocks.NewMockAIGatewayCertificatesSDK(t),
 		AIGatewayConsumersSDK:                        mocks.NewMockAIGatewayConsumersSDK(t),
 		AIGatewayConsumerGroupsSDK:                   mocks.NewMockAIGatewayConsumerGroupsSDK(t),
 		AIGatewayDataPlaneCertificatesSDK:            mocks.NewMockAIGatewayDataPlaneCertificatesSDK(t),
@@ -52,6 +57,7 @@ func newGeneratedMockSDKWrapper(t *testing.T) generatedMockSDKWrapper {
 		AIGatewayModelsSDK:                           mocks.NewMockAIGatewayModelsSDK(t),
 		AIGatewayModelProvidersSDK:                   mocks.NewMockAIGatewayModelProvidersSDK(t),
 		AIGatewayPoliciesSDK:                         mocks.NewMockAIGatewayPoliciesSDK(t),
+		AIGatewaySNIsSDK:                             mocks.NewMockAIGatewaySNIsSDK(t),
 		EventGatewayBackendClustersSDK:               mocks.NewMockEventGatewayBackendClustersSDK(t),
 		EventGatewayDataPlaneCertificatesSDK:         mocks.NewMockEventGatewayDataPlaneCertificatesSDK(t),
 		EventGatewayListenersSDK:                     mocks.NewMockEventGatewayListenersSDK(t),
@@ -83,6 +89,16 @@ func (m generatedMockSDKWrapper) GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayA
 // GetAIGatewayAuthStrategiesSDK returns the SDK to operate AIGatewayAuthStrategy.
 func (m generatedMockSDKWrapper) GetAIGatewayAuthStrategiesSDK() sdkkonnectgo.AIGatewayAuthStrategiesSDK {
 	return m.AIGatewayAuthStrategiesSDK
+}
+
+// GetAIGatewayCACertificatesSDK returns the SDK to operate AIGatewayCACertificate.
+func (m generatedMockSDKWrapper) GetAIGatewayCACertificatesSDK() sdkkonnectgo.AIGatewayCACertificatesSDK {
+	return m.AIGatewayCACertificatesSDK
+}
+
+// GetAIGatewayCertificatesSDK returns the SDK to operate AIGatewayCertificate.
+func (m generatedMockSDKWrapper) GetAIGatewayCertificatesSDK() sdkkonnectgo.AIGatewayCertificatesSDK {
+	return m.AIGatewayCertificatesSDK
 }
 
 // GetAIGatewayConsumersSDK returns the SDK to operate AIGatewayConsumer.
@@ -118,6 +134,11 @@ func (m generatedMockSDKWrapper) GetAIGatewayModelProvidersSDK() sdkkonnectgo.AI
 // GetAIGatewayPoliciesSDK returns the SDK to operate AIGatewayPolicy.
 func (m generatedMockSDKWrapper) GetAIGatewayPoliciesSDK() sdkkonnectgo.AIGatewayPoliciesSDK {
 	return m.AIGatewayPoliciesSDK
+}
+
+// GetAIGatewaySNIsSDK returns the SDK to operate AIGatewaySNI.
+func (m generatedMockSDKWrapper) GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNIsSDK {
+	return m.AIGatewaySNIsSDK
 }
 
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.

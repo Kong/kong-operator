@@ -19,6 +19,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -27,7 +28,13 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	_ "github.com/kong/kong-operator/v2/controller/hybridgateway/utils" // Used by function under test.
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+// testReferenceGrantVersion is the version used by tests that are not sensitive to
+// which one the cluster serves; see referencegranthelpers.V1. Tests that depend on a
+// grant being found run against referencegranthelpers.Versions instead.
+var testReferenceGrantVersion = referencegranthelpers.V1()
 
 // Helper functions for creating test objects.
 func createTestEndpointSliceList(items []discoveryv1.EndpointSlice) *discoveryv1.EndpointSliceList {
@@ -38,9 +45,7 @@ func createTestEndpointSliceList(items []discoveryv1.EndpointSlice) *discoveryv1
 
 func createTestEndpointSlice(name string, ports []discoveryv1.EndpointPort, endpoints []discoveryv1.Endpoint) discoveryv1.EndpointSlice {
 	return discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name:      name,
 		Ports:     ports,
 		Endpoints: endpoints,
 	}
@@ -73,14 +78,10 @@ func createTestServicePort() *corev1.ServicePort {
 // Global helper to create HTTPRoute with optional BackendRefs.
 func createGlobalTestHTTPRoute(name, namespace string, backendRefs ...[]gwtypes.HTTPBackendRef) *gwtypes.HTTPRoute {
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       name,
+		Namespace:  namespace,
 	}
 
 	if len(backendRefs) > 0 && backendRefs[0] != nil {
@@ -100,13 +101,9 @@ func createGlobalTestHTTPRoute(name, namespace string, backendRefs ...[]gwtypes.
 func createGlobalTestHTTPBackendRef(name, namespace string, weight, port *int32, group ...*gwtypes.Group) gwtypes.HTTPBackendRef {
 	serviceKind := gwtypes.Kind("Service")
 	ref := gwtypes.HTTPBackendRef{
-		BackendRef: gwtypes.BackendRef{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: gwtypes.ObjectName(name),
-				Kind: &serviceKind,
-			},
-			Weight: weight,
-		},
+		Name:   gwtypes.ObjectName(name),
+		Kind:   &serviceKind,
+		Weight: weight,
 	}
 
 	if namespace != "" {
@@ -132,6 +129,7 @@ func createTestScheme() *runtime.Scheme {
 	_ = corev1.AddToScheme(scheme)
 	_ = discoveryv1.AddToScheme(scheme)
 	_ = gatewayv1.Install(scheme)
+	_ = gatewayv1beta1.Install(scheme)
 	_ = configurationv1alpha1.AddToScheme(scheme)
 	return scheme
 }
@@ -156,10 +154,8 @@ func createTestFakeClientWithInterceptors(interceptors interceptor.Funcs, object
 // createTestService creates a test Service with specified parameters.
 func createTestService(name, namespace string, serviceType corev1.ServiceType, clusterIP, externalName string, ports []corev1.ServicePort) *corev1.Service {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 		Spec: corev1.ServiceSpec{
 			Type:  serviceType,
 			Ports: ports,
@@ -185,19 +181,13 @@ func createTestvalidBackendRef(serviceName, namespace string, weight *int32, rea
 	}
 	return validBackendRef[gwtypes.HTTPBackendRef]{
 		backendRef: &gwtypes.HTTPBackendRef{
-			BackendRef: gwtypes.BackendRef{
-				BackendObjectReference: gwtypes.BackendObjectReference{
-					Name: gwtypes.ObjectName(serviceName),
-					Kind: &serviceKind,
-				},
-				Weight: weight,
-			},
+			Name:   gwtypes.ObjectName(serviceName),
+			Kind:   &serviceKind,
+			Weight: weight,
 		},
 		service: &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      serviceName,
-				Namespace: namespace,
-			},
+			Name:      serviceName,
+			Namespace: namespace,
 		},
 		servicePort: &corev1.ServicePort{
 			Name: "http",
@@ -223,8 +213,8 @@ func TestFindBackendRefPortInService(t *testing.T) {
 	// Helper function to create test Service for this specific test.
 	createSvc := func(name, namespace string, ports []corev1.ServicePort) *corev1.Service {
 		return &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
-			Spec:       corev1.ServiceSpec{Ports: ports},
+			Name: name, Namespace: namespace,
+			Spec: corev1.ServiceSpec{Ports: ports},
 		}
 	}
 
@@ -533,10 +523,8 @@ func TestResolveFQDNEndpoints(t *testing.T) {
 		{
 			name: "Default cluster domain (empty) uses short form",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-service",
-					Namespace: "default",
-				},
+				Name:      "my-service",
+				Namespace: "default",
 			},
 			clusterDomain: "",
 			expected:      []string{"my-service.default.svc"},
@@ -544,10 +532,8 @@ func TestResolveFQDNEndpoints(t *testing.T) {
 		{
 			name: "Custom cluster domain uses full FQDN",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "my-service",
-					Namespace: "default",
-				},
+				Name:      "my-service",
+				Namespace: "default",
 			},
 			clusterDomain: "cluster.local",
 			expected:      []string{"my-service.default.svc.cluster.local"},
@@ -555,10 +541,8 @@ func TestResolveFQDNEndpoints(t *testing.T) {
 		{
 			name: "Service with different namespace and custom domain",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "api-service",
-					Namespace: "backend",
-				},
+				Name:      "api-service",
+				Namespace: "backend",
 			},
 			clusterDomain: "my-cluster.local",
 			expected:      []string{"api-service.backend.svc.my-cluster.local"},
@@ -566,10 +550,8 @@ func TestResolveFQDNEndpoints(t *testing.T) {
 		{
 			name: "Service with hyphenated names and empty domain",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "web-frontend-service",
-					Namespace: "production-ns",
-				},
+				Name:      "web-frontend-service",
+				Namespace: "production-ns",
 			},
 			clusterDomain: "",
 			expected:      []string{"web-frontend-service.production-ns.svc"},
@@ -598,10 +580,8 @@ func TestResolveExternalNameEndpoints(t *testing.T) {
 		{
 			name: "ExternalName service with valid external name",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "external-service",
-					Namespace: "default",
-				},
+				Name:      "external-service",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "external.example.com",
@@ -614,10 +594,8 @@ func TestResolveExternalNameEndpoints(t *testing.T) {
 		{
 			name: "ExternalName service with empty external name should be skipped",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "external-service-empty",
-					Namespace: "default",
-				},
+				Name:      "external-service-empty",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "",
@@ -630,10 +608,8 @@ func TestResolveExternalNameEndpoints(t *testing.T) {
 		{
 			name: "ExternalName service with FQDN external name",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "database-service",
-					Namespace: "production",
-				},
+				Name:      "database-service",
+				Namespace: "production",
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "database.prod.example.com",
@@ -706,10 +682,8 @@ func TestResolveTargetPort(t *testing.T) {
 		{
 			name: "service-upstream annotation should use service port even for headless service",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "None",
@@ -779,10 +753,8 @@ func TestResolveTargetPort(t *testing.T) {
 		{
 			name: "Regular service with named targetPort resolved from EndpointSlice",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "named-svc",
-					Namespace: "default",
-				},
+				Name:      "named-svc",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "10.0.0.1",
@@ -801,12 +773,10 @@ func TestResolveTargetPort(t *testing.T) {
 			expectedPort: 8080,
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "named-svc-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "named-svc",
-						},
+					Name:      "named-svc-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "named-svc",
 					},
 					Ports: []discoveryv1.EndpointPort{
 						createTestEndpointPort("http", 8080, corev1.ProtocolTCP),
@@ -817,10 +787,8 @@ func TestResolveTargetPort(t *testing.T) {
 		{
 			name: "EndpointSlice List error propagates in resolveTargetPort",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "err-svc",
-					Namespace: "default",
-				},
+				Name:      "err-svc",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:      corev1.ServiceTypeClusterIP,
 					ClusterIP: "10.0.0.1",
@@ -898,20 +866,16 @@ func TestResolveEndpointSliceEndpoints(t *testing.T) {
 		{
 			name: "Service with ready endpoints should return endpoints",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "default",
-				},
+				Name:      "test-service",
+				Namespace: "default",
 			},
 			servicePort: createTestServicePort(),
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "slice-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "test-service",
-						},
+					Name:      "slice-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-service",
 					},
 					Ports: []discoveryv1.EndpointPort{
 						createTestEndpointPort("http", 80, corev1.ProtocolTCP),
@@ -929,10 +893,8 @@ func TestResolveEndpointSliceEndpoints(t *testing.T) {
 		{
 			name: "Service with no ready endpoints should be skipped",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "empty-service",
-					Namespace: "default",
-				},
+				Name:      "empty-service",
+				Namespace: "default",
 			},
 			servicePort:        createTestServicePort(),
 			existingSlices:     []discoveryv1.EndpointSlice{},
@@ -943,10 +905,8 @@ func TestResolveEndpointSliceEndpoints(t *testing.T) {
 		{
 			name: "EndpointSlices not found should be skipped",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "notfound-service",
-					Namespace: "default",
-				},
+				Name:      "notfound-service",
+				Namespace: "default",
 			},
 			servicePort:        createTestServicePort(),
 			mockError:          apierrors.NewNotFound(discoveryv1.Resource("endpointslices"), "notfound-service"),
@@ -957,10 +917,8 @@ func TestResolveEndpointSliceEndpoints(t *testing.T) {
 		{
 			name: "Network error should return error",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "error-service",
-					Namespace: "default",
-				},
+				Name:      "error-service",
+				Namespace: "default",
 			},
 			servicePort:        createTestServicePort(),
 			mockError:          fmt.Errorf("network timeout"),
@@ -1032,10 +990,8 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "FQDN mode with regular service should use FQDN",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "web-service",
-					Namespace: "default",
-				},
+				Name:      "web-service",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "10.0.0.1", // Non-headless
 				},
@@ -1049,10 +1005,8 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "ExternalName service should use external name",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "external-db",
-					Namespace: "default",
-				},
+				Name:      "external-db",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "database.example.com",
@@ -1067,12 +1021,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "service-upstream annotation should use service DNS",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "service-upstream",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "service-upstream",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "10.0.0.1",
@@ -1087,12 +1039,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "service-upstream annotation should use configured cluster domain",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "service-upstream",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "service-upstream",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "10.0.0.1",
@@ -1108,10 +1058,8 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "ExternalName service with empty external name should be skipped",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "empty-external",
-					Namespace: "default",
-				},
+				Name:      "empty-external",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
 					ExternalName: "",
@@ -1126,12 +1074,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "service-upstream annotation should override ExternalName service",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "external-db",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "external-db",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					Type:         corev1.ServiceTypeExternalName,
@@ -1147,10 +1093,8 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "Regular service without FQDN should use EndpointSlices",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "backend-service",
-					Namespace: "default",
-				},
+				Name:      "backend-service",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "10.0.0.1",
 				},
@@ -1159,12 +1103,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 			fqdn:        false,
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "backend-service",
-						},
+					Name:      "backend-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "backend-service",
 					},
 					Ports: []discoveryv1.EndpointPort{
 						createTestEndpointPort("http", 80, corev1.ProtocolTCP),
@@ -1182,12 +1124,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "service-upstream annotation should override headless endpoint discovery",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "headless-service",
-					Namespace: "default",
-					Annotations: map[string]string{
-						"ingress.kubernetes.io/service-upstream": "true",
-					},
+				Name:      "headless-service",
+				Namespace: "default",
+				Annotations: map[string]string{
+					"ingress.kubernetes.io/service-upstream": "true",
 				},
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "None",
@@ -1197,12 +1137,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 			fqdn:        false,
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "headless-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "headless-service",
-						},
+					Name:      "headless-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "headless-service",
 					},
 					Ports: []discoveryv1.EndpointPort{
 						createTestEndpointPort("http", 80, corev1.ProtocolTCP),
@@ -1219,10 +1157,8 @@ func TestResolveServiceEndpoints(t *testing.T) {
 		{
 			name: "Headless service with FQDN should still use EndpointSlices",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "headless-service",
-					Namespace: "default",
-				},
+				Name:      "headless-service",
+				Namespace: "default",
 				Spec: corev1.ServiceSpec{
 					ClusterIP: "None", // Headless
 				},
@@ -1231,12 +1167,10 @@ func TestResolveServiceEndpoints(t *testing.T) {
 			fqdn:        true,
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "headless-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "headless-service",
-						},
+					Name:      "headless-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "headless-service",
 					},
 					Ports: []discoveryv1.EndpointPort{
 						createTestEndpointPort("http", 80, corev1.ProtocolTCP),
@@ -1294,28 +1228,22 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with matching endpoint slices",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service",
-					Namespace: "default",
-				},
+				Name:      "test-service",
+				Namespace: "default",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-slice-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "test-service",
-						},
+					Name:      "test-service-slice-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-service",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-slice-2",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "test-service",
-						},
+					Name:      "test-service-slice-2",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "test-service",
 					},
 				},
 			},
@@ -1324,10 +1252,8 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with no endpoint slices",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "empty-service",
-					Namespace: "test-ns",
-				},
+				Name:      "empty-service",
+				Namespace: "test-ns",
 			},
 			existingSlices:     []discoveryv1.EndpointSlice{},
 			expectedSliceNames: []string{},
@@ -1335,19 +1261,15 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with slices in different namespace should not match",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cross-ns-service",
-					Namespace: "namespace-a",
-				},
+				Name:      "cross-ns-service",
+				Namespace: "namespace-a",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cross-ns-service-slice",
-						Namespace: "namespace-b", // Different namespace.
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "cross-ns-service",
-						},
+					Name:      "cross-ns-service-slice",
+					Namespace: "namespace-b", // Different namespace.
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "cross-ns-service",
 					},
 				},
 			},
@@ -1356,19 +1278,15 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with slices with different service name should not match",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "service-a",
-					Namespace: "default",
-				},
+				Name:      "service-a",
+				Namespace: "default",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-b-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "service-b", // Different service name.
-						},
+					Name:      "service-b-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "service-b", // Different service name.
 					},
 				},
 			},
@@ -1377,37 +1295,29 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with mixed matching and non-matching slices",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "mixed-service",
-					Namespace: "prod",
-				},
+				Name:      "mixed-service",
+				Namespace: "prod",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "mixed-service-slice-1",
-						Namespace: "prod",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "mixed-service", // Matches.
-						},
+					Name:      "mixed-service-slice-1",
+					Namespace: "prod",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "mixed-service", // Matches.
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "other-service-slice",
-						Namespace: "prod",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "other-service", // Doesn't match.
-						},
+					Name:      "other-service-slice",
+					Namespace: "prod",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "other-service", // Doesn't match.
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "mixed-service-slice-2",
-						Namespace: "prod",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "mixed-service", // Matches.
-						},
+					Name:      "mixed-service-slice-2",
+					Namespace: "prod",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "mixed-service", // Matches.
 					},
 				},
 			},
@@ -1416,19 +1326,15 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with slice missing service name label",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "label-test-service",
-					Namespace: "default",
-				},
+				Name:      "label-test-service",
+				Namespace: "default",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "label-test-slice-1",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "label-test-service", // Has label.
-						},
+					Name:      "label-test-slice-1",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "label-test-service", // Has label.
 					},
 				},
 				{
@@ -1444,19 +1350,15 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Service with empty name",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "",
-					Namespace: "default",
-				},
+				Name:      "",
+				Namespace: "default",
 			},
 			existingSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "empty-name-slice",
-						Namespace: "default",
-						Labels: map[string]string{
-							discoveryv1.LabelServiceName: "", // Empty service name.
-						},
+					Name:      "empty-name-slice",
+					Namespace: "default",
+					Labels: map[string]string{
+						discoveryv1.LabelServiceName: "", // Empty service name.
 					},
 				},
 			},
@@ -1465,10 +1367,8 @@ func TestGetEndpointSlicesForService(t *testing.T) {
 		{
 			name: "Client List operation error should be handled",
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "error-test-service",
-					Namespace: "default",
-				},
+				Name:      "error-test-service",
+				Namespace: "default",
 			},
 			existingSlices:      []discoveryv1.EndpointSlice{},
 			expectError:         true,
@@ -1571,11 +1471,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			},
 			existingEndpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-slice",
-						Namespace: "default",
-						Labels:    map[string]string{discoveryv1.LabelServiceName: "test-service"},
-					},
+					Name:      "test-service-slice",
+					Namespace: "default",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "test-service"},
 					Ports: []discoveryv1.EndpointPort{
 						{Name: new("http"), Port: new(int32(8080)), Protocol: new(corev1.ProtocolTCP)},
 					},
@@ -1647,11 +1545,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			},
 			existingEndpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "headless-service-slice",
-						Namespace: "default",
-						Labels:    map[string]string{discoveryv1.LabelServiceName: "headless-service"},
-					},
+					Name:      "headless-service-slice",
+					Namespace: "default",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "headless-service"},
 					Ports: []discoveryv1.EndpointPort{
 						{Name: new("http"), Port: new(int32(8080)), Protocol: new(corev1.ProtocolTCP)},
 					},
@@ -1708,11 +1604,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			},
 			existingEndpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "no-endpoints-service-slice",
-						Namespace: "default",
-						Labels:    map[string]string{discoveryv1.LabelServiceName: "no-endpoints-service"},
-					},
+					Name:      "no-endpoints-service-slice",
+					Namespace: "default",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "no-endpoints-service"},
 					Ports: []discoveryv1.EndpointPort{
 						{Name: new("http"), Port: new(int32(8080)), Protocol: new(corev1.ProtocolTCP)},
 					},
@@ -1756,11 +1650,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			},
 			existingEndpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "valid-service-slice",
-						Namespace: "default",
-						Labels:    map[string]string{discoveryv1.LabelServiceName: "valid-service"},
-					},
+					Name:      "valid-service-slice",
+					Namespace: "default",
+					Labels:    map[string]string{discoveryv1.LabelServiceName: "valid-service"},
 					Ports: []discoveryv1.EndpointPort{
 						{Name: new("http"), Port: new(int32(8080)), Protocol: new(corev1.ProtocolTCP)},
 					},
@@ -1809,38 +1701,42 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create objects for the fake client.
-			var objects []client.Object
-			for i := range tt.existingServices {
-				objects = append(objects, &tt.existingServices[i])
-			}
-			for i := range tt.existingEndpointSlices {
-				objects = append(objects, &tt.existingEndpointSlices[i])
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					// Create objects for the fake client.
+					var objects []client.Object
+					for i := range tt.existingServices {
+						objects = append(objects, &tt.existingServices[i])
+					}
+					for i := range tt.existingEndpointSlices {
+						objects = append(objects, &tt.existingEndpointSlices[i])
+					}
 
-			// Create fake client.
-			fakeClient := createTestFakeClient(objects...)
+					// Create fake client.
+					fakeClient := createTestFakeClient(objects...)
 
-			// Call the function.
-			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, tt.httpRoute, tt.backendRefs, tt.fqdn, "cluster.local") // Verify error expectations.
-			if tt.expectError {
-				assert.Error(t, err)
-				if tt.expectedErrorString != "" {
-					assert.Contains(t, err.Error(), tt.expectedErrorString)
-				}
-				return
-			}
+					// Call the function.
+					ctx := context.Background()
+					results, err := filterValidBackendRefs(ctx, logger, fakeClient, gv, tt.httpRoute, tt.backendRefs, tt.fqdn, "cluster.local") // Verify error expectations.
+					if tt.expectError {
+						assert.Error(t, err)
+						if tt.expectedErrorString != "" {
+							assert.Contains(t, err.Error(), tt.expectedErrorString)
+						}
+						return
+					}
 
-			// Verify success case.
-			require.NoError(t, err)
-			assert.Len(t, results, tt.expectedValidCount)
+					// Verify success case.
+					require.NoError(t, err)
+					assert.Len(t, results, tt.expectedValidCount)
 
-			// Run custom validation if provided.
-			if tt.validateResults != nil {
-				tt.validateResults(t, results)
+					// Run custom validation if provided.
+					if tt.validateResults != nil {
+						tt.validateResults(t, results)
+					}
+				})
 			}
 		})
 	}
@@ -1878,7 +1774,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		// Call the function.
 		ctx := context.Background()
-		_, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+		_, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 		// Verify that the error is returned.
 		assert.Error(t, err)
@@ -1887,6 +1783,12 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 	})
 
 	// Test ReferenceGrant scenarios.
+	// These sub-cases stay pinned to a single ReferenceGrant version: every one of them
+	// asserts that the reference is *denied*, either because no grant was seeded or
+	// because the seeded grant does not permit it. A wrong-version List returns an empty
+	// list and therefore the same denial, so running them twice proves nothing. The
+	// grant-permitted path through this same CheckReferenceGrant call is covered against
+	// both versions by TestTargetsForBackendRefs.
 	t.Run("ReferenceGrant enabled scenarios", func(t *testing.T) {
 		existingServices := []corev1.Service{
 			*createTestService("cross-ns-service", "other-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{
@@ -1896,11 +1798,9 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		existingEndpointSlices := []discoveryv1.EndpointSlice{
 			{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "cross-ns-service-slice",
-					Namespace: "other-namespace",
-					Labels:    map[string]string{discoveryv1.LabelServiceName: "cross-ns-service"},
-				},
+				Name:      "cross-ns-service-slice",
+				Namespace: "other-namespace",
+				Labels:    map[string]string{discoveryv1.LabelServiceName: "cross-ns-service"},
 				Ports: []discoveryv1.EndpointPort{
 					{Name: new("http"), Port: new(int32(8080)), Protocol: new(corev1.ProtocolTCP)},
 				},
@@ -1933,7 +1833,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should succeed but return no valid backend refs since no ReferenceGrant exists.
 			require.NoError(t, err)
@@ -1944,10 +1844,8 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 		t.Run("ReferenceGrant exists but doesn't permit", func(t *testing.T) {
 			// Create a ReferenceGrant that doesn't permit the reference.
 			nonPermittingGrant := &gwtypes.ReferenceGrant{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "non-permitting-grant",
-					Namespace: "other-namespace",
-				},
+				Name:      "non-permitting-grant",
+				Namespace: "other-namespace",
 				Spec: gwtypes.ReferenceGrantSpec{
 					From: []gwtypes.ReferenceGrantFrom{
 						{
@@ -1984,7 +1882,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should succeed but return no valid backend refs since ReferenceGrant doesn't permit.
 			require.NoError(t, err)
@@ -1996,7 +1894,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 			// Create fake client with interceptor that simulates ReferenceGrant list error.
 			interceptorFunc := interceptor.Funcs{
 				List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-					if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
+					if referencegranthelpers.IsList(list) {
 						return fmt.Errorf("simulated ReferenceGrant list error")
 					}
 					return client.List(ctx, list, opts...)
@@ -2018,7 +1916,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 			// Call the function with ReferenceGrant enabled.
 			ctx := context.Background()
-			_, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+			_, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 			// Should return an error.
 			assert.Error(t, err)
@@ -2068,7 +1966,7 @@ func TestFiltervalidBackendRefs(t *testing.T) {
 
 		// Call the function.
 		ctx := context.Background()
-		results, err := filterValidBackendRefs(ctx, logger, fakeClient, httpRoute, backendRefs, false, "cluster.local")
+		results, err := filterValidBackendRefs(ctx, logger, fakeClient, testReferenceGrantVersion, httpRoute, backendRefs, false, "cluster.local")
 
 		// Should succeed but return no valid backend refs since no EndpointSlices found.
 		require.NoError(t, err)
@@ -2083,19 +1981,13 @@ func TestRecalculateWeightsAcrossBackendRefs(t *testing.T) {
 		serviceKind := gwtypes.Kind("Service")
 		return validBackendRef[gwtypes.HTTPBackendRef]{
 			backendRef: &gwtypes.HTTPBackendRef{
-				BackendRef: gwtypes.BackendRef{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name: gwtypes.ObjectName(serviceName),
-						Kind: &serviceKind,
-					},
-					Weight: weight,
-				},
+				Name:   gwtypes.ObjectName(serviceName),
+				Kind:   &serviceKind,
+				Weight: weight,
 			},
 			service: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      serviceName,
-					Namespace: namespace,
-				},
+				Name:      serviceName,
+				Namespace: namespace,
 			},
 			servicePort: &corev1.ServicePort{
 				Name: "http",
@@ -2493,18 +2385,12 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			validBackendRefs: []validBackendRef[gwtypes.HTTPBackendRef]{
 				{
 					backendRef: &gwtypes.HTTPBackendRef{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name: "service1",
-								Kind: new(gwtypes.Kind("Service")),
-							},
-						},
+						Name: "service1",
+						Kind: new(gwtypes.Kind("Service")),
 					},
 					service: &corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "test-namespace",
-						},
+						Name:      "service1",
+						Namespace: "test-namespace",
 					},
 					servicePort: &corev1.ServicePort{
 						Name: "http",
@@ -2536,20 +2422,14 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 			validBackendRefs: []validBackendRef[gwtypes.HTTPBackendRef]{
 				{
 					backendRef: &gwtypes.HTTPBackendRef{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name: "service1",
-								Kind: new(gwtypes.Kind("Service")),
-							},
-						},
+						Name: "service1",
+						Kind: new(gwtypes.Kind("Service")),
 					},
 					service: &corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "service1",
-							Namespace: "test-namespace",
-							Annotations: map[string]string{
-								"konghq.com/tags": "svc-tag",
-							},
+						Name:      "service1",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"konghq.com/tags": "svc-tag",
 						},
 					},
 					servicePort: &corev1.ServicePort{
@@ -2679,7 +2559,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-service", Namespace: "other-namespace"},
+					Name: "test-service", Namespace: "other-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
 					},
@@ -2706,7 +2586,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-service", Namespace: "test-namespace"},
+					Name: "test-service", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports:     []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
 						ClusterIP: "10.0.0.1", // Regular service, not headless.
@@ -2747,10 +2627,8 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-service",
+					Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{
 							{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)},
@@ -2761,12 +2639,10 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-slice",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "test-service",
-						},
+					Name:      "test-service-slice",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "test-service",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1", "10.0.0.2"}, true)},
@@ -2801,14 +2677,14 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "service1", Namespace: "test-namespace"},
+					Name: "service1", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "service2", Namespace: "test-namespace"},
+					Name: "service2", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
@@ -2817,23 +2693,19 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service1-slice",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "service1",
-						},
+					Name:      "service1-slice",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "service1",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.1.1"}, true)},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service2-slice",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "service2",
-						},
+					Name:      "service2-slice",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "service2",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.2.1"}, true)},
@@ -2873,14 +2745,14 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "service-a", Namespace: "test-namespace"},
+					Name: "service-a", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "service-b", Namespace: "test-namespace"},
+					Name: "service-b", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
@@ -2889,20 +2761,16 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-a-slice",
-						Namespace: "test-namespace",
-						Labels:    map[string]string{"kubernetes.io/service-name": "service-a"},
-					},
+					Name:      "service-a-slice",
+					Namespace: "test-namespace",
+					Labels:    map[string]string{"kubernetes.io/service-name": "service-a"},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1"}, true)},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "service-b-slice",
-						Namespace: "test-namespace",
-						Labels:    map[string]string{"kubernetes.io/service-name": "service-b"},
-					},
+					Name:      "service-b-slice",
+					Namespace: "test-namespace",
+					Labels:    map[string]string{"kubernetes.io/service-name": "service-b"},
 					// Both services select the same underlying pods.
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.0.1"}, true)},
@@ -2932,7 +2800,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "backend-service", Namespace: "backend-ns"},
+					Name: "backend-service", Namespace: "backend-ns",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
@@ -2941,12 +2809,10 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "backend-service-slice",
-						Namespace: "backend-ns",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "backend-service",
-						},
+					Name:      "backend-service-slice",
+					Namespace: "backend-ns",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "backend-service",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.1"}, true)},
@@ -2954,7 +2820,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			referenceGrants: []gwtypes.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "allow-frontend-to-backend", Namespace: "backend-ns"},
+					Name: "allow-frontend-to-backend", Namespace: "backend-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{Group: gwtypes.GroupName, Kind: "HTTPRoute", Namespace: "frontend-ns"},
@@ -2983,14 +2849,14 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "backend-ns"},
+					Name: "app-backend-v1", Namespace: "backend-ns",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "backend-ns"},
+					Name: "app-backend-v2", Namespace: "backend-ns",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
@@ -2999,23 +2865,19 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-backend-v1-slice",
-						Namespace: "backend-ns",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "app-backend-v1",
-						},
+					Name:      "app-backend-v1-slice",
+					Namespace: "backend-ns",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "app-backend-v1",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.1"}, true)},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "app-backend-v2-slice",
-						Namespace: "backend-ns",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "app-backend-v2",
-						},
+					Name:      "app-backend-v2-slice",
+					Namespace: "backend-ns",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "app-backend-v2",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.3.2"}, true)},
@@ -3023,7 +2885,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			referenceGrants: []gwtypes.ReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "allow-frontend-to-v1", Namespace: "backend-ns"},
+					Name: "allow-frontend-to-v1", Namespace: "backend-ns",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{Group: gwtypes.GroupName, Kind: "HTTPRoute", Namespace: "frontend-ns"},
@@ -3054,7 +2916,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "backend-service", Namespace: "backend-ns"},
+					Name: "backend-service", Namespace: "backend-ns",
 					Spec: corev1.ServiceSpec{
 						Ports: []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP, TargetPort: intstr.FromInt(8080)}},
 						Type:  corev1.ServiceTypeClusterIP,
@@ -3080,7 +2942,7 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         true, // FQDN mode.
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{Name: "external-service", Namespace: "test-namespace"},
+					Name: "external-service", Namespace: "test-namespace",
 					Spec: corev1.ServiceSpec{
 						Ports:        []corev1.ServicePort{{Name: "http", Port: 80, Protocol: corev1.ProtocolTCP}},
 						Type:         corev1.ServiceTypeExternalName,
@@ -3115,12 +2977,10 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			fqdn:         false,
 			services: []corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "annotated-headless",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"ingress.kubernetes.io/service-upstream": "true",
-						},
+					Name:      "annotated-headless",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"ingress.kubernetes.io/service-upstream": "true",
 					},
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "None",
@@ -3133,12 +2993,10 @@ func TestTargetsForBackendRefs(t *testing.T) {
 			},
 			endpointSlices: []discoveryv1.EndpointSlice{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "annotated-headless-slice",
-						Namespace: "test-namespace",
-						Labels: map[string]string{
-							"kubernetes.io/service-name": "annotated-headless",
-						},
+					Name:      "annotated-headless-slice",
+					Namespace: "test-namespace",
+					Labels: map[string]string{
+						"kubernetes.io/service-name": "annotated-headless",
 					},
 					Ports:     []discoveryv1.EndpointPort{createTestEndpointPort("http", 8080, corev1.ProtocolTCP)},
 					Endpoints: []discoveryv1.Endpoint{createTestEndpoint([]string{"10.0.4.1"}, true)},
@@ -3154,91 +3012,98 @@ func TestTargetsForBackendRefs(t *testing.T) {
 		},
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			// Create fake client with test objects.
-			objects := []client.Object{}
-			for i := range tt.services {
-				objects = append(objects, &tt.services[i])
-			}
-			for i := range tt.endpointSlices {
-				objects = append(objects, &tt.endpointSlices[i])
-			}
-			for i := range tt.referenceGrants {
-				objects = append(objects, &tt.referenceGrants[i])
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tt := range tests {
+				t.Run(tt.name, func(t *testing.T) {
+					// Create fake client with test objects.
+					objects := []client.Object{}
+					for i := range tt.services {
+						objects = append(objects, &tt.services[i])
+					}
+					for i := range tt.endpointSlices {
+						objects = append(objects, &tt.endpointSlices[i])
+					}
+					grants := make([]client.Object, 0, len(tt.referenceGrants))
+					for i := range tt.referenceGrants {
+						grants = append(grants, &tt.referenceGrants[i])
+					}
+					objects = append(objects, referencegranthelpers.AsVersion(gv, grants)...)
 
-			var cl client.Client
-			// Add client error interceptors if specified.
-			if tt.clientErrors != nil {
-				cl = createTestFakeClientWithInterceptors(interceptor.Funcs{
-					Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-						if errorKey, exists := tt.clientErrors["get-service"]; exists {
-							if _, ok := obj.(*corev1.Service); ok && key.Name == "test-service" {
-								return errorKey
-							}
-						}
-						return client.Get(ctx, key, obj, opts...)
-					},
-					List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
-						// Handle ReferenceGrant list error.
-						if errorKey, exists := tt.clientErrors["list-referencegrant"]; exists {
-							if _, ok := list.(*gwtypes.ReferenceGrantList); ok {
-								return errorKey
-							}
-						}
-						// Handle EndpointSlice list error.
-						if errorKey, exists := tt.clientErrors["list-endpointslice"]; exists {
-							if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
-								return errorKey
-							}
-						}
-						return client.List(ctx, list, opts...)
-					},
-				}, objects...)
-			} else {
-				cl = createTestFakeClient(objects...)
-			}
+					var cl client.Client
+					// Add client error interceptors if specified.
+					if tt.clientErrors != nil {
+						cl = createTestFakeClientWithInterceptors(interceptor.Funcs{
+							Get: func(ctx context.Context, client client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+								if errorKey, exists := tt.clientErrors["get-service"]; exists {
+									if _, ok := obj.(*corev1.Service); ok && key.Name == "test-service" {
+										return errorKey
+									}
+								}
+								return client.Get(ctx, key, obj, opts...)
+							},
+							List: func(ctx context.Context, client client.WithWatch, list client.ObjectList, opts ...client.ListOption) error {
+								// Handle ReferenceGrant list error.
+								if errorKey, exists := tt.clientErrors["list-referencegrant"]; exists {
+									if referencegranthelpers.IsList(list) {
+										return errorKey
+									}
+								}
+								// Handle EndpointSlice list error.
+								if errorKey, exists := tt.clientErrors["list-endpointslice"]; exists {
+									if _, ok := list.(*discoveryv1.EndpointSliceList); ok {
+										return errorKey
+									}
+								}
+								return client.List(ctx, list, opts...)
+							},
+						}, objects...)
+					} else {
+						cl = createTestFakeClient(objects...)
+					}
 
-			// Call the function.
-			targets, err := TargetsForBackendRefs(
-				createTestContext(),
-				createTestLogger(),
-				cl,
-				tt.httpRoute,
-				tt.backendRefs,
-				tt.pRef,
-				tt.upstreamName,
-				tt.fqdn,
-				"cluster.local",
-			) // Check error expectation.
-			if tt.expectedError {
-				require.Error(t, err)
-				return
-			}
-			require.NoError(t, err)
+					// Call the function.
+					targets, err := TargetsForBackendRefs(
+						createTestContext(),
+						createTestLogger(),
+						cl,
+						gv,
+						tt.httpRoute,
+						tt.backendRefs,
+						tt.pRef,
+						tt.upstreamName,
+						tt.fqdn,
+						"cluster.local",
+					) // Check error expectation.
+					if tt.expectedError {
+						require.Error(t, err)
+						return
+					}
+					require.NoError(t, err)
 
-			// Check number of targets.
-			assert.Len(t, targets, tt.expectedTargets)
+					// Check number of targets.
+					assert.Len(t, targets, tt.expectedTargets)
 
-			// Run custom validation if provided.
-			if tt.validateResult != nil {
-				tt.validateResult(t, targets)
-			}
+					// Run custom validation if provided.
+					if tt.validateResult != nil {
+						tt.validateResult(t, targets)
+					}
 
-			// General validations for all targets.
-			for _, target := range targets {
-				// All targets should have the correct upstream reference.
-				assert.Equal(t, tt.upstreamName, target.Spec.UpstreamRef.Name)
+					// General validations for all targets.
+					for _, target := range targets {
+						// All targets should have the correct upstream reference.
+						assert.Equal(t, tt.upstreamName, target.Spec.UpstreamRef.Name)
 
-				// All targets should be in the same namespace as the HTTPRoute.
-				assert.Equal(t, tt.httpRoute.Namespace, target.Namespace)
+						// All targets should be in the same namespace as the HTTPRoute.
+						assert.Equal(t, tt.httpRoute.Namespace, target.Namespace)
 
-				// All target names should contain the upstream name.
-				assert.Contains(t, target.Name, tt.upstreamName+".")
+						// All target names should contain the upstream name.
+						assert.Contains(t, target.Name, tt.upstreamName+".")
 
-				// Target should have an address:port format.
-				assert.Contains(t, target.Spec.Target, ":")
+						// Target should have an address:port format.
+						assert.Contains(t, target.Spec.Target, ":")
+					}
+				})
 			}
 		})
 	}
@@ -3252,20 +3117,14 @@ func TestTargetsForTCPRouteBackendRefs(t *testing.T) {
 	backendPort := gwtypes.PortNumber(80)
 
 	tcpRoute := &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	backendRefs := []gwtypes.BackendRef{{
-		BackendObjectReference: gwtypes.BackendObjectReference{
-			Name: "test-service",
-			Port: &backendPort,
-		},
+		Name: "test-service",
+		Port: &backendPort,
 	}}
 	service := createTestService("test-service", "test-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{{
 		Name:       "tcp",
@@ -3282,7 +3141,7 @@ func TestTargetsForTCPRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, tcpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, tcpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)
@@ -3299,22 +3158,14 @@ func TestTargetsForGRPCRouteBackendRefs(t *testing.T) {
 	backendPort := gwtypes.PortNumber(80)
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "GRPCRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "GRPCRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	backendRefs := []gwtypes.GRPCBackendRef{{
-		BackendRef: gwtypes.BackendRef{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "test-service",
-				Port: &backendPort,
-			},
-		},
+		Name: "test-service",
+		Port: &backendPort,
 	}}
 	service := createTestService("test-service", "test-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{{
 		Name:       "grpc",
@@ -3331,7 +3182,7 @@ func TestTargetsForGRPCRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, grpcRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, grpcRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.NotEmpty(t, targets[0].Name)
@@ -3347,20 +3198,14 @@ func TestTargetsForUDPRouteBackendRefs(t *testing.T) {
 	backendPort := gwtypes.PortNumber(80)
 
 	udpRoute := &gwtypes.UDPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "UDPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		Kind:       "UDPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "test-namespace",
 	}
 	backendRefs := []gwtypes.BackendRef{{
-		BackendObjectReference: gwtypes.BackendObjectReference{
-			Name: "test-service",
-			Port: &backendPort,
-		},
+		Name: "test-service",
+		Port: &backendPort,
 	}}
 	service := createTestService("test-service", "test-namespace", corev1.ServiceTypeClusterIP, "10.0.0.1", "", []corev1.ServicePort{{
 		Name:       "udp",
@@ -3377,7 +3222,7 @@ func TestTargetsForUDPRouteBackendRefs(t *testing.T) {
 	endpointSlice.Labels = map[string]string{discoveryv1.LabelServiceName: "test-service"}
 
 	cl := createTestFakeClient(service, &endpointSlice)
-	targets, err := TargetsForBackendRefs(ctx, logger, cl, udpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
+	targets, err := TargetsForBackendRefs(ctx, logger, cl, testReferenceGrantVersion, udpRoute, backendRefs, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream", false, "")
 	require.NoError(t, err)
 	require.Len(t, targets, 1)
 	assert.Equal(t, "10.0.0.2:8080", targets[0].Spec.Target)
@@ -3582,13 +3427,11 @@ func TestKongTargetNameReuseByAddress(t *testing.T) {
 	// with an optional Programmed condition. The hybrid-routes annotation lets VerifyAndUpdate accept it.
 	newExistingTarget := func(name, target string, programmed bool) *configurationv1alpha1.KongTarget {
 		tgt := &configurationv1alpha1.KongTarget{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "test-namespace",
-				Labels:    metadata.BuildLabels(route, pRef),
-				Annotations: map[string]string{
-					"gateway-operator.konghq.com/httproutes": "test-namespace/test-route",
-				},
+			Name:      name,
+			Namespace: "test-namespace",
+			Labels:    metadata.BuildLabels(route, pRef),
+			Annotations: map[string]string{
+				"gateway-operator.konghq.com/httproutes": "test-namespace/test-route",
 			},
 		}
 		tgt.Spec.Target = target

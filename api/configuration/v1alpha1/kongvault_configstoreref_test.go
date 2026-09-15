@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -26,7 +25,7 @@ func configStoreRefScheme(t *testing.T) *runtime.Scheme {
 
 func configStore(namespace, konnectID string) *konnectv1alpha1.KonnectConfigStore {
 	cs := &konnectv1alpha1.KonnectConfigStore{
-		ObjectMeta: metav1.ObjectMeta{Name: "tls-cert-keys", Namespace: namespace},
+		Name: "tls-cert-keys", Namespace: namespace,
 	}
 	cs.Status.ID = konnectID
 	return cs
@@ -34,7 +33,7 @@ func configStore(namespace, konnectID string) *konnectv1alpha1.KonnectConfigStor
 
 func konnectVaultWithRef(ref *configurationv1alpha1.KonnectConfigStoreRef) *configurationv1alpha1.KongVault {
 	return &configurationv1alpha1.KongVault{
-		ObjectMeta: metav1.ObjectMeta{Name: "certvault"},
+		Name: "certvault",
 		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:        "konnect",
 			Prefix:         "certvault",

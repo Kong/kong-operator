@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 )
@@ -19,16 +18,12 @@ func TestQueue(t *testing.T) {
 
 	t.Log("generating Kubernetes objects to emit events for the queue")
 	ing1 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "ingress-test-1",
-		},
+		Namespace: corev1.NamespaceDefault,
+		Name:      "ingress-test-1",
 	}
 	ing2 := &netv1.Ingress{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "ingress-test-1",
-		},
+		Namespace: corev1.NamespaceDefault,
+		Name:      "ingress-test-1",
 	}
 
 	t.Log("initializing kubernetes objects (this would normally be done by api client)")
@@ -99,14 +94,10 @@ var (
 func TestQueuePublish(t *testing.T) {
 	const testBufferSize = 1
 	testObj := &netv1.Ingress{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "Ingress",
-			APIVersion: "networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: corev1.NamespaceDefault,
-			Name:      "ingress-test-1",
-		},
+		Kind:       "Ingress",
+		APIVersion: "networking.k8s.io/v1",
+		Namespace:  corev1.NamespaceDefault,
+		Name:       "ingress-test-1",
 	}
 
 	// shouldCompleteAlmostImmediately is a helper function that runs a given action

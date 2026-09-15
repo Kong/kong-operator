@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/require"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -16,15 +15,11 @@ import (
 
 func testAIGWDPOwner() *aigatewayv1alpha1.AIGatewayDataPlane {
 	return &aigatewayv1alpha1.AIGatewayDataPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: aigatewayv1alpha1.SchemeGroupVersion.String(),
-			Kind:       "AIGatewayDataPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "my-owner",
-			Namespace: "test-ns",
-			UID:       types.UID("test-uid"),
-		},
+		APIVersion: aigatewayv1alpha1.SchemeGroupVersion.String(),
+		Kind:       "AIGatewayDataPlane",
+		Name:       "my-owner",
+		Namespace:  "test-ns",
+		UID:        types.UID("test-uid"),
 	}
 }
 

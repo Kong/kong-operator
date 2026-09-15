@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestPrettyPrintServiceList(t *testing.T) {
@@ -23,10 +22,8 @@ func TestPrettyPrintServiceList(t *testing.T) {
 			name: "a single service should just return the <namespace>/<name>",
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
 				},
 			},
 			expected: "default/test-service1",
@@ -35,22 +32,16 @@ func TestPrettyPrintServiceList(t *testing.T) {
 			name: "multiple services should be comma deliniated",
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "test-service2",
+					Namespace: corev1.NamespaceDefault,
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service3",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "test-service3",
+					Namespace: corev1.NamespaceDefault,
 				},
 			},
 			expected: "default/test-service[0-9], default/test-service[0-9]",

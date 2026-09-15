@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -39,10 +38,8 @@ func TestGetAPIAuthConfigurationRefFromParent_Portal(t *testing.T) {
 	testGetAPIAuthConfigurationRefFromParent(t,
 		func(ref commonv1alpha1.ObjectRef) objectWithParentRef {
 			return &konnectv1alpha1.PortalPage{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "portal-page",
-					Namespace: "default",
-				},
+				Name:      "portal-page",
+				Namespace: "default",
 				Spec: konnectv1alpha1.PortalPageSpec{
 					PortalRef: ref,
 				},
@@ -50,10 +47,8 @@ func TestGetAPIAuthConfigurationRefFromParent_Portal(t *testing.T) {
 		},
 		func(namespace, apiAuthName string) *konnectv1alpha1.Portal {
 			return &konnectv1alpha1.Portal{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "parent",
-					Namespace: namespace,
-				},
+				Name:      "parent",
+				Namespace: namespace,
 				Spec: konnectv1alpha1.PortalSpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -70,10 +65,8 @@ func TestGetAPIAuthConfigurationRefFromParent_EventGateway(t *testing.T) {
 	testGetAPIAuthConfigurationRefFromParent(t,
 		func(ref commonv1alpha1.ObjectRef) objectWithParentRef {
 			return &configurationv1alpha1.EventGatewayBackendCluster{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "backend-cluster",
-					Namespace: "default",
-				},
+				Name:      "backend-cluster",
+				Namespace: "default",
 				Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 					GatewayRef: ref,
 				},
@@ -81,10 +74,8 @@ func TestGetAPIAuthConfigurationRefFromParent_EventGateway(t *testing.T) {
 		},
 		func(namespace, apiAuthName string) *konnectv1alpha1.KonnectEventGateway {
 			return &konnectv1alpha1.KonnectEventGateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "parent",
-					Namespace: namespace,
-				},
+				Name:      "parent",
+				Namespace: namespace,
 				Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 					KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 						APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{
@@ -219,10 +210,8 @@ func testGetAPIAuthConfigurationRefFromParent[
 func TestGetParentForRef_Portal(t *testing.T) {
 	testGetParentForRef(t, func(namespace string) *konnectv1alpha1.Portal {
 		return &konnectv1alpha1.Portal{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "parent",
-				Namespace: namespace,
-			},
+			Name:      "parent",
+			Namespace: namespace,
 		}
 	})
 }
@@ -230,10 +219,8 @@ func TestGetParentForRef_Portal(t *testing.T) {
 func TestGetParentForRef_EventGateway(t *testing.T) {
 	testGetParentForRef(t, func(namespace string) *konnectv1alpha1.KonnectEventGateway {
 		return &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "parent",
-				Namespace: namespace,
-			},
+			Name:      "parent",
+			Namespace: namespace,
 		}
 	})
 }

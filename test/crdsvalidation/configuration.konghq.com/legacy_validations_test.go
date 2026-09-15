@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -718,11 +717,9 @@ func TestCRDValidations(t *testing.T) {
 
 func createKongUpstreamPolicy(ctx context.Context, client client.Client, ns string, spec configurationv1beta1.KongUpstreamPolicySpec) error {
 	return client.Create(ctx, &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "test-",
-			Namespace:    ns,
-		},
-		Spec: spec,
+		GenerateName: "test-",
+		Namespace:    ns,
+		Spec:         spec,
 	})
 }
 

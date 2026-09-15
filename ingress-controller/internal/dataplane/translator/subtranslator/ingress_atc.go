@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/kong/go-kong/kong"
 	netv1 "k8s.io/api/networking/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
@@ -31,17 +30,15 @@ func (m *ingressTranslationMeta) translateIntoKongExpressionRoute() *kongstate.R
 	)
 
 	route := &kongstate.Route{
-		Ingress: util.FromK8sObject(m.parentIngress),
-		Route: kong.Route{
-			Name:              new(routeName),
-			Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
-			StripPath:         new(false),
-			PreserveHost:      new(true),
-			RequestBuffering:  new(true),
-			ResponseBuffering: new(true),
-			Tags:              m.ingressTags,
-		},
-		ExpressionRoutes: true,
+		Ingress:           util.FromK8sObject(m.parentIngress),
+		Name:              new(routeName),
+		Protocols:         ingressRouteProtocols(m.parentIngress.GetAnnotations()),
+		StripPath:         new(false),
+		PreserveHost:      new(true),
+		RequestBuffering:  new(true),
+		ResponseBuffering: new(true),
+		Tags:              m.ingressTags,
+		ExpressionRoutes:  true,
 	}
 
 	ingressAnnotations := m.parentIngress.GetAnnotations()

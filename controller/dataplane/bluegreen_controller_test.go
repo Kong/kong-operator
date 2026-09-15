@@ -18,10 +18,10 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/pkg/builder"
-	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -123,16 +123,14 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			existingServiceModifier:  func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {}, // No-op
 			expectedCreatedOrUpdated: op.Noop,
 			expectedService: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:    "default",
-					GenerateName: "dataplane-ingress-dp-0-",
-					Labels: map[string]string{
-						"app":                                "dp-0",
-						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				Namespace:    "default",
+				GenerateName: "dataplane-ingress-dp-0-",
+				Labels: map[string]string{
+					"app":                                "dp-0",
+					consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 
-						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
-					},
+					consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+					consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -149,21 +147,19 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			).WithIngressServiceType(corev1.ServiceTypeLoadBalancer).
 				WithPromotionStrategy(operatorv1beta1.AutomaticPromotion).Build(),
 			existingServiceModifier: func(t *testing.T, ctx context.Context, cl client.Client, svc *corev1.Service) {
-				require.NoError(t, dataplane.OwnedObjectPreDeleteHook(ctx, cl, svc))
+				require.NoError(t, k8sreduce.OwnedObjectPreDeleteHook(ctx, cl, svc))
 				require.NoError(t, cl.Delete(ctx, svc))
 			},
 			expectedCreatedOrUpdated: op.Created,
 			expectedService: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:    "default",
-					GenerateName: "dataplane-ingress-dp-1-",
-					Labels: map[string]string{
-						"app":                                "dp-1",
-						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				Namespace:    "default",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Labels: map[string]string{
+					"app":                                "dp-1",
+					consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 
-						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
-					},
+					consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+					consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,
@@ -200,16 +196,14 @@ func TestEnsurePreviewIngressService(t *testing.T) {
 			},
 			expectedCreatedOrUpdated: op.Updated,
 			expectedService: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace:    "default",
-					GenerateName: "dataplane-ingress-dp-1-",
-					Labels: map[string]string{
-						"app":                                "dp-1",
-						consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+				Namespace:    "default",
+				GenerateName: "dataplane-ingress-dp-1-",
+				Labels: map[string]string{
+					"app":                                "dp-1",
+					consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
 
-						consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
-						consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
-					},
+					consts.DataPlaneServiceTypeLabel:  string(consts.DataPlaneIngressServiceLabelValue),
+					consts.DataPlaneServiceStateLabel: consts.DataPlaneStateLabelValuePreview,
 				},
 				Spec: corev1.ServiceSpec{
 					Type: corev1.ServiceTypeLoadBalancer,

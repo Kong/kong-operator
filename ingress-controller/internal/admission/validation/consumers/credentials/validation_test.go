@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/labels"
 )
@@ -21,12 +20,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid credential",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "key-auth",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
 				},
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
@@ -37,12 +34,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid credential but not supported by KIC",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "konnect",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "konnect",
 				},
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
@@ -53,12 +48,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "credential with invalid type",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "bad-cred",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "bad-cred",
 				},
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
@@ -69,12 +62,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with HS512",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS512"),
@@ -87,12 +78,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with HS384",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS384"),
@@ -105,12 +94,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with HS256",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS256"),
@@ -123,12 +110,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with RS256",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("RS256"),
@@ -139,12 +124,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with RS256",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm":      []byte("RS256"),
@@ -157,12 +140,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "invalid credential type",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "bee-auth",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "bee-auth",
 				},
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
@@ -173,10 +154,8 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "no credential type",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-				},
+				Name:      "secret",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"key": []byte("little-rabbits-be-good"),
 				},
@@ -186,12 +165,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "missing required field",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "key-auth",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
 				},
 				Data: map[string][]byte{
 					"bee": []byte("little-rabbits-be-good"),
@@ -202,12 +179,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "empty required field",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "key-auth",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "key-auth",
 				},
 				Data: map[string][]byte{
 					"key": []byte(""),
@@ -218,12 +193,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "invalid jwt credential with HS256 missing secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS256"),
@@ -235,12 +208,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "invalid jwt credential with HS384 missing secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS384"),
@@ -252,12 +223,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "invalid jwt credential with HS512 missing secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm": []byte("HS512"),
@@ -269,12 +238,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with RS256 missing secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm":      []byte("RS256"),
@@ -286,12 +253,10 @@ func TestValidateCredentials(t *testing.T) {
 		{
 			name: "valid jwt credential with RS512 missing secret",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "secret",
-					Namespace: "default",
-					Labels: map[string]string{
-						labels.CredentialTypeLabel: "jwt",
-					},
+				Name:      "secret",
+				Namespace: "default",
+				Labels: map[string]string{
+					labels.CredentialTypeLabel: "jwt",
 				},
 				Data: map[string][]byte{
 					"algorithm":      []byte("RS512"),

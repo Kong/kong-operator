@@ -55,9 +55,7 @@ func TestIngressGRPC(t *testing.T) {
 
 			t.Log("configuring certificate secret")
 			secret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "secret-test",
-				},
+				Name: "secret-test",
 				Data: map[string][]byte{
 					"tls.crt": tlsRouteExampleTLSCert,
 					"tls.key": tlsRouteExampleTLSKey,
@@ -110,18 +108,16 @@ func TestIngressGRPC(t *testing.T) {
 			ingress := builder.NewIngress(uuid.NewString(), ingressClass).WithRules(
 				netv1.IngressRule{
 					Host: testHostname,
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: serviceGRPCS.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: test.GRPCSBinPort,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: serviceGRPCS.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: test.GRPCSBinPort,
 										},
 									},
 								},
@@ -130,18 +126,16 @@ func TestIngressGRPC(t *testing.T) {
 					},
 				},
 				netv1.IngressRule{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     "/",
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Service: &netv1.IngressServiceBackend{
-											Name: serviceGRPC.Name,
-											Port: netv1.ServiceBackendPort{
-												Number: test.GRPCBinPort,
-											},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     "/",
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Service: &netv1.IngressServiceBackend{
+										Name: serviceGRPC.Name,
+										Port: netv1.ServiceBackendPort{
+											Number: test.GRPCBinPort,
 										},
 									},
 								},
@@ -245,15 +239,13 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			ingressClass := GetIngressClassFromCtx(ctx)
 			serviceFacades := []*incubatorv1alpha1.KongServiceFacade{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "httpbin-facade-jpeg",
-						Annotations: map[string]string{
-							annotations.IngressClassKey: ingressClass,
-							// We'll use this annotation to test that modifications are allowed on KongServiceFacade
-							// level. This should make Kong Service created from this KongServiceFacade always
-							// return a JPEG image.
-							annotations.AnnotationPrefix + annotations.PathKey: "/image/jpeg",
-						},
+					Name: "httpbin-facade-jpeg",
+					Annotations: map[string]string{
+						annotations.IngressClassKey: ingressClass,
+						// We'll use this annotation to test that modifications are allowed on KongServiceFacade
+						// level. This should make Kong Service created from this KongServiceFacade always
+						// return a JPEG image.
+						annotations.AnnotationPrefix + annotations.PathKey: "/image/jpeg",
 					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -263,15 +255,13 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "httpbin-facade-png",
-						Annotations: map[string]string{
-							// We'll use this annotation to test that modifications are allowed on KongServiceFacade
-							// level. This should make Kong Service created from this KongServiceFacade always
-							// return a PNG image.
-							annotations.AnnotationPrefix + annotations.PathKey: "/image/png",
-							annotations.IngressClassKey:                        ingressClass,
-						},
+					Name: "httpbin-facade-png",
+					Annotations: map[string]string{
+						// We'll use this annotation to test that modifications are allowed on KongServiceFacade
+						// level. This should make Kong Service created from this KongServiceFacade always
+						// return a PNG image.
+						annotations.AnnotationPrefix + annotations.PathKey: "/image/png",
+						annotations.IngressClassKey:                        ingressClass,
 					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -281,14 +271,12 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "httpbin-facade-svg",
-						Annotations: map[string]string{
-							// We'll use this annotation to verify that the default backend is used when no path matches.
-							// httpbin's /anything should return anything passed in the request data.
-							annotations.AnnotationPrefix + annotations.PathKey: "/anything",
-							annotations.IngressClassKey:                        ingressClass,
-						},
+					Name: "httpbin-facade-svg",
+					Annotations: map[string]string{
+						// We'll use this annotation to verify that the default backend is used when no path matches.
+						// httpbin's /anything should return anything passed in the request data.
+						annotations.AnnotationPrefix + annotations.PathKey: "/anything",
+						annotations.IngressClassKey:                        ingressClass,
 					},
 					Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 						Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -308,29 +296,27 @@ func TestIngress_KongServiceFacadeAsBackend(t *testing.T) {
 			t.Log("configuring Ingress")
 			ingress := builder.NewIngress(uuid.NewString(), ingressClass).WithRules(
 				netv1.IngressRule{
-					IngressRuleValue: netv1.IngressRuleValue{
-						HTTP: &netv1.HTTPIngressRuleValue{
-							Paths: []netv1.HTTPIngressPath{
-								{
-									Path:     jpegIngressPath,
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-											Name:     serviceFacades[0].Name,
-										},
+					HTTP: &netv1.HTTPIngressRuleValue{
+						Paths: []netv1.HTTPIngressPath{
+							{
+								Path:     jpegIngressPath,
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     serviceFacades[0].Name,
 									},
 								},
-								{
-									Path:     pngIngressPath,
-									PathType: new(netv1.PathTypePrefix),
-									Backend: netv1.IngressBackend{
-										Resource: &corev1.TypedLocalObjectReference{
-											APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
-											Kind:     incubatorv1alpha1.KongServiceFacadeKind,
-											Name:     serviceFacades[1].Name,
-										},
+							},
+							{
+								Path:     pngIngressPath,
+								PathType: new(netv1.PathTypePrefix),
+								Backend: netv1.IngressBackend{
+									Resource: &corev1.TypedLocalObjectReference{
+										APIGroup: new(incubatorv1alpha1.SchemeGroupVersion.Group),
+										Kind:     incubatorv1alpha1.KongServiceFacadeKind,
+										Name:     serviceFacades[1].Name,
 									},
 								},
 							},

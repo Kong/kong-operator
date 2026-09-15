@@ -26,6 +26,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
@@ -53,6 +54,9 @@ type Reconciler struct {
 	LoggingMode            logging.Mode
 	ValidateDataPlaneImage bool
 	CertTTL                time.Duration
+	// DataPlaneIPFamily controls which IP family (or families) DataPlanes'
+	// Kong listens bind to.
+	DataPlaneIPFamily ipfamily.IPFamily
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -220,7 +224,8 @@ func (r *Reconciler) Reconcile(ctx context.Context, dataplane *operatorv1beta1.D
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
-		WithSecretLabelSelector(r.SecretLabelSelector)
+		WithSecretLabelSelector(r.SecretLabelSelector).
+		WithIPFamily(r.DataPlaneIPFamily)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {

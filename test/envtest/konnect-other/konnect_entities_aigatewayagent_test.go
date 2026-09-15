@@ -165,7 +165,7 @@ func TestAIGatewayAgent(t *testing.T) {
 
 		t.Log("Creating an unprogrammed AIGatewayConsumerGroup to be referenced by the agent ACL")
 		consumerGroup := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
-			ObjectMeta: metav1.ObjectMeta{Name: "acl-consumer-group", Namespace: ns.Name},
+			Name: "acl-consumer-group", Namespace: ns.Name,
 			Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
 				AIGatewayRef: commonv1alpha1.ObjectRef{
 					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,

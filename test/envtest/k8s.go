@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	ctrlclient "sigs.k8s.io/controller-runtime/pkg/client"
 )
 
@@ -15,11 +14,9 @@ func CreateNamespace(ctx context.Context, t *testing.T, client ctrlclient.Client
 	t.Helper()
 
 	ns := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ns-",
-			Labels: map[string]string{
-				"test": "envtest",
-			},
+		GenerateName: "ns-",
+		Labels: map[string]string{
+			"test": "envtest",
 		},
 	}
 	require.NoError(t, client.Create(ctx, &ns, &ctrlclient.CreateOptions{}))
@@ -33,10 +30,8 @@ func CreatePod(ctx context.Context, t *testing.T, client ctrlclient.Client, ns s
 	t.Helper()
 
 	pod := corev1.Pod{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    ns,
-			GenerateName: "pod-",
-		},
+		Namespace:    ns,
+		GenerateName: "pod-",
 		Spec: corev1.PodSpec{
 			Containers: []corev1.Container{
 				{

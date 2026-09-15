@@ -1,0 +1,11 @@
+# Minimal sample for the on-prem AIGateway control plane CRD.
+#
+# The reconciler (opt in via --enable-controller-onpremaigateway) currently
+# only reports readiness; it does not yet aggregate configuration or push it
+# to data planes.
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: OnPremAIGateway
+metadata:
+  name: ai-gw-cp-onprem-1
+  namespace: default
+spec: {}

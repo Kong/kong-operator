@@ -6,7 +6,6 @@ import (
 	"github.com/kong/go-kong/kong"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
@@ -15,18 +14,14 @@ import (
 func TestCredentialsConflictsDetector(t *testing.T) {
 	someSecret := func(name string) *corev1.Secret {
 		return &corev1.Secret{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "default",
-			},
+			Name:      name,
+			Namespace: "default",
 		}
 	}
 	someConsumer := func(name string) *configurationv1.KongConsumer {
 		return &configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      name,
-				Namespace: "default",
-			},
+			Name:      name,
+			Namespace: "default",
 		}
 	}
 	expectedConflict := func(msg string, secret *corev1.Secret, consumer *configurationv1.KongConsumer) kongstate.CredentialConflict {
@@ -54,18 +49,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.KeyAuth{
-						KeyAuth: kong.KeyAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("key1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.KeyAuth{
-						KeyAuth: kong.KeyAuth{
-							Key: new("key2"),
-						},
+						Key: new("key2"),
 					},
 					secret:   someSecret("key2"),
 					consumer: someConsumer("consumer2"),
@@ -78,27 +69,21 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.KeyAuth{
-						KeyAuth: kong.KeyAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("key1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.KeyAuth{
-						KeyAuth: kong.KeyAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("key1"),
 					consumer: someConsumer("consumer2"),
 				},
 				{
 					credential: &kongstate.KeyAuth{
-						KeyAuth: kong.KeyAuth{
-							Key: new("key2"),
-						},
+						Key: new("key2"),
 					},
 				},
 			},
@@ -112,18 +97,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.BasicAuth{
-						BasicAuth: kong.BasicAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("basic1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.BasicAuth{
-						BasicAuth: kong.BasicAuth{
-							Username: new("user2"),
-						},
+						Username: new("user2"),
 					},
 					secret:   someSecret("basic2"),
 					consumer: someConsumer("consumer2"),
@@ -136,27 +117,21 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.BasicAuth{
-						BasicAuth: kong.BasicAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("basic1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.BasicAuth{
-						BasicAuth: kong.BasicAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("basic1"),
 					consumer: someConsumer("consumer2"),
 				},
 				{
 					credential: &kongstate.BasicAuth{
-						BasicAuth: kong.BasicAuth{
-							Username: new("user2"),
-						},
+						Username: new("user2"),
 					},
 					secret:   someSecret("basic2"),
 					consumer: someConsumer("consumer3"),
@@ -172,18 +147,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.JWTAuth{
-						JWTAuth: kong.JWTAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("jwt1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.JWTAuth{
-						JWTAuth: kong.JWTAuth{
-							Key: new("key2"),
-						},
+						Key: new("key2"),
 					},
 					secret:   someSecret("jwt2"),
 					consumer: someConsumer("consumer2"),
@@ -196,27 +167,21 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.JWTAuth{
-						JWTAuth: kong.JWTAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("jwt1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.JWTAuth{
-						JWTAuth: kong.JWTAuth{
-							Key: new("key1"),
-						},
+						Key: new("key1"),
 					},
 					secret:   someSecret("jwt1"),
 					consumer: someConsumer("consumer2"),
 				},
 				{
 					credential: &kongstate.JWTAuth{
-						JWTAuth: kong.JWTAuth{
-							Key: new("key2"),
-						},
+						Key: new("key2"),
 					},
 					secret:   someSecret("jwt2"),
 					consumer: someConsumer("consumer3"),
@@ -232,18 +197,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.HMACAuth{
-						HMACAuth: kong.HMACAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("hmac1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.HMACAuth{
-						HMACAuth: kong.HMACAuth{
-							Username: new("user2"),
-						},
+						Username: new("user2"),
 					},
 					secret:   someSecret("hmac2"),
 					consumer: someConsumer("consumer2"),
@@ -256,18 +217,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.HMACAuth{
-						HMACAuth: kong.HMACAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("hmac1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.HMACAuth{
-						HMACAuth: kong.HMACAuth{
-							Username: new("user1"),
-						},
+						Username: new("user1"),
 					},
 					secret:   someSecret("hmac1"),
 					consumer: someConsumer("consumer2"),
@@ -292,18 +249,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.Oauth2Credential{
-						Oauth2Credential: kong.Oauth2Credential{
-							ClientID: new("client1"),
-						},
+						ClientID: new("client1"),
 					},
 					secret:   someSecret("oauth2-1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.Oauth2Credential{
-						Oauth2Credential: kong.Oauth2Credential{
-							ClientID: new("client2"),
-						},
+						ClientID: new("client2"),
 					},
 					secret:   someSecret("oauth2-2"),
 					consumer: someConsumer("consumer2"),
@@ -316,18 +269,14 @@ func TestCredentialsConflictsDetector(t *testing.T) {
 			credentials: []testCredentialDetails{
 				{
 					credential: &kongstate.Oauth2Credential{
-						Oauth2Credential: kong.Oauth2Credential{
-							ClientID: new("client1"),
-						},
+						ClientID: new("client1"),
 					},
 					secret:   someSecret("oauth2-1"),
 					consumer: someConsumer("consumer1"),
 				},
 				{
 					credential: &kongstate.Oauth2Credential{
-						Oauth2Credential: kong.Oauth2Credential{
-							ClientID: new("client1"),
-						},
+						ClientID: new("client1"),
 					},
 					secret:   someSecret("oauth2-1"),
 					consumer: someConsumer("consumer2"),

@@ -89,14 +89,12 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 
 			t.Log("Deploying CA secret")
 			caSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: caSecretName,
-					Labels: map[string]string{
-						configuration.CACertLabelKey: "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: caSecretName,
+				Labels: map[string]string{
+					configuration.CACertLabelKey: "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				StringData: map[string]string{
 					"id":   uuid.NewString(),
@@ -109,9 +107,7 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 
 			t.Log("Deploying goecho certificate")
 			goechoSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: goEchoTLSSecretName,
-				},
+				Name: goEchoTLSSecretName,
 				StringData: map[string]string{
 					"tls.crt": string(bundle),
 					"tls.key": string(key),
@@ -126,14 +122,12 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 				certificate.WithCATrue(),
 			)
 			anotherCaSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: anotherCASecretName,
-					Labels: map[string]string{
-						configuration.CACertLabelKey: "true",
-					},
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: anotherCASecretName,
+				Labels: map[string]string{
+					configuration.CACertLabelKey: "true",
+				},
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				StringData: map[string]string{
 					"id":   uuid.NewString(),
@@ -176,10 +170,8 @@ func TestIngressVerifyUpstreamTLS(t *testing.T) {
 			deployment.Spec.Template.Spec.Volumes = []corev1.Volume{
 				{
 					Name: certsVolumeName,
-					VolumeSource: corev1.VolumeSource{
-						Secret: &corev1.SecretVolumeSource{
-							SecretName: goEchoTLSSecretName,
-						},
+					Secret: &corev1.SecretVolumeSource{
+						SecretName: goEchoTLSSecretName,
 					},
 				},
 			}

@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -19,9 +18,7 @@ func TestWatch(t *testing.T) {
 			WithScheme(scheme.Get()).
 			Build()
 		consumer = &configurationv1.KongConsumer{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "test-consumer",
-			},
+			Name: "test-consumer",
 		}
 	)
 

@@ -139,9 +139,7 @@ func TestCreateManager(t *testing.T) {
 			name: "0 dataplanes, 0 pods, 1 node",
 			objects: []runtime.Object{
 				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node-0",
-					},
+					Name: "node-0",
 				},
 			},
 			expectedReportParts: []string{
@@ -164,27 +162,19 @@ func TestCreateManager(t *testing.T) {
 			name: "1 dataplane, 1 pod, 1 node",
 			objects: []runtime.Object{
 				&corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "gateway-operator-abcde",
-					},
+					Namespace: "kong",
+					Name:      "gateway-operator-abcde",
 				},
 				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node-0",
-					},
+					Name: "node-0",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cloud-gateway-0",
-					},
+					Namespace: "kong",
+					Name:      "cloud-gateway-0",
 				},
 				&netv1.Ingress{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "ingress-1",
-					},
+					Namespace: "kong",
+					Name:      "ingress-1",
 				},
 			},
 			expectedReportParts: []string{
@@ -207,38 +197,26 @@ func TestCreateManager(t *testing.T) {
 			name: "4 dataplanes (1 owned), 3 controlplanes (1 owned), 2 nodes, 1 pod",
 			objects: []runtime.Object{
 				&corev1.Pod{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "gateway-operator-abcde",
-					},
+					Namespace: "kong",
+					Name:      "gateway-operator-abcde",
 				},
 				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node-0",
-					},
+					Name: "node-0",
 				},
 				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node-1",
-					},
+					Name: "node-1",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cloud-gateway-0",
-					},
+					Namespace: "kong",
+					Name:      "cloud-gateway-0",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cloud-gateway-1",
-					},
+					Namespace: "kong",
+					Name:      "cloud-gateway-1",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cloud-gateway-2",
-					},
+					Namespace: "kong",
+					Name:      "cloud-gateway-2",
 				},
 				&operatorv1beta1.DataPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -248,16 +226,12 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "control-plane-0",
-					},
+					Namespace: "kong",
+					Name:      "control-plane-0",
 				},
 				&gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "control-plane-1",
-					},
+					Namespace: "kong",
+					Name:      "control-plane-1",
 				},
 				&gwtypes.ControlPlane{
 					ObjectMeta: metav1.ObjectMeta{
@@ -290,10 +264,8 @@ func TestCreateManager(t *testing.T) {
 			name: "dataplanes replicas count",
 			objects: []runtime.Object{
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "dp-10-replicas",
-					},
+					Namespace: "kong",
+					Name:      "dp-10-replicas",
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -305,10 +277,8 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "dp-5-scaling-max-replicas",
-					},
+					Namespace: "kong",
+					Name:      "dp-5-scaling-max-replicas",
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -345,22 +315,16 @@ func TestCreateManager(t *testing.T) {
 			name: "1 aigateway, 1 dataplane, 1 controlplane",
 			objects: []runtime.Object{
 				&operatorv1alpha1.AIGateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "ai-gateway",
-					},
+					Namespace: "kong",
+					Name:      "ai-gateway",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "ai-gateway-dp",
-					},
+					Namespace: "kong",
+					Name:      "ai-gateway-dp",
 				},
 				&gwtypes.ControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "ai-gateway-cp",
-					},
+					Namespace: "kong",
+					Name:      "ai-gateway-cp",
 				},
 			},
 			expectedReportParts: []string{
@@ -380,40 +344,28 @@ func TestCreateManager(t *testing.T) {
 			name: "Konnect entities",
 			objects: []runtime.Object{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongservice-1",
-					},
+					Namespace: "kong",
+					Name:      "kongservice-1",
 				},
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongservice-2",
-					},
+					Namespace: "kong",
+					Name:      "kongservice-2",
 				},
 				&configurationv1alpha1.KongRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongroute-1",
-					},
+					Namespace: "kong",
+					Name:      "kongroute-1",
 				},
 				&configurationv1.KongConsumer{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongconsumer-1",
-					},
+					Namespace: "kong",
+					Name:      "kongconsumer-1",
 				},
 				&configurationv1beta1.KongConsumerGroup{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongconsumergroup-1",
-					},
+					Namespace: "kong",
+					Name:      "kongconsumergroup-1",
 				},
 				&configurationv1alpha1.KongSNI{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "kongroute-1",
-					},
+					Namespace: "kong",
+					Name:      "kongroute-1",
 				},
 			},
 			expectedReportParts: []string{
@@ -441,10 +393,8 @@ func TestCreateManager(t *testing.T) {
 			},
 			objects: []runtime.Object{
 				&gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "hybrid-not-programmed",
-					},
+					Namespace: "kong",
+					Name:      "hybrid-not-programmed",
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "kong-non-hybrid",
 						Infrastructure: &gatewayv1.GatewayInfrastructure{
@@ -463,10 +413,8 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "hybrid-programmed",
-					},
+					Namespace: "kong",
+					Name:      "hybrid-programmed",
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "kong-hybrid",
 						Listeners: []gatewayv1.Listener{
@@ -501,10 +449,8 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "non-hybrid-programmed",
-					},
+					Namespace: "kong",
+					Name:      "non-hybrid-programmed",
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "kong-non-hybrid",
 						Listeners: []gatewayv1.Listener{
@@ -539,10 +485,8 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other",
-						Name:      "other",
-					},
+					Namespace: "other",
+					Name:      "other",
 					Spec: gatewayv1.GatewaySpec{
 						GatewayClassName: "not-kong",
 						Listeners: []gatewayv1.Listener{
@@ -554,9 +498,7 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong-hybrid",
-					},
+					Name: "kong-hybrid",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 						ParametersRef: &gatewayv1.ParametersReference{
@@ -576,9 +518,7 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "kong-non-hybrid",
-					},
+					Name: "kong-non-hybrid",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 					},
@@ -592,18 +532,14 @@ func TestCreateManager(t *testing.T) {
 					},
 				},
 				&gatewayv1.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "not-kong",
-					},
+					Name: "not-kong",
 					Spec: gatewayv1.GatewayClassSpec{
 						ControllerName: gatewayv1.GatewayController("another-controller"),
 					},
 				},
 				&operatorv2beta1.GatewayConfiguration{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "konnect-1",
-					},
+					Namespace: "kong",
+					Name:      "konnect-1",
 					Spec: operatorv2beta1.GatewayConfigurationSpec{
 						Konnect: &operatorv2beta1.KonnectOptions{
 							APIAuthConfigurationRef: &konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -693,15 +629,11 @@ func TestTelemetryUpdates(t *testing.T) {
 			name: "1 dataplane which gets deleted",
 			objects: []runtime.Object{
 				&corev1.Node{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "node-0",
-					},
+					Name: "node-0",
 				},
 				&operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "kong",
-						Name:      "cloud-gateway-0",
-					},
+					Namespace: "kong",
+					Name:      "cloud-gateway-0",
 				},
 			},
 			expectedReportParts: []string{
@@ -733,24 +665,16 @@ func TestTelemetryUpdates(t *testing.T) {
 			},
 			action: func(t *testing.T, tracker k8stesting.ObjectTracker) {
 				require.NoError(t, tracker.Create(operatorv1beta1.DataPlaneGVR(), &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "gateway-operator.konghq.com/v1beta1",
-						Kind:       "DataPlane",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-gateway-0",
-						Namespace: "kong",
-					},
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+					Name:       "cloud-gateway-0",
+					Namespace:  "kong",
 				}, "kong"))
 				require.NoError(t, tracker.Create(operatorv1beta1.DataPlaneGVR(), &metav1.PartialObjectMetadata{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: "gateway-operator.konghq.com/v1beta1",
-						Kind:       "DataPlane",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "cloud-gateway-1",
-						Namespace: "kong",
-					},
+					APIVersion: "gateway-operator.konghq.com/v1beta1",
+					Kind:       "DataPlane",
+					Name:       "cloud-gateway-1",
+					Namespace:  "kong",
 				}, "kong"))
 			},
 			expectedReportPartsAfterAction: []string{

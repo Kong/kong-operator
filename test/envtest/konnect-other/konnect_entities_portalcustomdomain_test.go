@@ -7,7 +7,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -170,10 +169,8 @@ func testEnvtestPortalCustomDomain(
 	namespace, portalName, enabled, hostname string,
 ) *konnectv1alpha1.PortalCustomDomain {
 	return &konnectv1alpha1.PortalCustomDomain{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal-custom-domain",
-			Namespace: namespace,
-		},
+		Name:      "portal-custom-domain",
+		Namespace: namespace,
 		Spec: konnectv1alpha1.PortalCustomDomainSpec{
 			PortalRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

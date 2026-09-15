@@ -6,7 +6,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/events"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -33,7 +32,7 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 	}{
 		{
 			name:              "HTTPRoute with TranslationSucceeded",
-			object:            &gatewayv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "default"}},
+			object:            &gatewayv1.HTTPRoute{Name: "test-route", Namespace: "default"},
 			eventType:         corev1.EventTypeNormal,
 			baseReason:        "TranslationSucceeded",
 			message:           "Translation completed successfully",
@@ -43,7 +42,7 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 		},
 		{
 			name:              "Gateway with TranslationFailed",
-			object:            &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"}},
+			object:            &gatewayv1.Gateway{Name: "test-gateway", Namespace: "default"},
 			eventType:         corev1.EventTypeWarning,
 			baseReason:        "TranslationFailed",
 			message:           "Translation failed due to error",
@@ -53,7 +52,7 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 		},
 		{
 			name:              "Unknown type falls back to base reason",
-			object:            &corev1.Pod{ObjectMeta: metav1.ObjectMeta{Name: "test-pod", Namespace: "default"}},
+			object:            &corev1.Pod{Name: "test-pod", Namespace: "default"},
 			eventType:         corev1.EventTypeNormal,
 			baseReason:        "StatusUpdateSucceeded",
 			message:           "Status updated",
@@ -63,7 +62,7 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 		},
 		{
 			name:              "HTTPRoute with StateEnforcementSucceeded",
-			object:            &gatewayv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route"}},
+			object:            &gatewayv1.HTTPRoute{Name: "test-route"},
 			eventType:         corev1.EventTypeNormal,
 			baseReason:        "StateEnforcementSucceeded",
 			message:           "State enforced",
@@ -73,7 +72,7 @@ func TestTypedEventRecorder_Event(t *testing.T) {
 		},
 		{
 			name:              "Gateway with OrphanCleanupFailed",
-			object:            &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "test-gateway"}},
+			object:            &gatewayv1.Gateway{Name: "test-gateway"},
 			eventType:         corev1.EventTypeWarning,
 			baseReason:        "OrphanCleanupFailed",
 			message:           "Cleanup failed",
@@ -112,7 +111,7 @@ func TestTypedEventRecorder_Eventf(t *testing.T) {
 	}{
 		{
 			name:              "HTTPRoute with formatted message",
-			object:            &gatewayv1.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: "default"}},
+			object:            &gatewayv1.HTTPRoute{Name: "test-route", Namespace: "default"},
 			eventType:         corev1.EventTypeNormal,
 			baseReason:        "StateEnforcementSucceeded",
 			messageFmt:        "Enforced state for %d resources",
@@ -123,7 +122,7 @@ func TestTypedEventRecorder_Eventf(t *testing.T) {
 		},
 		{
 			name:              "Gateway with formatted message",
-			object:            &gatewayv1.Gateway{ObjectMeta: metav1.ObjectMeta{Name: "test-gateway", Namespace: "default"}},
+			object:            &gatewayv1.Gateway{Name: "test-gateway", Namespace: "default"},
 			eventType:         corev1.EventTypeWarning,
 			baseReason:        "OrphanCleanupFailed",
 			messageFmt:        "Failed to clean up %d orphaned resources",
@@ -162,11 +161,11 @@ func TestTypedEventRecorder_AllBaseReasons(t *testing.T) {
 	}
 
 	httpRoute := &gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-route"},
+		Name: "test-route",
 	}
 
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "test-gateway"},
+		Name: "test-gateway",
 	}
 
 	for _, baseReason := range baseReasons {
@@ -235,10 +234,10 @@ func TestTypedEventRecorder_MultipleEvents(t *testing.T) {
 	recorder := NewTypedEventRecorder(fakeRecorder)
 
 	httpRoute := &gatewayv1.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{Name: "route1"},
+		Name: "route1",
 	}
 	gateway := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gateway1"},
+		Name: "gateway1",
 	}
 
 	recorder.Eventf(httpRoute, corev1.EventTypeNormal, "TranslationSucceeded", "message1")

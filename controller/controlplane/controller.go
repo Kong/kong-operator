@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,6 +84,15 @@ type Reconciler struct {
 
 	// WatchNamespaces is a list of namespaces to watch. If empty (default), all namespaces are watched.
 	WatchNamespaces []string
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at startup and passed down to every
+	// ControlPlane instance this reconciler schedules.
+	//
+	// Resolving it once is safe because requiredCRDChecks gates the ControlPlane
+	// controller on a ReferenceGrant CRD being present: the operator refuses to start
+	// without one, so there is always something to detect.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -477,6 +487,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	cfgOpts := []managercfg.Opt{
+		WithReferenceGrantVersion(r.ReferenceGrantVersion),
 		WithRestConfig(r.RestConfig, r.KubeConfigPath),
 		WithCacheSyncPeriod(r.CacheSyncPeriod),
 		WithKongAdminService(types.NamespacedName{
@@ -672,21 +683,25 @@ func (r *Reconciler) handleScheduleInstanceOutcome(
 
 	// If the error is transient, we log it and requeue the resource. Such errors include:
 	// - NoAvailableEndpointsError: indicates that there are no available endpoints for the dataplane;
-	// - KongClientNotReadyError: indicates that the Kong client is not ready.
+	// - KongClientNotReadyError: indicates that the Kong client is not ready;
+	// - InstanceWithIDAlreadyScheduledError: indicates that the previously stopped instance
+	//   with the same ID hasn't been reaped yet.
 	// These errors are considered transient and will be retried after a delay.
 	if endpointsError, ok := errors.AsType[ingresserrors.NoAvailableEndpointsError](err); ok {
-		conditionMessage = endpointsError.Error()
+		conditionMessage = fmt.Sprintf("Unable to connect to data plane: %s", endpointsError.Error())
 	} else if kongClientError, ok := errors.AsType[ingresserrors.KongClientNotReadyError](err); ok {
-		conditionMessage = kongClientError.Error()
+		conditionMessage = fmt.Sprintf("Unable to connect to data plane: %s", kongClientError.Error())
+	} else if _, ok := errors.AsType[multiinstance.InstanceWithIDAlreadyScheduledError](err); ok {
+		conditionMessage = "Waiting for the previous control plane instance to be removed"
 	}
 	if conditionMessage != "" {
-		logger.Info("Transient error encountered while creating kong api clients, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
+		logger.Info("Transient error encountered while scheduling control plane instance, retrying after delay", "error", err, "retryDelay", requeueAfterBoot)
 		k8sutils.SetCondition(
 			k8sutils.NewCondition(
 				kcfgdataplane.ReadyType,
 				metav1.ConditionFalse,
 				kcfgdataplane.WaitingToBecomeReadyReason,
-				fmt.Sprintf("Unable to connect to data plane: %s", conditionMessage),
+				conditionMessage,
 			),
 			cp,
 		)

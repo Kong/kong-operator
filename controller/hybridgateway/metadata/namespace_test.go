@@ -122,10 +122,8 @@ func TestNamespaceFromParentRefWithHTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute with cross-namespace gateway reference",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "api-route",
-					Namespace: "app-namespace",
-				},
+				Name:      "api-route",
+				Namespace: "app-namespace",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name:      "shared-gateway",
@@ -137,10 +135,8 @@ func TestNamespaceFromParentRefWithHTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute with same-namespace gateway reference",
 			httpRoute: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "api-route",
-					Namespace: "app-namespace",
-				},
+				Name:      "api-route",
+				Namespace: "app-namespace",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "local-gateway",

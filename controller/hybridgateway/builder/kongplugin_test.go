@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -39,10 +38,8 @@ func TestKongPluginBuilder_WithNamespace(t *testing.T) {
 
 func TestKongPluginBuilder_WithLabels(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -60,10 +57,8 @@ func TestKongPluginBuilder_WithLabels(t *testing.T) {
 
 func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
@@ -86,10 +81,8 @@ func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
 
 	t.Run("parentRef is nil", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 		builder := NewKongPlugin().WithAnnotations(route, nil)
 		require.NotEmpty(t, builder.errors)
@@ -99,11 +92,9 @@ func TestKongPluginBuilder_WithAnnotations(t *testing.T) {
 
 func TestKongPluginBuilder_WithOwner(t *testing.T) {
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-http-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		Name:      "test-http-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 
 	t.Run("valid owner", func(t *testing.T) {
@@ -196,11 +187,9 @@ func TestKongPluginBuilder_WithTags(t *testing.T) {
 
 	t.Run("composes with WithTagsFromAnnotations", func(t *testing.T) {
 		sourcePlugin := &configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "user-plugin",
-				Annotations: map[string]string{
-					"konghq.com/tags": "annotation-tag",
-				},
+			Name: "user-plugin",
+			Annotations: map[string]string{
+				"konghq.com/tags": "annotation-tag",
 			},
 			Tags: commonv1alpha1.Tags{"spec-tag"},
 		}
@@ -218,10 +207,8 @@ func TestKongPluginBuilder_WithTags(t *testing.T) {
 
 func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 
 	parentRef := &gwtypes.ParentReference{
@@ -250,12 +237,10 @@ func TestKongPluginBuilder_ChainedCalls(t *testing.T) {
 func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 	t.Run("tags from single source", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "team-payments,env-prod",
-				},
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "team-payments,env-prod",
 			},
 		}
 
@@ -269,21 +254,17 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 	t.Run("tags from multiple sources are merged and deduplicated", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "shared-tag,route-tag",
-				},
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "shared-tag,route-tag",
 			},
 		}
 		sourcePlugin := &configurationv1.KongPlugin{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "user-plugin",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "shared-tag,plugin-tag",
-				},
+			Name:      "user-plugin",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "shared-tag,plugin-tag",
 			},
 		}
 
@@ -297,10 +278,8 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 	t.Run("no tags annotation when sources have no tags", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
+			Name:      "test-route",
+			Namespace: "default",
 		}
 
 		plugin, err := NewKongPlugin().
@@ -313,12 +292,10 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 	t.Run("nil source is safely skipped", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "my-tag",
-				},
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "my-tag",
 			},
 		}
 
@@ -332,12 +309,10 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 	t.Run("tags annotation preserved alongside tracking annotations", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "my-tag",
-				},
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "my-tag",
 			},
 		}
 		parentRef := &gwtypes.ParentReference{
@@ -358,12 +333,10 @@ func TestKongPluginBuilder_WithTagsAnnotation(t *testing.T) {
 
 	t.Run("tags with spaces are trimmed", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-				Annotations: map[string]string{
-					"konghq.com/tags": "team-payments , env-prod,env-prod, ,  shared-tag  ",
-				},
+			Name:      "test-route",
+			Namespace: "default",
+			Annotations: map[string]string{
+				"konghq.com/tags": "team-payments , env-prod,env-prod, ,  shared-tag  ",
 			},
 		}
 

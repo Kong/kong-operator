@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -32,7 +31,7 @@ func configStoreRefScheme(t *testing.T) *runtime.Scheme {
 // ID, i.e. a reference target that resolves successfully.
 func programmedConfigStore(name, namespace, konnectID string) *konnectv1alpha1.KonnectConfigStore {
 	cs := &konnectv1alpha1.KonnectConfigStore{
-		ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: namespace},
+		Name: name, Namespace: namespace,
 	}
 	cs.Status.ID = konnectID
 	return cs
@@ -42,7 +41,7 @@ func programmedConfigStore(name, namespace, konnectID string) *konnectv1alpha1.K
 // with the given raw spec.config (empty means spec.config is unset).
 func konnectBackedVault(rawConfig string, ref *configurationv1alpha1.KonnectConfigStoreRef) *configurationv1alpha1.KongVault {
 	v := &configurationv1alpha1.KongVault{
-		ObjectMeta: metav1.ObjectMeta{Name: "certvault"},
+		Name: "certvault",
 		Spec: configurationv1alpha1.KongVaultSpec{
 			Backend:        "konnect",
 			Prefix:         "certvault",

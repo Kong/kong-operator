@@ -31,8 +31,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // ReferenceGrantReconciler reconciles a ReferenceGrant object.
@@ -45,19 +44,13 @@ type ReferenceGrantReconciler struct {
 
 	CacheSyncTimeout time.Duration
 
-	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or
-	// v1beta1) served by the cluster, resolved on SetupWithManager call.
-	referenceGrantVersion schema.GroupVersion
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	gv, ok := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
-	if !ok {
-		return fmt.Errorf("neither v1 nor v1beta1 ReferenceGrant CRD found")
-	}
-	r.referenceGrantVersion = gv
-
 	return ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named("referencegrant-controller").
@@ -68,7 +61,7 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			CacheSyncTimeout: r.CacheSyncTimeout,
 		}).
 		// watch Referencegrant objects
-		For(gatewayapi.NewReferenceGrant(r.referenceGrantVersion)).
+		For(k8sutils.NewReferenceGrant(r.ReferenceGrantVersion)).
 		Complete(r)
 }
 
@@ -79,12 +72,12 @@ func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // move the current state of the cluster closer to the desired state.
 func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	log := r.Log.WithValues("GatewayV1ReferenceGrant", req.NamespacedName)
-	obj := gatewayapi.NewReferenceGrant(r.referenceGrantVersion)
+	obj := k8sutils.NewReferenceGrant(r.ReferenceGrantVersion)
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		// if the queued object is no longer present in the proxy cache we need
 		// to ensure that if it was ever added to the cache, it gets removed.
 		if apierrors.IsNotFound(err) {
-			grant, _ := gatewayapi.AsReferenceGrant(obj)
+			grant, _ := k8sutils.AsReferenceGrant(obj)
 			debug(log, grant, "Object does not exist, ensuring it is not present in the proxy cache")
 			grant.Namespace = req.Namespace
 			grant.Name = req.Name
@@ -94,7 +87,7 @@ func (r *ReferenceGrantReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 		// for any error other than 404, requeue
 		return ctrl.Result{}, err
 	}
-	grant, ok := gatewayapi.AsReferenceGrant(obj)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		return ctrl.Result{}, fmt.Errorf("unexpected object type %T", obj)
 	}

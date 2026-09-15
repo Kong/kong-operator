@@ -35,13 +35,13 @@ const (
 
 func minimalMCPServerDataPlane() *mcpv1alpha1.MCPServerDataPlane {
 	return &mcpv1alpha1.MCPServerDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: testMCPServerName},
+		Namespace: testMCPServerNamespace, Name: testMCPServerName,
 	}
 }
 
 func minimalAPIAuth() *konnectv1alpha1.KonnectAPIAuthConfiguration {
 	return &konnectv1alpha1.KonnectAPIAuthConfiguration{
-		ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+		Namespace: testMCPServerNamespace, Name: "api-auth",
 		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
 			Token:     "test-token",
@@ -66,7 +66,7 @@ func mcpServerMetadataWithContainers() mcpServerMetadata {
 // ensureTokenSecret's body (see Test_ensureTokenSecret for that).
 func tokenSecret(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) *corev1.Secret {
 	nn := generateWorkloadNN(mcpDataPlane)
-	return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Name: nn.Name, Namespace: nn.Namespace}}
+	return &corev1.Secret{Name: nn.Name, Namespace: nn.Namespace}
 }
 
 func Test_ensureDeployment(t *testing.T) {
@@ -212,7 +212,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "secretRef type in the same namespace returns the referenced name and deletes a stale generated Secret",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "user-provided-secret"},
@@ -231,7 +231,7 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "secretRef type in a different namespace is rejected",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
 				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
 					Type:      konnectv1alpha1.KonnectAPIAuthTypeSecretRef,
 					SecretRef: &corev1.SecretReference{Name: "other-ns-secret", Namespace: "other-ns"},
@@ -242,8 +242,8 @@ func Test_ensureTokenSecret(t *testing.T) {
 		{
 			name: "unsupported auth type returns an error",
 			apiAuth: &konnectv1alpha1.KonnectAPIAuthConfiguration{
-				ObjectMeta: metav1.ObjectMeta{Namespace: testMCPServerNamespace, Name: "api-auth"},
-				Spec:       konnectv1alpha1.KonnectAPIAuthConfigurationSpec{Type: "bogus"},
+				Namespace: testMCPServerNamespace, Name: "api-auth",
+				Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{Type: "bogus"},
 			},
 			wantErr: true,
 		},
@@ -548,6 +548,73 @@ func Test_generateDeployment_PodTemplateLabelsAndAnnotations(t *testing.T) {
 	assert.NotContains(t, deploy.Annotations, "team-contact")
 }
 
+func Test_generateDeployment_SignalAnnotations(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	apiAuth := minimalAPIAuth()
+	tokenSecret := tokenSecret(mcpDataPlane)
+
+	t.Run("no signal seen yet: no signal annotations on Deployment or pod template", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.NotContains(t, deploy.Annotations, mcpSignalOffsetAnnotationKey)
+		assert.NotContains(t, deploy.Annotations, mcpSignalVersionAnnotationKey)
+		assert.NotContains(t, deploy.Spec.Template.Annotations, mcpSignalOffsetAnnotationKey)
+		assert.NotContains(t, deploy.Spec.Template.Annotations, mcpSignalVersionAnnotationKey)
+	})
+
+	t.Run("signal is stamped on Deployment and pod template", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		metadata.SignalOffset = "off-1"
+		metadata.SignalVersion = "sig-v1"
+		deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.Equal(t, "off-1", deploy.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Annotations[mcpSignalVersionAnnotationKey])
+		assert.Equal(t, "off-1", deploy.Spec.Template.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Spec.Template.Annotations[mcpSignalVersionAnnotationKey])
+	})
+
+	t.Run("a changed signal changes the pod template, triggering a rollout", func(t *testing.T) {
+		before := mcpServerMetadataWithContainers()
+		before.SignalOffset, before.SignalVersion = "off-1", "sig-v1"
+		after := mcpServerMetadataWithContainers()
+		after.SignalOffset, after.SignalVersion = "off-2", "sig-v1"
+
+		deployBefore := generateDeployment(logr.Discard(), mcpDataPlane, before, tokenSecret, apiAuth.Spec.ServerURL)
+		deployAfter := generateDeployment(logr.Discard(), mcpDataPlane, after, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.NotEqual(t, deployBefore.Spec.Template.Annotations, deployAfter.Spec.Template.Annotations)
+	})
+
+	t.Run("user cannot override signal annotations via spec.deployment or podTemplateSpec", func(t *testing.T) {
+		metadata := mcpServerMetadataWithContainers()
+		metadata.SignalOffset, metadata.SignalVersion = "off-1", "sig-v1"
+
+		dp := minimalMCPServerDataPlane()
+		dp.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{
+			Annotations: map[string]string{
+				mcpSignalOffsetAnnotationKey:  "user-supplied",
+				mcpSignalVersionAnnotationKey: "user-supplied",
+			},
+			PodTemplateSpec: mcpv1alpha1.MCPServerDataPlanePodTemplateSpec{
+				Metadata: mcpv1alpha1.MCPServerDataPlanePodTemplateSpecMetadata{
+					Annotations: map[string]string{
+						mcpSignalOffsetAnnotationKey:  "user-supplied",
+						mcpSignalVersionAnnotationKey: "user-supplied",
+					},
+				},
+			},
+		}
+		deploy := generateDeployment(logr.Discard(), dp, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+		assert.Equal(t, "off-1", deploy.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Annotations[mcpSignalVersionAnnotationKey])
+		assert.Equal(t, "off-1", deploy.Spec.Template.Annotations[mcpSignalOffsetAnnotationKey])
+		assert.Equal(t, "sig-v1", deploy.Spec.Template.Annotations[mcpSignalVersionAnnotationKey])
+	})
+}
+
 // infoCountSink is a minimal logr.LogSink that counts Info() calls.
 type infoCountSink struct{ count *int }
 
@@ -601,7 +668,7 @@ func Test_addAnnotationsForMCPServerDataPlaneDeployment(t *testing.T) {
 					Deployment: &mcpv1alpha1.DeploymentOptions{Annotations: tc.specAnnotations},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Annotations: tc.existingAnnotations}}
+			deployment := &appsv1.Deployment{Annotations: tc.existingAnnotations}
 			var infoCount int
 			addAnnotationsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
 			require.Equal(t, tc.expectedAnnotations, deployment.Annotations)
@@ -649,7 +716,7 @@ func Test_addLabelsForMCPServerDataPlaneDeployment(t *testing.T) {
 					Deployment: &mcpv1alpha1.DeploymentOptions{Labels: tc.specLabels},
 				},
 			}
-			deployment := &appsv1.Deployment{ObjectMeta: metav1.ObjectMeta{Labels: tc.existingLabels}}
+			deployment := &appsv1.Deployment{Labels: tc.existingLabels}
 			var infoCount int
 			addLabelsForMCPServerDataPlaneDeployment(logr.New(infoCountSink{count: &infoCount}), deployment, mcpDataPlane)
 			require.Equal(t, tc.expectedLabels, deployment.Labels)

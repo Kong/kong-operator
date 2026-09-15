@@ -40,11 +40,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -55,11 +53,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -70,11 +66,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
@@ -85,11 +79,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: false,
@@ -100,11 +92,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route3",
-					Namespace: "ns3",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "route3",
+				Namespace: "ns3",
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
@@ -114,11 +104,9 @@ func TestAppendHTTPRouteToBindingAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			binding := &configurationv1alpha1.KongPluginBinding{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-binding",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-binding",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			am := metadata.NewAnnotationManager(logger)
@@ -150,12 +138,10 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 			routeName:       "test-route",
 			existingBinding: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-httproute",
-					Namespace: "test-namespace",
-					UID:       "test-uid",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-httproute",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "test-gateway",
@@ -185,12 +171,10 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 			pluginName: "test-plugin-2",
 			routeName:  "test-route-2",
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-httproute-2",
-					Namespace: "test-namespace",
-					UID:       "test-uid-2",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-httproute-2",
+				Namespace: "test-namespace",
+				UID:       "test-uid-2",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "test-gateway",

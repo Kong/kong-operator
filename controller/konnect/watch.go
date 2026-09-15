@@ -5,7 +5,6 @@ import (
 	"reflect"
 
 	corev1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -146,10 +145,8 @@ itemLoop:
 			}
 		}
 		ret = append(ret, ctrl.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: e.GetNamespace(),
-				Name:      e.GetName(),
-			},
+			Namespace: e.GetNamespace(),
+			Name:      e.GetName(),
 		})
 	}
 
@@ -323,6 +320,9 @@ type WatchableEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
 		aiconfigurationv1alpha1.AIGatewayMCPServer |
 		aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate |
+		aiconfigurationv1alpha1.AIGatewayCACertificate |
+		aiconfigurationv1alpha1.AIGatewayCertificate |
+		aiconfigurationv1alpha1.AIGatewaySNI |
 		konnectv1alpha1.KonnectEventGateway |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayListener |
@@ -426,10 +426,8 @@ func enqueueObjectsForKongReferenceGrant[
 				ksPtr := TT(&ks)
 
 				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Namespace: ksPtr.GetNamespace(),
-						Name:      ksPtr.GetName(),
-					},
+					Namespace: ksPtr.GetNamespace(),
+					Name:      ksPtr.GetName(),
 				},
 				)
 			}
@@ -527,10 +525,8 @@ func enqueueObjectsForSecretRef[
 				}
 				if ref.Name == secret.Name && ns == secret.Namespace {
 					ret = append(ret, reconcile.Request{
-						NamespacedName: types.NamespacedName{
-							Namespace: itemPtr.GetNamespace(),
-							Name:      itemPtr.GetName(),
-						},
+						Namespace: itemPtr.GetNamespace(),
+						Name:      itemPtr.GetName(),
 					})
 					break
 				}

@@ -64,10 +64,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 		FormatVersion: "3.0",
 		Services: []file.FService{
 			{
-				Service: kong.Service{
-					Name: new("service1"),
-					Host: new("example.com"),
-				},
+				Name: new("service1"),
+				Host: new("example.com"),
 			},
 		},
 	}
@@ -75,10 +73,8 @@ func TestConfigSynchronizer_UpdatesKongConfigAccordingly(t *testing.T) {
 		return &kongstate.KongState{
 			Services: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("service1"),
-						Host: new("example.com"),
-					},
+					Name: new("service1"),
+					Host: new("example.com"),
 				},
 			},
 		}
@@ -233,10 +229,8 @@ func TestConfigSynchronizer_StatusNotificationIsSent(t *testing.T) {
 				return &kongstate.KongState{
 					Services: []kongstate.Service{
 						{
-							Service: kong.Service{
-								Name: new("service1"),
-								Host: new("example.com"),
-							},
+							Name: new("service1"),
+							Host: new("example.com"),
 						},
 					},
 				}
@@ -311,10 +305,8 @@ func TestConfigSynchronizer_EnableReverseSync(t *testing.T) {
 			initialKongState := &kongstate.KongState{
 				Services: []kongstate.Service{
 					{
-						Service: kong.Service{
-							Name: new("service1"),
-							Host: new("example.com"),
-						},
+						Name: new("service1"),
+						Host: new("example.com"),
 					},
 				},
 			}

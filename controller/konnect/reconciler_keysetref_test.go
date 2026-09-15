@@ -39,10 +39,8 @@ func TestHandleKeySetRef(t *testing.T) {
 		}
 
 		cp = &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "cp-1",
-				Namespace: "ns",
-			},
+			Name:      "cp-1",
+			Namespace: "ns",
 		}
 		cpRef = &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -52,10 +50,8 @@ func TestHandleKeySetRef(t *testing.T) {
 		}
 
 		notProgrammedKeySet = &configurationv1alpha1.KongKeySet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "key-set-1",
-				Namespace: "ns",
-			},
+			Name:      "key-set-1",
+			Namespace: "ns",
 			Spec: configurationv1alpha1.KongKeySetSpec{
 				ControlPlaneRef: cpRef,
 				KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
@@ -64,10 +60,8 @@ func TestHandleKeySetRef(t *testing.T) {
 			},
 		}
 		programmedKeySet = &configurationv1alpha1.KongKeySet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "key-set-2",
-				Namespace: "ns",
-			},
+			Name:      "key-set-2",
+			Namespace: "ns",
 			Spec: configurationv1alpha1.KongKeySetSpec{
 				ControlPlaneRef: cpRef,
 				KongKeySetAPISpec: configurationv1alpha1.KongKeySetAPISpec{
@@ -76,9 +70,7 @@ func TestHandleKeySetRef(t *testing.T) {
 			},
 			Status: configurationv1alpha1.KongKeySetStatus{
 				Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
-					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-						ID: "key-set-id",
-					},
+					ID:             "key-set-id",
 					ControlPlaneID: "cp-id",
 				},
 				Conditions: []metav1.Condition{
@@ -92,13 +84,11 @@ func TestHandleKeySetRef(t *testing.T) {
 			},
 		}
 		keySetDuringDeletion = &configurationv1alpha1.KongKeySet{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:              "key-set-3",
-				Namespace:         "ns",
-				DeletionTimestamp: new(metav1.Now()),
-				Finalizers: []string{
-					KonnectCleanupFinalizer,
-				},
+			Name:              "key-set-3",
+			Namespace:         "ns",
+			DeletionTimestamp: new(metav1.Now()),
+			Finalizers: []string{
+				KonnectCleanupFinalizer,
 			},
 		}
 	)

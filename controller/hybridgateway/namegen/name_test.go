@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -16,19 +15,15 @@ import (
 
 func testRoute(namespace, name string) *gwtypes.HTTPRoute {
 	return &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 	}
 }
 
 func testGRPCRoute(namespace, name string) *gwtypes.GRPCRoute {
 	return &gwtypes.GRPCRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
+		Name:      name,
+		Namespace: namespace,
 	}
 }
 
@@ -65,13 +60,9 @@ func testBackendRef(
 	name string, namespace *gatewayv1.Namespace, port *gatewayv1.PortNumber,
 ) gatewayv1.HTTPBackendRef {
 	return gatewayv1.HTTPBackendRef{
-		BackendRef: gatewayv1.BackendRef{
-			BackendObjectReference: gatewayv1.BackendObjectReference{
-				Name:      gatewayv1.ObjectName(name),
-				Namespace: namespace,
-				Port:      port,
-			},
-		},
+		Name:      gatewayv1.ObjectName(name),
+		Namespace: namespace,
+		Port:      port,
 	}
 }
 
@@ -79,13 +70,9 @@ func testGRPCBackendRef(
 	name string, namespace *gatewayv1.Namespace, port *gatewayv1.PortNumber,
 ) gatewayv1.GRPCBackendRef {
 	return gatewayv1.GRPCBackendRef{
-		BackendRef: gatewayv1.BackendRef{
-			BackendObjectReference: gatewayv1.BackendObjectReference{
-				Name:      gatewayv1.ObjectName(name),
-				Namespace: namespace,
-				Port:      port,
-			},
-		},
+		Name:      gatewayv1.ObjectName(name),
+		Namespace: namespace,
+		Port:      port,
 	}
 }
 
@@ -221,19 +208,15 @@ func TestNewKongUpstreamNameForHTTPRoute(t *testing.T) {
 
 func TestTCPRouteNames(t *testing.T) {
 	tcpRoute := &gwtypes.TCPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "tcp-route",
-			Namespace: "default",
-		},
+		Name:      "tcp-route",
+		Namespace: "default",
 	}
 	cp := testControlPlaneRef("test-cp")
 	port := gwtypes.PortNumber(8080)
 	rule := gwtypes.TCPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "service1",
-				Port: &port,
-			},
+			Name: "service1",
+			Port: &port,
 		}},
 	}
 	parentRef := testParentRef(nil)
@@ -250,19 +233,15 @@ func TestTCPRouteNames(t *testing.T) {
 
 func TestUDPRouteNames(t *testing.T) {
 	udpRoute := &gwtypes.UDPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "udp-route",
-			Namespace: "default",
-		},
+		Name:      "udp-route",
+		Namespace: "default",
 	}
 	cp := testControlPlaneRef("test-cp")
 	port := gwtypes.PortNumber(8080)
 	rule := gwtypes.UDPRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "service1",
-				Port: &port,
-			},
+			Name: "service1",
+			Port: &port,
 		}},
 	}
 	parentRef := testParentRef(nil)
@@ -534,13 +513,9 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 	port := func(value gatewayv1.PortNumber) *gatewayv1.PortNumber { return &value }
 	backendRef := func(name string, namespace *gatewayv1.Namespace, portNumber *gatewayv1.PortNumber) gatewayv1.HTTPBackendRef {
 		return gatewayv1.HTTPBackendRef{
-			BackendRef: gatewayv1.BackendRef{
-				BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name:      gatewayv1.ObjectName(name),
-					Namespace: namespace,
-					Port:      portNumber,
-				},
-			},
+			Name:      gatewayv1.ObjectName(name),
+			Namespace: namespace,
+			Port:      portNumber,
 		}
 	}
 	buildExpected := func(readable string, cp *commonv1alpha1.ControlPlaneRef, backends []gatewayv1.HTTPBackendRef) string {
@@ -570,10 +545,8 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 		{
 			name: "short backend names",
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -591,10 +564,8 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 		{
 			name: "three long service names",
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -612,10 +583,8 @@ func TestNewKongServiceName_BackendDisplayLimit(t *testing.T) {
 		{
 			name: "two long namespaces",
 			route: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			cp: &commonv1alpha1.ControlPlaneRef{
 				Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -815,18 +784,14 @@ func TestNewKongRouteNameForGRPCRouteMatch_DiffersByRuleIndex(t *testing.T) {
 
 func TestNewKongRouteNameForTLSRouteRule_DiffersByParentRef(t *testing.T) {
 	route := &gwtypes.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 	cp := testControlPlaneRef("test-cp")
 	rule := gwtypes.TLSRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "backend",
-				Port: new(gatewayv1.PortNumber(443)),
-			},
+			Name: "backend",
+			Port: new(gatewayv1.PortNumber(443)),
 		}},
 	}
 	listener1 := gatewayv1.SectionName("listener-1")
@@ -841,18 +806,14 @@ func TestNewKongRouteNameForTLSRouteRule_DiffersByParentRef(t *testing.T) {
 
 func TestNewKongRouteNameForTLSRouteRule_WithoutParentRefKeepsLegacyFormat(t *testing.T) {
 	route := &gwtypes.TLSRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Name:      "test-route",
+		Namespace: "default",
 	}
 	cp := testControlPlaneRef("test-cp")
 	rule := gwtypes.TLSRouteRule{
 		BackendRefs: []gwtypes.BackendRef{{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name: "backend",
-				Port: new(gatewayv1.PortNumber(443)),
-			},
+			Name: "backend",
+			Port: new(gatewayv1.PortNumber(443)),
 		}},
 	}
 
@@ -1068,30 +1029,20 @@ func TestNewKongPluginBindingName(t *testing.T) {
 func TestNewKongTargetName(t *testing.T) {
 	httpBR := func(name string) *gwtypes.HTTPBackendRef {
 		return &gwtypes.HTTPBackendRef{
-			BackendRef: gatewayv1.BackendRef{
-				BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name: gatewayv1.ObjectName(name),
-					Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-				},
-			},
+			Name: gatewayv1.ObjectName(name),
+			Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 		}
 	}
 	grpcBR := func(name string) *gwtypes.GRPCBackendRef {
 		return &gwtypes.GRPCBackendRef{
-			BackendRef: gatewayv1.BackendRef{
-				BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name: gatewayv1.ObjectName(name),
-					Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-				},
-			},
+			Name: gatewayv1.ObjectName(name),
+			Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 		}
 	}
 	tlsBR := func(name string) *gwtypes.BackendRef {
 		return &gwtypes.BackendRef{
-			BackendObjectReference: gatewayv1.BackendObjectReference{
-				Name: gatewayv1.ObjectName(name),
-				Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-			},
+			Name: gatewayv1.ObjectName(name),
+			Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 		}
 	}
 
@@ -1191,21 +1142,15 @@ func TestNameGenerationConsistency(t *testing.T) {
 	rule := gatewayv1.HTTPRouteRule{
 		BackendRefs: []gatewayv1.HTTPBackendRef{
 			{
-				BackendRef: gatewayv1.BackendRef{
-					BackendObjectReference: gatewayv1.BackendObjectReference{
-						Name: "consistent-service",
-						Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-					},
-				},
+				Name: "consistent-service",
+				Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 			},
 		},
 	}
 
 	route := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "consistent-route",
-			Namespace: "default",
-		},
+		Name:      "consistent-route",
+		Namespace: "default",
 	}
 
 	filter := gatewayv1.HTTPRouteFilter{
@@ -1218,12 +1163,8 @@ func TestNameGenerationConsistency(t *testing.T) {
 	}
 
 	br := &gwtypes.HTTPBackendRef{
-		BackendRef: gatewayv1.BackendRef{
-			BackendObjectReference: gatewayv1.BackendObjectReference{
-				Name: "consistent-backend",
-				Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
-			},
-		},
+		Name: "consistent-backend",
+		Port: func() *gatewayv1.PortNumber { p := gatewayv1.PortNumber(8080); return &p }(),
 	}
 
 	t.Run("upstream name consistency", func(t *testing.T) {
@@ -1269,15 +1210,11 @@ func TestRefactorGoldenNames(t *testing.T) {
 
 	httpBackendRef := func(name string) gatewayv1.HTTPBackendRef {
 		return gatewayv1.HTTPBackendRef{
-			BackendRef: gatewayv1.BackendRef{
-				BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name: gatewayv1.ObjectName(name),
-					Port: new(gatewayv1.PortNumber(8080)),
-				},
-			},
+			Name: gatewayv1.ObjectName(name),
+			Port: new(gatewayv1.PortNumber(8080)),
 		}
 	}
-	httpRouteForServiceLike := &gwtypes.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "http-route", Namespace: "default"}}
+	httpRouteForServiceLike := &gwtypes.HTTPRoute{Name: "http-route", Namespace: "default"}
 
 	basicRule := gatewayv1.HTTPRouteRule{BackendRefs: []gatewayv1.HTTPBackendRef{httpBackendRef("http-backend")}}
 	assert.Equal(t, "http.default-http-backend-8080.1.cp1fbfa93f.29652d0c", NewKongUpstreamNameForHTTPRouteRule(httpRouteForServiceLike, cp, basicRule))
@@ -1306,41 +1243,37 @@ func TestRefactorGoldenNames(t *testing.T) {
 
 	grpcBackendRef := func(name string) gatewayv1.GRPCBackendRef {
 		return gatewayv1.GRPCBackendRef{
-			BackendRef: gatewayv1.BackendRef{
-				BackendObjectReference: gatewayv1.BackendObjectReference{
-					Name: gatewayv1.ObjectName(name),
-					Port: new(gatewayv1.PortNumber(8080)),
-				},
-			},
+			Name: gatewayv1.ObjectName(name),
+			Port: new(gatewayv1.PortNumber(8080)),
 		}
 	}
-	grpcRouteForServiceLike := &gwtypes.GRPCRoute{ObjectMeta: metav1.ObjectMeta{Name: "grpc-route", Namespace: "default"}}
+	grpcRouteForServiceLike := &gwtypes.GRPCRoute{Name: "grpc-route", Namespace: "default"}
 	grpcBasicRule := gatewayv1.GRPCRouteRule{BackendRefs: []gatewayv1.GRPCBackendRef{grpcBackendRef("grpc-backend")}}
 	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.b6d9a138", NewKongUpstreamNameForGRPCRouteRule(grpcRouteForServiceLike, cp, grpcBasicRule))
 	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.b6d9a138", NewKongServiceNameForGRPCRouteRule(grpcRouteForServiceLike, cp, grpcBasicRule))
 	assert.Equal(t, "grpc.default-grpc-backend-8080.1.cp1fbfa93f.bnf3748ad33.b6d9a138", NewKongServiceNameForGRPCRouteRuleBackendNotFound(grpcRouteForServiceLike, cp, grpcBasicRule))
 
-	tlsRoute := &gwtypes.TLSRoute{ObjectMeta: metav1.ObjectMeta{Name: "tls-route", Namespace: "default"}}
+	tlsRoute := &gwtypes.TLSRoute{Name: "tls-route", Namespace: "default"}
 	tlsRule := gwtypes.TLSRouteRule{BackendRefs: []gwtypes.BackendRef{{
-		BackendObjectReference: gwtypes.BackendObjectReference{Name: "tls-backend", Port: &port},
+		Name: "tls-backend", Port: &port,
 	}}}
 	assert.Equal(t, "tls.default-tls-backend-443.1.cp1fbfa93f.ea981935", NewKongUpstreamNameForTLSRouteRule(tlsRoute, cp, tlsRule))
 	assert.Equal(t, "tls.default-tls-backend-443.1.cp1fbfa93f.ea981935", NewKongServiceNameForTLSRouteRule(tlsRoute, cp, tlsRule))
 	assert.Equal(t, "tls.default-tls-route.cp1fbfa93f.pr4557fd4c.7d7f1d3d", NewKongRouteNameForTLSRouteRule(tlsRoute, cp, parentRef, tlsRule))
 	assert.Equal(t, "tls.default-tls-route.cp1fbfa93f.7d7f1d3d", NewKongRouteNameForTLSRouteRule(tlsRoute, cp, nil, tlsRule))
 
-	tcpRoute := &gwtypes.TCPRoute{ObjectMeta: metav1.ObjectMeta{Name: "tcp-route", Namespace: "default"}}
+	tcpRoute := &gwtypes.TCPRoute{Name: "tcp-route", Namespace: "default"}
 	tcpRule := gwtypes.TCPRouteRule{BackendRefs: []gwtypes.BackendRef{{
-		BackendObjectReference: gwtypes.BackendObjectReference{Name: "tcp-backend", Port: &port},
+		Name: "tcp-backend", Port: &port,
 	}}}
 	assert.Equal(t, "tcp.default-tcp-backend-443.1.cp1fbfa93f.e8e7532f", NewKongUpstreamNameForTCPRouteRule(tcpRoute, cp, tcpRule))
 	assert.Equal(t, "tcp.default-tcp-backend-443.1.cp1fbfa93f.e8e7532f", NewKongServiceNameForTCPRouteRule(tcpRoute, cp, tcpRule))
 	assert.Equal(t, "tcp.default-tcp-route.cp1fbfa93f.pr4557fd4c.196de16d", NewKongRouteNameForTCPRouteRule(tcpRoute, cp, parentRef, tcpRule))
 	assert.Equal(t, "tcp.default-tcp-route.cp1fbfa93f.196de16d", NewKongRouteNameForTCPRouteRule(tcpRoute, cp, nil, tcpRule))
 
-	udpRoute := &gwtypes.UDPRoute{ObjectMeta: metav1.ObjectMeta{Name: "udp-route", Namespace: "default"}}
+	udpRoute := &gwtypes.UDPRoute{Name: "udp-route", Namespace: "default"}
 	udpRule := gwtypes.UDPRouteRule{BackendRefs: []gwtypes.BackendRef{{
-		BackendObjectReference: gwtypes.BackendObjectReference{Name: "udp-backend", Port: &port},
+		Name: "udp-backend", Port: &port,
 	}}}
 	assert.Equal(t, "udp.default-udp-backend-443.1.cp1fbfa93f.a1dd4f9f", NewKongUpstreamNameForUDPRouteRule(udpRoute, cp, udpRule))
 	assert.Equal(t, "udp.default-udp-backend-443.1.cp1fbfa93f.a1dd4f9f", NewKongServiceNameForUDPRouteRule(udpRoute, cp, udpRule))

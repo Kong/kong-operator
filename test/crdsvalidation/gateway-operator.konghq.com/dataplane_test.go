@@ -65,9 +65,7 @@ func TestDataplane(t *testing.T) {
 								{
 									Group: "konnect.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},
@@ -85,9 +83,7 @@ func TestDataplane(t *testing.T) {
 								{
 									Group: "invalid.konghq.com",
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: "my-konnect-extension",
-									},
+									Name:  "my-konnect-extension",
 								},
 							},
 						},
@@ -104,12 +100,10 @@ func TestDataplane(t *testing.T) {
 							Deployment: validDataplaneOptions.Deployment,
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
-									Group: "konnect.konghq.com",
-									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name:      "my-konnect-extension",
-										Namespace: new("namespace2"),
-									},
+									Group:     "konnect.konghq.com",
+									Kind:      "KonnectExtension",
+									Name:      "my-konnect-extension",
+									Namespace: new("namespace2"),
 								},
 							},
 						},
@@ -276,9 +270,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeNodePort,
-										},
+										Type: corev1.ServiceTypeNodePort,
 										Ports: []operatorv1beta1.DataPlaneServicePort{
 											{
 												Name:       "http",
@@ -328,9 +320,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeLoadBalancer,
-										},
+										Type: corev1.ServiceTypeLoadBalancer,
 										Ports: []operatorv1beta1.DataPlaneServicePort{
 											{
 												Name:       "http",
@@ -356,9 +346,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeClusterIP,
-										},
+										Type: corev1.ServiceTypeClusterIP,
 										Ports: []operatorv1beta1.DataPlaneServicePort{
 											{
 												Name:       "http",
@@ -447,11 +435,9 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-												"environment": "production",
-												"team":        "platform",
-											},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+											"environment": "production",
+											"team":        "platform",
 										},
 									},
 								},
@@ -470,10 +456,8 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-												"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
-											},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+											"key": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa1",
 										},
 									},
 								},
@@ -496,10 +480,8 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-												"key": "-starts-with-dash",
-											},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+											"key": "-starts-with-dash",
 										},
 									},
 								},
@@ -519,10 +501,8 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-												"key": "ends-with-dash-",
-											},
+										Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+											"key": "ends-with-dash-",
 										},
 									},
 								},
@@ -547,9 +527,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeLoadBalancer,
-										},
+										Type: corev1.ServiceTypeLoadBalancer,
 									},
 								},
 							},
@@ -567,9 +545,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeNodePort,
-										},
+										Type: corev1.ServiceTypeNodePort,
 									},
 								},
 							},
@@ -587,9 +563,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeClusterIP,
-										},
+										Type: corev1.ServiceTypeClusterIP,
 									},
 								},
 							},
@@ -607,9 +581,7 @@ func TestDataplane(t *testing.T) {
 							Network: operatorv1beta1.DataPlaneNetworkOptions{
 								Services: &operatorv1beta1.DataPlaneServices{
 									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-										ServiceOptions: operatorv1beta1.ServiceOptions{
-											Type: corev1.ServiceTypeExternalName,
-										},
+										Type: corev1.ServiceTypeExternalName,
 									},
 								},
 							},
@@ -862,9 +834,7 @@ func TestDataplane(t *testing.T) {
 				Update: func(obj *operatorv1beta1.DataPlane) {
 					obj.Spec.DataPlaneOptions.Network.Services = &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeClusterIP,
-							},
+							Type: corev1.ServiceTypeClusterIP,
 						},
 					}
 				},
@@ -909,9 +879,7 @@ func TestDataplane(t *testing.T) {
 				Update: func(obj *operatorv1beta1.DataPlane) {
 					obj.Spec.DataPlaneOptions.Network.Services = &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeClusterIP,
-							},
+							Type: corev1.ServiceTypeClusterIP,
 						},
 					}
 				},

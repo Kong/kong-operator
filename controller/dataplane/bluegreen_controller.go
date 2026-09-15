@@ -28,7 +28,6 @@ import (
 	kcfgkonnect "github.com/kong/kong-operator/v2/api/konnect"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/address"
-	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/extensions"
 	extensionserrors "github.com/kong/kong-operator/v2/controller/pkg/extensions/errors"
 	extensionskonnect "github.com/kong/kong-operator/v2/controller/pkg/extensions/konnect"
@@ -36,7 +35,9 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
+	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
@@ -76,6 +77,9 @@ type BlueGreenReconciler struct {
 	ValidateDataPlaneImage bool
 	LoggingMode            logging.Mode
 	CertTTL                time.Duration
+	// DataPlaneIPFamily controls which IP family (or families) DataPlanes'
+	// Kong listens bind to.
+	DataPlaneIPFamily ipfamily.IPFamily
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -534,7 +538,8 @@ func (r *BlueGreenReconciler) ensureDeploymentForDataPlane(
 		WithOpts(deploymentOpts...).
 		WithDefaultImage(r.DefaultImage).
 		WithAdditionalLabels(deploymentLabels).
-		WithSecretLabelSelector(r.SecretLabelSelector)
+		WithSecretLabelSelector(r.SecretLabelSelector).
+		WithIPFamily(r.DataPlaneIPFamily)
 
 	deployment, res, err := deploymentBuilder.BuildAndDeploy(ctx, dataplane, r.EnforceConfig, r.ValidateDataPlaneImage)
 	if err != nil {
@@ -604,7 +609,7 @@ func (r *BlueGreenReconciler) reduceLiveDeployments(
 			"deployment", client.ObjectKeyFromObject(&deployment),
 		)
 
-		if err := dataplane.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
+		if err := k8sreduce.OwnedObjectPreDeleteHook(ctx, r.Client, &deployment); err != nil {
 			return fmt.Errorf("failed executing pre delete hook: %w", err)
 		}
 		if err := r.Delete(ctx, &deployment); err != nil {

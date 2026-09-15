@@ -75,19 +75,15 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		{
 			name: "cross-namespace reference",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
-								Group: konnectv1alpha1.SchemeGroupVersion.Group,
-								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name:      "konnect-ext",
-									Namespace: new("other"),
-								},
+								Group:     konnectv1alpha1.SchemeGroupVersion.Group,
+								Kind:      konnectv1alpha2.KonnectExtensionKind,
+								Name:      "konnect-ext",
+								Namespace: new("other"),
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -99,11 +95,9 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 			konnectExt: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-ext",
-					Namespace: "other",
-				},
-				Status: konnectExtensionStatus,
+				Name:      "konnect-ext",
+				Namespace: "other",
+				Status:    konnectExtensionStatus,
 			},
 			expectedError: extensionserrors.ErrCrossNamespaceReference,
 			applied:       false,
@@ -111,18 +105,14 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		{
 			name: "Extension not found",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "konnect-ext",
-								},
+								Name:  "konnect-ext",
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -139,18 +129,14 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 		{
 			name: "Extension properly referenced, controlplane type, no deployment Options set.",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "konnect-ext",
-								},
+								Name:  "konnect-ext",
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -162,29 +148,23 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 			konnectExt: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-ext",
-					Namespace: "default",
-				},
-				Status: konnectExtensionStatus,
+				Name:      "konnect-ext",
+				Namespace: "default",
+				Status:    konnectExtensionStatus,
 			},
 			applied: true,
 		},
 		{
 			name: "Extension properly referenced, ingress controller type, no deployment Options set.",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "konnect-ext",
-								},
+								Name:  "konnect-ext",
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -196,29 +176,23 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 			konnectExt: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-ext",
-					Namespace: "default",
-				},
-				Status: konnectExtensionStatus,
+				Name:      "konnect-ext",
+				Namespace: "default",
+				Status:    konnectExtensionStatus,
 			},
 			applied: true,
 		},
 		{
 			name: "Extension properly referenced, controlplane type, with deployment Options set.",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "konnect-ext",
-								},
+								Name:  "konnect-ext",
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -244,29 +218,23 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 			konnectExt: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-ext",
-					Namespace: "default",
-				},
-				Status: konnectExtensionStatus,
+				Name:      "konnect-ext",
+				Namespace: "default",
+				Status:    konnectExtensionStatus,
 			},
 			applied: true,
 		},
 		{
 			name: "Extension with DataPlane labels",
 			dataPlane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "default",
-				},
+				Namespace: "default",
 				Spec: operatorv1beta1.DataPlaneSpec{
 					DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 						Extensions: []commonv1alpha1.ExtensionRef{
 							{
 								Group: konnectv1alpha1.SchemeGroupVersion.Group,
 								Kind:  konnectv1alpha2.KonnectExtensionKind,
-								NamespacedRef: commonv1alpha1.NamespacedRef{
-									Name: "konnect-ext",
-								},
+								Name:  "konnect-ext",
 							},
 						},
 						Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -292,10 +260,8 @@ func TestApplyDataPlaneKonnectExtension(t *testing.T) {
 				},
 			},
 			konnectExt: &konnectv1alpha2.KonnectExtension{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-ext",
-					Namespace: "default",
-				},
+				Name:      "konnect-ext",
+				Namespace: "default",
 				Spec: konnectv1alpha2.KonnectExtensionSpec{
 					Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 						DataPlane: &konnectv1alpha2.KonnectExtensionDataPlane{

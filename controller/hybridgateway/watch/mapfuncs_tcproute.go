@@ -23,10 +23,8 @@ func listTCPRoutesForGateway(ctx context.Context, cl client.Client, gatewayNames
 	requests := make([]reconcile.Request, len(tcpRoutes.Items))
 	for i, tcpRoute := range tcpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: tcpRoute.Namespace,
-				Name:      tcpRoute.Name,
-			},
+			Namespace: tcpRoute.Namespace,
+			Name:      tcpRoute.Name,
 		}
 	}
 	return requests, nil
@@ -46,10 +44,8 @@ func listTCPRoutesForService(ctx context.Context, cl client.Client, svcNamespace
 	requests := make([]reconcile.Request, len(tcpRoutes.Items))
 	for i, tcpRoute := range tcpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: tcpRoute.Namespace,
-				Name:      tcpRoute.Name,
-			},
+			Namespace: tcpRoute.Namespace,
+			Name:      tcpRoute.Name,
 		}
 	}
 	return requests, nil

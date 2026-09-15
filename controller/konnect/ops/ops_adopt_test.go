@@ -47,7 +47,7 @@ func TestAdoptMatchUnsupportedMode(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	network := &konnectv1alpha1.KonnectCloudGatewayNetwork{
-		ObjectMeta: metav1.ObjectMeta{Name: "net-mode", Namespace: "default"},
+		Name: "net-mode", Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 			Name:                          "net-mode",
 			CloudGatewayProviderAccountID: "acct-1",
@@ -76,7 +76,7 @@ func TestAdoptMatchMissingKonnectID(t *testing.T) {
 	cl := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
 	network := &konnectv1alpha1.KonnectCloudGatewayNetwork{
-		ObjectMeta: metav1.ObjectMeta{Name: "net-missing-id", Namespace: "default"},
+		Name: "net-missing-id", Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayNetworkSpec{
 			Name:                          "net-missing-id",
 			CloudGatewayProviderAccountID: "acct-1",

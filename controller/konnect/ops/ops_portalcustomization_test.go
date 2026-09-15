@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
@@ -103,16 +102,12 @@ func TestGetPortalCustomizationForUID(t *testing.T) {
 
 func testPortalCustomization() *konnectv1alpha1.PortalCustomization {
 	return &konnectv1alpha1.PortalCustomization{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "PortalCustomization",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "portal-customization",
-			Namespace:  "default",
-			UID:        "portal-customization-uid",
-			Generation: 2,
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "PortalCustomization",
+		Name:       "portal-customization",
+		Namespace:  "default",
+		UID:        "portal-customization-uid",
+		Generation: 2,
 		Spec: konnectv1alpha1.PortalCustomizationSpec{
 			PortalRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

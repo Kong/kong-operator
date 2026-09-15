@@ -7,7 +7,6 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/e2e-framework/pkg/envconf"
 )
@@ -27,13 +26,11 @@ func CreateNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, run
 
 	t.Logf("Creating dedicated namespace for test %s", t.Name())
 	nsObj := corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "ns-" + runID + "-",
-			Labels: map[string]string{
-				"kubernetes-ingress-controller.konghq.com/test-name": NameFromT(t),
-				"kubernetes-ingress-controller.konghq.com/run-id":    runID,
-				"kubernetes-ingress-controller.konghq.com/test-type": "integration",
-			},
+		GenerateName: "ns-" + runID + "-",
+		Labels: map[string]string{
+			"kubernetes-ingress-controller.konghq.com/test-name": NameFromT(t),
+			"kubernetes-ingress-controller.konghq.com/run-id":    runID,
+			"kubernetes-ingress-controller.konghq.com/test-type": "integration",
 		},
 	}
 
@@ -54,8 +51,8 @@ func deleteNSForTest(ctx context.Context, cfg *envconf.Config, t *testing.T, _ s
 	ns := fmt.Sprint(ctx.Value(getNamespaceKey(t)))
 	t.Logf("Deleting NS %v for test %v", ns, t.Name())
 
-	nsObj := corev1.Namespace{}
-	nsObj.Name = ns
+	nsObj := corev1.Namespace{
+		Name: ns}
 	return ctx, cfg.Client().Resources().Delete(ctx, &nsObj)
 }
 

@@ -124,18 +124,14 @@ func TestEnsureHPA(t *testing.T) {
 		ownerRef := metav1.OwnerReference{UID: mcpDataPlane.UID, Name: mcpDataPlane.Name}
 
 		hpa1 := &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: mcpDataPlane.Name + "-1", Namespace: testMCPServerNamespace,
-				Labels:          labels,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
+			Name: mcpDataPlane.Name + "-1", Namespace: testMCPServerNamespace,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
 		}
 		hpa2 := &autoscalingv2.HorizontalPodAutoscaler{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: mcpDataPlane.Name + "-2", Namespace: testMCPServerNamespace,
-				Labels:          labels,
-				OwnerReferences: []metav1.OwnerReference{ownerRef},
-			},
+			Name: mcpDataPlane.Name + "-2", Namespace: testMCPServerNamespace,
+			Labels:          labels,
+			OwnerReferences: []metav1.OwnerReference{ownerRef},
 		}
 		r, cl := newReconcilerForHPATest(t, mcpDataPlane, hpa1, hpa2)
 

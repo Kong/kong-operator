@@ -9,7 +9,6 @@ import (
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
@@ -185,10 +184,8 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 		}
 
 		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-service",
-				Namespace: "default",
-			},
+			Name:      "test-service",
+			Namespace: "default",
 		}
 
 		port := &corev1.ServicePort{
@@ -251,10 +248,8 @@ func TestTerminatingEndpointsDrainSupport(t *testing.T) {
 		}
 
 		service := &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-service",
-				Namespace: "default",
-			},
+			Name:      "test-service",
+			Namespace: "default",
 		}
 
 		port := &corev1.ServicePort{

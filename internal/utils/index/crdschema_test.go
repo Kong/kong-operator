@@ -22,13 +22,12 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 func TestCRDGroup(t *testing.T) {
 	crd := &apiextensionsv1.CustomResourceDefinition{
-		ObjectMeta: metav1.ObjectMeta{Name: "widgets.example.com"},
-		Spec:       apiextensionsv1.CustomResourceDefinitionSpec{Group: "example.com"},
+		Name: "widgets.example.com",
+		Spec: apiextensionsv1.CustomResourceDefinitionSpec{Group: "example.com"},
 	}
 	assert.Equal(t, []string{"example.com"}, crdGroup(crd))
 }

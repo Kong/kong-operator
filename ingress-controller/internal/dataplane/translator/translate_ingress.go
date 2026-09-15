@@ -242,17 +242,15 @@ func translateIngressDefaultBackendService(
 
 func translateIngressDefaultBackendRoute(ingress *netv1.Ingress, tags []*string, expressionRoutes bool) *kongstate.Route {
 	r := &kongstate.Route{
-		Ingress: util.FromK8sObject(ingress),
-		Route: kong.Route{
-			Name:              new(ingress.Namespace + "." + ingress.Name),
-			Protocols:         kong.StringSlice("http", "https"),
-			StripPath:         new(false),
-			PreserveHost:      new(true),
-			RequestBuffering:  new(true),
-			ResponseBuffering: new(true),
-			Tags:              tags,
-		},
-		ExpressionRoutes: expressionRoutes,
+		Ingress:           util.FromK8sObject(ingress),
+		Name:              new(ingress.Namespace + "." + ingress.Name),
+		Protocols:         kong.StringSlice("http", "https"),
+		StripPath:         new(false),
+		PreserveHost:      new(true),
+		RequestBuffering:  new(true),
+		ResponseBuffering: new(true),
+		Tags:              tags,
+		ExpressionRoutes:  expressionRoutes,
 	}
 
 	if expressionRoutes {

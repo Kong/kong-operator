@@ -64,11 +64,9 @@ func TestKongConsumerCredential_APIKey(t *testing.T) {
 	})
 	consumer.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
 		ControlPlaneID: cp.GetKonnectStatus().GetKonnectID(),
-		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-			ID:        consumerID,
-			ServerURL: cp.GetKonnectStatus().GetServerURL(),
-			OrgID:     cp.GetKonnectStatus().GetOrgID(),
-		},
+		ID:             consumerID,
+		ServerURL:      cp.GetKonnectStatus().GetServerURL(),
+		OrgID:          cp.GetKonnectStatus().GetOrgID(),
 	}
 	require.NoError(t, clientNamespaced.Status().Update(ctx, consumer))
 

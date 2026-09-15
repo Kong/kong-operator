@@ -104,7 +104,7 @@ jobs:
       with:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@c5fc58bd0be7a4b94b73ce40250322d5b838a108 # v5.0.7
+    - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@60e3a74c7b74a319e8e53e46bc455205f7173e1a # v5.0.8
 
   ossf-scorecard:
     runs-on: ubuntu-latest
@@ -467,7 +467,7 @@ jobs:
 
       - name: Upload test results to BuildPulse for flaky test detection
         if: ${{ !cancelled() }}
-        uses: buildpulse/buildpulse-action@d4d8e00c645a2e3db0419a43664bbcf868080234 # v0.12.0
+        uses: buildpulse/buildpulse-action@76dbedc6585e8731b40a19da1ebc3f6609dbbb83 # v3
         with:
           account: 962416
           repository: 477814940

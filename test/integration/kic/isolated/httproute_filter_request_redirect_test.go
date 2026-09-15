@@ -66,9 +66,7 @@ func TestHTTPRouteFilterRequestRedirect(t *testing.T) {
 			proxyAdminURL := GetAdminURLFromCtx(ctx)
 
 			httpRoute := &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "httproute-request-redirect-test",
-				},
+				Name: "httproute-request-redirect-test",
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: gatewayapi.CommonRouteSpec{
 						ParentRefs: []gatewayapi.ParentReference{{

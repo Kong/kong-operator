@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -39,14 +38,10 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "foo",
-							},
+							Name: "foo",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "bar",
-							},
+							Name: "bar",
 						},
 					},
 				},
@@ -66,14 +61,10 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "foo",
-							},
+							Name: "foo",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "bar",
-							},
+							Name: "bar",
 						},
 					},
 				},
@@ -93,9 +84,7 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 				},
@@ -112,14 +101,10 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s2",
-							},
+							Name: "s2",
 						},
 					},
 				},
@@ -139,9 +124,7 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "r1",
-							},
+							Name: "r1",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -154,9 +137,7 @@ func TestGetCombinations(t *testing.T) {
 					},
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 				},
@@ -176,16 +157,12 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c1",
-							},
+							Name: "c1",
 						},
 					},
 				},
@@ -210,21 +187,15 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c1",
-							},
+							Name: "c1",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c2",
-							},
+							Name: "c2",
 						},
 					},
 				},
@@ -253,21 +224,15 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "cg1",
-							},
+							Name: "cg1",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "cg2",
-							},
+							Name: "cg2",
 						},
 					},
 				},
@@ -296,9 +261,7 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "r1",
-							},
+							Name: "r1",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -311,21 +274,15 @@ func TestGetCombinations(t *testing.T) {
 					},
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "cg1",
-							},
+							Name: "cg1",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "cg2",
-							},
+							Name: "cg2",
 						},
 					},
 				},
@@ -365,9 +322,7 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "r1",
-							},
+							Name: "r1",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -380,16 +335,12 @@ func TestGetCombinations(t *testing.T) {
 					},
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c1",
-							},
+							Name: "c1",
 						},
 					},
 				},
@@ -411,9 +362,7 @@ func TestGetCombinations(t *testing.T) {
 				relations: ForeignRelations{
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "r1",
-							},
+							Name: "r1",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -426,21 +375,15 @@ func TestGetCombinations(t *testing.T) {
 					},
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "s1",
-							},
+							Name: "s1",
 						},
 					},
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c1",
-							},
+							Name: "c1",
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name: "c2",
-							},
+							Name: "c2",
 						},
 					},
 				},
@@ -475,10 +418,8 @@ func TestGetCombinations(t *testing.T) {
 func TestGroupByControlPlane(t *testing.T) {
 	cpWithName := func(name string) *konnectv1alpha2.KonnectGatewayControlPlane {
 		return &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      name,
-			},
+			Namespace: "default",
+			Name:      name,
 		}
 	}
 	type args struct {
@@ -504,10 +445,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -524,10 +463,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -547,10 +484,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -561,10 +496,8 @@ func TestGroupByControlPlane(t *testing.T) {
 							},
 						},
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s2",
-								Namespace: "default",
-							},
+							Name:      "s2",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -581,10 +514,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -599,10 +530,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp2"}: {
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s2",
-								Namespace: "default",
-							},
+							Name:      "s2",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -620,10 +549,8 @@ func TestGroupByControlPlane(t *testing.T) {
 			name: "service and route with same control plane ref",
 			objects: []client.Object{
 				&configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s1",
-						Namespace: "default",
-					},
+					Name:      "s1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 							Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -638,10 +565,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				relations: ForeignRelations{
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -654,10 +579,8 @@ func TestGroupByControlPlane(t *testing.T) {
 					},
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "r1",
-								Namespace: "default",
-							},
+							Name:      "r1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -680,10 +603,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
 					Service: []configurationv1alpha1.KongService{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "s1",
-								Namespace: "default",
-							},
+							Name:      "s1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongServiceSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -696,10 +617,8 @@ func TestGroupByControlPlane(t *testing.T) {
 					},
 					Route: []configurationv1alpha1.KongRoute{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "r1",
-								Namespace: "default",
-							},
+							Name:      "r1",
+							Namespace: "default",
 							Spec: configurationv1alpha1.KongRouteSpec{
 								ServiceRef: &configurationv1alpha1.ServiceRef{
 									Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -725,10 +644,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				relations: ForeignRelations{
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "c1",
-								Namespace: "default",
-							},
+							Name:      "c1",
+							Namespace: "default",
 							Spec: configurationv1.KongConsumerSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -745,10 +662,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
 					Consumer: []configurationv1.KongConsumer{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "c1",
-								Namespace: "default",
-							},
+							Name:      "c1",
+							Namespace: "default",
 							Spec: configurationv1.KongConsumerSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -768,10 +683,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				relations: ForeignRelations{
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "cg1",
-								Namespace: "default",
-							},
+							Name:      "cg1",
+							Namespace: "default",
 							Spec: configurationv1beta1.KongConsumerGroupSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -788,10 +701,8 @@ func TestGroupByControlPlane(t *testing.T) {
 				types.NamespacedName{Namespace: "default", Name: "cp1"}: {
 					ConsumerGroup: []configurationv1beta1.KongConsumerGroup{
 						{
-							ObjectMeta: metav1.ObjectMeta{
-								Name:      "cg1",
-								Namespace: "default",
-							},
+							Name:      "cg1",
+							Namespace: "default",
 							Spec: configurationv1beta1.KongConsumerGroupSpec{
 								ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 									Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,

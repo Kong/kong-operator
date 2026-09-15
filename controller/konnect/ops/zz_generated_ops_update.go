@@ -32,6 +32,10 @@ func UpdateGeneratedOps[
 		return updateAIGatewayAgent(ctx, cl, sdk.GetAIGatewayAgentsSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return updateAIGatewayAuthStrategy(ctx, cl, sdk.GetAIGatewayAuthStrategiesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
+		return updateAIGatewayCACertificate(ctx, cl, sdk.GetAIGatewayCACertificatesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return updateAIGatewayCertificate(ctx, cl, sdk.GetAIGatewayCertificatesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return updateAIGatewayConsumer(ctx, cl, sdk.GetAIGatewayConsumersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -48,6 +52,8 @@ func UpdateGeneratedOps[
 		return updateAIGatewayModelProvider(ctx, cl, sdk.GetAIGatewayModelProvidersSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return updateAIGatewayPolicy(ctx, cl, sdk.GetAIGatewayPoliciesSDK(), ent)
+	case *aiconfigurationv1alpha1.AIGatewaySNI:
+		return updateAIGatewaySNI(ctx, cl, sdk.GetAIGatewaySNIsSDK(), ent)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return updateEventGatewayBackendCluster(ctx, cl, sdk.GetEventGatewayBackendClustersSDK(), ent)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

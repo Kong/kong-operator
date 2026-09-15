@@ -73,24 +73,22 @@ func NewPostgres(ctx context.Context, t *testing.T, net *testcontainers.DockerNe
 func runKongDBMigrations(ctx context.Context, t *testing.T, networkName string) {
 	// Run Kong migrations bootstrap command in a container.
 	kongMigrationsC, err := testcontainers.GenericContainer(ctx, testcontainers.GenericContainerRequest{
-		ContainerRequest: testcontainers.ContainerRequest{
-			Image: kongImageUnderTest(t),
-			Env: map[string]string{
-				"KONG_DATABASE":    "postgres",
-				"KONG_PG_HOST":     postgresContainerNetworkAlias,
-				"KONG_PG_PORT":     strconv.Itoa(postgresPort),
-				"KONG_PG_USER":     postgresUser,
-				"KONG_PG_PASSWORD": postgresPassword,
-				"KONG_PG_DATABASE": postgresDatabase,
-			},
-			Cmd: []string{
-				"kong", "migrations", "bootstrap",
-				"--yes", "--force",
-				"--db-timeout", "30",
-			},
-			Networks: []string{networkName},
+		Image: kongImageUnderTest(t),
+		Env: map[string]string{
+			"KONG_DATABASE":    "postgres",
+			"KONG_PG_HOST":     postgresContainerNetworkAlias,
+			"KONG_PG_PORT":     strconv.Itoa(postgresPort),
+			"KONG_PG_USER":     postgresUser,
+			"KONG_PG_PASSWORD": postgresPassword,
+			"KONG_PG_DATABASE": postgresDatabase,
 		},
-		Started: true,
+		Cmd: []string{
+			"kong", "migrations", "bootstrap",
+			"--yes", "--force",
+			"--db-timeout", "30",
+		},
+		Networks: []string{networkName},
+		Started:  true,
 	})
 	require.NoError(t, err)
 	t.Logf("Kong migrations container ID: %s", kongMigrationsC.GetContainerID())

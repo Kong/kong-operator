@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 )
 
@@ -18,7 +17,7 @@ func TestProtocolPortsFromListeners(t *testing.T) {
 	}
 
 	gw := &gatewayv1.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+		Name: "gw", Namespace: "ns",
 		Spec: gatewayv1.GatewaySpec{
 			Listeners: []gatewayv1.Listener{
 				{Name: "tcp-1", Protocol: gatewayv1.TCPProtocolType, Port: 8898},
@@ -73,7 +72,7 @@ func TestProtocolPortsFromListeners(t *testing.T) {
 			name:      "no listeners returns nil",
 			protocols: []gatewayv1.ProtocolType{gatewayv1.TCPProtocolType},
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+				Name: "gw", Namespace: "ns",
 			},
 			expected: nil,
 		},
@@ -108,7 +107,7 @@ func TestProtocolPortsFromListeners(t *testing.T) {
 			name:      "no listeners returns nil",
 			protocols: []gatewayv1.ProtocolType{gatewayv1.UDPProtocolType},
 			gateway: &gatewayv1.Gateway{
-				ObjectMeta: metav1.ObjectMeta{Name: "gw", Namespace: "ns"},
+				Name: "gw", Namespace: "ns",
 			},
 			expected: nil,
 		},

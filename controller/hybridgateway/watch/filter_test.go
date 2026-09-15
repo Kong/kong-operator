@@ -32,10 +32,8 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "HTTPRoute returns predicate funcs",
 			obj: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectNil:   false,
@@ -43,10 +41,8 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "GRPCRoute returns predicate funcs",
 			obj: &gwtypes.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectNil:   false,
@@ -54,10 +50,8 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "Gateway returns predicate funcs",
 			obj: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectNil:   false,
@@ -65,10 +59,8 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "TCPRoute returns predicate funcs",
 			obj: &gwtypes.TCPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectNil:   false,
@@ -76,10 +68,8 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "UDPRoute returns predicate funcs",
 			obj: &gwtypes.UDPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			expectError: false,
 			expectNil:   false,
@@ -87,9 +77,7 @@ func TestFilterBy(t *testing.T) {
 		{
 			name: "unsupported type returns error",
 			obj: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-class",
-				},
+				Name: "test-class",
 			},
 			expectError: true,
 			expectNil:   true,
@@ -136,10 +124,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "CreateFunc allows event when object is not HTTPRoute",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			eventType:      "create",
 			expectedResult: true,
@@ -147,10 +133,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "CreateFunc filters out when gateway not found",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -169,10 +153,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "CreateFunc allows when error occurs during GetNamespacedRefs",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -187,47 +169,41 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-with-error",
-						Namespace: "default",
-						UID:       "gw-error-uid",
-					},
+					Name:      "gateway-with-error",
+					Namespace: "default",
+					UID:       "gw-error-uid",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
 				},
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ext1",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "gateway-with-error",
-								UID:        "gw-error-uid",
-							},
+					Name:      "ext1",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "gateway-with-error",
+							UID:        "gw-error-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{},
 				},
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ext2",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "gateway-with-error",
-								UID:        "gw-error-uid",
-							},
+					Name:      "ext2",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "gateway-with-error",
+							UID:        "gw-error-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{},
@@ -239,10 +215,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "CreateFunc filters out HTTPRoute without Konnect control plane reference",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -257,10 +231,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -272,16 +244,12 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "UpdateFunc allows when object is not HTTPRoute",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			objectOld: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			eventType:      "update",
 			expectedResult: true,
@@ -289,10 +257,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "UpdateFunc filters out when neither old nor new has CP ref",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -306,10 +272,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 				},
 			},
 			objectOld: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -324,10 +288,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -339,10 +301,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "UpdateFunc allows when old object has CP ref but new doesn't",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -356,10 +316,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 				},
 			},
 			objectOld: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -374,39 +332,33 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-without-cp",
-						Namespace: "default",
-						UID:       "gw-no-cp-uid",
-					},
+					Name:      "gateway-without-cp",
+					Namespace: "default",
+					UID:       "gw-no-cp-uid",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
 				},
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-with-cp",
-						Namespace: "default",
-						UID:       "gw-with-cp-uid",
-					},
+					Name:      "gateway-with-cp",
+					Namespace: "default",
+					UID:       "gw-with-cp-uid",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
 				},
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "gateway-with-cp",
-								UID:        "gw-with-cp-uid",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "gateway-with-cp",
+							UID:        "gw-with-cp-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -423,10 +375,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "update",
@@ -435,10 +385,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "DeleteFunc allows event when object is not HTTPRoute",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			eventType:      "delete",
 			expectedResult: true,
@@ -446,10 +394,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "DeleteFunc filters out HTTPRoute without CP ref",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -464,10 +410,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -479,10 +423,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "GenericFunc allows event when object is not HTTPRoute",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			eventType:      "generic",
 			expectedResult: true,
@@ -490,10 +432,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 		{
 			name: "GenericFunc filters out HTTPRoute without CP ref",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.HTTPRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -508,10 +448,8 @@ func TestFilterByHTTPRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -574,10 +512,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 		{
 			name: "CreateFunc allows event when object is not GRPCRoute",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			eventType:      "create",
 			expectedResult: true,
@@ -585,10 +521,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 		{
 			name: "CreateFunc filters out GRPCRoute without Konnect control plane reference",
 			object: &gwtypes.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.GRPCRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -603,10 +537,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -618,10 +550,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 		{
 			name: "CreateFunc allows GRPCRoute with Konnect control plane reference",
 			object: &gwtypes.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.GRPCRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -636,29 +566,25 @@ func TestFilterByGRPCRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gateway-with-cp",
-						Namespace: "default",
-						UID:       "gw-with-cp-uid",
-					},
+					Name:      "gateway-with-cp",
+					Namespace: "default",
+					UID:       "gw-with-cp-uid",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
 				},
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-konnect-extension",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "gateway-with-cp",
-								UID:        "gw-with-cp-uid",
-							},
+					Name:      "test-konnect-extension",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "gateway-with-cp",
+							UID:        "gw-with-cp-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -675,10 +601,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "create",
@@ -687,10 +611,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 		{
 			name: "DeleteFunc filters out GRPCRoute without CP ref",
 			object: &gwtypes.GRPCRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 				Spec: gwtypes.GRPCRouteSpec{
 					CommonRouteSpec: gwtypes.CommonRouteSpec{
 						ParentRefs: []gwtypes.ParentReference{
@@ -705,10 +627,8 @@ func TestFilterByGRPCRoute(t *testing.T) {
 			},
 			existingObjs: []client.Object{
 				&gwtypes.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-					},
+					Name:      "test-gateway",
+					Namespace: "default",
 					Spec: gwtypes.GatewaySpec{
 						GatewayClassName: "kong",
 					},
@@ -765,10 +685,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "CreateFunc allows event when object is not Gateway",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			eventType:      "create",
 			expectedResult: true,
@@ -776,10 +694,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "CreateFunc filters out Gateway with non-existent GatewayClass",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent-class",
 				},
@@ -790,19 +706,15 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "CreateFunc filters out Gateway with unsupported controller",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "other-class",
 				},
 			},
 			existingObjs: []client.Object{
 				&gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "other-class",
-					},
+					Name: "other-class",
 					Spec: gwtypes.GatewayClassSpec{
 						ControllerName: "example.com/other-controller",
 					},
@@ -814,30 +726,26 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "CreateFunc allows supported Gateway",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -854,10 +762,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "create",
@@ -866,30 +772,26 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "CreateFunc allows when API error occurs",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -906,10 +808,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			interceptorFuncs: &interceptor.Funcs{
@@ -923,16 +823,12 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "UpdateFunc allows when object is not Gateway",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			objectOld: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			eventType:      "update",
 			expectedResult: true,
@@ -940,19 +836,15 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "UpdateFunc filters out when neither old nor new is supported",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
 			},
 			objectOld: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent-old",
 				},
@@ -963,40 +855,34 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "UpdateFunc allows when new object is supported",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			objectOld: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1013,10 +899,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "update",
@@ -1025,40 +909,34 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "UpdateFunc allows when old object is supported but new is not",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
 			},
 			objectOld: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1075,10 +953,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "update",
@@ -1087,10 +963,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "DeleteFunc allows event when object is not Gateway",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			eventType:      "delete",
 			expectedResult: true,
@@ -1098,10 +972,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "DeleteFunc filters out unsupported Gateway",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
@@ -1112,30 +984,26 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "DeleteFunc allows supported Gateway",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1152,10 +1020,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "delete",
@@ -1164,10 +1030,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "GenericFunc allows event when object is not Gateway",
 			object: &gwtypes.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "default",
-				},
+				Name:      "test-route",
+				Namespace: "default",
 			},
 			eventType:      "generic",
 			expectedResult: true,
@@ -1175,10 +1039,8 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "GenericFunc filters out unsupported Gateway",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "non-existent",
 				},
@@ -1189,30 +1051,26 @@ func TestFilterByGateway(t *testing.T) {
 		{
 			name: "GenericFunc allows supported Gateway",
 			object: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-					UID:       "test-gateway-uid",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
+				UID:       "test-gateway-uid",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "kong",
 				},
 			},
 			existingObjs: []client.Object{
 				&konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-gateway",
-						Namespace: "default",
-						Labels: map[string]string{
-							"gateway-operator.konghq.com/managed-by": "gateway",
-						},
-						OwnerReferences: []metav1.OwnerReference{
-							{
-								APIVersion: "gateway.networking.k8s.io/v1",
-								Kind:       "Gateway",
-								Name:       "test-gateway",
-								UID:        "test-gateway-uid",
-							},
+					Name:      "test-gateway",
+					Namespace: "default",
+					Labels: map[string]string{
+						"gateway-operator.konghq.com/managed-by": "gateway",
+					},
+					OwnerReferences: []metav1.OwnerReference{
+						{
+							APIVersion: "gateway.networking.k8s.io/v1",
+							Kind:       "Gateway",
+							Name:       "test-gateway",
+							UID:        "test-gateway-uid",
 						},
 					},
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
@@ -1229,10 +1087,8 @@ func TestFilterByGateway(t *testing.T) {
 					},
 				},
 				&konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-cp",
-						Namespace: "default",
-					},
+					Name:      "test-cp",
+					Namespace: "default",
 				},
 			},
 			eventType:      "generic",

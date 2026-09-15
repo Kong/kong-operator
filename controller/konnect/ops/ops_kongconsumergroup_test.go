@@ -12,7 +12,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -23,18 +22,14 @@ import (
 
 func TestKongConsumerGroupToSDKConsumerGroupInput_Tags(t *testing.T) {
 	cg := &configurationv1beta1.KongConsumerGroup{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongConsumerGroup",
-			APIVersion: "configuration.konghq.com/v1beta1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "cg-1",
-			Namespace:  "default",
-			Generation: 2,
-			UID:        k8stypes.UID(uuid.NewString()),
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2",
-			},
+		Kind:       "KongConsumerGroup",
+		APIVersion: "configuration.konghq.com/v1beta1",
+		Name:       "cg-1",
+		Namespace:  "default",
+		Generation: 2,
+		UID:        k8stypes.UID(uuid.NewString()),
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2",
 		},
 		Status: configurationv1beta1.KongConsumerGroupStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneRef{
@@ -63,11 +58,9 @@ func TestAdoptKongConsumerGroupOverride(t *testing.T) {
 	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-override",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "group-override",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: "group-override",
 		},
@@ -110,11 +103,9 @@ func TestAdoptKongConsumerGroupMatch(t *testing.T) {
 	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-match",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "group-match",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: "group-match",
 		},
@@ -152,11 +143,9 @@ func TestAdoptKongConsumerGroupMatchNotMatching(t *testing.T) {
 	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-mismatch",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "group-mismatch",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: "expected-name",
 		},
@@ -195,11 +184,9 @@ func TestAdoptKongConsumerGroupUIDConflict(t *testing.T) {
 	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-conflict",
-			Namespace: "default",
-			UID:       k8stypes.UID("desired-uid"),
-		},
+		Name:      "group-conflict",
+		Namespace: "default",
+		UID:       k8stypes.UID("desired-uid"),
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: "group-conflict",
 		},
@@ -241,11 +228,9 @@ func TestAdoptKongConsumerGroupFetchError(t *testing.T) {
 	sdk := mocks.NewMockConsumerGroupsSDK(t)
 
 	group := &configurationv1beta1.KongConsumerGroup{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "group-fetch",
-			Namespace: "default",
-			UID:       k8stypes.UID(uuid.NewString()),
-		},
+		Name:      "group-fetch",
+		Namespace: "default",
+		UID:       k8stypes.UID(uuid.NewString()),
 		Spec: configurationv1beta1.KongConsumerGroupSpec{
 			Name: "group-fetch",
 		},

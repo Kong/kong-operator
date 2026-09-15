@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -99,16 +98,12 @@ func TestGetEventGatewayVirtualClusterProducePolicyForUID(t *testing.T) {
 
 func testEventGatewayVirtualClusterProducePolicy() *configurationv1alpha1.EventGatewayVirtualClusterProducePolicy {
 	return &configurationv1alpha1.EventGatewayVirtualClusterProducePolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayVirtualClusterProducePolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "produce-policy",
-			Namespace:  "default",
-			UID:        "produce-policy-uid",
-			Generation: 2,
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayVirtualClusterProducePolicy",
+		Name:       "produce-policy",
+		Namespace:  "default",
+		UID:        "produce-policy-uid",
+		Generation: 2,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterProducePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

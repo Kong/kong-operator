@@ -7,7 +7,6 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -23,13 +22,11 @@ import (
 // GenerateNewIngressServiceForDataPlane is a helper to generate the dataplane ingress service.
 func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplane.Namespace,
+		Namespace: dataplane.Namespace,
 
-			Labels: map[string]string{
-				"app":                            dataplane.Name,
-				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
-			},
+		Labels: map[string]string{
+			"app":                            dataplane.Name,
+			consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneIngressServiceLabelValue),
 		},
 		Spec: corev1.ServiceSpec{
 			Type: getDataPlaneIngressServiceType(dataplane),
@@ -200,13 +197,11 @@ func ServicePortsFromDataPlaneIngressOpt(dataplane *operatorv1beta1.DataPlane) S
 // GenerateNewAdminServiceForDataPlane is a helper to generate the headless dataplane admin service.
 func GenerateNewAdminServiceForDataPlane(dataplane *operatorv1beta1.DataPlane, opts ...ServiceOpt) (*corev1.Service, error) {
 	adminService := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    dataplane.Namespace,
-			GenerateName: k8sutils.TrimGenerateName(dataPlaneAdminServiceGenerateName(dataplane)),
-			Labels: map[string]string{
-				"app":                            dataplane.Name,
-				consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
-			},
+		Namespace:    dataplane.Namespace,
+		GenerateName: k8sutils.TrimGenerateName(dataPlaneAdminServiceGenerateName(dataplane)),
+		Labels: map[string]string{
+			"app":                            dataplane.Name,
+			consts.DataPlaneServiceTypeLabel: string(consts.DataPlaneAdminServiceLabelValue),
 		},
 		Spec: corev1.ServiceSpec{
 			// Headless service, since endpoints for Kong Gateway Admin API are derived from EndpointSlices.

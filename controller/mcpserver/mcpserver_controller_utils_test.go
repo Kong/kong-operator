@@ -19,13 +19,11 @@ func TestOwnerControlPlaneName(t *testing.T) {
 		{
 			name: "matching kind and APIVersion returns CP name",
 			mcpServer: &konnectv1alpha1.MCPServer{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: konnectv1alpha2.GroupVersion.String(),
-							Kind:       "KonnectGatewayControlPlane",
-							Name:       "my-cp",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: konnectv1alpha2.GroupVersion.String(),
+						Kind:       "KonnectGatewayControlPlane",
+						Name:       "my-cp",
 					},
 				},
 			},
@@ -39,13 +37,11 @@ func TestOwnerControlPlaneName(t *testing.T) {
 		{
 			name: "wrong kind returns empty string",
 			mcpServer: &konnectv1alpha1.MCPServer{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: konnectv1alpha2.GroupVersion.String(),
-							Kind:       "SomethingElse",
-							Name:       "my-cp",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: konnectv1alpha2.GroupVersion.String(),
+						Kind:       "SomethingElse",
+						Name:       "my-cp",
 					},
 				},
 			},
@@ -54,13 +50,11 @@ func TestOwnerControlPlaneName(t *testing.T) {
 		{
 			name: "wrong APIVersion returns empty string",
 			mcpServer: &konnectv1alpha1.MCPServer{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "wrong.api/v1",
-							Kind:       "KonnectGatewayControlPlane",
-							Name:       "my-cp",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "wrong.api/v1",
+						Kind:       "KonnectGatewayControlPlane",
+						Name:       "my-cp",
 					},
 				},
 			},
@@ -69,18 +63,16 @@ func TestOwnerControlPlaneName(t *testing.T) {
 		{
 			name: "multiple owner refs, only matching one returns name",
 			mcpServer: &konnectv1alpha1.MCPServer{
-				ObjectMeta: metav1.ObjectMeta{
-					OwnerReferences: []metav1.OwnerReference{
-						{
-							APIVersion: "other.api/v1",
-							Kind:       "OtherResource",
-							Name:       "other",
-						},
-						{
-							APIVersion: konnectv1alpha2.GroupVersion.String(),
-							Kind:       "KonnectGatewayControlPlane",
-							Name:       "my-cp",
-						},
+				OwnerReferences: []metav1.OwnerReference{
+					{
+						APIVersion: "other.api/v1",
+						Kind:       "OtherResource",
+						Name:       "other",
+					},
+					{
+						APIVersion: konnectv1alpha2.GroupVersion.String(),
+						Kind:       "KonnectGatewayControlPlane",
+						Name:       "my-cp",
 					},
 				},
 			},

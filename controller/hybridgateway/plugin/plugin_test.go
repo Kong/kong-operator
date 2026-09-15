@@ -7,6 +7,7 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -44,11 +45,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 			name:                "no existing annotations",
 			existingAnnotations: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -59,11 +58,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: true,
@@ -74,11 +71,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "other-namespace/other-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "other-namespace/other-route,test-namespace/test-route",
 			expectModification: true,
@@ -89,11 +84,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "test-namespace/test-route",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
 			},
 			expectedAnnotation: "test-namespace/test-route",
 			expectModification: false,
@@ -104,11 +97,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 				consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation: "ns1/route1,ns2/route2",
 			},
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route3",
-					Namespace: "ns3",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "route3",
+				Namespace: "ns3",
 			},
 			expectedAnnotation: "ns1/route1,ns2/route2,ns3/route3",
 			expectModification: true,
@@ -118,11 +109,9 @@ func TestAppendHTTPRouteToPluginAnnotations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			plugin := &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:        "test-plugin",
-					Namespace:   "test-namespace",
-					Annotations: tt.existingAnnotations,
-				},
+				Name:        "test-plugin",
+				Namespace:   "test-namespace",
+				Annotations: tt.existingAnnotations,
 			}
 
 			am := metadata.NewAnnotationManager(logger)
@@ -169,12 +158,10 @@ func TestPluginForFilter(t *testing.T) {
 			},
 			existingPlugin: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					UID:       "test-uid",
-				},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
 			},
 			parentRef: &gwtypes.ParentReference{
 				Name: "test-gateway",
@@ -210,14 +197,12 @@ func TestPluginForFilter(t *testing.T) {
 			},
 			existingPlugin: nil,
 			httpRoute: &gwtypes.HTTPRoute{
-				TypeMeta: httpRouteTypeMeta,
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-route",
-					Namespace: "test-namespace",
-					UID:       "test-uid",
-					Annotations: map[string]string{
-						pkgmetadata.AnnotationKeyTags: "team-b, team-a",
-					},
+				TypeMeta:  httpRouteTypeMeta,
+				Name:      "test-route",
+				Namespace: "test-namespace",
+				UID:       "test-uid",
+				Annotations: map[string]string{
+					pkgmetadata.AnnotationKeyTags: "team-b, team-a",
 				},
 			},
 			parentRef: &gwtypes.ParentReference{
@@ -318,17 +303,13 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 			},
 			namespace: "default",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 		},
@@ -357,20 +338,16 @@ func TestGetReferencedKongPlugin(t *testing.T) {
 			},
 			namespace: "test-namespace",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
 				},
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
@@ -416,14 +393,12 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "route-tag",
-			},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
 		},
 	}
 	parentRef := &gwtypes.ParentReference{
@@ -431,12 +406,10 @@ func TestPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
-			},
+		Name:      "referenced-plugin",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "plugin-tag,route-tag",
 		},
 		PluginName: "rate-limiting",
 	}
@@ -471,22 +444,18 @@ func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-		},
+		Name:       "referenced-plugin",
+		Namespace:  "test-namespace",
 		PluginName: "rate-limiting",
 		Tags:       commonv1alpha1.Tags{"team-payments", "env-prod"},
 	}
@@ -514,4 +483,132 @@ func TestPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugins[0].Tags)
+}
+
+// resolvedConfigCase describes a KongPlugin referenced by an ExtensionRef filter together with the
+// Secret it sources its configuration from, and the configuration the mirrored copy must carry.
+// The cases are shared by the HTTPRoute and GRPCRoute ExtensionRef paths, which resolve the
+// configuration the same way.
+type resolvedConfigCase struct {
+	name        string
+	plugin      *configurationv1.KongPlugin
+	secret      *corev1.Secret
+	expected    string
+	expectedErr string
+}
+
+// objects returns the cluster state the case needs, for seeding a fake client.
+func (c resolvedConfigCase) objects() []client.Object {
+	objects := []client.Object{c.plugin}
+	if c.secret != nil {
+		objects = append(objects, c.secret)
+	}
+	return objects
+}
+
+// resolvedConfigCases returns the shared ExtensionRef configuration resolution cases.
+func resolvedConfigCases() []resolvedConfigCase {
+	referencedPlugin := func(mutate func(*configurationv1.KongPlugin)) *configurationv1.KongPlugin {
+		plugin := &configurationv1.KongPlugin{
+			Name:       "referenced-plugin",
+			Namespace:  "test-namespace",
+			PluginName: "rate-limiting",
+		}
+		mutate(plugin)
+		return plugin
+	}
+	configSecret := func(data map[string][]byte) *corev1.Secret {
+		return &corev1.Secret{
+			Name: "plugin-config", Namespace: "test-namespace",
+			Data: data,
+		}
+	}
+
+	return []resolvedConfigCase{
+		{
+			name: "spec.config is mirrored as-is",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.Config = apiextensionsv1.JSON{Raw: []byte(`{"minute":10}`)}
+			}),
+			expected: `{"minute":10}`,
+		},
+		{
+			name: "spec.configFrom is resolved from the Secret",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.ConfigFrom = &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{Secret: "plugin-config", Key: "config"},
+				}
+			}),
+			secret:   configSecret(map[string][]byte{"config": []byte("minute: 10\npolicy: local\n")}),
+			expected: `{"minute":10,"policy":"local"}`,
+		},
+		{
+			name: "spec.configPatches are applied on top of spec.config",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.Config = apiextensionsv1.JSON{Raw: []byte(`{"minute":10,"secret":""}`)}
+				p.ConfigPatches = []configurationv1.ConfigPatch{{
+					Path: "/secret",
+					ValueFrom: configurationv1.ConfigSource{
+						SecretValue: configurationv1.SecretValueFromSource{Secret: "plugin-config", Key: "secret"},
+					},
+				}}
+			}),
+			secret:   configSecret(map[string][]byte{"secret": []byte(`"shhh"`)}),
+			expected: `{"minute":10,"secret":"shhh"}`,
+		},
+		{
+			name: "a missing Secret surfaces as an error",
+			plugin: referencedPlugin(func(p *configurationv1.KongPlugin) {
+				p.ConfigFrom = &configurationv1.ConfigSource{
+					SecretValue: configurationv1.SecretValueFromSource{Secret: "absent", Key: "config"},
+				}
+			}),
+			expectedErr: "plugin configuration secret test-namespace/absent not found: if it exists, it is not matched by --secret-label-selector",
+		},
+	}
+}
+
+func TestPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.HTTPRouteRule{
+		Filters: []gwtypes.HTTPRouteFilter{
+			{
+				Type: gatewayv1.HTTPRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	for _, tc := range resolvedConfigCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.objects()...).
+				Build()
+
+			plugins, err := PluginsForRule(ctx, logger, fakeClient, httpRoute, rule, parentRef)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, plugins, 1)
+			assert.JSONEq(t, tc.expected, string(plugins[0].Config.Raw))
+		})
+	}
 }

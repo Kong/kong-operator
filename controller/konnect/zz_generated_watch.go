@@ -26,6 +26,10 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayAgentReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayAuthStrategy:
 		return AIGatewayAuthStrategyReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewayCACertificate:
+		return AIGatewayCACertificateReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewayCertificate:
+		return AIGatewayCertificateReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayConsumer:
 		return AIGatewayConsumerReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayConsumerCredential:
@@ -42,6 +46,8 @@ func reconciliationWatchOptionsForEntity[
 		return AIGatewayModelProviderReconciliationWatchOptions(cl)
 	case *aiconfigurationv1alpha1.AIGatewayPolicy:
 		return AIGatewayPolicyReconciliationWatchOptions(cl)
+	case *aiconfigurationv1alpha1.AIGatewaySNI:
+		return AIGatewaySNIReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayBackendCluster:
 		return EventGatewayBackendClusterReconciliationWatchOptions(cl)
 	case *configurationv1alpha1.EventGatewayDataPlaneCertificate:

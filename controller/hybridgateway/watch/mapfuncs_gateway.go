@@ -11,6 +11,7 @@ import (
 
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // MapGatewayForTLSSecret returns a handler.MapFunc that, given a Secret object,
@@ -39,10 +40,8 @@ func MapGatewayForTLSSecret(cl client.Client) handler.MapFunc {
 		requests := make([]reconcile.Request, 0, len(gateways.Items))
 		for _, gw := range gateways.Items {
 			requests = append(requests, reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: gw.Namespace,
-					Name:      gw.Name,
-				},
+				Namespace: gw.Namespace,
+				Name:      gw.Name,
 			})
 		}
 
@@ -57,7 +56,7 @@ func MapGatewayForTLSSecret(cl client.Client) handler.MapFunc {
 // event handling and reconciliation when a ReferenceGrant changes.
 func MapGatewayForReferenceGrant(cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		rg, ok := obj.(*gwtypes.ReferenceGrant)
+		rg, ok := k8sutils.AsReferenceGrant(obj)
 		if !ok {
 			return nil
 		}
@@ -84,10 +83,8 @@ func MapGatewayForReferenceGrant(cl client.Client) handler.MapFunc {
 		for _, gw := range gateways.Items {
 			if hasMatchingCrossNamespaceSecretRef(gw, rg) {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{
-						Namespace: gw.Namespace,
-						Name:      gw.Name,
-					},
+					Namespace: gw.Namespace,
+					Name:      gw.Name,
 				})
 			}
 		}

@@ -29,12 +29,12 @@ import (
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 var errInvalidType = errors.New("invalid type")
@@ -53,14 +53,9 @@ type HTTPRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
-	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
-	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
-	// served by the cluster, resolved on SetupWithManager call.
-	referenceGrantVersion schema.GroupVersion
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -69,16 +64,6 @@ type HTTPRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the HTTPRouteReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling HTTPRoutes.
-	// Once the HTTPRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	r.referenceGrantVersion, r.enableReferenceGrant = ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
-	if !r.enableReferenceGrant {
-		r.Log.Error(nil, "Neither v1 nor v1beta1 ReferenceGrant CRD found; cross-namespace references will be rejected")
-	}
-
 	if err := setupHTTPRouteIndices(mgr); err != nil {
 		return err
 	}
@@ -117,12 +102,10 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForKongPlugin),
 	)
 
-	if r.enableReferenceGrant {
-		blder.Watches(gatewayapi.NewReferenceGrant(r.referenceGrantVersion),
-			handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForReferenceGrant),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom)),
-		)
-	}
+	blder.Watches(k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listHTTPRoutesForReferenceGrant),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasHTTPRouteFrom)),
+	)
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -158,7 +141,7 @@ func (r *HTTPRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // listHTTPRoutesForReferenceGrant is a watch predicate which finds all HTTPRoutes
 // mentioned in a From clause for a ReferenceGrant.
 func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := gatewayapi.AsReferenceGrant(obj)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			errInvalidType,
@@ -179,10 +162,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 				from.Kind == ("HTTPRoute") &&
 				from.Group == ("gateway.networking.k8s.io") {
 				recs = append(recs, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      httproute.Name,
-					},
+					Namespace: httproute.Namespace,
+					Name:      httproute.Name,
 				})
 			}
 		}
@@ -191,7 +172,7 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForReferenceGrant(ctx context.Contex
 }
 
 func referenceGrantHasHTTPRouteFrom(obj client.Object) bool {
-	grant, ok := gatewayapi.AsReferenceGrant(obj)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -292,10 +273,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGatewayClass(ctx context.Context,
 			if gatewaysForNamespace, ok := gateways[namespace]; ok {
 				if _, ok := gatewaysForNamespace[string(parentRef.Name)]; ok {
 					queue = append(queue, reconcile.Request{
-						NamespacedName: k8stypes.NamespacedName{
-							Namespace: httproute.Namespace,
-							Name:      httproute.Name,
-						},
+						Namespace: httproute.Namespace,
+						Name:      httproute.Name,
 					})
 				}
 			}
@@ -354,10 +333,8 @@ func (r *HTTPRouteReconciler) listHTTPRoutesForGateway(ctx context.Context, obj 
 			}
 			if namespace == gw.Namespace && string(parentRef.Name) == gw.Name {
 				queue = append(queue, reconcile.Request{
-					NamespacedName: k8stypes.NamespacedName{
-						Namespace: httproute.Namespace,
-						Name:      httproute.Name,
-					},
+					Namespace: httproute.Namespace,
+					Name:      httproute.Name,
 				})
 			}
 		}
@@ -680,17 +657,12 @@ func (r *HTTPRouteReconciler) getHTTPRouteRuleReason(ctx context.Context, httpRo
 			// and if there is grant for that reference
 			if httpRoute.Namespace != backendNamespace {
 				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the HTTPRoute (namespace %s)", targetNN, httpRoute.Namespace)
-				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
-						nil
-				}
 
-				referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
+				referenceGrantList := k8sutils.NewReferenceGrantList(r.ReferenceGrantVersion)
 				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", "", err
 				}
-				referenceGrants := gatewayapi.ReferenceGrantItems(referenceGrantList)
+				referenceGrants := k8sutils.ReferenceGrantItems(referenceGrantList)
 				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
 				if len(referenceGrants) == 0 {
 					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
@@ -770,29 +742,12 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 			crossNSNamespaces[pluginNamespace] = struct{}{}
 		}
 	}
-	if len(crossNSNamespaces) > 0 {
-		if !r.enableReferenceGrant {
-			for _, pluginRef := range pluginRefs {
-				pluginNamespace := pluginRef.Namespace
-				if pluginNamespace == "" {
-					pluginNamespace = httpRoute.Namespace
-				}
-				if pluginNamespace != httpRoute.Namespace {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						fmt.Sprintf("%s/%s is in a different namespace than the HTTPRoute (namespace %s) install ReferenceGrant CRD and configure a proper grant",
-							pluginNamespace, pluginRef.Name, httpRoute.Namespace,
-						),
-						nil
-				}
-			}
+	for ns := range crossNSNamespaces {
+		grants, err := r.listReferenceGrants(ctx, ns)
+		if err != nil {
+			return "", "", err
 		}
-		for ns := range crossNSNamespaces {
-			grants, err := r.listReferenceGrants(ctx, ns)
-			if err != nil {
-				return "", "", err
-			}
-			referenceGrants = append(referenceGrants, grants...)
-		}
+		referenceGrants = append(referenceGrants, grants...)
 	}
 
 	for _, pluginRef := range pluginRefs {
@@ -830,11 +785,11 @@ func (r *HTTPRouteReconciler) validateAnnotationPluginReferences(
 }
 
 func (r *HTTPRouteReconciler) listReferenceGrants(ctx context.Context, namespace string) ([]*gatewayapi.ReferenceGrant, error) {
-	referenceGrantList := gatewayapi.NewReferenceGrantList(r.referenceGrantVersion)
+	referenceGrantList := k8sutils.NewReferenceGrantList(r.ReferenceGrantVersion)
 	if err := r.List(ctx, referenceGrantList, client.InNamespace(namespace)); err != nil {
 		return nil, err
 	}
-	return gatewayapi.ReferenceGrantItems(referenceGrantList), nil
+	return k8sutils.ReferenceGrantItems(referenceGrantList), nil
 }
 
 func (r *HTTPRouteReconciler) isPluginReferenceGranted(

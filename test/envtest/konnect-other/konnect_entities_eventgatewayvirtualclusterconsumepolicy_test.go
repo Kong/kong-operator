@@ -223,10 +223,8 @@ func testEnvtestEventGatewayVirtualClusterConsumePolicy(
 	namespace, virtualClusterName, name, description, headerValue string,
 ) *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
 	return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "virtual-cluster-consume-policy",
-			Namespace: namespace,
-		},
+		Name:      "virtual-cluster-consume-policy",
+		Namespace: namespace,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

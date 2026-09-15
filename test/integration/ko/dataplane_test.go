@@ -44,20 +44,16 @@ func TestDataPlaneEssentials(t *testing.T) {
 
 	t.Log("deploying dataplane resource")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"label-a": "value-a",
-									"label-x": "value-x",
-								},
+							Labels: map[string]string{
+								"label-a": "value-a",
+								"label-x": "value-x",
 							},
 							Spec: corev1.PodSpec{
 								Containers: []corev1.Container{
@@ -79,10 +75,8 @@ func TestDataPlaneEssentials(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Annotations: map[string]string{
-									"foo": "bar",
-								},
+							Annotations: map[string]string{
+								"foo": "bar",
 							},
 						},
 					},
@@ -216,10 +210,8 @@ func TestDataPlaneServiceTypes(t *testing.T) {
 
 	t.Log("deploying dataplane resource")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -239,9 +231,7 @@ func TestDataPlaneServiceTypes(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -323,10 +313,8 @@ func TestDataPlaneUpdate(t *testing.T) {
 	dataplaneClient := integration.GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
 	t.Log("deploying dataplane resource")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -454,12 +442,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 					FailureThreshold:    3,
 					SuccessThreshold:    1,
 					TimeoutSeconds:      1,
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/status_which_will_always_return_404",
-							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-							Scheme: corev1.URISchemeHTTP,
-						},
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/status_which_will_always_return_404",
+						Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+						Scheme: corev1.URISchemeHTTP,
 					},
 				}
 			}),
@@ -492,12 +478,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 					FailureThreshold:    3,
 					SuccessThreshold:    1,
 					TimeoutSeconds:      1,
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/status",
-							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-							Scheme: corev1.URISchemeHTTP,
-						},
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/status",
+						Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+						Scheme: corev1.URISchemeHTTP,
 					},
 				}
 			}),
@@ -529,12 +513,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 					InitialDelaySeconds: 0,
 					PeriodSeconds:       2,
 					FailureThreshold:    30,
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/status",
-							Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
-							Scheme: corev1.URISchemeHTTP,
-						},
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/status",
+						Port:   intstr.FromInt(consts.DataPlaneMetricsPort),
+						Scheme: corev1.URISchemeHTTP,
 					},
 				}
 			}),
@@ -566,12 +548,10 @@ func TestDataPlaneUpdate(t *testing.T) {
 					InitialDelaySeconds: 0,
 					PeriodSeconds:       2,
 					FailureThreshold:    30,
-					ProbeHandler: corev1.ProbeHandler{
-						HTTPGet: &corev1.HTTPGetAction{
-							Path:   "/status",
-							Port:   intstr.FromString("metrics"),
-							Scheme: corev1.URISchemeHTTP,
-						},
+					HTTPGet: &corev1.HTTPGetAction{
+						Path:   "/status",
+						Port:   intstr.FromString("metrics"),
+						Scheme: corev1.URISchemeHTTP,
 					},
 				}
 			}),
@@ -603,10 +583,8 @@ func TestDataPlaneHorizontalScaling(t *testing.T) {
 
 	t.Log("deploying dataplane resource with 2 replicas")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -745,10 +723,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 
 	t.Log("creating a secret to mount to dataplane containers")
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "secret-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "secret-",
 		StringData: map[string]string{
 			"file-0": "foo",
 		},
@@ -759,10 +735,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 
 	t.Log("deploying dataplane resource")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -775,10 +749,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 									},
 									{
 										Name: "test-volume",
-										VolumeSource: corev1.VolumeSource{
-											Secret: &corev1.SecretVolumeSource{
-												SecretName: secret.Name,
-											},
+										Secret: &corev1.SecretVolumeSource{
+											SecretName: secret.Name,
 										},
 									},
 								},
@@ -805,12 +777,10 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 											FailureThreshold:    3,
 											SuccessThreshold:    1,
 											TimeoutSeconds:      1,
-											ProbeHandler: corev1.ProbeHandler{
-												HTTPGet: &corev1.HTTPGetAction{
-													Path:   "/status",
-													Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
-													Scheme: corev1.URISchemeHTTP,
-												},
+											HTTPGet: &corev1.HTTPGetAction{
+												Path:   "/status",
+												Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
+												Scheme: corev1.URISchemeHTTP,
 											},
 										},
 									},
@@ -883,10 +853,8 @@ func TestDataPlaneVolumeMounts(t *testing.T) {
 	t.Log("updating volumes and volume mounts in dataplane spec to verify volumes could be reconciled")
 	dataplane.Spec.Deployment.PodTemplateSpec.Spec.Volumes[0] = corev1.Volume{
 		Name: "test-volume-1",
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: secret.Name,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: secret.Name,
 		},
 	}
 	dataplane.Spec.DataPlaneOptions.Deployment.PodTemplateSpec.Spec.Containers[0].VolumeMounts[0] = corev1.VolumeMount{
@@ -926,10 +894,8 @@ func TestDataPlanePodDisruptionBudget(t *testing.T) {
 
 	t.Log("deploying DataPlane resource with 2 replicas")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Resources: operatorv1beta1.DataPlaneResources{
@@ -1020,10 +986,8 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 
 	t.Log("deploying DataPlane resource with 2 replicas")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -1047,9 +1011,7 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
-							},
+							ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
 						},
 					},
 				},
@@ -1109,9 +1071,7 @@ func TestDataPlaneServiceExternalTrafficPolicy(t *testing.T) {
 	require.Eventually(t, testutils.DataPlaneUpdateEventually(t, ctx, dataplaneName, clients.MgrClient, func(dp *operatorv1beta1.DataPlane) {
 		dp.Spec.Network.Services = &operatorv1beta1.DataPlaneServices{
 			Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-				ServiceOptions: operatorv1beta1.ServiceOptions{
-					ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
-				},
+				ExternalTrafficPolicy: corev1.ServiceExternalTrafficPolicyLocal,
 			},
 		}
 	}), waitTime, tickTime)
@@ -1127,10 +1087,8 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 	serviceName := "ingress-service-" + uuid.NewString()
 	t.Logf("deploying dataplane resource with service name specified to %s", serviceName)
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dataplane-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "dataplane-",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -1156,9 +1114,7 @@ func TestDataPlaneSpecifyingServiceName(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Name: &serviceName,
-							},
+							Name: &serviceName,
 						},
 					},
 				},

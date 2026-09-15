@@ -21,32 +21,24 @@ func TestCompareLicense(t *testing.T) {
 		{
 			name: "The newer one should win",
 			license1: &configurationv1alpha1.KongLicense{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-					Name:              "alpha",
-				},
+				CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+				Name:              "alpha",
 			},
 			license2: &configurationv1alpha1.KongLicense{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					Name:              "beta",
-				},
+				CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+				Name:              "beta",
 			},
 			expectedResult: false,
 		},
 		{
 			name: "If the creationTimestamp equals, the one with lexical smaller name should win",
 			license1: &configurationv1alpha1.KongLicense{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					Name:              "alpha",
-				},
+				CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+				Name:              "alpha",
 			},
 			license2: &configurationv1alpha1.KongLicense{
-				ObjectMeta: metav1.ObjectMeta{
-					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-					Name:              "beta",
-				},
+				CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+				Name:              "beta",
 			},
 			expectedResult: true,
 		},
@@ -78,22 +70,16 @@ func TestKongLicenseController_pickLicense(t *testing.T) {
 			name: "Should choose the newest one",
 			licenses: []*configurationv1alpha1.KongLicense{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
-						Name:              "older",
-					},
+					CreationTimestamp: metav1.NewTime(now.Add(-10 * time.Second)),
+					Name:              "older",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
-						Name:              "newer",
-					},
+					CreationTimestamp: metav1.NewTime(now.Add(-5 * time.Second)),
+					Name:              "newer",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						CreationTimestamp: metav1.NewTime(now.Add(-2 * time.Second)),
-						Name:              "newest",
-					},
+					CreationTimestamp: metav1.NewTime(now.Add(-2 * time.Second)),
+					Name:              "newest",
 				},
 			},
 			expectedNil:       false,

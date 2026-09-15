@@ -30,9 +30,19 @@ type tcpRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
-func newTCPRouteConverter(tcpRoute *gwtypes.TCPRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.TCPRoute] {
+func newTCPRouteConverter(
+	tcpRoute *gwtypes.TCPRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.TCPRoute] {
 	return &tcpRouteConverter{
 		Client:      cl,
 		route:       tcpRoute,
@@ -47,6 +57,8 @@ func newTCPRouteConverter(tcpRoute *gwtypes.TCPRoute, cl client.Client, fqdnMode
 		},
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 	}
 }
 
@@ -65,7 +77,10 @@ func (c *tcpRouteConverter) GetRootObject() gwtypes.TCPRoute {
 // UpdateRootObjectStatus implements the APIConverter interface.
 // It updates TCPRoute status conditions for each supported ParentReference.
 func (c *tcpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForTCPRoute)
+	return route.UpdateRouteStatus(
+		ctx, logger, c.Client, c.referenceGrantVersion, c.route, c.expectedGVKs,
+		route.BuildResolvedRefsConditionForTCPRoute,
+	)
 }
 
 // GetOutputStore implements APIConverter.
@@ -192,6 +207,7 @@ func (c *tcpRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

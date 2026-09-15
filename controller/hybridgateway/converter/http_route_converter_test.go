@@ -39,16 +39,12 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 	logger := logr.Discard()
 
 	validUpstream := &configurationv1alpha1.KongUpstream{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "upstream-1",
-			Namespace: "default",
-		},
+		Name:      "upstream-1",
+		Namespace: "default",
 	}
 	validService := &configurationv1alpha1.KongService{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "service-1",
-			Namespace: "default",
-		},
+		Name:      "service-1",
+		Namespace: "default",
 	}
 
 	tests := []struct {
@@ -77,7 +73,7 @@ func TestHTTPRouteConverter_GetOutputStore(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-			converter := newHTTPRouteConverter(&gwtypes.HTTPRoute{}, fakeClient, false, "").(*httpRouteConverter)
+			converter := newHTTPRouteConverter(&gwtypes.HTTPRoute{}, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			converter.outputStore = tt.outputStore
 
 			objects, err := converter.GetOutputStore(ctx, logger)
@@ -129,7 +125,7 @@ func TestHTTPRouteConverter_TranslateDeduplicatesSharedBackendResources(t *testi
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
 
-	converter := newHTTPRouteConverter(route, fakeClient, false, "")
+	converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
 	require.Equal(t, 6, resourceCount)
@@ -168,7 +164,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantLen: 1,
 			assertFn: func(t *testing.T, parents []hybridGatewayParent) {
@@ -185,7 +181,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 		},
 		{
@@ -200,7 +196,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 					Kind:  &gatewayKind,
 				}}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 		},
 		{
@@ -215,7 +211,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 					Kind:  &invalidKind,
 				}}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 		},
 		{
@@ -225,11 +221,11 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway-class"},
-					Spec:       gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
+					Name: "test-gateway-class",
+					Spec: gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
 				}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 		},
 		{
@@ -247,7 +243,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:     true,
 			errContains: "failed to get ControlPlaneRef",
@@ -275,7 +271,7 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:     true,
 			errContains: "listener lookup error",
@@ -300,6 +296,11 @@ func TestHTTPRouteConverter_GetHybridGatewayParents(t *testing.T) {
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test seeds grants, but
+// only reads them through target.TargetsForBackendRefs -> route.CheckReferenceGrant,
+// which TestTargetsForBackendRefs already exercises against both served versions.
+// Running the whole converter twice would re-test that same path through a thicker
+// stack without covering anything new.
 func TestHTTPRouteConverter_Translate(t *testing.T) {
 	type outputCount struct {
 		upstreams int
@@ -351,7 +352,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 		t.Helper()
 		route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 		cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-		conv := newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+		conv := newHTTPRouteConverter(route, cl, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 		_, err := conv.Translate(t.Context(), logr.Discard())
 		require.NoError(t, err)
 		for _, obj := range conv.outputStore {
@@ -384,11 +385,11 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				})
 				gateway := baseGateway()
 				objects := append(baseObjects(gateway), &configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "ext-plugin", Namespace: "default"},
+					Name: "ext-plugin", Namespace: "default",
 					PluginName: "rate-limiting",
 				})
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 8,
 			wantOutputs: outputCount{
@@ -424,7 +425,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				})
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 6,
 			wantOutputs: outputCount{
@@ -467,7 +468,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 5,
 			wantOutputs: outputCount{
@@ -533,7 +534,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 5,
 			wantOutputs: outputCount{
@@ -594,7 +595,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), newService("backend"))
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 5,
 			wantOutputs: outputCount{
@@ -663,15 +664,11 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								},
 							}},
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      v2Name,
-										Namespace: new(gwtypes.Namespace("app-backend")),
-										Kind:      &serviceKind,
-										Group:     &serviceGroup,
-										Port:      new(gwtypes.PortNumber(80)),
-									},
-								},
+								Name:      v2Name,
+								Namespace: new(gwtypes.Namespace("app-backend")),
+								Kind:      &serviceKind,
+								Group:     &serviceGroup,
+								Port:      new(gwtypes.PortNumber(80)),
 							}},
 						},
 						{
@@ -682,15 +679,11 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 								},
 							}},
 							BackendRefs: []gwtypes.HTTPBackendRef{{
-								BackendRef: gwtypes.BackendRef{
-									BackendObjectReference: gwtypes.BackendObjectReference{
-										Name:      v1Name,
-										Namespace: new(gwtypes.Namespace("app-backend")),
-										Kind:      &serviceKind,
-										Group:     &serviceGroup,
-										Port:      new(gwtypes.PortNumber(80)),
-									},
-								},
+								Name:      v1Name,
+								Namespace: new(gwtypes.Namespace("app-backend")),
+								Kind:      &serviceKind,
+								Group:     &serviceGroup,
+								Port:      new(gwtypes.PortNumber(80)),
 							}},
 						},
 					},
@@ -701,7 +694,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					newKonnectGatewayStandardObjects(gateway),
 					newNamespace(),
 					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v1", Namespace: "app-backend"},
+						Name: "app-backend-v1", Namespace: "app-backend",
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "10.0.0.2",
 							Ports: []corev1.ServicePort{{
@@ -713,7 +706,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					},
 					&corev1.Service{
-						ObjectMeta: metav1.ObjectMeta{Name: "app-backend-v2", Namespace: "app-backend"},
+						Name: "app-backend-v2", Namespace: "app-backend",
 						Spec: corev1.ServiceSpec{
 							ClusterIP: "10.0.0.3",
 							Ports: []corev1.ServicePort{{
@@ -726,7 +719,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					},
 					newEndpointSlice("app-backend-v1", "app-backend", []string{"10.0.1.1"}),
 					&gwtypes.ReferenceGrant{
-						ObjectMeta: metav1.ObjectMeta{Name: "allow-app-backend-v1", Namespace: "app-backend"},
+						Name: "allow-app-backend-v1", Namespace: "app-backend",
 						Spec: gwtypes.ReferenceGrantSpec{
 							From: []gwtypes.ReferenceGrantFrom{{
 								Group:     gwtypes.GroupName,
@@ -742,7 +735,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					},
 				)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 9,
 			wantOutputs: outputCount{
@@ -800,7 +793,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 5,
 			wantOutputs: outputCount{
@@ -883,7 +876,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace())
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 10,
 			wantOutputs: outputCount{
@@ -1030,7 +1023,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				)
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount: 10,
 			wantOutputs: outputCount{
@@ -1096,7 +1089,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				}})
 				gateway := baseGateway()
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(baseObjects(gateway)...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:    true,
 			wantErrSub: "failed to translate KongPlugins for rule",
@@ -1120,7 +1113,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					Kind:  &gatewayKind,
 				}}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 		},
 		{
@@ -1138,7 +1131,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:    true,
 			wantErrSub: "failed to get ControlPlaneRef",
@@ -1160,7 +1153,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:    true,
 			wantErrSub: "failed to translate KongUpstream resource",
@@ -1182,7 +1175,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:      true,
 			wantErrSub:   "failed to translate KongService for rule",
@@ -1205,7 +1198,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:      true,
 			wantErrSub:   "failed to translate KongRoutes for rule",
@@ -1230,7 +1223,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:    true,
 			wantErrSub: "failed to build KongPluginBinding for plugin",
@@ -1263,7 +1256,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantErr:      true,
 			wantErrSub:   "failed to translate KongTarget resources for upstream",
@@ -1288,7 +1281,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
 				cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(append(objects, legacy)...).Build()
-				return newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, cl, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount:    4,
 			wantStoreLen: 4,
@@ -1345,7 +1338,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				require.NoError(t, cl.Status().Update(t.Context(), failedDup))
 
 				route := newHTTPRouteForTranslation([]string{"api.example.com"}, []gwtypes.HTTPBackendRef{newBackendRef("")}, nil)
-				return newHTTPRouteConverter(route, cl, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, cl, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount:    4,
 			wantStoreLen: 4,
@@ -1374,26 +1367,18 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					[]string{"api.example.com"},
 					[]gwtypes.HTTPBackendRef{
 						{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  "svc-active",
-									Kind:  &serviceKind,
-									Group: &serviceGroup,
-									Port:  new(gwtypes.PortNumber(80)),
-								},
-								Weight: &w100,
-							},
+							Name:   "svc-active",
+							Kind:   &serviceKind,
+							Group:  &serviceGroup,
+							Port:   new(gwtypes.PortNumber(80)),
+							Weight: &w100,
 						},
 						{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:  "svc-preview",
-									Kind:  &serviceKind,
-									Group: &serviceGroup,
-									Port:  new(gwtypes.PortNumber(80)),
-								},
-								Weight: &w0,
-							},
+							Name:   "svc-preview",
+							Kind:   &serviceKind,
+							Group:  &serviceGroup,
+							Port:   new(gwtypes.PortNumber(80)),
+							Weight: &w0,
 						},
 					},
 					nil,
@@ -1401,7 +1386,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 				gateway := baseGateway()
 				// Both services resolve to the same pod IP — the classic blue-green overlap scenario.
 				svcActive := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-active", Namespace: "default"},
+					Name: "svc-active", Namespace: "default",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "10.0.1.1",
 						Ports: []corev1.ServicePort{
@@ -1410,7 +1395,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					},
 				}
 				svcPreview := &corev1.Service{
-					ObjectMeta: metav1.ObjectMeta{Name: "svc-preview", Namespace: "default"},
+					Name: "svc-preview", Namespace: "default",
 					Spec: corev1.ServiceSpec{
 						ClusterIP: "10.0.1.2",
 						Ports: []corev1.ServicePort{
@@ -1423,7 +1408,7 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 					newEndpointSlice("svc-preview", "default", []string{"10.0.0.1"}), // same pod IP
 				)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			},
 			wantCount:    4,
 			wantStoreLen: 4,
@@ -1472,6 +1457,10 @@ func TestHTTPRouteConverter_Translate(t *testing.T) {
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test seeds grants, but
+// only reads them through route.UpdateRouteStatus -> buildResolvedRefsCondition ->
+// CheckReferenceGrant, which TestBuildResolvedRefsCondition already exercises against
+// both served versions.
 func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 	baseGateway := func() *gwtypes.Gateway {
 		gateway := newGatewayWithListenerHostnames("api.example.com")
@@ -1501,7 +1490,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := baseGateway()
 				objects := baseObjects(gateway, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
@@ -1523,7 +1512,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := baseGateway()
 				objects := baseObjects(gateway, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			wantStop:    true,
@@ -1546,7 +1535,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				badService.Annotations = map[string]string{"konghq.com/tls-verify": "maybe"}
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), badService, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			wantStop:    true,
@@ -1567,7 +1556,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), newService("backend"), route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
@@ -1585,7 +1574,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := baseGateway()
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
@@ -1613,7 +1602,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := baseObjects(gateway, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			wantStop:    true,
@@ -1631,7 +1620,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				}, nil)
 				gateway := baseGateway()
 				referenceGrant := &gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "allow-backend", Namespace: "backend"},
+					Name: "allow-backend", Namespace: "backend",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{{
 							Group:     gatewayv1.GroupName,
@@ -1647,7 +1636,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				}
 				objects := append(newKonnectGatewayStandardObjects(gateway), newNamespace(), newService("backend"), referenceGrant, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 			assertFn: func(t *testing.T, route *gwtypes.HTTPRoute) {
@@ -1663,7 +1652,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := baseGateway()
 				objects := baseObjects(gateway, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantErr:     true,
 			errContains: "failed to update HTTPRoute status",
@@ -1683,7 +1672,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantErr:     true,
 			errContains: "failed to build resolvedRefs condition",
@@ -1707,7 +1696,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantErr:     true,
 			errContains: "failed to build accepted condition",
@@ -1733,7 +1722,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantErr:     true,
 			errContains: "failed to build programmed condition",
@@ -1754,7 +1743,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 					},
 				}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(route).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 		},
@@ -1765,11 +1754,11 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				gateway := newGatewayWithListenerHostnames("api.example.com")
 				gateway.UID = types.UID("gateway-uid")
 				gatewayClass := &gwtypes.GatewayClass{
-					ObjectMeta: metav1.ObjectMeta{Name: "test-gateway-class"},
-					Spec:       gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
+					Name: "test-gateway-class",
+					Spec: gwtypes.GatewayClassSpec{ControllerName: "konghq.com/gateway-operator"},
 				}
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(gateway, gatewayClass).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 		},
 		{
@@ -1787,7 +1776,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 				}
 				objects := baseObjects(gateway, route)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithStatusSubresource(route).WithObjects(objects...).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantUpdated: true,
 		},
@@ -1806,7 +1795,7 @@ func TestHTTPRouteConverter_UpdateRootObjectStatus(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), route
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), route
 			},
 			wantErr:     true,
 			errContains: "failed to get supported gateway",
@@ -1848,7 +1837,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 			setup: func() (*httpRouteConverter, *unstructured.Unstructured) {
 				resource := newUnstructuredResource("")
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), resource
 			},
 			wantSkip: true,
 		},
@@ -1858,7 +1847,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				routeKey := client.ObjectKeyFromObject(route).String()
 				resource := newUnstructuredResource(routeKey + ",other-ns/other-route")
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), resource
 			},
 			wantSkip: true,
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
@@ -1871,7 +1860,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				routeKey := client.ObjectKeyFromObject(route).String()
 				resource := newUnstructuredResource(routeKey)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), resource
 			},
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
 				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesHTTPRouteAnnotation]
@@ -1892,7 +1881,7 @@ func TestHTTPRouteConverter_HandleOrphanedResource(t *testing.T) {
 						},
 					}).
 					Build()
-				return newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter), resource
+				return newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter), resource
 			},
 			wantErr:     true,
 			wantSkip:    true,
@@ -1938,7 +1927,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				sectionName := gwtypes.SectionName("listener-1")
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
@@ -1960,7 +1949,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				sectionName := gwtypes.SectionName("listener-0")
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
@@ -1982,7 +1971,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
@@ -2002,7 +1991,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				sectionName := gwtypes.SectionName("listener-0")
 				port := gwtypes.PortNumber(81)
 				pRef := gwtypes.ParentReference{
@@ -2024,7 +2013,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
@@ -2044,7 +2033,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
@@ -2064,7 +2053,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
@@ -2084,7 +2073,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 				gateway.UID = types.UID("gateway-uid")
 				objects := newKonnectGatewayStandardObjects(gateway)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				sectionName := gwtypes.SectionName("listener-0")
 				pRef := gwtypes.ParentReference{
 					Name:        "test-gateway",
@@ -2111,7 +2100,7 @@ func TestHTTPRouteConverter_GetHostnamesByParentRef(t *testing.T) {
 						},
 					}).
 					Build()
-				converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+				converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 				port := gwtypes.PortNumber(80)
 				pRef := gwtypes.ParentReference{
 					Name:  "test-gateway",
@@ -2156,10 +2145,10 @@ func TestHTTPRouteConverter_MetadataAccessors(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			route := newHTTPRouteWithHostnames("api.example.com")
 			fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-			converter := newHTTPRouteConverter(route, fakeClient, false, "").(*httpRouteConverter)
+			converter := newHTTPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 
 			converter.outputStore = []client.Object{
-				&configurationv1alpha1.KongRoute{ObjectMeta: metav1.ObjectMeta{Name: "route"}},
+				&configurationv1alpha1.KongRoute{Name: "route"},
 			}
 
 			root := converter.GetRootObject()
@@ -2242,14 +2231,10 @@ func newHTTPRouteWithRules(hostnames []string, rules []gwtypes.HTTPRouteRule) *g
 	}
 
 	return &gwtypes.HTTPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "HTTPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Kind:       "HTTPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "default",
 		Spec: gwtypes.HTTPRouteSpec{
 			Hostnames: gwHostnames,
 			Rules:     rules,
@@ -2283,14 +2268,10 @@ func newBackendRef(namespace string) gwtypes.HTTPBackendRef {
 	serviceKind := gwtypes.Kind("Service")
 	serviceGroup := gwtypes.Group("")
 	ref := gwtypes.HTTPBackendRef{
-		BackendRef: gwtypes.BackendRef{
-			BackendObjectReference: gwtypes.BackendObjectReference{
-				Name:  "backend-service",
-				Kind:  &serviceKind,
-				Group: &serviceGroup,
-				Port:  new(gwtypes.PortNumber(80)),
-			},
-		},
+		Name:  "backend-service",
+		Kind:  &serviceKind,
+		Group: &serviceGroup,
+		Port:  new(gwtypes.PortNumber(80)),
 	}
 
 	if namespace != "" {
@@ -2328,10 +2309,8 @@ func newExtensionRefFilter(name string) gwtypes.HTTPRouteFilter {
 
 func newService(namespace string) *corev1.Service {
 	return &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-service",
-			Namespace: namespace,
-		},
+		Name:      "backend-service",
+		Namespace: namespace,
 		Spec: corev1.ServiceSpec{
 			ClusterIP: "10.0.0.1",
 			Ports: []corev1.ServicePort{
@@ -2349,12 +2328,10 @@ func newService(namespace string) *corev1.Service {
 func newEndpointSlice(serviceName, namespace string, addresses []string) *discoveryv1.EndpointSlice {
 	port := int32(8080)
 	return &discoveryv1.EndpointSlice{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      fmt.Sprintf("%s-slice", serviceName),
-			Namespace: namespace,
-			Labels: map[string]string{
-				discoveryv1.LabelServiceName: serviceName,
-			},
+		Name:      fmt.Sprintf("%s-slice", serviceName),
+		Namespace: namespace,
+		Labels: map[string]string{
+			discoveryv1.LabelServiceName: serviceName,
 		},
 		Ports: []discoveryv1.EndpointPort{
 			{
@@ -2376,9 +2353,7 @@ func newEndpointSlice(serviceName, namespace string, addresses []string) *discov
 
 func newNamespace() *corev1.Namespace {
 	return &corev1.Namespace{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: "default",
-		},
+		Name: "default",
 	}
 }
 
@@ -2445,13 +2420,13 @@ func TestHTTPRouteConverter_DesiredResourcesReady(t *testing.T) {
 		}
 		if konnectID != "" {
 			svc.Status.Konnect = &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-				KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: konnectID},
+				ID: konnectID,
 			}
 		}
 		return svc
 	}
 
-	baseRoute := &gwtypes.HTTPRoute{ObjectMeta: metav1.ObjectMeta{Name: "test-route", Namespace: ns}}
+	baseRoute := &gwtypes.HTTPRoute{Name: "test-route", Namespace: ns}
 
 	tests := []struct {
 		name            string
@@ -2595,7 +2570,7 @@ func TestHTTPRouteConverter_DesiredResourcesReady(t *testing.T) {
 			}
 			cl := builder.Build()
 
-			conv := newHTTPRouteConverter(baseRoute, cl, false, "").(*httpRouteConverter)
+			conv := newHTTPRouteConverter(baseRoute, cl, false, "", testReferenceGrantVersion).(*httpRouteConverter)
 			conv.outputStore = tt.outputStore
 
 			ready, err := conv.DesiredResourcesReady(ctx, logr.Discard())

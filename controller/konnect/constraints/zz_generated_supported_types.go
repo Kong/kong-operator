@@ -13,6 +13,8 @@ import (
 type SupportedGeneratedKonnectEntityType interface {
 	aiconfigurationv1alpha1.AIGatewayAgent |
 		aiconfigurationv1alpha1.AIGatewayAuthStrategy |
+		aiconfigurationv1alpha1.AIGatewayCACertificate |
+		aiconfigurationv1alpha1.AIGatewayCertificate |
 		aiconfigurationv1alpha1.AIGatewayConsumer |
 		aiconfigurationv1alpha1.AIGatewayConsumerCredential |
 		aiconfigurationv1alpha1.AIGatewayConsumerGroup |
@@ -21,6 +23,7 @@ type SupportedGeneratedKonnectEntityType interface {
 		aiconfigurationv1alpha1.AIGatewayModel |
 		aiconfigurationv1alpha1.AIGatewayModelProvider |
 		aiconfigurationv1alpha1.AIGatewayPolicy |
+		aiconfigurationv1alpha1.AIGatewaySNI |
 		configurationv1alpha1.EventGatewayBackendCluster |
 		configurationv1alpha1.EventGatewayDataPlaneCertificate |
 		configurationv1alpha1.EventGatewayListener |

@@ -13,7 +13,6 @@ import (
 	"go.uber.org/zap/zaptest/observer"
 	corev1 "k8s.io/api/core/v1"
 	netv1 "k8s.io/api/networking/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/uuid"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,8 +40,8 @@ func makeSecretToSNIs(in map[string]testSNIs) SecretNameToSNIs {
 
 func TestMergeIngressRules(t *testing.T) {
 	var (
-		parent1 = &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{UID: uuid.NewUUID()}}
-		parent2 = &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{UID: uuid.NewUUID()}}
+		parent1 = &netv1.Ingress{UID: uuid.NewUUID()}
+		parent2 = &netv1.Ingress{UID: uuid.NewUUID()}
 	)
 
 	for _, tt := range []struct {
@@ -172,7 +171,7 @@ func TestMergeIngressRules(t *testing.T) {
 }
 
 func TestAddFromIngressV1TLS(t *testing.T) {
-	parentIngress := &netv1.Ingress{ObjectMeta: metav1.ObjectMeta{Namespace: "foo"}}
+	parentIngress := &netv1.Ingress{Namespace: "foo"}
 
 	type args struct {
 		tlsSections []netv1.IngressTLS
@@ -269,41 +268,33 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 			},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "baz",
-						},
+					Name:      "test-service2",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "baz",
 					},
 				},
 			},
 			expectedServices: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "baz",
-						},
+					Name:      "test-service2",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "baz",
 					},
 				},
 			},
@@ -323,16 +314,12 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 					MustBuild(),
 			},
 			services: []*corev1.Service{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service1",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-service1",
+				Namespace: corev1.NamespaceDefault,
 			}},
 			expectedServices: []*corev1.Service{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-service1",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "test-service1",
+				Namespace: corev1.NamespaceDefault,
 			}},
 			expectedAnnotations: map[string]string{},
 			expectedFailures: []string{
@@ -342,8 +329,8 @@ func TestGetK8sServicesForBackends(t *testing.T) {
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			parent := &netv1.Ingress{
-				ObjectMeta: metav1.ObjectMeta{Name: "ingress", Namespace: tt.namespace},
-				TypeMeta:   metav1.TypeMeta{Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String()},
+				Name: "ingress", Namespace: tt.namespace,
+				Kind: "Ingress", APIVersion: netv1.SchemeGroupVersion.String(),
 			}
 			storer, err := store.NewFakeStore(store.FakeObjects{Services: tt.services})
 			require.NoError(t, err)
@@ -380,27 +367,21 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation passes for a group of services with no annotations expected, even if they all have different annotations",
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service1",
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Name: "test-service1",
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service2",
-						Annotations: map[string]string{
-							"konghq.com/bar": "foo",
-						},
+					Name: "test-service2",
+					Annotations: map[string]string{
+						"konghq.com/bar": "foo",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service3",
-						Annotations: map[string]string{
-							"konghq.com/baz": "foo",
-						},
+					Name: "test-service3",
+					Annotations: map[string]string{
+						"konghq.com/baz": "foo",
 					},
 				},
 			},
@@ -410,35 +391,29 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation passes for a group of services all have the expected annotations",
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service1",
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-							"konghq.com/bar": "foo",
-							"konghq.com/baz": "foo",
-							"example.com":    "foo",
-						},
+					Name: "test-service1",
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
+						"konghq.com/bar": "foo",
+						"konghq.com/baz": "foo",
+						"example.com":    "foo",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service2",
-						Annotations: map[string]string{
-							"konghq.com/baz": "foo",
-							"konghq.com/foo": "bar",
-							"konghq.com/bar": "foo",
-							"example.com":    "bar",
-						},
+					Name: "test-service2",
+					Annotations: map[string]string{
+						"konghq.com/baz": "foo",
+						"konghq.com/foo": "bar",
+						"konghq.com/bar": "foo",
+						"example.com":    "bar",
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-service3",
-						Annotations: map[string]string{
-							"konghq.com/bar": "foo",
-							"konghq.com/foo": "bar",
-							"konghq.com/baz": "foo",
-						},
+					Name: "test-service3",
+					Annotations: map[string]string{
+						"konghq.com/bar": "foo",
+						"konghq.com/foo": "bar",
+						"konghq.com/baz": "foo",
 					},
 				},
 			},
@@ -453,38 +428,32 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation fails if one service does not have all expected annotations",
 			services: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/bar": "foo",
-							"konghq.com/baz": "foo",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/bar": "foo",
+						"konghq.com/baz": "foo",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/baz": "foo",
-							"konghq.com/foo": "bar",
-							"konghq.com/bar": "foo",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service2",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/baz": "foo",
+						"konghq.com/foo": "bar",
+						"konghq.com/bar": "foo",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service3",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/bar": "foo",
-							"konghq.com/foo": "bar",
-							"konghq.com/baz": "foo",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service3",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/bar": "foo",
+						"konghq.com/foo": "bar",
+						"konghq.com/baz": "foo",
 					},
 				},
 			},
@@ -504,33 +473,27 @@ func TestDoK8sServicesMatchAnnotations(t *testing.T) {
 			name: "validation fails if all services have the same annotations, but not the same value",
 			services: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service1",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service1",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service2",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "baz",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service2",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "baz",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service3",
-						Namespace: corev1.NamespaceDefault,
-						Annotations: map[string]string{
-							"konghq.com/foo": "buzz",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "test-service3",
+					Namespace: corev1.NamespaceDefault,
+					Annotations: map[string]string{
+						"konghq.com/foo": "buzz",
 					},
 				},
 			},
@@ -576,40 +539,32 @@ func TestPopulateServices(t *testing.T) {
 			name: "one service to skip, one service to keep",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "k8s-service-to-skip1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "k8s-service-to-skip1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "k8s-service-to-skip2",
-						Namespace: "test-namespace",
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "k8s-service-to-skip2",
+					Namespace: "test-namespace",
+				},
+				{
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "k8s-service-to-keep1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "k8s-service-to-keep1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
-					},
-				},
-				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "k8s-service-to-keep2",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							"konghq.com/foo": "bar",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "k8s-service-to-keep2",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						"konghq.com/foo": "bar",
 					},
 				},
 			},
@@ -651,36 +606,30 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with CA certificates",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
-							annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1,ca-2",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1,ca-2",
 					},
 				},
 			},
 			k8sSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-1",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-1",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-1"),
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-2",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-2",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-2"),
@@ -714,35 +663,29 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with CA certificates but not TLS verification",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1,ca-2",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1,ca-2",
 					},
 				},
 			},
 			k8sSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-1",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-1",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-1"),
 					},
 				},
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-2",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-2",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-2"),
@@ -770,15 +713,13 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with a CA certificate referring a non-existing secret",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
-							annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-not-existing",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-not-existing",
 					},
 				},
 			},
@@ -804,25 +745,21 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with a CA certificate but secret has no id field",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
-							annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "https",
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
 					},
 				},
 			},
 			k8sSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-1",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-1",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 					},
@@ -850,25 +787,21 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with a CA certificate but protocol used is not compatible",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
-							annotations.AnnotationPrefix + annotations.ProtocolKey:              "grpc",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
+						annotations.AnnotationPrefix + annotations.ProtocolKey:              "grpc",
 					},
 				},
 			},
 			k8sSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-1",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-1",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-1"),
@@ -897,24 +830,20 @@ func TestPopulateServices(t *testing.T) {
 			name: "service with a CA certificate but no protocol is specified (default http)",
 			k8sServices: []*corev1.Service{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "s-1",
-						Namespace: "test-namespace",
-						Annotations: map[string]string{
-							annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
-							annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
-						},
+					Kind: "Service", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "s-1",
+					Namespace: "test-namespace",
+					Annotations: map[string]string{
+						annotations.AnnotationPrefix + annotations.TLSVerifyKey:             "true",
+						annotations.AnnotationPrefix + annotations.CACertificatesSecretsKey: "ca-1",
 					},
 				},
 			},
 			k8sSecrets: []*corev1.Secret{
 				{
-					TypeMeta: metav1.TypeMeta{Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String()},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "ca-1",
-						Namespace: "test-namespace",
-					},
+					Kind: "Secret", APIVersion: corev1.SchemeGroupVersion.String(),
+					Name:      "ca-1",
+					Namespace: "test-namespace",
 					Data: map[string][]byte{
 						"cert": []byte("cert"),
 						"id":   []byte("id-1"),
@@ -978,11 +907,9 @@ func TestPopulateServices(t *testing.T) {
 func TestResolveKubernetesServiceForBackend(t *testing.T) {
 	testService := func(annotations map[string]string) *corev1.Service {
 		return &corev1.Service{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:        "test-service",
-				Namespace:   "test-namespace",
-				Annotations: annotations,
-			},
+			Name:        "test-service",
+			Namespace:   "test-namespace",
+			Annotations: annotations,
 		}
 	}
 
@@ -1020,13 +947,11 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-service-facade",
-							Namespace: "test-namespace",
-							Annotations: map[string]string{
-								"common": "common-from-facade",
-								"facade": "facade-from-facade",
-							},
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"common": "common-from-facade",
+							"facade": "facade-from-facade",
 						},
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -1053,10 +978,8 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			}),
 			expectedTranslatedObjects: []client.Object{
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-facade",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-service-facade",
+					Namespace: "test-namespace",
 				},
 			},
 		},
@@ -1065,13 +988,11 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-service-facade",
-							Namespace: "test-namespace",
-							Annotations: map[string]string{
-								"common": "common-from-facade",
-								"facade": "facade-from-facade",
-							},
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"common": "common-from-facade",
+							"facade": "facade-from-facade",
 						},
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -1094,10 +1015,8 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			}),
 			expectedTranslatedObjects: []client.Object{
 				&incubatorv1alpha1.KongServiceFacade{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-service-facade",
-						Namespace: "test-namespace",
-					},
+					Name:      "test-service-facade",
+					Namespace: "test-namespace",
 				},
 			},
 		},
@@ -1106,13 +1025,11 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 			storerObjects: store.FakeObjects{
 				KongServiceFacades: []*incubatorv1alpha1.KongServiceFacade{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "test-service-facade",
-							Namespace: "test-namespace",
-							Annotations: map[string]string{
-								"common": "common-from-facade",
-								"facade": "facade-from-facade",
-							},
+						Name:      "test-service-facade",
+						Namespace: "test-namespace",
+						Annotations: map[string]string{
+							"common": "common-from-facade",
+							"facade": "facade-from-facade",
 						},
 						Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 							Backend: incubatorv1alpha1.KongServiceFacadeBackend{
@@ -1166,24 +1083,20 @@ func TestResolveKubernetesServiceForBackend(t *testing.T) {
 
 func TestResolveKubernetesServiceForBackend_DoesNotModifyCache(t *testing.T) {
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				"service": "from-service",
-			},
+		Name:      "test-service",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"service": "from-service",
 		},
 	}
 	// Preserve a copy to compare against later.
 	svcCopy := svc.DeepCopy()
 
 	kongServiceFacade := &incubatorv1alpha1.KongServiceFacade{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-service-facade",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				"facade": "from-facade",
-			},
+		Name:      "test-service-facade",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"facade": "from-facade",
 		},
 		Spec: incubatorv1alpha1.KongServiceFacadeSpec{
 			Backend: incubatorv1alpha1.KongServiceFacadeBackend{

@@ -9,7 +9,6 @@ import (
 	"github.com/go-logr/logr"
 	prometheus "github.com/prometheus/client_model/go"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -47,10 +46,8 @@ func TestPrometheusMetricsScraper_Scrape(t *testing.T) {
 		{
 			name: "scraping from a valid Admin API endpoint works",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-1",
-					Namespace: "default",
-				},
+				Name:      "dataplane-1",
+				Namespace: "default",
 			},
 			expected: func(serverAddr string) Metrics {
 				return Metrics{

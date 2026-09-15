@@ -95,9 +95,7 @@ func TestIsContentEmpty(t *testing.T) {
 			content: &file.Content{
 				Upstreams: []file.FUpstream{
 					{
-						Upstream: kong.Upstream{
-							Name: new("test"),
-						},
+						Name: new("test"),
 					},
 				},
 			},

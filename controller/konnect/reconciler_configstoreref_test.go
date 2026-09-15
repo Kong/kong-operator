@@ -30,19 +30,19 @@ func TestHandleConfigStoreRef(t *testing.T) {
 
 	programmedConfigStore := func() *konnectv1alpha1.KonnectConfigStore {
 		cs := &konnectv1alpha1.KonnectConfigStore{
-			ObjectMeta: metav1.ObjectMeta{Name: "tls-cert-keys", Namespace: "ns"},
+			Name: "tls-cert-keys", Namespace: "ns",
 		}
 		cs.Status.ID = "cs-id"
 		return cs
 	}
 	notProgrammedConfigStore := &konnectv1alpha1.KonnectConfigStore{
-		ObjectMeta: metav1.ObjectMeta{Name: "tls-cert-keys", Namespace: "ns"},
+		Name: "tls-cert-keys", Namespace: "ns",
 	}
 
 	// KongVault is cluster-scoped, hence the empty `from` namespace.
 	grant := func(mutate ...func(*configurationv1alpha1.KongReferenceGrant)) *configurationv1alpha1.KongReferenceGrant {
 		g := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{Name: "allow-kongvault", Namespace: "ns"},
+			Name: "allow-kongvault", Namespace: "ns",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{{
 					Group:     configurationv1alpha1.Group(configurationv1alpha1.GroupVersion.Group),
@@ -64,7 +64,7 @@ func TestHandleConfigStoreRef(t *testing.T) {
 	// KongVault is cluster-scoped, so it carries no namespace of its own.
 	vault := func(mutate ...func(*configurationv1alpha1.KongVault)) *configurationv1alpha1.KongVault {
 		v := &configurationv1alpha1.KongVault{
-			ObjectMeta: metav1.ObjectMeta{Name: "certvault"},
+			Name: "certvault",
 			Spec: configurationv1alpha1.KongVaultSpec{
 				Backend: "konnect",
 				Prefix:  "certvault",

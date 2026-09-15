@@ -72,10 +72,8 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-kep-not-found",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-kep-not-found",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -112,18 +110,14 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kep-not-programmed",
-				Namespace: ns.Name,
-			},
+			Name:      "kep-not-programmed",
+			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-kep-not-programmed",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-kep-not-programmed",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -159,19 +153,15 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kep-no-cert-programmed",
-				Namespace: ns.Name,
-			},
+			Name:      "kep-no-cert-programmed",
+			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
 		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-no-cert")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-no-cert-programmed",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-no-cert-programmed",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -238,19 +228,15 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kep-happy-path",
-				Namespace: ns.Name,
-			},
+			Name:      "kep-happy-path",
+			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
 		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-happy")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-happy-path",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-happy-path",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -323,19 +309,15 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kep-idempotent",
-				Namespace: ns.Name,
-			},
+			Name:      "kep-idempotent",
+			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
 		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-idempotent")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-idempotent",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-idempotent",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -389,19 +371,15 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 		t.Parallel()
 
 		kep := &konnectv1alpha1.KonnectEventGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "kep-deletion",
-				Namespace: ns.Name,
-			},
+			Name:      "kep-deletion",
+			Namespace: ns.Name,
 		}
 		require.NoError(t, cl.Create(ctx, kep))
 		UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, "konnect-id-deletion")
 
 		egdp := &eventgatewayv1alpha1.KegDataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "egdp-deletion",
-				Namespace: ns.Name,
-			},
+			Name:      "egdp-deletion",
+			Namespace: ns.Name,
 			Spec: eventgatewayv1alpha1.KegDataPlaneSpec{
 				ControlPlaneRef: eventgatewayv1alpha1.ControlPlaneRef{
 					Type: eventgatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
@@ -535,10 +513,8 @@ func TestKEGDataPlaneReconciler(t *testing.T) {
 							},
 							Volumes: []corev1.Volume{
 								{
-									Name: "my-extra-vol",
-									VolumeSource: corev1.VolumeSource{
-										EmptyDir: &corev1.EmptyDirVolumeSource{},
-									},
+									Name:     "my-extra-vol",
+									EmptyDir: &corev1.EmptyDirVolumeSource{},
 								},
 							},
 						},
@@ -963,7 +939,7 @@ func setupProgrammedKEGDP(
 	t.Helper()
 
 	kep := &konnectv1alpha1.KonnectEventGateway{
-		ObjectMeta: metav1.ObjectMeta{Name: kepName, Namespace: ns},
+		Name: kepName, Namespace: ns,
 	}
 	require.NoError(t, cl.Create(ctx, kep))
 	UpdateKonnectEventGatewayStatusWithProgrammed(t, ctx, cl, kep, konnectID)
@@ -973,8 +949,8 @@ func setupProgrammedKEGDP(
 		KonnectNamespacedRef: &eventgatewayv1alpha1.KonnectNamespacedRef{Name: kepName},
 	}
 	egdp := &eventgatewayv1alpha1.KegDataPlane{
-		ObjectMeta: metav1.ObjectMeta{Name: egdpName, Namespace: ns},
-		Spec:       spec,
+		Name: egdpName, Namespace: ns,
+		Spec: spec,
 	}
 	require.NoError(t, cl.Create(ctx, egdp))
 
@@ -1048,12 +1024,10 @@ func createKEGClusterCASecret(t *testing.T, ctx context.Context, cl client.Clien
 	)
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace,
-			Name:      name,
-			Labels: map[string]string{
-				"konghq.com/secret": "internal",
-			},
+		Namespace: namespace,
+		Name:      name,
+		Labels: map[string]string{
+			"konghq.com/secret": "internal",
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{

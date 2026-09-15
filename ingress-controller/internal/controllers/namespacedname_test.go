@@ -6,7 +6,6 @@ import (
 	"github.com/samber/mo"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
@@ -38,22 +37,16 @@ func TestOptionalNamespacedName(t *testing.T) {
 		}
 		presentOptional := NewOptionalNamespacedName(mo.Some(namespacedName))
 		assert.True(t, presentOptional.Matches(&gatewayapi.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example",
-				Namespace: "default",
-			},
+			Name:      "example",
+			Namespace: "default",
 		}))
 		assert.False(t, presentOptional.Matches(&gatewayapi.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "dummy",
-				Namespace: "default",
-			},
+			Name:      "dummy",
+			Namespace: "default",
 		}))
 		assert.False(t, presentOptional.Matches(&gatewayapi.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "example",
-				Namespace: "dummy",
-			},
+			Name:      "example",
+			Namespace: "dummy",
 		}))
 	})
 }

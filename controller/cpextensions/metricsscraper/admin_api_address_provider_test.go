@@ -24,29 +24,25 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 		{
 			name: "Single EndpointSlice",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-1",
-					Namespace: "default",
-				},
+				Name:      "dataplane-1",
+				Namespace: "default",
 			},
 			endpointSlices: &discoveryv1.EndpointSliceList{
 				Items: []discoveryv1.EndpointSlice{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-1",
-							Namespace: "default",
-							Labels: map[string]string{
-								"gateway-operator.konghq.com/dataplane-service-state": "live",
-								"gateway-operator.konghq.com/dataplane-service-type":  "admin",
-								"gateway-operator.konghq.com/managed-by":              "dataplane",
-								"app":                                                 "dataplane-1",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-1",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/dataplane-service-state": "live",
+							"gateway-operator.konghq.com/dataplane-service-type":  "admin",
+							"gateway-operator.konghq.com/managed-by":              "dataplane",
+							"app":                                                 "dataplane-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
@@ -77,29 +73,25 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 		{
 			name: "Single EndpointSlice, IPv6 not supported",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-1",
-					Namespace: "default",
-				},
+				Name:      "dataplane-1",
+				Namespace: "default",
 			},
 			endpointSlices: &discoveryv1.EndpointSliceList{
 				Items: []discoveryv1.EndpointSlice{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-1",
-							Namespace: "default",
-							Labels: map[string]string{
-								"gateway-operator.konghq.com/dataplane-service-state": "live",
-								"gateway-operator.konghq.com/dataplane-service-type":  "admin",
-								"gateway-operator.konghq.com/managed-by":              "dataplane",
-								"app":                                                 "dataplane-1",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-1",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/dataplane-service-state": "live",
+							"gateway-operator.konghq.com/dataplane-service-type":  "admin",
+							"gateway-operator.konghq.com/managed-by":              "dataplane",
+							"app":                                                 "dataplane-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv6,
@@ -122,29 +114,25 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 		{
 			name: "Single EndpointSlice, IPv4 and IPv6, only the former is returned",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-1",
-					Namespace: "default",
-				},
+				Name:      "dataplane-1",
+				Namespace: "default",
 			},
 			endpointSlices: &discoveryv1.EndpointSliceList{
 				Items: []discoveryv1.EndpointSlice{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-1",
-							Namespace: "default",
-							Labels: map[string]string{
-								"gateway-operator.konghq.com/dataplane-service-state": "live",
-								"gateway-operator.konghq.com/dataplane-service-type":  "admin",
-								"gateway-operator.konghq.com/managed-by":              "dataplane",
-								"app":                                                 "dataplane-1",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-1",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/dataplane-service-state": "live",
+							"gateway-operator.konghq.com/dataplane-service-type":  "admin",
+							"gateway-operator.konghq.com/managed-by":              "dataplane",
+							"app":                                                 "dataplane-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv6,
@@ -162,21 +150,19 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-2",
-							Namespace: "default",
-							Labels: map[string]string{
-								"gateway-operator.konghq.com/dataplane-service-state": "live",
-								"gateway-operator.konghq.com/dataplane-service-type":  "admin",
-								"gateway-operator.konghq.com/managed-by":              "dataplane",
-								"app":                                                 "dataplane-1",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-2",
+						Namespace: "default",
+						Labels: map[string]string{
+							"gateway-operator.konghq.com/dataplane-service-state": "live",
+							"gateway-operator.konghq.com/dataplane-service-type":  "admin",
+							"gateway-operator.konghq.com/managed-by":              "dataplane",
+							"app":                                                 "dataplane-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
@@ -202,29 +188,25 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 		{
 			name: "2 EndpointSlices, 1 belongs to another DataPlane",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-1",
-					Namespace: "default",
-				},
+				Name:      "dataplane-1",
+				Namespace: "default",
 			},
 			endpointSlices: &discoveryv1.EndpointSliceList{
 				Items: []discoveryv1.EndpointSlice{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-1",
-							Namespace: "default",
-							Labels: map[string]string{
-								consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
-								consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-								consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-								"app":                                "dataplane-1",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-1",
+						Namespace: "default",
+						Labels: map[string]string{
+							consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+							"app":                                "dataplane-1",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
@@ -245,15 +227,13 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 						},
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-2",
-							Namespace: "default",
-							Labels: map[string]string{
-								consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
-								consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-								consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-								"app":                                "dataplane-2",
-							},
+						Name:      "endpoint-slice-2",
+						Namespace: "default",
+						Labels: map[string]string{
+							consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+							"app":                                "dataplane-2",
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,
 						Ports: []discoveryv1.EndpointPort{
@@ -280,29 +260,25 @@ func TestAdminAPIAddressProvider_AdminAddressesFromDP(t *testing.T) {
 		{
 			name: "multiple addresses in a single endpoint result in only the first address being used",
 			dataplane: &operatorv1beta1.DataPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "dataplane-3",
-					Namespace: "default",
-				},
+				Name:      "dataplane-3",
+				Namespace: "default",
 			},
 			endpointSlices: &discoveryv1.EndpointSliceList{
 				Items: []discoveryv1.EndpointSlice{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "endpoint-slice-3",
-							Namespace: "default",
-							Labels: map[string]string{
-								consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
-								consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
-								consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
-								"app":                                "dataplane-3",
-							},
-							OwnerReferences: []metav1.OwnerReference{
-								{
-									APIVersion: "v1",
-									Kind:       "Service",
-									Name:       "servicename",
-								},
+						Name:      "endpoint-slice-3",
+						Namespace: "default",
+						Labels: map[string]string{
+							consts.DataPlaneServiceStateLabel:    consts.DataPlaneStateLabelValueLive,
+							consts.DataPlaneServiceTypeLabel:     string(consts.DataPlaneAdminServiceLabelValue),
+							consts.GatewayOperatorManagedByLabel: consts.DataPlaneManagedLabelValue,
+							"app":                                "dataplane-3",
+						},
+						OwnerReferences: []metav1.OwnerReference{
+							{
+								APIVersion: "v1",
+								Kind:       "Service",
+								Name:       "servicename",
 							},
 						},
 						AddressType: discoveryv1.AddressTypeIPv4,

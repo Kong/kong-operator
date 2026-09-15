@@ -18,67 +18,223 @@ package dataplane
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 
-	certificatesv1 "k8s.io/api/certificates/v1"
+	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
-// ensureCertificateSecret provisions (or finds) the mTLS client certificate Secret
-// for the given AIGatewayDataPlane, signed by the cluster CA.
-func (r *Reconciler) ensureCertificateSecret(
+// certificateChecksum computes a stable checksum of a certificate Secret's
+// tls.crt and tls.key content, used to trigger a Deployment rollout when a
+// manually-referenced Secret is edited in place.
+func certificateChecksum(secret *corev1.Secret) string {
+	h := sha256.New()
+	h.Write(secret.Data[corev1.TLSCertKey])
+	h.Write(secret.Data[corev1.TLSPrivateKeyKey])
+	return hex.EncodeToString(h.Sum(nil))
+}
+
+// resolveCertificateSecret resolves the mTLS client certificate Secret for
+// the given AIGatewayDataPlane, honoring spec.certificateSecret.provisioning:
+// Manual fetches the user-referenced Secret as-is, Automatic falls back to
+// the shared operator-managed provisioning. Both only apply when aigatewaycp
+// is non-nil (a KonnectAIGateway was resolved): with no control plane to ever
+// use the certificate against, provisioning (or even just validating) one
+// would be pure waste. If aigatewaycp is nil, (op.Noop, nil, nil) is returned
+// and, if the user did configure spec.certificateSecret anyway, the mismatch
+// is surfaced via the CertificateProvisioned condition rather than silently
+// ignored; the AIGatewayDataPlane is otherwise fully manual, wired entirely
+// via spec.deployment.podTemplateSpec.
+func resolveCertificateSecret(
 	ctx context.Context,
+	cl client.Client,
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	resolveAutomatic func(ctx context.Context, dp *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error),
+) (op.Result, *corev1.Secret, error) {
+	cs := aigwdp.Spec.CertificateSecret
+	if aigatewaycp == nil {
+		if cs != nil {
+			apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
+				Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(aigatewayv1alpha1.CertificateControlPlaneRefMissingReason),
+				Message:            aigatewayv1alpha1.CertificateControlPlaneRefMissingMessage,
+				ObservedGeneration: aigwdp.Generation,
+			})
+		} else {
+			// cs was cleared (or never set) while still controlPlaneRef-less:
+			// drop any stale condition from an earlier reconcile where cs was
+			// non-nil, since nothing else touches CertificateProvisionedType
+			// while aigatewaycp stays nil.
+			apimeta.RemoveStatusCondition(&aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType))
+		}
+		return op.Noop, nil, nil
+	}
+	if isManualProvisioning(aigwdp) {
+		return getManualCertificateSecret(ctx, cl, aigwdp)
+	}
+	return resolveAutomatic(ctx, aigwdp)
+}
+
+// getManualCertificateSecret fetches the Secret referenced by
+// spec.certificateSecret.secretRef and validates it contains a usable TLS
+// certificate and key. The operator never creates, modifies, rotates, or
+// deletes this Secret. The reference is always resolved in the
+// AIGatewayDataPlane's own namespace: a Secret can only ever be mounted into
+// a Pod's volumes from that Pod's own namespace, so cross-namespace
+// references are not supported.
+func getManualCertificateSecret(
+	ctx context.Context,
+	cl client.Client,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
 ) (op.Result, *corev1.Secret, error) {
-	matchingLabels := client.MatchingLabels{
-		consts.SecretProvisioningLabelKey:               consts.SecretProvisioningAutomaticLabelValue,
-		consts.SecretAIGatewayDataPlaneCertificateLabel: "true",
-	}
-	if r.SecretLabelSelector != "" {
-		matchingLabels[r.SecretLabelSelector] = "true"
-	}
-	res, secret, err := secrets.EnsureCertificate(
-		ctx,
-		aigwdp,
-		fmt.Sprintf("%s.%s", aigwdp.Name, aigwdp.Namespace),
-		types.NamespacedName{
-			Namespace: r.ClusterCASecretNamespace,
-			Name:      r.ClusterCASecretName,
-		},
-		[]certificatesv1.KeyUsage{
-			certificatesv1.UsageKeyEncipherment,
-			certificatesv1.UsageDigitalSignature,
-			certificatesv1.UsageClientAuth,
-		},
-		r.Client,
-		matchingLabels,
-		r.CertTTL,
-	)
+	secretRef := aigwdp.Spec.CertificateSecret.SecretRef
+	name := secretRef.Name
+	ns := aigwdp.Namespace
+
+	secret := &corev1.Secret{}
+	err := cl.Get(ctx, types.NamespacedName{Namespace: ns, Name: name}, secret)
 	if err != nil {
+		if !apierrors.IsNotFound(err) {
+			// A transient API error or an RBAC denial isn't a missing-Secret
+			// problem: don't point the user at the label-selector requirement,
+			// and surface the error so the reconcile retries with backoff.
+			apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
+				Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+				Status:             metav1.ConditionFalse,
+				Reason:             string(aigatewayv1alpha1.UnableToProvisionReason),
+				Message:            fmt.Sprintf("failed to read certificate Secret %q: %v", name, err),
+				ObservedGeneration: aigwdp.Generation,
+			})
+			return op.Noop, nil, fmt.Errorf("failed to read certificate Secret %s/%s: %w", ns, name, err)
+		}
+		// A missing referenced Secret is an expected, user-fixable state: the
+		// condition points the user at the reference, and the Secret watch
+		// re-triggers the reconcile once the Secret appears, so there is no
+		// need to retry with error backoff.
 		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
 			Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
 			Status:             metav1.ConditionFalse,
-			Reason:             string(aigatewayv1alpha1.UnableToProvisionReason),
-			Message:            fmt.Sprintf("failed to provision mTLS certificate Secret: %v", err),
+			Reason:             string(aigatewayv1alpha1.CertificateSecretRefNotFoundReason),
+			Message:            aigatewayv1alpha1.CertificateSecretRefNotFoundMessage(name),
 			ObservedGeneration: aigwdp.Generation,
 		})
-		return op.Noop, nil, err
+		return op.Noop, nil, nil
 	}
+
+	if !secrets.IsTLSSecretValid(secret) {
+		apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
+			Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
+			Status:             metav1.ConditionFalse,
+			Reason:             string(aigatewayv1alpha1.CertificateSecretInvalidReason),
+			Message:            aigatewayv1alpha1.CertificateSecretInvalidMessage,
+			ObservedGeneration: aigwdp.Generation,
+		})
+		return op.Noop, nil, nil
+	}
+
 	apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
 		Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
 		Status:             metav1.ConditionTrue,
 		Reason:             string(aigatewayv1alpha1.CertificateProvisionedReason),
-		Message:            "mTLS certificate Secret provisioned",
+		Message:            "mTLS certificate Secret referenced and valid",
 		ObservedGeneration: aigwdp.Generation,
 	})
-	return res, secret, nil
+	return op.Noop, secret, nil
+}
+
+// isManualProvisioning reports whether the AIGatewayDataPlane is configured
+// with a manually-provisioned certificate Secret.
+func isManualProvisioning(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
+	cs := aigwdp.Spec.CertificateSecret
+	return cs != nil && cs.Provisioning != nil && *cs.Provisioning == aigatewayv1alpha1.ManualCertificateProvisioning
+}
+
+// cleanupStaleAutomaticCertificateSecret deletes the operator-provisioned
+// Automatic certificate Secret owned by aigwdp, if one still exists after a
+// switch to Manual provisioning. It must only be called once the Deployment
+// rollout onto the Manual Secret is confirmed complete, so that no running
+// replica is left depending on a Secret this removes. Switching back to
+// Automatic later simply provisions a new one; nothing guarantees the switch
+// back ever happens, so the Secret can't be left around indefinitely waiting
+// for it (owner-reference GC alone would only remove it when the
+// AIGatewayDataPlane itself is deleted).
+func cleanupStaleAutomaticCertificateSecret(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+) error {
+	matchingLabels := client.MatchingLabels{
+		consts.SecretProvisioningLabelKey:               consts.SecretProvisioningAutomaticLabelValue,
+		consts.SecretAIGatewayDataPlaneCertificateLabel: "true",
+	}
+	stale, err := k8sutils.ListSecretsForOwner(ctx, cl, aigwdp.GetUID(), client.InNamespace(aigwdp.Namespace), matchingLabels)
+	if err != nil {
+		return fmt.Errorf("failed to list automatic certificate Secrets for AIGatewayDataPlane %s/%s: %w",
+			aigwdp.Namespace, aigwdp.Name, err)
+	}
+	for i := range stale {
+		secret := &stale[i]
+		if err := cl.Delete(ctx, secret); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete stale automatic certificate Secret %s/%s: %w",
+				secret.Namespace, secret.Name, err)
+		}
+		log.Debug(logger, "stale automatic certificate Secret removed after switch to Manual provisioning", "name", secret.Name)
+	}
+	return nil
+}
+
+// cleanupStaleKonnectCertificates deletes every AIGatewayDataPlaneCertificate
+// owned by aigwdp except the one named currentCertName. It must only be
+// called once the Deployment rollout using the current certificate is
+// confirmed complete, so that no running replica is left depending on a
+// certificate this removes from Konnect (deleting the CR deprovisions the
+// underlying certificate via the Konnect entity finalizer).
+func cleanupStaleKonnectCertificates(
+	ctx context.Context,
+	cl client.Client,
+	logger logr.Logger,
+	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
+	currentCertName string,
+) error {
+	// Select by owner reference rather than the managed-by labels: certificates
+	// created before those labels existed still carry an owner reference (see
+	// SetOwnerForObject in the shared reconciler) and would otherwise be
+	// invisible to this List, left orphaned in Konnect forever.
+	var certs aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList
+	if err := cl.List(ctx, &certs, client.InNamespace(aigwdp.Namespace)); err != nil {
+		return fmt.Errorf("failed to list AIGatewayDataPlaneCertificates for AIGatewayDataPlane %s/%s: %w",
+			aigwdp.Namespace, aigwdp.Name, err)
+	}
+
+	for i := range certs.Items {
+		stale := &certs.Items[i]
+		if stale.Name == currentCertName || !metav1.IsControlledBy(stale, aigwdp) {
+			continue
+		}
+		if err := cl.Delete(ctx, stale); err != nil && !apierrors.IsNotFound(err) {
+			return fmt.Errorf("failed to delete stale AIGatewayDataPlaneCertificate %s/%s: %w",
+				stale.Namespace, stale.Name, err)
+		}
+		log.Debug(logger, "stale AIGatewayDataPlaneCertificate removed", "name", stale.Name)
+	}
+	return nil
 }

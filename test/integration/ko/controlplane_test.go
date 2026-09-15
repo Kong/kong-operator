@@ -29,23 +29,21 @@ import (
 )
 
 var dataplaneSpec = gov1beta1.DataPlaneSpec{
-	DataPlaneOptions: gov1beta1.DataPlaneOptions{
-		Deployment: gov1beta1.DataPlaneDeploymentOptions{
-			DeploymentOptions: gov1beta1.DeploymentOptions{
-				PodTemplateSpec: &corev1.PodTemplateSpec{
-					Spec: corev1.PodSpec{
-						Containers: []corev1.Container{
-							{
-								Name:  consts.DataPlaneProxyContainerName,
-								Image: helpers.GetDefaultDataPlaneImage(),
-								// Speed up the test.
-								ReadinessProbe: func() *corev1.Probe {
-									p := k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint)
-									p.InitialDelaySeconds = 1
-									p.PeriodSeconds = 1
-									return p
-								}(),
-							},
+	Deployment: gov1beta1.DataPlaneDeploymentOptions{
+		DeploymentOptions: gov1beta1.DeploymentOptions{
+			PodTemplateSpec: &corev1.PodTemplateSpec{
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  consts.DataPlaneProxyContainerName,
+							Image: helpers.GetDefaultDataPlaneImage(),
+							// Speed up the test.
+							ReadinessProbe: func() *corev1.Probe {
+								p := k8sresources.GenerateDataPlaneReadinessProbe(consts.DataPlaneStatusEndpoint)
+								p.InitialDelaySeconds = 1
+								p.PeriodSeconds = 1
+								return p
+							}(),
 						},
 					},
 				},
@@ -62,11 +60,9 @@ func TestControlPlaneEssentials(t *testing.T) {
 	namespace, cleaner := helpers.SetupTestEnv(t, ctx, integration.GetEnv())
 
 	dataplane := &gov1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "dp-essentials-",
-		},
-		Spec: dataplaneSpec,
+		Namespace:    namespace.Name,
+		GenerateName: "dp-essentials-",
+		Spec:         dataplaneSpec,
 	}
 	t.Log("deploying dataplane resource")
 	require.NoError(t, cl.Create(ctx, dataplane))
@@ -85,14 +81,10 @@ func TestControlPlaneEssentials(t *testing.T) {
 	}), testutils.ControlPlaneCondDeadline, testutils.ControlPlaneCondTick)
 
 	controlplane := &gwtypes.ControlPlane{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: gwtypes.ControlPlaneGVR().GroupVersion().String(),
-			Kind:       "ControlPlane",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "controlplane-",
-			Namespace:    namespace.Name,
-		},
+		APIVersion:   gwtypes.ControlPlaneGVR().GroupVersion().String(),
+		Kind:         "ControlPlane",
+		GenerateName: "controlplane-",
+		Namespace:    namespace.Name,
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				IngressClass: new(ingressClass),
@@ -151,9 +143,7 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 
 	createNamespace := func(t *testing.T, cl client.Client, cleaner *clusters.Cleaner, generateName string) *corev1.Namespace {
 		ns := &corev1.Namespace{
-			ObjectMeta: metav1.ObjectMeta{
-				GenerateName: generateName,
-			},
+			GenerateName: generateName,
 		}
 		require.NoError(t, cl.Create(ctx, ns))
 		cleaner.AddNamespace(ns)
@@ -163,10 +153,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 	nsB := createNamespace(t, cl, cleaner, "test-namespace-b")
 
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace:    namespace.Name,
-			GenerateName: "cp-watchnamespaces-",
-		},
+		Namespace:    namespace.Name,
+		GenerateName: "cp-watchnamespaces-",
 		Spec: gwtypes.ControlPlaneSpec{
 			DataPlane: gwtypes.ControlPlaneDataPlaneTarget{
 				Type: gwtypes.ControlPlaneDataPlaneTargetRefType,
@@ -248,10 +236,8 @@ func TestControlPlaneWatchNamespaces(t *testing.T) {
 func watchNamespaceGrantForNamespace(t *testing.T, cl client.Client, cp *gwtypes.ControlPlane, ns string) *gov1alpha1.WatchNamespaceGrant {
 	ctx := t.Context()
 	wng := &gov1alpha1.WatchNamespaceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: ns + "-refgrant-",
-			Namespace:    ns,
-		},
+		GenerateName: ns + "-refgrant-",
+		Namespace:    ns,
 		Spec: gov1alpha1.WatchNamespaceGrantSpec{
 			From: []gov1alpha1.WatchNamespaceGrantFrom{
 				{
@@ -280,10 +266,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Name:      uuid.NewString(),
 	}
 	dataplane := &gov1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
-		},
+		Namespace: dataplaneName.Namespace,
+		Name:      dataplaneName.Name,
 		Spec: gov1beta1.DataPlaneSpec{
 			DataPlaneOptions: gov1beta1.DataPlaneOptions{
 				Deployment: gov1beta1.DataPlaneDeploymentOptions{
@@ -313,10 +297,8 @@ func TestControlPlaneUpdate(t *testing.T) {
 		Name:      uuid.NewString(),
 	}
 	cp := &gwtypes.ControlPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: controlplaneName.Namespace,
-			Name:      controlplaneName.Name,
-		},
+		Namespace: controlplaneName.Namespace,
+		Name:      controlplaneName.Name,
 		Spec: gwtypes.ControlPlaneSpec{
 			ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 				IngressClass: new(ingressClass),

@@ -13,6 +13,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	kogateway "github.com/kong/kong-operator/v2/controller/gateway"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	testutils "github.com/kong/kong-operator/v2/pkg/utils/test"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 	"github.com/kong/kong-operator/v2/test/envtest"
@@ -30,10 +31,12 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
+		DataPlaneIPFamily:     ipfamily.IPv4,
 		Client:                mgr.GetClient(),
 		Scheme:                scheme,
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
+		ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 	}
 	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
@@ -224,10 +227,12 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 	mgr, logs := envtest.NewManager(t, ctx, cfg, scheme)
 
 	r := &kogateway.Reconciler{
+		DataPlaneIPFamily:     ipfamily.IPv4,
 		Client:                mgr.GetClient(),
 		Scheme:                scheme,
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
+		ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 	}
 	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 

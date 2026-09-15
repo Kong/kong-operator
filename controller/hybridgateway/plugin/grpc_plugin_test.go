@@ -31,14 +31,12 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	logger := logr.Discard()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "grpc-tag, shared-tag",
-			},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "grpc-tag, shared-tag",
 		},
 	}
 	parentRef := &gwtypes.ParentReference{
@@ -80,11 +78,9 @@ func TestGRPCPluginsForRule_UnsupportedFilterErrors(t *testing.T) {
 	logger := logr.Discard()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
 	}
 	rule := gwtypes.GRPCRouteRule{
 		Filters: []gatewayv1.GRPCRouteFilter{
@@ -155,17 +151,13 @@ func TestGetReferencedKongPluginForGRPCFilter(t *testing.T) {
 			},
 			namespace: "default",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-plugin",
-					Namespace: "default",
-				},
+				Name:       "test-plugin",
+				Namespace:  "default",
 				PluginName: "rate-limiting",
 			},
 		},
@@ -194,20 +186,16 @@ func TestGetReferencedKongPluginForGRPCFilter(t *testing.T) {
 			},
 			namespace: "test-namespace",
 			existingPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
 				},
 			},
 			expectedPlugin: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "complex-plugin",
-					Namespace: "test-namespace",
-				},
+				Name:       "complex-plugin",
+				Namespace:  "test-namespace",
 				PluginName: "custom-plugin",
 				Config: apiextensionsv1.JSON{
 					Raw: []byte(`{"key":"value"}`),
@@ -249,14 +237,12 @@ func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "route-tag",
-			},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
 		},
 	}
 	parentRef := &gwtypes.ParentReference{
@@ -264,12 +250,10 @@ func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-			Annotations: map[string]string{
-				pkgmetadata.AnnotationKeyTags: "plugin-tag",
-			},
+		Name:      "referenced-plugin",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "plugin-tag",
 		},
 		PluginName: "rate-limiting",
 	}
@@ -304,22 +288,18 @@ func TestGRPCPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta: grpcRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "test-namespace",
-			UID:       "test-uid",
-		},
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
 	}
 
 	referencedPlugin := &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "referenced-plugin",
-			Namespace: "test-namespace",
-		},
+		Name:       "referenced-plugin",
+		Namespace:  "test-namespace",
 		PluginName: "rate-limiting",
 		Tags:       commonv1alpha1.Tags{"team-payments", "env-prod"},
 	}
@@ -347,4 +327,49 @@ func TestGRPCPluginsForRule_ExtensionRef_Tags(t *testing.T) {
 	require.Len(t, plugins, 1)
 
 	assert.Equal(t, commonv1alpha1.Tags{"team-payments", "env-prod"}, plugins[0].Tags)
+}
+
+func TestGRPCPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		UID:       "test-uid",
+	}
+	parentRef := &gwtypes.ParentReference{
+		Name: "test-gateway",
+	}
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{
+			{
+				Type: gatewayv1.GRPCRouteFilterExtensionRef,
+				ExtensionRef: &gatewayv1.LocalObjectReference{
+					Group: gatewayv1.Group(configurationv1.GroupVersion.Group),
+					Kind:  "KongPlugin",
+					Name:  "referenced-plugin",
+				},
+			},
+		},
+	}
+
+	for _, tc := range resolvedConfigCases() {
+		t.Run(tc.name, func(t *testing.T) {
+			fakeClient := fakectrlruntimeclient.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tc.objects()...).
+				Build()
+
+			plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+			if tc.expectedErr != "" {
+				require.ErrorContains(t, err, tc.expectedErr)
+				return
+			}
+			require.NoError(t, err)
+			require.Len(t, plugins, 1)
+			assert.JSONEq(t, tc.expected, string(plugins[0].Config.Raw))
+		})
+	}
 }

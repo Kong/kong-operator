@@ -39,6 +39,10 @@ type grpcRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
 // HandleOrphanedResource removes this GRPCRoute from an orphaned resource's hybrid-routes annotation.
@@ -134,16 +138,27 @@ func (c *grpcRouteConverter) GetOutputStore(_ context.Context, logger logr.Logge
 
 // UpdateRootObjectStatus reconciles the GRPCRoute status conditions for its parent references.
 func (c *grpcRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForGRPCRoute)
+	return route.UpdateRouteStatus(
+		ctx, logger, c.Client, c.referenceGrantVersion, c.route, c.expectedGVKs,
+		route.BuildResolvedRefsConditionForGRPCRoute,
+	)
 }
 
-func newGRPCRouteConverter(grpcRoute *gwtypes.GRPCRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.GRPCRoute] {
+func newGRPCRouteConverter(
+	grpcRoute *gwtypes.GRPCRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.GRPCRoute] {
 	return &grpcRouteConverter{
 		Client:        cl,
 		route:         grpcRoute,
 		outputStore:   []client.Object{},
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongRoute"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongTarget"},
@@ -203,6 +218,7 @@ func (c *grpcRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

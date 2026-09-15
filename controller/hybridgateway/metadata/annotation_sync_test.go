@@ -8,7 +8,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -39,11 +38,9 @@ func newKongUpstreamUnstructured(annotations map[string]string) *unstructured.Un
 
 func TestEnsureRouteInAnnotation(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "route-a",
+		Namespace: "ns",
 	}
 	routeKey := client.ObjectKeyFromObject(route).String()
 	key := client.ObjectKey{Namespace: "ns", Name: "up-1"}
@@ -93,11 +90,9 @@ func TestEnsureRouteInAnnotation(t *testing.T) {
 
 func TestEnsureRouteInAnnotation_ReportsMissingWhenObjectAbsent(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "route-a",
+		Namespace: "ns",
 	}
 
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
@@ -116,11 +111,9 @@ func TestEnsureRouteInAnnotation_SkipsUntrackedRouteKind(t *testing.T) {
 	// A Gateway is not tracked via the hybrid-routes annotation; the helper must be a no-op and
 	// must not even attempt to mutate the object.
 	gateway := &gwtypes.Gateway{
-		TypeMeta: metav1.TypeMeta{Kind: "Gateway", APIVersion: "gateway.networking.k8s.io/v1"},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "gw",
-			Namespace: "ns",
-		},
+		Kind: "Gateway", APIVersion: "gateway.networking.k8s.io/v1",
+		Name:      "gw",
+		Namespace: "ns",
 	}
 	existing := newKongUpstreamUnstructured(nil)
 	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(existing).Build()
@@ -140,11 +133,9 @@ func TestEnsureRouteInAnnotation_SkipsUntrackedRouteKind(t *testing.T) {
 
 func TestEnsureRouteInAnnotation_ReturnsConflictForRequeue(t *testing.T) {
 	route := &gwtypes.HTTPRoute{
-		TypeMeta: httpRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-a",
-			Namespace: "ns",
-		},
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "route-a",
+		Namespace: "ns",
 	}
 	key := client.ObjectKey{Namespace: "ns", Name: "up-1"}
 

@@ -9,7 +9,6 @@ import (
 
 	"github.com/samber/lo"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
@@ -27,6 +26,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -109,10 +109,8 @@ func (r *Reconciler) listGatewaysForGatewayClass(ctx context.Context, obj client
 	for _, gateway := range gateways.Items {
 		if gateway.Spec.GatewayClassName == gatewayv1.ObjectName(gatewayClass.Name) {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}
@@ -148,10 +146,8 @@ func (r *Reconciler) listGatewaysForKonnectExtension(ctx context.Context, ext *k
 	gatewayConfigurationsRequests := index.ListObjectsReferencingKonnectExtension(r.Client, &operatorv2beta1.GatewayConfigurationList{})(ctx, ext)
 	gatewayConfigurations := lo.Map(gatewayConfigurationsRequests, func(req reconcile.Request, _ int) operatorv2beta1.GatewayConfiguration {
 		return operatorv2beta1.GatewayConfiguration{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: req.Namespace,
-				Name:      req.Name,
-			},
+			Namespace: req.Namespace,
+			Name:      req.Name,
 		}
 	})
 	affectedGateways := make([]reconcile.Request, 0)
@@ -211,10 +207,8 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 	for _, gateway := range gatewayList.Items {
 		if _, ok := matchingGatewayClasses[string(gateway.Spec.GatewayClassName)]; ok {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: gateway.Namespace,
-					Name:      gateway.Name,
-				},
+				Namespace: gateway.Namespace,
+				Name:      gateway.Name,
 			})
 		}
 	}
@@ -226,12 +220,12 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	grant, ok := obj.(*gwtypes.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),
 			"Referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}
@@ -384,10 +378,8 @@ func (r *Reconciler) listManagedGatewaysInNamespace(ctx context.Context, obj cli
 			continue
 		}
 		recs = append(recs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: gateway.Namespace,
-				Name:      gateway.Name,
-			},
+			Namespace: gateway.Namespace,
+			Name:      gateway.Name,
 		})
 	}
 	return recs

@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
@@ -23,7 +22,7 @@ func TestKongSNIBuilder_BasicFields(t *testing.T) {
 
 func TestKongSNIBuilder_WithLabels(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw1", Namespace: "ns1"},
+		Name: "gw1", Namespace: "ns1",
 	}
 	listener := &gwtypes.Listener{Port: 443}
 	b := NewKongSNI().WithLabels(gw, listener)
@@ -36,7 +35,7 @@ func TestKongSNIBuilder_WithLabels(t *testing.T) {
 
 func TestKongSNIBuilder_WithLabels_NilListener(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw2", Namespace: "ns2"},
+		Name: "gw2", Namespace: "ns2",
 	}
 	b := NewKongSNI().WithLabels(gw, nil)
 	sni, err := b.Build()
@@ -47,7 +46,7 @@ func TestKongSNIBuilder_WithLabels_NilListener(t *testing.T) {
 
 func TestKongSNIBuilder_WithAnnotations(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw3", Namespace: "ns3"},
+		Name: "gw3", Namespace: "ns3",
 	}
 	b := NewKongSNI().WithAnnotations(gw)
 	sni, err := b.Build()
@@ -57,7 +56,7 @@ func TestKongSNIBuilder_WithAnnotations(t *testing.T) {
 
 func TestKongSNIBuilder_WithOwner(t *testing.T) {
 	gw := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{Name: "gw4", Namespace: "ns4"},
+		Name: "gw4", Namespace: "ns4",
 	}
 	b := NewKongSNI().WithOwner(gw)
 	_, err := b.Build()

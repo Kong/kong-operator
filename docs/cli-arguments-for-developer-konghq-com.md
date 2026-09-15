@@ -160,6 +160,10 @@ rows:
     type: '`bool`'
     description: "Enable the Konnect controllers."
     default: '`false`'
+  - flag: '`--enable-controller-onpremaigateway`'
+    type: '`bool`'
+    description: "Enable the on-prem AI Gateway (control plane) controller."
+    default: '`false`'
   - flag: '`--enable-controlplane-config-dump`'
     type: '`bool`'
     description: "Enable the server to dump generated Kong configuration from ControlPlanes. Only effective when ControlPlane controller is enabled."
@@ -192,6 +196,10 @@ rows:
     type: '`string`'
     description: "The address the probe endpoint binds to."
     default: '`:8081`'
+  - flag: '`--ip-family`'
+    type: '`string`'
+    description: "IP family of the cluster, used e.g. to decide which IP family (or families) DataPlanes' Kong listens bind to. Possible values: auto, ipv4, ipv6, dual. When 'auto' (default), the operator detects the cluster's IP family at startup and exits with an error if detection fails."
+    default: '`"auto"`'
   - flag: '`--konnect-controller-max-concurrent-reconciles`'
     type: '`uint`'
     description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."

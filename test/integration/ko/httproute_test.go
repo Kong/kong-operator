@@ -151,12 +151,10 @@ func TestHTTPRouteWithTLS(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithDNSNames(host))
 
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      host,
-			Labels: map[string]string{
-				config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
-			},
+		Namespace: namespace.Name,
+		Name:      host,
+		Labels: map[string]string{
+			config.DefaultSecretLabelSelector: config.LabelValueForSelectorTrue,
 		},
 		Type: corev1.SecretTypeTLS,
 		Data: map[string][]byte{

@@ -189,10 +189,8 @@ func TestSpecificGatewayNN(t *testing.T) {
 
 	t.Run("changes to referencegrant used by not configured gateway do not get gateway's listener status filled", func(t *testing.T) {
 		refGrant := gatewayapi.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "refgrant-1",
-				Namespace: nnIgnored.Namespace,
-			},
+			Name:      "refgrant-1",
+			Namespace: nnIgnored.Namespace,
 			Spec: gatewayapi.ReferenceGrantSpec{
 				From: []gatewayapi.ReferenceGrantFrom{
 					{

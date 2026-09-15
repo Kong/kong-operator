@@ -151,10 +151,8 @@ func TestGatewayListenerConflicts(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithCommonName(ns.Name + ".example.com"))
 	certName := "cert"
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      certName,
-			Namespace: ns.Name,
-		},
+		Name:      certName,
+		Namespace: ns.Name,
 		Data: map[string][]byte{
 			"tls.crt": cert,
 			"tls.key": key,
@@ -381,11 +379,9 @@ func TestGatewayFilters(t *testing.T) {
 	t.Logf("creating an httproute to access deployment %s via kong", deployment.Name)
 	HTTPRoute := func() *gatewayapi.HTTPRoute {
 		return &gatewayapi.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: uuid.NewString(),
-				Annotations: map[string]string{
-					annotations.AnnotationPrefix + annotations.StripPathKey: "true",
-				},
+			Name: uuid.NewString(),
+			Annotations: map[string]string{
+				annotations.AnnotationPrefix + annotations.StripPathKey: "true",
 			},
 			Spec: gatewayapi.HTTPRouteSpec{
 				CommonRouteSpec: gatewayapi.CommonRouteSpec{

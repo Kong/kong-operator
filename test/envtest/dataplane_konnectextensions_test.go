@@ -30,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
@@ -63,12 +64,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				certificate.WithKeyType(keyType),
 			)
 			caSecret := &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: clusterCASecretNN.Namespace,
-					Name:      clusterCASecretNN.Name,
-					Labels: map[string]string{
-						"konghq.com/secret": "internal",
-					},
+				Namespace: clusterCASecretNN.Namespace,
+				Name:      clusterCASecretNN.Name,
+				Labels: map[string]string{
+					"konghq.com/secret": "internal",
 				},
 				Type: corev1.SecretTypeTLS,
 				Data: map[string][]byte{
@@ -79,6 +78,7 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 			require.NoError(t, cl.Create(ctx, caSecret))
 
 			dpReconciler := &dataplane.Reconciler{
+				DataPlaneIPFamily:        ipfamily.IPv4,
 				Client:                   cl,
 				ClusterCASecretName:      clusterCASecretNN.Name,
 				ClusterCASecretNamespace: clusterCASecretNN.Namespace,
@@ -138,10 +138,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				t.Logf("Creating KonnectExtension")
 				konnectExtension := konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "ke-",
-						Namespace:    ns.Name,
-					},
+					GenerateName: "ke-",
+					Namespace:    ns.Name,
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -159,19 +157,15 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				t.Logf("Creating DataPlane with KonnectExtension reference")
 				dp := operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					GenerateName: "dp-",
+					Namespace:    ns.Name,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: konnectv1alpha1.GroupVersion.Group,
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: konnectExtension.Name,
-									},
+									Name:  konnectExtension.Name,
 								},
 							},
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -332,10 +326,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				t.Logf("Creating KonnectExtension")
 				konnectExtension := konnectv1alpha2.KonnectExtension{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "ke-",
-						Namespace:    ns.Name,
-					},
+					GenerateName: "ke-",
+					Namespace:    ns.Name,
 					Spec: konnectv1alpha2.KonnectExtensionSpec{
 						Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
 							ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
@@ -353,19 +345,15 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				t.Logf("Creating DataPlane with KonnectExtension reference")
 				dp := operatorv1beta1.DataPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "dp-",
-						Namespace:    ns.Name,
-					},
+					GenerateName: "dp-",
+					Namespace:    ns.Name,
 					Spec: operatorv1beta1.DataPlaneSpec{
 						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 							Extensions: []commonv1alpha1.ExtensionRef{
 								{
 									Group: konnectv1alpha1.GroupVersion.Group,
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: konnectExtension.Name,
-									},
+									Name:  konnectExtension.Name,
 								},
 							},
 							Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -375,10 +363,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 											Volumes: []corev1.Volume{
 												{
 													Name: "custom-volume",
-													VolumeSource: corev1.VolumeSource{
-														EmptyDir: &corev1.EmptyDirVolumeSource{
-															SizeLimit: resource.NewQuantity(100, resource.Format("Gi")),
-														},
+													EmptyDir: &corev1.EmptyDirVolumeSource{
+														SizeLimit: resource.NewQuantity(100, resource.Format("Gi")),
 													},
 												},
 											},
@@ -527,12 +513,10 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 					certificate.WithKeyType(keyType),
 				)
 				sharedSecret := &corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						GenerateName: "shared-dp-cert-",
-						Namespace:    ns.Name,
-						Labels: map[string]string{
-							konnect.SecretKonnectDataPlaneCertificateLabel: "true",
-						},
+					GenerateName: "shared-dp-cert-",
+					Namespace:    ns.Name,
+					Labels: map[string]string{
+						konnect.SecretKonnectDataPlaneCertificateLabel: "true",
 					},
 					Type: corev1.SecretTypeTLS,
 					Data: map[string][]byte{
@@ -545,10 +529,8 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 				mkExtension := func(name, cpName string) *konnectv1alpha2.KonnectExtension {
 					provisioning := konnectv1alpha2.ManualSecretProvisioning
 					return &konnectv1alpha2.KonnectExtension{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      name,
-							Namespace: ns.Name,
-						},
+						Name:      name,
+						Namespace: ns.Name,
 						Spec: konnectv1alpha2.KonnectExtensionSpec{
 							ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
 								CertificateSecret: konnectv1alpha2.CertificateSecret{
@@ -580,15 +562,13 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				mkDP := func(name, extName string) *operatorv1beta1.DataPlane {
 					return &operatorv1beta1.DataPlane{
-						ObjectMeta: metav1.ObjectMeta{Name: name, Namespace: ns.Name},
+						Name: name, Namespace: ns.Name,
 						Spec: operatorv1beta1.DataPlaneSpec{
 							DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 								Extensions: []commonv1alpha1.ExtensionRef{{
 									Group: konnectv1alpha1.GroupVersion.Group,
 									Kind:  "KonnectExtension",
-									NamespacedRef: commonv1alpha1.NamespacedRef{
-										Name: extName,
-									},
+									Name:  extName,
 								}},
 								Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 									DeploymentOptions: operatorv1beta1.DeploymentOptions{

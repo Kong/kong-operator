@@ -17,7 +17,6 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/controller/dataplane/certificates"
-	dataplanepkg "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/patch"
@@ -25,6 +24,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/config"
 	"github.com/kong/kong-operator/v2/internal/versions"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	k8sreduce "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/reduce"
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
@@ -58,6 +58,7 @@ type DeploymentBuilder struct {
 	additionalLabels       client.MatchingLabels
 	defaultImage           string
 	opts                   []k8sresources.DeploymentOpt
+	ipFamily               ipfamily.IPFamily
 
 	secretLabelSelector string
 }
@@ -92,6 +93,13 @@ func (d *DeploymentBuilder) WithDefaultImage(image string) *DeploymentBuilder {
 // to be reconciled by other controllers.
 func (d *DeploymentBuilder) WithSecretLabelSelector(key string) *DeploymentBuilder {
 	d.secretLabelSelector = key
+	return d
+}
+
+// WithIPFamily configures which IP family (or families) the generated
+// Deployment's Kong listens should bind to.
+func (d *DeploymentBuilder) WithIPFamily(family ipfamily.IPFamily) *DeploymentBuilder {
+	d.ipFamily = family
 	return d
 }
 
@@ -153,7 +161,11 @@ func (d *DeploymentBuilder) BuildAndDeploy(
 		return nil, op.Noop, err
 	}
 	// apply default envvars and restore the hacked-out ones
-	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, config.KongDefaults)
+	kongDefaults, err := config.KongDefaults(d.ipFamily)
+	if err != nil {
+		return nil, op.Noop, fmt.Errorf("failed to compute Kong defaults for the DataPlane: %w", err)
+	}
+	desiredDeployment = applyEnvForDataPlane(existingEnvVars, desiredDeployment, kongDefaults)
 
 	if err := k8sresources.AnnotateObjWithHash(desiredDeployment.Unwrap(), deploymentRelevantDataPlaneSpec(dataplane)); err != nil {
 		return nil, op.Noop, err
@@ -271,7 +283,7 @@ func listOrReduceDataPlaneDeployments(
 
 	count := len(deployments)
 	if count > 1 {
-		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, dataplanepkg.OwnedObjectPreDeleteHook); err != nil {
+		if err := k8sreduce.ReduceDeployments(ctx, cl, deployments, k8sreduce.OwnedObjectPreDeleteHook); err != nil {
 			return false, nil, err
 		}
 		return true, nil, errors.New("number of deployments reduced")

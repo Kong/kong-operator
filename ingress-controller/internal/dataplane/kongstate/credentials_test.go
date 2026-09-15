@@ -56,15 +56,15 @@ func TestKeyAuth_SanitizedCopy(t *testing.T) {
 	}
 
 	t.Run("deterministic: same key produces same redacted value across calls", func(t *testing.T) {
-		ka := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("mykey")}}
+		ka := KeyAuth{Key: new("mykey")}
 		got1 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		got2 := ka.SanitizedCopy(StaticUUIDGenerator{UUID: "y"})
 		assert.Equal(t, got1.Key, got2.Key, "same real key must produce same redacted key regardless of uuidGenerator")
 	})
 
 	t.Run("different keys produce different redacted values", func(t *testing.T) {
-		ka1 := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("keyA")}}
-		ka2 := KeyAuth{KeyAuth: kong.KeyAuth{Key: new("keyB")}}
+		ka1 := KeyAuth{Key: new("keyA")}
+		ka2 := KeyAuth{Key: new("keyB")}
 		got1 := ka1.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		got2 := ka2.SanitizedCopy(StaticUUIDGenerator{UUID: "x"})
 		assert.NotEqual(t, got1.Key, got2.Key, "different real keys must produce different redacted keys")
@@ -212,6 +212,41 @@ func TestOauth2Credential_SanitizedCopy(t *testing.T) {
 					ClientSecret: redactedString,
 					RedirectURIs: []*string{new("6.1"), new("6.2")},
 					Tags:         []*string{new("7.1"), new("7.2")},
+				},
+			},
+		},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			got := *tt.in.SanitizedCopy()
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestMTLSAuth_SanitizedCopy(t *testing.T) {
+	for _, tt := range []struct {
+		name string
+		in   MTLSAuth
+		want MTLSAuth
+	}{
+		{
+			name: "omits Consumer and CACertificate, keeps the rest",
+			in: MTLSAuth{
+				MTLSAuth: kong.MTLSAuth{
+					Consumer:      &kong.Consumer{Username: new("foo")},
+					CreatedAt:     new(1),
+					ID:            new("2"),
+					SubjectName:   new("foo@example.com"),
+					CACertificate: &kong.CACertificate{Cert: new("ca-cert-data")},
+					Tags:          []*string{new("3.1"), new("3.2")},
+				},
+			},
+			want: MTLSAuth{
+				MTLSAuth: kong.MTLSAuth{
+					CreatedAt:   new(1),
+					ID:          new("2"),
+					SubjectName: new("foo@example.com"),
+					Tags:        []*string{new("3.1"), new("3.2")},
 				},
 			},
 		},

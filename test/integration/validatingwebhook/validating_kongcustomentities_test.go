@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/annotations"
@@ -27,9 +26,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "entity not supported in Kong",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "not-supported-entity",
-				},
+				Name: "not-supported-entity",
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "invalid_entity",
 					ControllerName: ingressClass,
@@ -43,11 +40,9 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "valid session entity",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "session-1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "session-1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "sessions",
@@ -60,11 +55,9 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "invalid session entity",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "session-1",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "session-1",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "sessions",
@@ -78,9 +71,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "valid degraphql_route entity",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "degraphql-route-1",
-				},
+				Name: "degraphql-route-1",
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
 					ControllerName: ingressClass,
@@ -93,9 +84,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "invalid degraphql_route entity",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "degraphql-route-1",
-				},
+				Name: "degraphql-route-1",
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType:     "degraphql_routes",
 					ControllerName: ingressClass,
@@ -109,9 +98,7 @@ func TestAdmissionWebhook_KongCustomEntities(t *testing.T) {
 		{
 			name: "KongCustomEntity not controlled by the current controller",
 			entity: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "unrelated-entity",
-				},
+				Name: "unrelated-entity",
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "unrelated_entity",
 					Fields: apiextensionsv1.JSON{

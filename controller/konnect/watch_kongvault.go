@@ -140,9 +140,7 @@ func enqueueKongVaultForKonnectAPIAuthConfiguration(
 				// Append the KongVault to reconcile request list when the controlPlaneRef of the KongVault is pointing to the control plane
 				// which references the affected API auth configuration.
 				ret = append(ret, reconcile.Request{
-					NamespacedName: types.NamespacedName{
-						Name: vault.Name,
-					},
+					Name: vault.Name,
 				})
 
 			default:

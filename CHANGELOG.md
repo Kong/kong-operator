@@ -2,12 +2,15 @@
 
 ## Table of Contents
 
+- [v2.3.1](#v231)
 - [v2.3.0](#v230)
+- [v2.2.5](#v225)
 - [v2.2.4](#v224)
 - [v2.2.3](#v223)
 - [v2.2.2](#v222)
 - [v2.2.1](#v221)
 - [v2.2.0](#v220)
+- [v2.1.11](#v2111)
 - [v2.1.10](#v2110)
 - [v2.1.9](#v219)
 - [v2.1.8](#v218)
@@ -66,13 +69,75 @@
 - `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
   via `spec.deployment.scaling.horizontal`.
   [#5556](https://github.com/Kong/kong-operator/pull/5556)
+- Added `OnPremAIGateway` CRD: the on-prem (non-Konnect) control plane for
+  `AIGatewayDataPlane`. This change only adds the CRD; it is not reconciled yet.
+  [#5567](https://github.com/Kong/kong-operator/issues/5567)
+- Added a reconciler for `OnPremAIGateway`, gated behind the new
+  `--enable-controller-onpremaigateway` flag (env
+  `KONG_OPERATOR_ENABLE_CONTROLLER_ONPREMAIGATEWAY`, default `false`). For now it
+  only reports readiness; configuration aggregation and pushing to data planes
+  land in a later change.
+  [#5567](https://github.com/Kong/kong-operator/issues/5567)
+- `AIGatewayDataPlane`: added `spec.certificateSecret.{provisioning,secretRef}`,
+  letting users supply their own same-namespace TLS Secret for the mTLS client
+  certificate instead of relying on operator auto-provisioning, with support
+  for switching between `Manual` and `Automatic` provisioning.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
+- `OnPremAIGateway`: the reconciler now runs an in-process control plane instance
+  per resource and tears it down when the resource is deleted. The restart on
+  configuration change is wired but not effective yet: the instance configuration
+  is not assembled from the spec in this change, so full configuration handling
+  (including restarts driven by spec changes) lands in a later change.
+  [#5402](https://github.com/Kong/kong-operator/issues/5402)
+- Added `AIGatewayCACertificate` CRD: manage Konnect AI Gateway CA
+  certificates (`aiconfiguration.konghq.com/v1alpha1`), parented to
+  `KonnectAIGateway`, with the certificate PEM sourced from a Kubernetes
+  `Secret`.
+  [#5656](https://github.com/Kong/kong-operator/pull/5656)
+- Added `AIGatewayCertificate` CRD: manage Konnect AI Gateway certificates
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  with the certificate, private key, and alternate cert/key sourced from a
+  Kubernetes `Secret`.
+  [#5658](https://github.com/Kong/kong-operator/pull/5658)
+- Added `AIGatewaySNI` CRD: manage Konnect AI Gateway SNIs
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  with the SNI associated to an `AIGatewayCertificate` by certificate reference.
+  [#5667](https://github.com/Kong/kong-operator/pull/5667)
+- `OnPremAIGateway`: the reconciler now lists the `AIGatewayModel`s referencing it,
+  translates each into `github.com/Kong/ai-deck-converter`'s entity model, and
+  renders the result into a dbless configuration payload, restarting the control
+  plane instance when it changes. The other nine `aiconfiguration` entity kinds
+  aren't translated yet, so the rendered payload isn't a complete, pushable
+  configuration on its own; pushing it to data planes is also not wired yet.
+  [#5661](https://github.com/Kong/kong-operator/pull/5661)
+
+### Breaking changes
+
+- `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
+  client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
+  This corrects a bug where a certificate was previously always auto-provisioned
+  and signed by the operator's shared cluster CA (the same one used for
+  `ControlPlane`/`DataPlane` hybrid-mode mTLS elsewhere), regardless of whether
+  there was any control plane configured to use it. On upgrade, an existing
+  `controlPlaneRef`-less `AIGatewayDataPlane` hand-wired (via
+  `spec.deployment.podTemplateSpec`) to a same-cluster, operator-managed
+  `ControlPlane` loses that auto-issued certificate and must supply its own via
+  `spec.deployment.podTemplateSpec`. `spec.certificateSecret` is not a valid
+  remedy here: with no `spec.controlPlaneRef` it sets
+  `CertificateProvisioned=False/ControlPlaneRefMissing` and the operator stops
+  reconciling the Deployment, the HPA and the ingress Service entirely.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
+- `AIGatewayDataPlane`: the Deployment's Pod template now carries a certificate
+  checksum annotation. On upgrade, this causes a one-time rolling restart of
+  every existing `AIGatewayDataPlane` Deployment that has a `spec.controlPlaneRef`.
+  [#5548](https://github.com/Kong/kong-operator/pull/5548)
 
 ### Fixes
 
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
-  ** This change will delete the combined Kong routes created for the matches with
+  This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
 - Gateway: When using `gateway-operator.konghq.com/static-naming: "true"`, the name of
@@ -84,6 +149,50 @@
   Note: Gateways with the same namespace and name deployed to multiple clusters sharing a
   Konnect organization still conflict; use `spec.konnect.mirror` for that scenario.
   [#4079](https://github.com/Kong/kong-operator/issues/4079)
+- Konnect-hybrid gateways: resolve `spec.configFrom` and `spec.configPatches` of a
+  `KongPlugin` attached to an `HTTPRoute` or `GRPCRoute` through an `ExtensionRef`
+  filter. Both fields were previously ignored, so a plugin whose configuration came
+  from a `Secret` was pushed to Konnect without it. The referenced `Secret`s are now
+  watched, so changing one triggers a reconcile, and a failure to resolve them is
+  reported instead of silently yielding an empty configuration.
+  [#5600](https://github.com/Kong/kong-operator/pull/5600)
+- Konnect reconciler: release the cleanup finalizer with a non-optimistic merge
+  patch instead of an optimistic-locked update. A stale cached `resourceVersion`
+  could previously make that write conflict, which silently requeued the
+  reconcile and deleted the same entity from Konnect a second time.
+- MCP server: an advanced-mode `MCPServer` (user-created, not mirrored by the
+  operator) was deleted on the first sync after creation, because the control
+  plane sync withheld its Konnect ID from the set of servers considered still
+  present. It is now kept, and it is annotated with the latest Konnect MCP
+  signal and reconciled like a mirrored `MCPServer`.
+- MCP server: a new Konnect MCP signal now redeploys the `MCPServerDataPlane`'s
+  `Deployment` so its init container re-fetches the updated server code.
+  Previously, only a change in the remote MCP server's own version triggered a
+  redeploy, so config changes surfaced through the signal API alone were never
+  picked up.
+  [#5643](https://github.com/Kong/kong-operator/pull/5643)
+- On-prem gateway: keep tags of translated Kong certificate stable when multiple
+  `Secret`s have the same certificate content. The tags generated from the `Secret`
+  with the earliest creation timestamp are chosen, and the one with the lowest
+  UID when a tie happens.
+  This aligns with choosing ID of the translated certificate.
+  [#5657](https://github.com/Kong/kong-operator/pull/5657)
+- Fix compatibility with Gateway API in version lower than v1.5.0,
+  where `ReferenceGrant` is only served at `v1beta1`.
+  [#5683](https://github.com/Kong/kong-operator/pull/5683)
+
+## [v2.3.1]
+
+> Release date: 2026-09-09
+
+### Fixes
+
+- On-prem gateway: generate a distinct Kong route for each match when its parent
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
+  This change will delete the combined Kong routes created for the matches with
+  these filters in their parent rules and create new distinct ones.
+ [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5542](https://github.com/Kong/kong-operator/pull/5542)
 
 ## [v2.3.0]
 
@@ -586,6 +695,32 @@
   desired replicas to be updated and available.
   [#5425](https://github.com/Kong/kong-operator/pull/5425)
 
+## [v2.2.5]
+
+> Release date: 2026-09-09
+
+### Fixes
+
+- On-prem gateway: generate a distinct Kong route for each match when its parent
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
+  This change will delete the combined Kong routes created for the matches with
+  these filters in their parent rules and create new distinct ones.
+ [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5559](https://github.com/Kong/kong-operator/pull/5559)
+- HybridGateway: merge the current Route reference with existing
+  `hybrid-routes` annotations during state enforcement so Routes that share a
+  Kong resource no longer overwrite each other's references and continuously
+  reapply the resource.
+  [#4944](https://github.com/Kong/kong-operator/pull/4944) [#5441](https://github.com/Kong/kong-operator/pull/5441)
+- HybridGateway: fix KongRoute created without updating KongService's
+  `hybrid-routes` annotation.
+  [#5136](https://github.com/Kong/kong-operator/pull/5136) [#5442](https://github.com/Kong/kong-operator/pull/5442)
+- HybridGateway: shared Kong resources now converge when referenced by Routes
+  attached to multiple Gateways, and SSA no-op detection correctly handles
+  preserve-unknown fields. This prevents repeated apply loops from blocking
+  stale resource cleanup after workload rollouts.
+  [#5410](https://github.com/Kong/kong-operator/pull/5410) [#5429](https://github.com/Kong/kong-operator/pull/5429)
+
 ## [v2.2.4]
 
 > Release date: 2026-08-27
@@ -1000,6 +1135,19 @@
   the transition, both old and new entries may be present in Konnect
   simultaneously as creation and orphan cleanup are not synchronized.
   [#4509](https://github.com/Kong/kong-operator/pull/4509)
+
+## [v2.1.11]
+
+> Release date: 2026-09-09
+
+### Fixes
+
+- On-prem gateway: generate a distinct Kong route for each match when its parent
+ `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
+ `requestRedirect` filter.
+  This change will delete the combined Kong routes created for the matches with
+  these filters in their parent rules and create new distinct ones.
+ [#5521](https://github.com/Kong/kong-operator/pull/5521) [#5562](https://github.com/Kong/kong-operator/pull/5562)
 
 ## [v2.1.10]
 
@@ -3013,12 +3161,15 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.3.1]: https://github.com/Kong/kong-operator/compare/v2.3.0..v2.3.1
 [v2.3.0]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.3.0
+[v2.2.5]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.2.5
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
 [v2.2.2]: https://github.com/Kong/kong-operator/compare/v2.2.1..v2.2.2
 [v2.2.1]: https://github.com/Kong/kong-operator/compare/v2.2.0..v2.2.1
 [v2.2.0]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.2.0
+[v2.1.11]: https://github.com/Kong/kong-operator/compare/v2.1.10..v2.1.11
 [v2.1.10]: https://github.com/Kong/kong-operator/compare/v2.1.9..v2.1.10
 [v2.1.9]: https://github.com/Kong/kong-operator/compare/v2.1.8..v2.1.9
 [v2.1.8]: https://github.com/Kong/kong-operator/compare/v2.1.7..v2.1.8

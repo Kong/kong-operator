@@ -12,6 +12,16 @@ func (*AIGatewayAuthStrategy) PersistsKonnectID() bool {
 	return true
 }
 
+// PersistsKonnectID reports whether AIGatewayCACertificate persists a Konnect ID in status.
+func (*AIGatewayCACertificate) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewayCertificate persists a Konnect ID in status.
+func (*AIGatewayCertificate) PersistsKonnectID() bool {
+	return true
+}
+
 // PersistsKonnectID reports whether AIGatewayConsumer persists a Konnect ID in status.
 func (*AIGatewayConsumer) PersistsKonnectID() bool {
 	return true
@@ -49,5 +59,10 @@ func (*AIGatewayModelProvider) PersistsKonnectID() bool {
 
 // PersistsKonnectID reports whether AIGatewayPolicy persists a Konnect ID in status.
 func (*AIGatewayPolicy) PersistsKonnectID() bool {
+	return true
+}
+
+// PersistsKonnectID reports whether AIGatewaySNI persists a Konnect ID in status.
+func (*AIGatewaySNI) PersistsKonnectID() bool {
 	return true
 }

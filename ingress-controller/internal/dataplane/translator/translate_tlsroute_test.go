@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/require"
 	"go.uber.org/zap"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/failures"
@@ -33,11 +32,9 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 	}
 
 	tlsRouteExactHostname := &gatewayapi.TLSRoute{
-		TypeMeta: tlsRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "tlsroute-1",
-		},
+		TypeMeta:  tlsRouteTypeMeta,
+		Namespace: "default",
+		Name:      "tlsroute-1",
 		Spec: gatewayapi.TLSRouteSpec{
 			Hostnames: []gatewayapi.Hostname{
 				"foo.com",
@@ -55,11 +52,9 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 	}
 
 	tlsRouteWildcardHostname := &gatewayapi.TLSRoute{
-		TypeMeta: tlsRouteTypeMeta,
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "default",
-			Name:      "tlsroute-1",
-		},
+		TypeMeta:  tlsRouteTypeMeta,
+		Namespace: "default",
+		Name:      "tlsroute-1",
 		Spec: gatewayapi.TLSRouteSpec{
 			Hostnames: []gatewayapi.Hostname{
 				"*.foo.com",
@@ -94,23 +89,17 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			// so we need to add them here.
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service2",
-					},
+					Namespace: "default",
+					Name:      "service2",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("tlsroute.default.tlsroute-1.0"),
-					},
+					Name: new("tlsroute.default.tlsroute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -122,12 +111,10 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tlsroute.default.tlsroute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tlsroute.default.tlsroute-1.0.0"),
-							Expression:   new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tls"),
-						},
+						Name:             new("tlsroute.default.tlsroute-1.0.0"),
+						Expression:       new(`(tls.sni == "foo.com") || (tls.sni == "bar.com")`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tls"),
 						ExpressionRoutes: true,
 					},
 				},
@@ -139,10 +126,8 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			tlsRoutes:   []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 			},
 			expectedFailures: []failures.ResourceFailure{
@@ -156,17 +141,13 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			tlsRoutes:               []*gatewayapi.TLSRoute{tlsRouteWildcardHostname},
 			services: []*corev1.Service{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "service1",
-					},
+					Namespace: "default",
+					Name:      "service1",
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("tlsroute.default.tlsroute-1.0"),
-					},
+					Name: new("tlsroute.default.tlsroute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service1").
 							WithNamespace("default").
@@ -178,12 +159,10 @@ func TestIngressRulesFromTLSRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"tlsroute.default.tlsroute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("tlsroute.default.tlsroute-1.0.0"),
-							Expression:   new(`tls.sni =^ ".foo.com"`),
-							PreserveHost: new(true),
-							Protocols:    kong.StringSlice("tls"),
-						},
+						Name:             new("tlsroute.default.tlsroute-1.0.0"),
+						Expression:       new(`tls.sni =^ ".foo.com"`),
+						PreserveHost:     new(true),
+						Protocols:        kong.StringSlice("tls"),
 						ExpressionRoutes: true,
 					},
 				},

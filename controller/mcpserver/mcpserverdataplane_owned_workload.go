@@ -32,6 +32,19 @@ const (
 	// mcpServerVersionAnnotationKey is the annotation key used to store the
 	// remote MCP server version on the owned Deployment's pod template.
 	mcpServerVersionAnnotationKey = "kong-operator.konghq.com/mcp-server-version"
+
+	// mcpSignalOffsetAnnotationKey and mcpSignalVersionAnnotationKey carry the
+	// last MCP signal seen for the owning control plane (see signal.go). They
+	// are copied onto the owned Deployment's pod template so that a new signal
+	// restarts the pods and the init container re-fetches the server code from
+	// Konnect, even when mcpServerVersionAnnotationKey did not change.
+	//
+	// ponytail: the signal is control-plane-wide, not per-server, so one signal
+	// rolls every MCP Deployment on that control plane; and the offset resets to
+	// INITIAL on operator restart, so the first signal after a restart usually
+	// causes one spurious rollout. Upgrade to per-server signals if Konnect adds them.
+	mcpSignalOffsetAnnotationKey  = "kong-operator.konghq.com/mcp-signal-offset"
+	mcpSignalVersionAnnotationKey = "kong-operator.konghq.com/mcp-signal-version"
 )
 
 // generateWorkloadNN returns the NamespacedName for resources owned by the
@@ -51,6 +64,11 @@ type mcpServerMetadata struct {
 	Version            string
 	ControlPlaneID     string
 	MCPServerID        string
+	// SignalOffset and SignalVersion mirror the mcpSignalOffsetAnnotationKey /
+	// mcpSignalVersionAnnotationKey annotations read off the MCPServer mirror.
+	// Either may be empty if no signal has been seen yet.
+	SignalOffset  string
+	SignalVersion string
 }
 
 // derefImage returns the container's image, or "" if the container spec or
@@ -70,11 +88,9 @@ func (r *MCPServerDataPlaneReconciler) ensureTokenSecret(
 ) (*corev1.Secret, error) {
 	var (
 		secret = corev1.Secret{
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: "v1",
-				Kind:       "Secret",
-			},
-			Type: corev1.SecretTypeOpaque,
+			APIVersion: "v1",
+			Kind:       "Secret",
+			Type:       corev1.SecretTypeOpaque,
 		}
 	)
 
@@ -218,6 +234,25 @@ func (r *MCPServerDataPlaneReconciler) ensureDeployment(
 	return existing, nil
 }
 
+// mcpRolloutAnnotations returns the annotations that must be set on both the
+// Deployment and its pod template so that a change in the remote MCP server
+// version, or in the last Konnect MCP signal, triggers a rollout. Empty
+// values are omitted so a Deployment created before any signal has arrived
+// does not carry empty annotations that would churn once the first signal
+// lands.
+func mcpRolloutAnnotations(mcpMetadata mcpServerMetadata) map[string]string {
+	annotations := map[string]string{
+		mcpServerVersionAnnotationKey: mcpMetadata.Version,
+	}
+	if mcpMetadata.SignalOffset != "" {
+		annotations[mcpSignalOffsetAnnotationKey] = mcpMetadata.SignalOffset
+	}
+	if mcpMetadata.SignalVersion != "" {
+		annotations[mcpSignalVersionAnnotationKey] = mcpMetadata.SignalVersion
+	}
+	return annotations
+}
+
 // generateDeployment creates the desired Deployment spec for the given MCPServer.
 func generateDeployment(
 	logger logr.Logger,
@@ -273,17 +308,11 @@ func generateDeployment(
 	)
 
 	deployment := &appsv1.Deployment{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "apps/v1",
-			Kind:       "Deployment",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-			Annotations: map[string]string{
-				mcpServerVersionAnnotationKey: mcpMetadata.Version,
-			},
-		},
+		APIVersion:  "apps/v1",
+		Kind:        "Deployment",
+		Name:        nn.Name,
+		Namespace:   nn.Namespace,
+		Annotations: mcpRolloutAnnotations(mcpMetadata),
 		Spec: appsv1.DeploymentSpec{
 			Replicas: replicas,
 			Selector: &metav1.LabelSelector{
@@ -304,10 +333,8 @@ func generateDeployment(
 			},
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
-					Labels: podLabels,
-					Annotations: map[string]string{
-						mcpServerVersionAnnotationKey: mcpMetadata.Version,
-					},
+					Labels:      podLabels,
+					Annotations: mcpRolloutAnnotations(mcpMetadata),
 				},
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
@@ -375,10 +402,8 @@ func generateDeployment(
 					},
 					Volumes: []corev1.Volume{
 						{
-							Name: mcpServerVolumeName,
-							VolumeSource: corev1.VolumeSource{
-								EmptyDir: &corev1.EmptyDirVolumeSource{},
-							},
+							Name:     mcpServerVolumeName,
+							EmptyDir: &corev1.EmptyDirVolumeSource{},
 						},
 					},
 				},
@@ -433,6 +458,8 @@ var mcpServerDataPlaneDeploymentReservedKeys = reservedkeys.NewChecker(
 	"pod-template-hash",
 	"deployment.kubernetes.io/revision",
 	mcpServerVersionAnnotationKey,
+	mcpSignalOffsetAnnotationKey,
+	mcpSignalVersionAnnotationKey,
 )
 
 // addAnnotationsForMCPServerDataPlaneDeployment merges the user-provided
@@ -485,10 +512,8 @@ func patEnvVarFromAuth(tokenSecret *corev1.Secret) corev1.EnvVar {
 		Name: "PAT",
 		ValueFrom: &corev1.EnvVarSource{
 			SecretKeyRef: &corev1.SecretKeySelector{
-				LocalObjectReference: corev1.LocalObjectReference{
-					Name: tokenSecret.Name,
-				},
-				Key: konnectcontroller.SecretTokenKey,
+				Name: tokenSecret.Name,
+				Key:  konnectcontroller.SecretTokenKey,
 			},
 		},
 	}
@@ -536,14 +561,10 @@ func generateService(mcpDataPlane *mcpv1alpha1.MCPServerDataPlane) *corev1.Servi
 	}
 
 	svc := &corev1.Service{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: "v1",
-			Kind:       "Service",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      nn.Name,
-			Namespace: nn.Namespace,
-		},
+		APIVersion: "v1",
+		Kind:       "Service",
+		Name:       nn.Name,
+		Namespace:  nn.Namespace,
 		Spec: corev1.ServiceSpec{
 			Selector: labels,
 			Ports: []corev1.ServicePort{

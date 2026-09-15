@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // This file is for map functions shared by all supported routes in gateway APIs.
@@ -235,7 +236,7 @@ func MapRouteForEndpointSlice[T gwtypes.SupportedRoute](cl client.Client, route 
 func MapRouteForReferenceGrant[TList gwtypes.SupportedRouteList,
 	TListPtr gwtypes.SupportedRouteListPtr[TList]](cl client.Client) handler.MapFunc {
 	return func(ctx context.Context, obj client.Object) []reconcile.Request {
-		rg, ok := obj.(*gwtypes.ReferenceGrant)
+		rg, ok := k8sutils.AsReferenceGrant(obj)
 		if !ok {
 			return nil
 		}
@@ -321,10 +322,8 @@ func mapRouteInListForReferenceGrant[T gwtypes.SupportedRoute, TPtr gwtypes.Supp
 		for _, backendRef := range backendRefs {
 			if backendRef.Namespace != nil && string(*backendRef.Namespace) == rg.Namespace && rPtr.GetNamespace() != rg.Namespace {
 				requests = append(requests, reconcile.Request{
-					NamespacedName: client.ObjectKey{
-						Namespace: rPtr.GetNamespace(),
-						Name:      rPtr.GetName(),
-					},
+					Namespace: rPtr.GetNamespace(),
+					Name:      rPtr.GetName(),
 				})
 				break
 			}

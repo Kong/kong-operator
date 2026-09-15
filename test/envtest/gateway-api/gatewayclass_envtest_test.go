@@ -356,9 +356,7 @@ func testGatewayWithGatewayClassReconciliation(
 			clNamespaced := client.NewNamespacedClient(cl, ns.Name)
 
 			svc := corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "publish-svc",
-				},
+				Name: "publish-svc",
 				Spec: corev1.ServiceSpec{
 					Ports: builder.NewServicePort().
 						WithName("http").
@@ -378,8 +376,9 @@ func testGatewayWithGatewayClassReconciliation(
 					Namespace: ns.Name,
 					Name:      svc.Name,
 				},
-				DataplaneClient:   mocks.Dataplane{},
-				ReferenceIndexers: ctrlref.NewCacheIndexers(logr.Discard()),
+				DataplaneClient:       mocks.Dataplane{},
+				ReferenceIndexers:     ctrlref.NewCacheIndexers(logr.Discard()),
+				ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 			}
 			envtest.StartReconciler(ctx, t, scheme, cfg, gwReconciler, envtest.WithWatchNamespace(ns.Name))
 

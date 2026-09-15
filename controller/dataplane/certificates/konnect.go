@@ -51,8 +51,7 @@ var certificateGVR = schema.GroupVersionResource{
 // certificateCRDNotInstalled returns true if `certmanager.io/v1.certificates` CRD is not installed
 // so we can skip the processing of Konnect certificates when KonnectCertificateOptions is missing in DataPlane.
 func certificateCRDNotInstalled(logger logr.Logger, cl client.Client) bool {
-	checker := k8sutils.CRDChecker{Client: cl}
-	exist, err := checker.CRDExists(certificateGVR)
+	exist, err := k8sutils.CRDExists(cl.RESTMapper(), certificateGVR)
 	if err != nil {
 		log.Error(logger, err, "failed to check if certificate CRD installed")
 		return false
@@ -244,10 +243,8 @@ func MountAndUseKonnectCert(ctx context.Context, logger logr.Logger, dataplane *
 
 	konnectCertVolume := corev1.Volume{
 		Name: DataPlaneKonnectClientCertificateName,
-		VolumeSource: corev1.VolumeSource{
-			Secret: &corev1.SecretVolumeSource{
-				SecretName: secrets[0].Name,
-			},
+		Secret: &corev1.SecretVolumeSource{
+			SecretName: secrets[0].Name,
 		},
 	}
 	mount := corev1.VolumeMount{

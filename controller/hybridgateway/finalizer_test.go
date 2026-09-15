@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	finalizerconst "github.com/kong/kong-operator/v2/controller/hybridgateway/const/finalizers"
@@ -14,11 +13,9 @@ import (
 func TestFinalizerFunctionality(t *testing.T) {
 	t.Run("HTTPRoute finalizer operations", func(t *testing.T) {
 		route := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-route",
-				Namespace: "default",
-			},
-			Spec: gwtypes.HTTPRouteSpec{},
+			Name:      "test-route",
+			Namespace: "default",
+			Spec:      gwtypes.HTTPRouteSpec{},
 		}
 
 		finalizerName := finalizerconst.GetFinalizerForType(*route)
@@ -37,11 +34,9 @@ func TestFinalizerFunctionality(t *testing.T) {
 
 	t.Run("Gateway finalizer operations", func(t *testing.T) {
 		gateway := &gwtypes.Gateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-gateway",
-				Namespace: "default",
-			},
-			Spec: gwtypes.GatewaySpec{},
+			Name:      "test-gateway",
+			Namespace: "default",
+			Spec:      gwtypes.GatewaySpec{},
 		}
 
 		finalizerName := finalizerconst.GetFinalizerForType(*gateway)

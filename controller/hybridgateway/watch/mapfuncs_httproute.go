@@ -24,10 +24,8 @@ func listHTTPRoutesForGateway(ctx context.Context, cl client.Client, gatewayName
 	requests := make([]reconcile.Request, len(httpRoutes.Items))
 	for i, httpRoute := range httpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: httpRoute.Namespace,
-				Name:      httpRoute.Name,
-			},
+			Namespace: httpRoute.Namespace,
+			Name:      httpRoute.Name,
 		}
 	}
 	return requests, nil
@@ -50,10 +48,8 @@ func listHTTPRoutesForService(ctx context.Context, cl client.Client, svcNamespac
 	requests := make([]reconcile.Request, len(httpRoutes.Items))
 	for i, httpRoute := range httpRoutes.Items {
 		requests[i] = reconcile.Request{
-			NamespacedName: client.ObjectKey{
-				Namespace: httpRoute.Namespace,
-				Name:      httpRoute.Name,
-			},
+			Namespace: httpRoute.Namespace,
+			Name:      httpRoute.Name,
 		}
 	}
 	return requests, nil
@@ -94,10 +90,8 @@ func MapHTTPRouteForKongPlugin(cl client.Client) handler.MapFunc {
 		indexRequests := make([]reconcile.Request, len(httpRoutes.Items))
 		for i, httpRoute := range httpRoutes.Items {
 			indexRequests[i] = reconcile.Request{
-				NamespacedName: client.ObjectKey{
-					Namespace: httpRoute.Namespace,
-					Name:      httpRoute.Name,
-				},
+				Namespace: httpRoute.Namespace,
+				Name:      httpRoute.Name,
 			}
 		}
 

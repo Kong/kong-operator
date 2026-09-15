@@ -25,13 +25,11 @@ import (
 	"github.com/go-logr/logr"
 	certificatesv1 "k8s.io/api/certificates/v1"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
-	"github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
@@ -275,7 +273,7 @@ func getPreDeleteHooks[T interface {
 ) []k8sreduce.PreDeleteHook {
 	switch any(obj).(type) {
 	case *operatorv1beta1.DataPlane:
-		return []k8sreduce.PreDeleteHook{dataplane.OwnedObjectPreDeleteHook}
+		return []k8sreduce.PreDeleteHook{k8sreduce.OwnedObjectPreDeleteHook}
 	default:
 		return nil
 	}
@@ -349,10 +347,8 @@ func generateTLSDataSecret(
 	expiration := int32(certTTL.Seconds())
 
 	csr := certificatesv1.CertificateSigningRequest{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: owner.GetNamespace(),
-			Name:      owner.GetName(),
-		},
+		Namespace: owner.GetNamespace(),
+		Name:      owner.GetName(),
 		Spec: certificatesv1.CertificateSigningRequestSpec{
 			Request: pem.EncodeToMemory(&pem.Block{
 				Type:  "CERTIFICATE REQUEST",

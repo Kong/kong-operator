@@ -583,6 +583,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			}, nil
 		}
 
+		// Snapshot before any finalizer is removed, so the merge patch below carries
+		// only the finalizer change and does not rely on an optimistic lock: the
+		// cached ent can have a stale resourceVersion, and a conflicting Update here
+		// would requeue and delete the entity from Konnect a second time.
+		old := ent.DeepCopyObject().(TEnt)
+
 		if controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
 			// If the Konnect ID was never persisted to the status (e.g. the status
 			// update failed after the entity was created in Konnect), try to recover
@@ -629,10 +635,7 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 			controllerutil.RemoveFinalizer(ent, consts.KonnectGatewayControlPlaneFinalizer)
 		}
 
-		if err := r.Client.Update(ctx, ent); err != nil {
-			if apierrors.IsConflict(err) {
-				return ctrl.Result{Requeue: true}, nil
-			}
+		if err := r.Client.Patch(ctx, ent, client.MergeFrom(old)); err != nil {
 			if apierrors.IsNotFound(err) {
 				return ctrl.Result{}, nil
 			}

@@ -130,11 +130,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -339,9 +335,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -704,9 +697,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1055,9 +1045,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1077,11 +1064,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1286,9 +1269,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1308,11 +1288,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1517,9 +1493,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1539,11 +1512,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1748,9 +1717,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -1770,11 +1736,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -1979,9 +1941,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2001,11 +1960,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -2210,9 +2165,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2494,6 +2446,90 @@ spec:
                                     - Enabled
                                     - Disabled
                                     type: string
+                                  workloadIdentityFederation:
+                                    description: Config for GCP Workload Identity
+                                      Federation.
+                                    properties:
+                                      awsIam:
+                                        description: AuthGCPWorkloadIdentityFederationAwsIam
+                                          configuration.
+                                        properties:
+                                          authJSON:
+                                            description: |-
+                                              JSON configuration for the Workload Identity Federation token exchange
+                                              (Google's
+                                              `external_account` credential config: audience, token URL, credential
+                                              source, and
+                                              optional service account impersonation URL).
+                                              If not set, Kong falls back to the file
+                                              path in the `GOOGLE_APPLICATION_CREDENTIALS` environment variable.
+                                              This field is
+                                              [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                            maxLength: 253
+                                            type: string
+                                          aws:
+                                            description: AWS IAM (SigV4) authentication
+                                              for the upstream service.
+                                            properties:
+                                              accessKeyID:
+                                                description: |-
+                                                  The access key id for authenticating with static IAM User credentials.
+                                                  This field is
+                                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                maxLength: 253
+                                                type: string
+                                              assumeRoleArn:
+                                                description: |-
+                                                  The ARN of the IAM role to assume for generating authentication tokens.
+                                                  This field is
+                                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                maxLength: 253
+                                                type: string
+                                              region:
+                                                description: |-
+                                                  The AWS region of the upstream service.
+                                                  Overrides the region inferred from the environment.
+                                                maxLength: 253
+                                                type: string
+                                              roleSessionName:
+                                                description: |-
+                                                  The session name for the temporary credentials when assuming the IAM role.
+                                                  This field is
+                                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                maxLength: 253
+                                                type: string
+                                              secretAccessKey:
+                                                description: |-
+                                                  The secret access key for authenticating with static IAM User credentials.
+                                                  This field is
+                                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                maxLength: 253
+                                                type: string
+                                              sessionToken:
+                                                description: |-
+                                                  The session token for authenticating with temporary IAM credentials.
+                                                  This field is
+                                                  [referenceable](https://developer.konghq.com/gateway/entities/vault/#how-do-i-reference-secrets-stored-in-a-vault).
+                                                maxLength: 253
+                                                type: string
+                                              stsEndpointURL:
+                                                description: |-
+                                                  The STS endpoint URL to use for generating authentication tokens.
+                                                  If not specified, the default AWS STS endpoint will be used.
+                                                maxLength: 253
+                                                type: string
+                                            type: object
+                                        type: object
+                                      source:
+                                        description: Source designates the type of
+                                          configuration.
+                                        enum:
+                                        - awsIam
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - source
+                                    type: object
                                 type: object
                               type:
                                 description: Type designates the type of configuration.
@@ -2545,9 +2581,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2567,11 +2600,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -2776,9 +2805,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -2798,11 +2824,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3007,9 +3029,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3029,11 +3048,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3238,9 +3253,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3260,11 +3272,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3469,9 +3477,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3491,11 +3496,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3700,9 +3701,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3722,11 +3720,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -3931,9 +3925,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -3950,9 +3941,8 @@ spec:
                     description: Sagemaker configuration.
                     properties:
                       config:
-                        description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
+                        description: AIGatewayModelProviderSagemakerConfig is a type
+                          alias.
                         properties:
                           auth:
                             description: |-
@@ -4201,9 +4191,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4247,11 +4234,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4456,9 +4439,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4478,11 +4458,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4687,9 +4663,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.
@@ -4709,11 +4682,7 @@ spec:
                         description: Configuration for the model provider.
                         properties:
                           auth:
-                            description: |-
-                              **Pre-release Feature**
-                              This feature is currently in beta and is subject to change.
-
-                              Basic auth config for an upstream model provider.
+                            description: Basic auth config for an upstream model provider.
                             properties:
                               headers:
                                 items:
@@ -4918,9 +4887,6 @@ spec:
                         type: object
                       name:
                         description: |-
-                          **Pre-release Feature**
-                          This feature is currently in beta and is subject to change.
-
                           A user-defined unique identifier for this model provider instance, used as a
                           stable human-readable reference.
                           This value is immutable after creation.

@@ -7,7 +7,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -28,20 +27,16 @@ func Test_listHTTPRoutesForGateway_table(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-gw",
-		},
+		Namespace: "test-ns",
+		Name:      "test-gw",
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "test-class",
 		},
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -105,25 +100,17 @@ func Test_listHTTPRoutesForService(t *testing.T) {
 	_ = gatewayv1.Install(scheme)
 
 	svc := &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "test-svc",
-		},
+		Namespace: "test-ns",
+		Name:      "test-svc",
 	}
 
 	httpRoute := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "test-ns",
-			Name:      "route-1",
-		},
+		Namespace: "test-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gatewayv1.ObjectName("test-svc"),
-						},
-					},
+					Name: gatewayv1.ObjectName("test-svc"),
 				}},
 			}},
 		},
@@ -179,19 +166,13 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	// HTTPRoute in source-ns that references a service in target-ns.
 	httpRouteWithCrossNsRef := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "source-ns",
-			Name:      "route-1",
-		},
+		Namespace: "source-ns",
+		Name:      "route-1",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name:      gatewayv1.ObjectName("test-svc"),
-							Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
-						},
-					},
+					Name:      gatewayv1.ObjectName("test-svc"),
+					Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
 				}},
 			}},
 		},
@@ -199,18 +180,12 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	// HTTPRoute in source-ns that only references same-namespace services.
 	httpRouteSameNs := &gwtypes.HTTPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "source-ns",
-			Name:      "route-2",
-		},
+		Namespace: "source-ns",
+		Name:      "route-2",
 		Spec: gwtypes.HTTPRouteSpec{
 			Rules: []gwtypes.HTTPRouteRule{{
 				BackendRefs: []gwtypes.HTTPBackendRef{{
-					BackendRef: gwtypes.BackendRef{
-						BackendObjectReference: gwtypes.BackendObjectReference{
-							Name: gatewayv1.ObjectName("local-svc"),
-						},
-					},
+					Name: gatewayv1.ObjectName("local-svc"),
 				}},
 			}},
 		},
@@ -218,10 +193,8 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	// ReferenceGrant that allows HTTPRoutes from source-ns to reference resources in target-ns.
 	referenceGrant := &gwtypes.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: "target-ns",
-			Name:      "test-grant",
-		},
+		Namespace: "target-ns",
+		Name:      "test-grant",
 		Spec: gwtypes.ReferenceGrantSpec{
 			From: []gwtypes.ReferenceGrantFrom{{
 				Group:     gwtypes.GroupName,
@@ -261,10 +234,8 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("skip non-HTTPRoute kind", func(t *testing.T) {
 		rgWithWrongKind := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "target-ns",
-				Name:      "wrong-kind-grant",
-			},
+			Namespace: "target-ns",
+			Name:      "wrong-kind-grant",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{{
 					Group: gwtypes.GroupName,
@@ -288,10 +259,8 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("skip wrong group", func(t *testing.T) {
 		rgWithWrongGroup := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "target-ns",
-				Name:      "wrong-group-grant",
-			},
+			Namespace: "target-ns",
+			Name:      "wrong-group-grant",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{{
 					Group:     "some.other.group",
@@ -314,10 +283,8 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("accept empty group", func(t *testing.T) {
 		rgWithEmptyGroup := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "target-ns",
-				Name:      "empty-group-grant",
-			},
+			Namespace: "target-ns",
+			Name:      "empty-group-grant",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{{
 					// Empty group should be accepted.
@@ -361,29 +328,21 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("multiple from clauses", func(t *testing.T) {
 		httpRouteOtherNs := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "other-ns",
-				Name:      "route-3",
-			},
+			Namespace: "other-ns",
+			Name:      "route-3",
 			Spec: gwtypes.HTTPRouteSpec{
 				Rules: []gwtypes.HTTPRouteRule{{
 					BackendRefs: []gwtypes.HTTPBackendRef{{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name:      gatewayv1.ObjectName("test-svc"),
-								Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
-							},
-						},
+						Name:      gatewayv1.ObjectName("test-svc"),
+						Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
 					}},
 				}},
 			},
 		}
 
 		rgMultipleFrom := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "target-ns",
-				Name:      "multi-grant",
-			},
+			Namespace: "target-ns",
+			Name:      "multi-grant",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{
 					{
@@ -416,29 +375,19 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("multiple rules with mixed refs", func(t *testing.T) {
 		httpRouteMultiRules := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "source-ns",
-				Name:      "route-multi",
-			},
+			Namespace: "source-ns",
+			Name:      "route-multi",
 			Spec: gwtypes.HTTPRouteSpec{
 				Rules: []gwtypes.HTTPRouteRule{
 					{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name: gatewayv1.ObjectName("local-svc"),
-								},
-							},
+							Name: gatewayv1.ObjectName("local-svc"),
 						}},
 					},
 					{
 						BackendRefs: []gwtypes.HTTPBackendRef{{
-							BackendRef: gwtypes.BackendRef{
-								BackendObjectReference: gwtypes.BackendObjectReference{
-									Name:      gatewayv1.ObjectName("remote-svc"),
-									Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
-								},
-							},
+							Name:      gatewayv1.ObjectName("remote-svc"),
+							Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("target-ns"); return &ns }(),
 						}},
 					},
 				},
@@ -459,10 +408,8 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 
 	t.Run("empty from list", func(t *testing.T) {
 		rgEmptyFrom := &gwtypes.ReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "target-ns",
-				Name:      "empty-from-grant",
-			},
+			Namespace: "target-ns",
+			Name:      "empty-from-grant",
 			Spec: gwtypes.ReferenceGrantSpec{
 				From: []gwtypes.ReferenceGrantFrom{},
 			},
@@ -482,19 +429,13 @@ func Test_MapHTTPRouteForReferenceGrant(t *testing.T) {
 	t.Run("multiple routes in from namespace but only cross-namespace ref returned", func(t *testing.T) {
 		// This HTTPRoute in source-ns references a different namespace (not target-ns).
 		httpRouteOtherTarget := &gwtypes.HTTPRoute{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "source-ns",
-				Name:      "route-other",
-			},
+			Namespace: "source-ns",
+			Name:      "route-other",
 			Spec: gwtypes.HTTPRouteSpec{
 				Rules: []gwtypes.HTTPRouteRule{{
 					BackendRefs: []gwtypes.HTTPBackendRef{{
-						BackendRef: gwtypes.BackendRef{
-							BackendObjectReference: gwtypes.BackendObjectReference{
-								Name:      gatewayv1.ObjectName("other-svc"),
-								Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("other-target-ns"); return &ns }(),
-							},
-						},
+						Name:      gatewayv1.ObjectName("other-svc"),
+						Namespace: func() *gatewayv1.Namespace { ns := gatewayv1.Namespace("other-target-ns"); return &ns }(),
 					}},
 				}},
 			},
@@ -546,10 +487,8 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 		{
 			name: "wrong object type returns nil",
 			inputObject: &corev1.Service{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "test-svc",
-				},
+				Namespace: "test-ns",
+				Name:      "test-svc",
 			},
 			objects:   []client.Object{},
 			expectNil: true,
@@ -558,17 +497,13 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "plugin referenced via extensionRef filter",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "test-plugin",
-					},
+					Namespace:  "test-ns",
+					Name:       "test-plugin",
 					PluginName: "rate-limiting",
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-with-filter",
-					},
+					Namespace: "test-ns",
+					Name:      "route-with-filter",
 					Spec: gwtypes.HTTPRouteSpec{
 						Rules: []gwtypes.HTTPRouteRule{
 							{
@@ -588,10 +523,8 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 				},
 			},
 			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "test-plugin",
-				},
+				Namespace:  "test-ns",
+				Name:       "test-plugin",
 				PluginName: "rate-limiting",
 			},
 			expectedCount: 1,
@@ -601,29 +534,23 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "plugin referenced via annotation",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "plugin-with-annotation",
-						Annotations: map[string]string{
-							hybridRoutesAnnotation: "test-ns/route-with-annotation",
-						},
-					},
-					PluginName: "rate-limiting",
-				},
-				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-with-annotation",
-					},
-				},
-			},
-			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-ns",
 					Name:      "plugin-with-annotation",
 					Annotations: map[string]string{
 						hybridRoutesAnnotation: "test-ns/route-with-annotation",
 					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					Namespace: "test-ns",
+					Name:      "route-with-annotation",
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				Namespace: "test-ns",
+				Name:      "plugin-with-annotation",
+				Annotations: map[string]string{
+					hybridRoutesAnnotation: "test-ns/route-with-annotation",
 				},
 				PluginName: "rate-limiting",
 			},
@@ -634,20 +561,16 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "plugin referenced via both filter and annotation",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "plugin-both",
-						Annotations: map[string]string{
-							hybridRoutesAnnotation: "test-ns/route-with-annotation",
-						},
+					Namespace: "test-ns",
+					Name:      "plugin-both",
+					Annotations: map[string]string{
+						hybridRoutesAnnotation: "test-ns/route-with-annotation",
 					},
 					PluginName: "rate-limiting",
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-with-filter",
-					},
+					Namespace: "test-ns",
+					Name:      "route-with-filter",
 					Spec: gwtypes.HTTPRouteSpec{
 						Rules: []gwtypes.HTTPRouteRule{
 							{
@@ -666,19 +589,15 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-with-annotation",
-					},
+					Namespace: "test-ns",
+					Name:      "route-with-annotation",
 				},
 			},
 			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "plugin-both",
-					Annotations: map[string]string{
-						hybridRoutesAnnotation: "test-ns/route-with-annotation",
-					},
+				Namespace: "test-ns",
+				Name:      "plugin-both",
+				Annotations: map[string]string{
+					hybridRoutesAnnotation: "test-ns/route-with-annotation",
 				},
 				PluginName: "rate-limiting",
 			},
@@ -689,17 +608,13 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "multiple HTTPRoutes with filter referencing the same plugin",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "shared-plugin",
-					},
+					Namespace:  "test-ns",
+					Name:       "shared-plugin",
 					PluginName: "cors",
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-1",
-					},
+					Namespace: "test-ns",
+					Name:      "route-1",
 					Spec: gwtypes.HTTPRouteSpec{
 						Rules: []gwtypes.HTTPRouteRule{
 							{
@@ -718,10 +633,8 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-2",
-					},
+					Namespace: "test-ns",
+					Name:      "route-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						Rules: []gwtypes.HTTPRouteRule{
 							{
@@ -741,10 +654,8 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 				},
 			},
 			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "shared-plugin",
-				},
+				Namespace:  "test-ns",
+				Name:       "shared-plugin",
 				PluginName: "cors",
 			},
 			expectedCount: 2,
@@ -754,18 +665,14 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "no HTTPRoutes reference the plugin",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "test-plugin",
-					},
+					Namespace:  "test-ns",
+					Name:       "test-plugin",
 					PluginName: "rate-limiting",
 				},
 			},
 			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "test-plugin",
-				},
+				Namespace:  "test-ns",
+				Name:       "test-plugin",
 				PluginName: "rate-limiting",
 			},
 			expectEmpty: true,
@@ -773,10 +680,8 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 		{
 			name: "list error returns nil",
 			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Namespace: "test-ns",
-					Name:      "test-plugin",
-				},
+				Namespace:  "test-ns",
+				Name:       "test-plugin",
 				PluginName: "rate-limiting",
 			},
 			client:    &fakeErrorClient{},
@@ -786,35 +691,27 @@ func Test_MapHTTPRouteForKongPlugin(t *testing.T) {
 			name: "multiple annotations with multiple routes",
 			objects: []client.Object{
 				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "plugin-multi",
-						Annotations: map[string]string{
-							hybridRoutesAnnotation: "test-ns/route-1,test-ns/route-2",
-						},
-					},
-					PluginName: "rate-limiting",
-				},
-				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-1",
-					},
-				},
-				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "test-ns",
-						Name:      "route-2",
-					},
-				},
-			},
-			inputObject: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
 					Namespace: "test-ns",
 					Name:      "plugin-multi",
 					Annotations: map[string]string{
 						hybridRoutesAnnotation: "test-ns/route-1,test-ns/route-2",
 					},
+					PluginName: "rate-limiting",
+				},
+				&gwtypes.HTTPRoute{
+					Namespace: "test-ns",
+					Name:      "route-1",
+				},
+				&gwtypes.HTTPRoute{
+					Namespace: "test-ns",
+					Name:      "route-2",
+				},
+			},
+			inputObject: &configurationv1.KongPlugin{
+				Namespace: "test-ns",
+				Name:      "plugin-multi",
+				Annotations: map[string]string{
+					hybridRoutesAnnotation: "test-ns/route-1,test-ns/route-2",
 				},
 				PluginName: "rate-limiting",
 			},

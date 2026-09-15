@@ -7,7 +7,6 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -184,10 +183,8 @@ func testEnvtestPortalEmailConfig(
 	namespace, portalName, domainName, fromEmail, fromName, replyToEmail string,
 ) *konnectv1alpha1.PortalEmailConfig {
 	return &konnectv1alpha1.PortalEmailConfig{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "portal-email-config",
-			Namespace: namespace,
-		},
+		Name:      "portal-email-config",
+		Namespace: namespace,
 		Spec: konnectv1alpha1.PortalEmailConfigSpec{
 			PortalRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

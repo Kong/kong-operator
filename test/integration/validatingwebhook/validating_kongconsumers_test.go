@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
 	"github.com/kong/kong-operator/v2/controller/konnect"
@@ -27,12 +26,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 	t.Logf("creating some static credentials in %s namespace which will be used to test global validation", namespace.Name)
 	for _, secret := range []*corev1.Secret{
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "tuxcreds1",
-				Labels: map[string]string{
-					config.DefaultSecretLabelSelector: "true",
-					konnect.CredentialTypeLabel:       "basic-auth",
-				},
+			Name: "tuxcreds1",
+			Labels: map[string]string{
+				config.DefaultSecretLabelSelector: "true",
+				konnect.CredentialTypeLabel:       "basic-auth",
 			},
 			StringData: map[string]string{
 				"username": "tux1",
@@ -40,12 +37,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			},
 		},
 		{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: "tuxcreds2",
-				Labels: map[string]string{
-					config.DefaultSecretLabelSelector: "true",
-					konnect.CredentialTypeLabel:       "basic-auth",
-				},
+			Name: "tuxcreds2",
+			Labels: map[string]string{
+				config.DefaultSecretLabelSelector: "true",
+				konnect.CredentialTypeLabel:       "basic-auth",
 			},
 			StringData: map[string]string{
 				"username": "tux2",
@@ -60,11 +55,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 
 	t.Logf("creating a static consumer in %s namespace which will be used to test global validation", namespace.Name)
 	consumer := &configurationv1.KongConsumer{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: "statis-consumer-",
-			Annotations: map[string]string{
-				annotations.IngressClassKey: ingressClass,
-			},
+		GenerateName: "statis-consumer-",
+		Annotations: map[string]string{
+			annotations.IngressClassKey: ingressClass,
 		},
 		Username: "tux",
 		CustomID: uuid.NewString(),
@@ -86,11 +79,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer with no credentials should pass validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "testconsumer",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "testconsumer",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: uuid.NewString(),
 				CustomID: uuid.NewString(),
@@ -101,23 +92,19 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer with valid credentials should pass validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username:    "electron",
 				CustomID:    uuid.NewString(),
 				Credentials: []string{"electronscreds"},
 			},
 			credentials: []*corev1.Secret{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "electronscreds",
-					Labels: map[string]string{
-						config.DefaultSecretLabelSelector: "true",
-						konnect.CredentialTypeLabel:       "basic-auth",
-					},
+				Name: "electronscreds",
+				Labels: map[string]string{
+					config.DefaultSecretLabelSelector: "true",
+					konnect.CredentialTypeLabel:       "basic-auth",
 				},
 				StringData: map[string]string{
 					"username": "electron",
@@ -129,11 +116,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer with duplicate credentials which are NOT constrained should pass validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: "proton",
 				CustomID: uuid.NewString(),
@@ -144,12 +129,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			},
 			credentials: []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "protonscreds1",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "protonscreds1",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "proton",
@@ -157,12 +140,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "protonscreds2",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "protonscreds2",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "electron", // username is unique constrained
@@ -175,11 +156,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer referencing credentials secrets which do not yet exist should fail validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: "repairedlawnmower",
 				CustomID: uuid.NewString(),
@@ -193,11 +172,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer with duplicate credentials which ARE constrained should fail validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "brokenshovel",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: "brokenshovel",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: "neutron",
 				CustomID: uuid.NewString(),
@@ -208,12 +185,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			},
 			credentials: []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "neutronscreds1",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "neutronscreds1",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "neutron",
@@ -221,12 +196,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 					},
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "neutronscreds2",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "neutronscreds2",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "neutron", // username is unique constrained
@@ -240,11 +213,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer that provides duplicate credentials which are NOT in violation of unique key constraints should pass validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: uuid.NewString(),
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				Name: uuid.NewString(),
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: "reasonablehammer",
 				CustomID: uuid.NewString(),
@@ -254,12 +225,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			},
 			credentials: []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "reasonablehammer",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "reasonablehammer",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "reasonablehammer",
@@ -272,11 +241,9 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 		{
 			name: "a consumer that provides credentials that are in violation of unique constraints globally against other existing consumers should fail validation",
 			consumer: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					GenerateName: "violating-uniqueness-",
-					Annotations: map[string]string{
-						annotations.IngressClassKey: ingressClass,
-					},
+				GenerateName: "violating-uniqueness-",
+				Annotations: map[string]string{
+					annotations.IngressClassKey: ingressClass,
 				},
 				Username: "unreasonablehammer",
 				CustomID: uuid.NewString(),
@@ -286,12 +253,10 @@ func TestAdmissionWebhook_KongConsumers(t *testing.T) {
 			},
 			credentials: []*corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "unreasonablehammer",
-						Labels: map[string]string{
-							config.DefaultSecretLabelSelector: "true",
-							konnect.CredentialTypeLabel:       "basic-auth",
-						},
+					Name: "unreasonablehammer",
+					Labels: map[string]string{
+						config.DefaultSecretLabelSelector: "true",
+						konnect.CredentialTypeLabel:       "basic-auth",
 					},
 					StringData: map[string]string{
 						"username": "tux1", // unique constrained with previous created static consumer credentials

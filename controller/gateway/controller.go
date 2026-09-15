@@ -52,6 +52,7 @@ import (
 	gwconfigutils "github.com/kong/kong-operator/v2/internal/utils/gatewayconfig"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/utils/kubernetes/compare"
@@ -77,6 +78,13 @@ type Reconciler struct {
 	AnonymousReportsEnabled bool
 	LoggingMode             logging.Mode
 	WatchNamespaces         []string
+	// DataPlaneIPFamily controls which IP family (or families) provisioned
+	// DataPlanes' Kong listens bind to.
+	DataPlaneIPFamily ipfamily.IPFamily
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -117,7 +125,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// reconciliation for all supported gateway objects that are referenced in a "from"
 		// instance.
 		Watches(
-			&gwtypes.ReferenceGrant{},
+			k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
 		// watch for KongReferenceGrants to keep managed Konnect API auth grants in sync.
@@ -152,14 +160,13 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
-	crdChecker := k8sutils.CRDChecker{Client: r.Client}
 	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tlsroutes",
 	}
-	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	tlsRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tlsRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
 	}
@@ -178,7 +185,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "grpcroutes",
 	}
-	grpcRouteExist, err := crdChecker.CRDExists(grpcRouteGVR)
+	grpcRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), grpcRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if GRPCRoute CRD exists: %w", err)
 	}
@@ -197,7 +204,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "udproutes",
 	}
-	udpRouteExist, err := crdChecker.CRDExists(udpRouteGVR)
+	udpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), udpRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if UDPRoute CRD exists: %w", err)
 	}
@@ -216,7 +223,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tcproutes",
 	}
-	tcpRouteExist, err := crdChecker.CRDExists(tcpRouteGVR)
+	tcpRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tcpRouteGVR)
 	if err != nil {
 		return err
 	}
@@ -305,7 +312,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	}
 
 	gwConditionAware.initProgrammedAndListenersStatus()
-	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion); err != nil {
 		return ctrl.Result{}, err
 	}
 	// Validate the infrastructure.parametersRef early. If it references an
@@ -717,7 +724,7 @@ func (r *Reconciler) provisionDataPlane(
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
 
-	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions)
+	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions, r.DataPlaneIPFamily)
 	if err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(

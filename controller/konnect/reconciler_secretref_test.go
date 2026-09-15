@@ -36,14 +36,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "secret exists in same namespace",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "default",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "default",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name: "test-secret",
@@ -52,10 +48,8 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "default",
-					},
+					Name:      "test-secret",
+					Namespace: "default",
 				},
 			},
 			expectResult:        false,
@@ -67,14 +61,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "secret does not exist",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "default",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "default",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name: "missing-secret",
@@ -91,14 +81,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "cross-namespace reference with valid grant",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "cert-ns",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "cert-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
@@ -108,18 +94,14 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -147,14 +129,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "cross-namespace reference without grant",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "cert-ns",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "cert-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
@@ -164,10 +142,8 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 			},
 			grants:              []configurationv1alpha1.KongReferenceGrant{},
@@ -180,14 +156,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "cross-namespace reference with grant for wrong namespace",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "cert-ns",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "cert-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
@@ -197,18 +169,14 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -236,14 +204,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "multiple secret refs with grants",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "cert-ns",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "cert-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
@@ -257,24 +221,18 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-alt",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret-alt",
+					Namespace: "secret-ns",
 				},
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secrets",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secrets",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -302,14 +260,10 @@ func TestHandleSecretRef(t *testing.T) {
 		{
 			name: "multiple secret refs one missing grant",
 			certificate: &configurationv1alpha1.KongCertificate{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cert",
-					Namespace: "cert-ns",
-				},
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongCertificate",
-				},
+				Name:       "test-cert",
+				Namespace:  "cert-ns",
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongCertificate",
 				Spec: configurationv1alpha1.KongCertificateSpec{
 					SecretRef: &commonv1alpha1.NamespacedRef{
 						Name:      "test-secret",
@@ -323,24 +277,18 @@ func TestHandleSecretRef(t *testing.T) {
 			},
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret-alt",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret-alt",
+					Namespace: "secret-ns",
 				},
 			},
 			grants: []configurationv1alpha1.KongReferenceGrant{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "allow-cert-to-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "allow-cert-to-secret",
+					Namespace: "secret-ns",
 					Spec: configurationv1alpha1.KongReferenceGrantSpec{
 						From: []configurationv1alpha1.ReferenceGrantFrom{
 							{
@@ -370,16 +318,12 @@ func TestHandleSecretRef(t *testing.T) {
 			certificate: func() *configurationv1alpha1.KongCertificate {
 				now := metav1.Now()
 				return &configurationv1alpha1.KongCertificate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-cert",
-						Namespace:         "default",
-						DeletionTimestamp: &now,
-						Finalizers:        []string{KonnectCleanupFinalizer},
-					},
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
-						Kind:       "KongCertificate",
-					},
+					Name:              "test-cert",
+					Namespace:         "default",
+					DeletionTimestamp: &now,
+					Finalizers:        []string{KonnectCleanupFinalizer},
+					APIVersion:        configurationv1alpha1.GroupVersion.String(),
+					Kind:              "KongCertificate",
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name: "missing-secret",
@@ -396,16 +340,12 @@ func TestHandleSecretRef(t *testing.T) {
 			certificate: func() *configurationv1alpha1.KongCertificate {
 				now := metav1.Now()
 				return &configurationv1alpha1.KongCertificate{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:              "test-cert",
-						Namespace:         "cert-ns",
-						DeletionTimestamp: &now,
-						Finalizers:        []string{KonnectCleanupFinalizer},
-					},
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: configurationv1alpha1.GroupVersion.String(),
-						Kind:       "KongCertificate",
-					},
+					Name:              "test-cert",
+					Namespace:         "cert-ns",
+					DeletionTimestamp: &now,
+					Finalizers:        []string{KonnectCleanupFinalizer},
+					APIVersion:        configurationv1alpha1.GroupVersion.String(),
+					Kind:              "KongCertificate",
 					Spec: configurationv1alpha1.KongCertificateSpec{
 						SecretRef: &commonv1alpha1.NamespacedRef{
 							Name:      "test-secret",
@@ -416,10 +356,8 @@ func TestHandleSecretRef(t *testing.T) {
 			}(),
 			secrets: []corev1.Secret{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "secret-ns",
-					},
+					Name:      "test-secret",
+					Namespace: "secret-ns",
 				},
 			},
 			grants:       []configurationv1alpha1.KongReferenceGrant{},
@@ -487,14 +425,10 @@ func TestHandleSecretRef_RecoversToValidAfterFix(t *testing.T) {
 	scheme := scheme.Get()
 
 	cert := &configurationv1alpha1.KongCertificate{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cert",
-			Namespace: "default",
-		},
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "KongCertificate",
-		},
+		Name:       "test-cert",
+		Namespace:  "default",
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "KongCertificate",
 		Spec: configurationv1alpha1.KongCertificateSpec{
 			SecretRef: &commonv1alpha1.NamespacedRef{
 				Name: "test-secret",
@@ -523,10 +457,8 @@ func TestHandleSecretRef_RecoversToValidAfterFix(t *testing.T) {
 	// The Secret gets created; the next reconcile must flip the condition back
 	// to True instead of leaving the stale False value in place.
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-secret",
-			Namespace: "default",
-		},
+		Name:      "test-secret",
+		Namespace: "default",
 	}
 	require.NoError(t, cl.Create(ctx, secret))
 
@@ -552,14 +484,10 @@ func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
 
 	newCluster := func() *configurationv1alpha1.EventGatewayBackendCluster {
 		return &configurationv1alpha1.EventGatewayBackendCluster{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "test-cluster",
-				Namespace: "cluster-ns",
-			},
-			TypeMeta: metav1.TypeMeta{
-				APIVersion: configurationv1alpha1.GroupVersion.String(),
-				Kind:       "EventGatewayBackendCluster",
-			},
+			Name:       "test-cluster",
+			Namespace:  "cluster-ns",
+			APIVersion: configurationv1alpha1.GroupVersion.String(),
+			Kind:       "EventGatewayBackendCluster",
 			Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 				APISpec: configurationv1alpha1.EventGatewayBackendClusterAPISpec{
 					TLS: configurationv1alpha1.BackendClusterTLS{
@@ -579,11 +507,9 @@ func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
 		}
 	}
 	secret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-secret",
-			Namespace: "secret-ns",
-		},
-		Data: map[string][]byte{"tls.crt": []byte("cert")},
+		Name:      "test-secret",
+		Namespace: "secret-ns",
+		Data:      map[string][]byte{"tls.crt": []byte("cert")},
 	}
 
 	t.Run("without grant is not permitted", func(t *testing.T) {
@@ -609,10 +535,8 @@ func TestHandleSecretRef_SensitiveDataSourceCrossNamespace(t *testing.T) {
 	t.Run("with matching grant is permitted", func(t *testing.T) {
 		cluster := newCluster()
 		grant := &configurationv1alpha1.KongReferenceGrant{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "allow-cluster-to-secret",
-				Namespace: "secret-ns",
-			},
+			Name:      "allow-cluster-to-secret",
+			Namespace: "secret-ns",
 			Spec: configurationv1alpha1.KongReferenceGrantSpec{
 				From: []configurationv1alpha1.ReferenceGrantFrom{
 					{

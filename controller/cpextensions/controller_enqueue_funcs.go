@@ -66,10 +66,8 @@ func enqueueControlPlaneOwningKongPluginFunc(
 
 		return []ctrl.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Name:      cp.Name,
-					Namespace: cp.Namespace,
-				},
+				Name:      cp.Name,
+				Namespace: cp.Namespace,
 			},
 		}
 	}
@@ -104,10 +102,8 @@ func enqueueControlPlaneForServicesThatHavePluginsManaged() handler.MapFunc {
 
 		return []ctrl.Request{
 			{
-				NamespacedName: types.NamespacedName{
-					Name:      name,
-					Namespace: namespace,
-				},
+				Name:      name,
+				Namespace: namespace,
 			},
 		}
 	}
@@ -168,10 +164,8 @@ func enqueueControlPlaneForServicesThatHavePluginsConfigured(
 					if svcMatchName.Name == svc.Name && ext.Namespace == svc.Namespace {
 						return []ctrl.Request{
 							{
-								NamespacedName: types.NamespacedName{
-									Name:      controlplane.Name,
-									Namespace: controlplane.Namespace,
-								},
+								Name:      controlplane.Name,
+								Namespace: controlplane.Namespace,
 							},
 						}
 					}
@@ -225,10 +219,8 @@ func enqueueControlPlaneForDataPlaneMetricsExtension(
 				}
 				return []ctrl.Request{
 					{
-						NamespacedName: types.NamespacedName{
-							Name:      controlplane.Name,
-							Namespace: controlplane.Namespace,
-						},
+						Name:      controlplane.Name,
+						Namespace: controlplane.Namespace,
 					},
 				}
 			}
@@ -300,10 +292,8 @@ func enqueueControlPlaneForDataPlane(
 
 			return []ctrl.Request{
 				{
-					NamespacedName: types.NamespacedName{
-						Name:      controlplane.Name,
-						Namespace: controlplane.Namespace,
-					},
+					Name:      controlplane.Name,
+					Namespace: controlplane.Namespace,
 				},
 			}
 		}

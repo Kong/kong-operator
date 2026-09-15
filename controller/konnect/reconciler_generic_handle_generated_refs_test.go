@@ -28,10 +28,8 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "ignores entities without generated parent refs",
 			run: func(t *testing.T) {
 				ent := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc",
-						Namespace: "default",
-					},
+					Name:      "svc",
+					Namespace: "default",
 				}
 
 				r := &KonnectEntityReconciler[
@@ -51,11 +49,9 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "continues when event gateway listener parent ref is resolved",
 			run: func(t *testing.T) {
 				ent := &configurationv1alpha1.EventGatewayListenerPolicy{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "listener-policy",
-						Namespace:  "default",
-						Generation: 1,
-					},
+					Name:       "listener-policy",
+					Namespace:  "default",
+					Generation: 1,
 					Spec: configurationv1alpha1.EventGatewayListenerPolicySpec{
 						EventGatewayListenerRef: commonv1alpha1.ObjectRef{
 							Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -67,10 +63,8 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				}
 
 				parent := &configurationv1alpha1.EventGatewayListener{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "listener",
-						Namespace: "default",
-					},
+					Name:      "listener",
+					Namespace: "default",
 					Status: configurationv1alpha1.EventGatewayListenerStatus{
 						Conditions: []metav1.Condition{{
 							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -120,21 +114,17 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "continues when config store control plane parent ref is resolved",
 			run: func(t *testing.T) {
 				ent := &konnectv1alpha1.KonnectConfigStore{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "config-store",
-						Namespace:  "default",
-						Generation: 1,
-					},
+					Name:       "config-store",
+					Namespace:  "default",
+					Generation: 1,
 					Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 						ControlPlaneRef: gatewayRef("control-plane"),
 					},
 				}
 
 				parent := &konnectv1alpha2.KonnectGatewayControlPlane{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "control-plane",
-						Namespace: "default",
-					},
+					Name:      "control-plane",
+					Namespace: "default",
 					Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 						Conditions: []metav1.Condition{{
 							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -180,21 +170,17 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "continues when event gateway parent ref is resolved",
 			run: func(t *testing.T) {
 				ent := &configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "backend-cluster",
-						Namespace:  "default",
-						Generation: 1,
-					},
+					Name:       "backend-cluster",
+					Namespace:  "default",
+					Generation: 1,
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: gatewayRef("event-gateway"),
 					},
 				}
 
 				parent := &konnectv1alpha1.KonnectEventGateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "event-gateway",
-						Namespace: "default",
-					},
+					Name:      "event-gateway",
+					Namespace: "default",
 					Status: konnectv1alpha1.KonnectEventGatewayStatus{
 						Conditions: []metav1.Condition{{
 							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -240,21 +226,17 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "stops and requeues when event gateway parent is not programmed",
 			run: func(t *testing.T) {
 				ent := &configurationv1alpha1.EventGatewayBackendCluster{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "backend-cluster",
-						Namespace:  "default",
-						Generation: 1,
-					},
+					Name:       "backend-cluster",
+					Namespace:  "default",
+					Generation: 1,
 					Spec: configurationv1alpha1.EventGatewayBackendClusterSpec{
 						GatewayRef: gatewayRef("event-gateway"),
 					},
 				}
 
 				parent := &konnectv1alpha1.KonnectEventGateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "event-gateway",
-						Namespace: "default",
-					},
+					Name:      "event-gateway",
+					Namespace: "default",
 					Status: konnectv1alpha1.KonnectEventGatewayStatus{
 						Conditions: []metav1.Condition{{
 							Type:               string(konnectv1alpha1.KonnectEntityProgrammedConditionType),
@@ -299,12 +281,10 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			name: "removes cleanup finalizer when portal parent does not exist",
 			run: func(t *testing.T) {
 				ent := &konnectv1alpha1.PortalPage{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "portal-page",
-						Namespace:  "default",
-						Generation: 1,
-						Finalizers: []string{KonnectCleanupFinalizer},
-					},
+					Name:       "portal-page",
+					Namespace:  "default",
+					Generation: 1,
+					Finalizers: []string{KonnectCleanupFinalizer},
 					Spec: konnectv1alpha1.PortalPageSpec{
 						PortalRef: portalRef("portal"),
 					},

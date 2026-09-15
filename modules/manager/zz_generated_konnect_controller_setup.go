@@ -14,6 +14,8 @@ func generatedControllersForKonnectEntities(
 	return []ControllerDef{
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayAgent](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayAuthStrategy](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayCACertificate](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayCertificate](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumer](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerCredential](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerGroup](controllerFactory),
@@ -22,6 +24,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModel](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModelProvider](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayPolicy](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewaySNI](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayBackendCluster](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[configurationv1alpha1.EventGatewayListener](controllerFactory),

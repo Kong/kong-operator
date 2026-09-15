@@ -8,7 +8,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -30,10 +29,8 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 		{
 			name: "stored secrets",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-license-test-cp",
-					Namespace: "default",
-				},
+				Name:      "konnect-license-test-cp",
+				Namespace: "default",
 			},
 			license: license.KonnectLicense{
 				Payload:   "some-license-payload",
@@ -44,10 +41,8 @@ func TestSecretLicenseStore_Store(t *testing.T) {
 		{
 			name: "should create secret when secret not found",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "another-secret",
-					Namespace: "default",
-				},
+				Name:      "another-secret",
+				Namespace: "default",
 			},
 			license: license.KonnectLicense{
 				Payload:   "another-license-payload",
@@ -88,10 +83,8 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 		{
 			name: "load license successfully",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-license-test-cp",
-					Namespace: "default",
-				},
+				Name:      "konnect-license-test-cp",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"payload":    []byte("some-license-payload"),
 					"id":         []byte("some-license-id"),
@@ -107,20 +100,16 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 		{
 			name: "secret not found",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "some-other-secret",
-					Namespace: "default",
-				},
+				Name:      "some-other-secret",
+				Namespace: "default",
 			},
 			expectError: true,
 		},
 		{
 			name: "missing payload",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-license-test-cp",
-					Namespace: "default",
-				},
+				Name:      "konnect-license-test-cp",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"id":         []byte(base64.StdEncoding.EncodeToString([]byte("some-license-id"))),
 					"updated_at": []byte(base64.StdEncoding.EncodeToString([]byte(strconv.FormatInt(timeNowUnix, 10)))),
@@ -131,10 +120,8 @@ func TestSecretLicenseStore_Load(t *testing.T) {
 		{
 			name: "cannot parse update_at",
 			secret: &corev1.Secret{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "konnect-license-test-cp",
-					Namespace: "default",
-				},
+				Name:      "konnect-license-test-cp",
+				Namespace: "default",
 				Data: map[string][]byte{
 					"payload":    []byte(base64.StdEncoding.EncodeToString([]byte("some-license-payload"))),
 					"id":         []byte(base64.StdEncoding.EncodeToString([]byte("some-license-id"))),

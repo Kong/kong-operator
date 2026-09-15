@@ -50,10 +50,8 @@ func TestKonnectExtensionKonnectControlPlaneNotFound(t *testing.T) {
 	konnectExtension := deploy.KonnectExtension(
 		t, ctx, clientNamespaced,
 		deploy.WithKonnectExtensionKonnectNamespacedRefControlPlaneRef(&konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "controlplane-not-found",
-				Namespace: ns.Name,
-			},
+			Name:      "controlplane-not-found",
+			Namespace: ns.Name,
 		}),
 	)
 
@@ -510,9 +508,7 @@ func konnectExtensionTestBody(t *testing.T, cl client.Client, p KonnectExtension
 				{
 					Group: konnectv1alpha1.GroupVersion.Group,
 					Kind:  "KonnectExtension",
-					NamespacedRef: commonv1alpha1.NamespacedRef{
-						Name: p.konnectExtension.Name,
-					},
+					Name:  p.konnectExtension.Name,
 				},
 			},
 		).Build()

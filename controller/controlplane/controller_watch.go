@@ -51,10 +51,8 @@ func (r *Reconciler) listControlPlanesForWatchNamespaceGrants(
 		}
 		for _, cp := range controlPlaneList.Items {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Namespace: cp.Namespace,
-					Name:      cp.Name,
-				},
+				Namespace: cp.Namespace,
+				Name:      cp.Name,
 			})
 		}
 	}
@@ -124,10 +122,8 @@ func (r *Reconciler) getControlPlanesFromDataPlane(ctx context.Context, obj clie
 	recs := make([]reconcile.Request, 0, len(controlPlaneList.Items))
 	for _, cp := range controlPlaneList.Items {
 		recs = append(recs, reconcile.Request{
-			NamespacedName: types.NamespacedName{
-				Namespace: cp.Namespace,
-				Name:      cp.Name,
-			},
+			Namespace: cp.Namespace,
+			Name:      cp.Name,
 		})
 	}
 	return recs

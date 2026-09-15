@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -34,7 +33,7 @@ func TestKongTargetReferencesKongUpstream(t *testing.T) {
 		{
 			name: "same-namespace upstreamRef (no namespace field) keys with target's namespace",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{Namespace: targetNamespace},
+				Namespace: targetNamespace,
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name: upstreamName,
@@ -46,7 +45,7 @@ func TestKongTargetReferencesKongUpstream(t *testing.T) {
 		{
 			name: "cross-namespace upstreamRef keys with upstreamRef's namespace",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{Namespace: targetNamespace},
+				Namespace: targetNamespace,
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name:      upstreamName,
@@ -59,7 +58,7 @@ func TestKongTargetReferencesKongUpstream(t *testing.T) {
 		{
 			name: "empty namespace pointer falls back to target's namespace",
 			obj: &configurationv1alpha1.KongTarget{
-				ObjectMeta: metav1.ObjectMeta{Namespace: targetNamespace},
+				Namespace: targetNamespace,
 				Spec: configurationv1alpha1.KongTargetSpec{
 					UpstreamRef: commonv1alpha1.NamespacedRef{
 						Name:      upstreamName,

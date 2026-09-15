@@ -49,12 +49,8 @@ func TestOptWithCustomPlugin(t *testing.T) {
 			expectedVolumes: []corev1.Volume{
 				{
 					Name: "plugin1",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "configmap1",
-							},
-						},
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						Name: "configmap1",
 					},
 				},
 			},
@@ -99,22 +95,14 @@ func TestOptWithCustomPlugin(t *testing.T) {
 			expectedVolumes: []corev1.Volume{
 				{
 					Name: "plugin1",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "configmap1",
-							},
-						},
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						Name: "configmap1",
 					},
 				},
 				{
 					Name: "plugin2",
-					VolumeSource: corev1.VolumeSource{
-						ConfigMap: &corev1.ConfigMapVolumeSource{
-							LocalObjectReference: corev1.LocalObjectReference{
-								Name: "configmap2",
-							},
-						},
+					ConfigMap: &corev1.ConfigMapVolumeSource{
+						Name: "configmap2",
 					},
 				},
 			},

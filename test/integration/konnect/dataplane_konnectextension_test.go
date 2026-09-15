@@ -102,10 +102,8 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 	// Now creating a DataPlane that uses the KonnectExtension according to the provided manifest
 	t.Log("Creating a DataPlane that uses the KonnectExtension")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      "dataplane-prod",
-		},
+		Namespace: namespace.Name,
+		Name:      "dataplane-prod",
 		Spec: operatorv1beta1.DataPlaneSpec{
 			DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -132,10 +130,8 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 								},
 								Volumes: []corev1.Volume{
 									{
-										Name: "custom-vol",
-										VolumeSource: corev1.VolumeSource{
-											EmptyDir: &corev1.EmptyDirVolumeSource{},
-										},
+										Name:     "custom-vol",
+										EmptyDir: &corev1.EmptyDirVolumeSource{},
 									},
 								},
 							},
@@ -146,9 +142,7 @@ func TestDataPlaneWithKonnectExtension(t *testing.T) {
 					{
 						Group: konnectv1alpha1.GroupVersion.Group,
 						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: konnectExtension.Name,
-						},
+						Name:  konnectExtension.Name,
 					},
 				},
 			},

@@ -47,11 +47,9 @@ func TestDataPlaneBlueGreenRollout(t *testing.T) {
 		Name:      uuid.NewString(),
 	}
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
-		},
-		Spec: testBlueGreenDataPlaneSpec(),
+		Namespace: dataplaneName.Namespace,
+		Name:      dataplaneName.Name,
+		Spec:      testBlueGreenDataPlaneSpec(),
 	}
 
 	dataplaneClient := integration.GetClients().OperatorClient.GatewayOperatorV1beta1().DataPlanes(namespace.Name)
@@ -260,11 +258,9 @@ func TestDataPlaneBlueGreenHorizontalScaling(t *testing.T) {
 		Name:      uuid.NewString(),
 	}
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: dataplaneName.Namespace,
-			Name:      dataplaneName.Name,
-		},
-		Spec: testBlueGreenDataPlaneSpec(),
+		Namespace: dataplaneName.Namespace,
+		Name:      dataplaneName.Name,
+		Spec:      testBlueGreenDataPlaneSpec(),
 	}
 
 	dataplane.Spec.Deployment.Scaling = &operatorv1beta1.Scaling{
@@ -357,11 +353,9 @@ func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) 
 
 	t.Log("deploying dataplane")
 	dataplane := &operatorv1beta1.DataPlane{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: namespace.Name,
-			Name:      uuid.NewString(),
-		},
-		Spec: testBlueGreenDataPlaneSpec(),
+		Namespace: namespace.Name,
+		Name:      uuid.NewString(),
+		Spec:      testBlueGreenDataPlaneSpec(),
 	}
 	dataplaneName := client.ObjectKeyFromObject(dataplane)
 
@@ -455,38 +449,34 @@ func TestDataPlaneBlueGreenResourcesNotDeletedUntilOwnerIsRemoved(t *testing.T) 
 
 func testBlueGreenDataPlaneSpec() operatorv1beta1.DataPlaneSpec {
 	return operatorv1beta1.DataPlaneSpec{
-		DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
-			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
-				Rollout: &operatorv1beta1.Rollout{
-					Strategy: operatorv1beta1.RolloutStrategy{
-						BlueGreen: &operatorv1beta1.BlueGreenStrategy{
-							Promotion: operatorv1beta1.Promotion{
-								Strategy: operatorv1beta1.BreakBeforePromotion,
-							},
+		Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+			Rollout: &operatorv1beta1.Rollout{
+				Strategy: operatorv1beta1.RolloutStrategy{
+					BlueGreen: &operatorv1beta1.BlueGreenStrategy{
+						Promotion: operatorv1beta1.Promotion{
+							Strategy: operatorv1beta1.BreakBeforePromotion,
 						},
 					},
 				},
-				DeploymentOptions: operatorv1beta1.DeploymentOptions{
-					PodTemplateSpec: &corev1.PodTemplateSpec{
-						Spec: corev1.PodSpec{
-							Containers: []corev1.Container{
-								{
-									Name:  consts.DataPlaneProxyContainerName,
-									Image: helpers.GetDefaultDataPlaneImage(),
-									// Make the test a bit faster.
-									ReadinessProbe: &corev1.Probe{
-										InitialDelaySeconds: 0,
-										PeriodSeconds:       1,
-										FailureThreshold:    3,
-										SuccessThreshold:    1,
-										TimeoutSeconds:      1,
-										ProbeHandler: corev1.ProbeHandler{
-											HTTPGet: &corev1.HTTPGetAction{
-												Path:   "/status",
-												Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
-												Scheme: corev1.URISchemeHTTP,
-											},
-										},
+			},
+			DeploymentOptions: operatorv1beta1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name:  consts.DataPlaneProxyContainerName,
+								Image: helpers.GetDefaultDataPlaneImage(),
+								// Make the test a bit faster.
+								ReadinessProbe: &corev1.Probe{
+									InitialDelaySeconds: 0,
+									PeriodSeconds:       1,
+									FailureThreshold:    3,
+									SuccessThreshold:    1,
+									TimeoutSeconds:      1,
+									HTTPGet: &corev1.HTTPGetAction{
+										Path:   "/status",
+										Port:   intstr.FromInt32(consts.DataPlaneMetricsPort),
+										Scheme: corev1.URISchemeHTTP,
 									},
 								},
 							},

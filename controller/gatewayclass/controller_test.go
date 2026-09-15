@@ -6,7 +6,6 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/kubernetes/scheme"
 	controllerruntimeclient "sigs.k8s.io/controller-runtime/pkg/client"
@@ -50,9 +49,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController("mismatch-controller-name"),
 				},
@@ -75,9 +72,7 @@ func TestGatewayClassReconciler_Reconcile(t *testing.T) {
 				},
 			},
 			gatewayClass: &gatewayv1.GatewayClass{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-gatewayclass",
-				},
+				Name: "test-gatewayclass",
 				Spec: gatewayv1.GatewayClassSpec{
 					ControllerName: gatewayv1.GatewayController(vars.ControllerName()),
 				},

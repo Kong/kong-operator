@@ -24,7 +24,7 @@ func TestNewConverterTCPRoute(t *testing.T) {
 	route := newTCPRouteForTranslation()
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
-	converter, err := NewConverter(*route, fakeClient, false, "")
+	converter, err := NewConverter(*route, fakeClient, false, "", testReferenceGrantVersion)
 	require.NoError(t, err)
 	_, ok := converter.(*tcpRouteConverter)
 	require.True(t, ok)
@@ -40,7 +40,7 @@ func TestTCPRouteConverter_Translate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(route, fakeClient, false, "")
+	converter := newTCPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestTCPRouteConverter_TranslateKeepsOldestRouteForSameListener(t *testing.T
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(olderRoute, fakeClient, false, "")
+	converter := newTCPRouteConverter(olderRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestTCPRouteConverter_TranslateSkipsNewerRouteForSameListener(t *testing.T)
 		olderRoute,
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(newerRoute, fakeClient, false, "")
+	converter := newTCPRouteConverter(newerRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -172,10 +172,8 @@ func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		"konghq.com/protocol":    "tls",
 	}
 	clientCertSecret := &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "backend-client-cert",
-			Namespace: "default",
-		},
+		Name:      "backend-client-cert",
+		Namespace: "default",
 		Data: map[string][]byte{
 			corev1.TLSCertKey:       []byte("cert-data"),
 			corev1.TLSPrivateKeyKey: []byte("key-data"),
@@ -188,7 +186,7 @@ func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(route, fakeClient, false, "")
+	converter := newTCPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -240,14 +238,10 @@ func TestTCPRouteConverter_GetHybridGatewayParentsIsHostless(t *testing.T) {
 func newTCPRouteForTranslation() *gwtypes.TCPRoute {
 	port := gwtypes.PortNumber(80)
 	return &gwtypes.TCPRoute{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "TCPRoute",
-			APIVersion: "gateway.networking.k8s.io/v1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-route",
-			Namespace: "default",
-		},
+		Kind:       "TCPRoute",
+		APIVersion: "gateway.networking.k8s.io/v1",
+		Name:       "test-route",
+		Namespace:  "default",
 		Spec: gwtypes.TCPRouteSpec{
 			CommonRouteSpec: gwtypes.CommonRouteSpec{
 				ParentRefs: []gwtypes.ParentReference{{
@@ -258,12 +252,10 @@ func newTCPRouteForTranslation() *gwtypes.TCPRoute {
 			},
 			Rules: []gwtypes.TCPRouteRule{{
 				BackendRefs: []gwtypes.BackendRef{{
-					BackendObjectReference: gwtypes.BackendObjectReference{
-						Name:  "backend-service",
-						Port:  &port,
-						Kind:  new(gwtypes.Kind("Service")),
-						Group: new(gwtypes.Group("")),
-					},
+					Name:  "backend-service",
+					Port:  &port,
+					Kind:  new(gwtypes.Kind("Service")),
+					Group: new(gwtypes.Group("")),
 				}},
 			}},
 		},

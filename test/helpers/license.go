@@ -10,7 +10,6 @@ import (
 	"github.com/avast/retry-go/v5"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -29,9 +28,7 @@ func CreateKongLicense(ctx context.Context, cl client.Client, generateNamePrefix
 
 	fmt.Println("INFO: creating KongLicense for tests")
 	kongLicense := &configurationv1alpha1.KongLicense{
-		ObjectMeta: metav1.ObjectMeta{
-			GenerateName: generateNamePrefix,
-		},
+		GenerateName:     generateNamePrefix,
 		RawLicenseString: licenseData,
 		Enabled:          true,
 	}

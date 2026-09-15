@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -32,6 +33,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	mcpv1alpha1 "github.com/kong/kong-operator/v2/api/mcp/v1alpha1"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
+	aigwonprem "github.com/kong/kong-operator/v2/controller/aigateway/onprem"
 	"github.com/kong/kong-operator/v2/controller/controlplane"
 	"github.com/kong/kong-operator/v2/controller/cpextensions"
 	"github.com/kong/kong-operator/v2/controller/cpextensions/metricsscraper"
@@ -56,6 +58,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -96,9 +99,10 @@ func (c *ControllerDef) MaybeSetupWithManager(ctx context.Context, mgr ctrl.Mana
 func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) error {
 	var indexOptions []index.Option
 
-	crdChecker := k8sutils.CRDChecker{
-		Client: mgr.GetClient(),
+	crdChecker := func(gvr schema.GroupVersionResource) (bool, error) {
+		return k8sutils.CRDExists(mgr.GetClient().RESTMapper(), gvr)
 	}
+
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
 		Version:  gatewayv1.GroupVersion.Version,
@@ -131,34 +135,35 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
-	if cfg.GatewayControllerEnabled {
+	// The hybrid gateway controllers need the same indexes but are gated on the Konnect flag.
+	if cfg.GatewayControllerEnabled || cfg.KonnectControllersEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForGatewayClass(),
 			index.OptionsForGateway(),
 			index.OptionsForHTTPRoute(),
 		)
-		hasTLSRoute, err := crdChecker.CRDExists(tlsRouteGVR)
+		hasTLSRoute, err := crdChecker(tlsRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTLSRoute())
 		}
-		hasTCPRoute, err := crdChecker.CRDExists(tcpRouteGVR)
+		hasTCPRoute, err := crdChecker(tcpRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForTCPRoute())
 		}
-		hasUDPRoute, err := crdChecker.CRDExists(udpRouteGVR)
+		hasUDPRoute, err := crdChecker(udpRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
 		}
 		if hasUDPRoute {
 			indexOptions = slices.Concat(indexOptions, index.OptionsForUDPRoute())
 		}
-		hasGRPCRoute, err := crdChecker.CRDExists(grpcRouteGVR)
+		hasGRPCRoute, err := crdChecker(grpcRouteGVR)
 		if err != nil {
 			return fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
 		}
@@ -209,6 +214,14 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 	if cfg.AIGatewayDataPlaneControllerEnabled {
 		indexOptions = slices.Concat(indexOptions,
 			index.OptionsForAIGatewayDataPlane(),
+		)
+	}
+
+	// The AIGatewayModel index is also registered above under KonnectControllersEnabled; guard
+	// against indexing the same field twice.
+	if cfg.OnPremAIGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
+		indexOptions = slices.Concat(indexOptions,
+			index.OptionsForAIGatewayModel(),
 		)
 	}
 
@@ -409,6 +422,16 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 			},
 		},
 		{
+			condition: c.OnPremAIGatewayControllerEnabled,
+			gvrs: []schema.GroupVersionResource{
+				{
+					Group:    aigatewayv1alpha1.SchemeGroupVersion.Group,
+					Version:  aigatewayv1alpha1.SchemeGroupVersion.Version,
+					Resource: "onpremaigateways",
+				},
+			},
+		},
+		{
 			condition: c.KonnectControllersEnabled,
 			gvrs: []schema.GroupVersionResource{
 				gwtypes.GatewayConfigurationGVR(),
@@ -553,13 +576,15 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "kongvaults",
 				},
 			},
+			anyOfGVRs: [][]schema.GroupVersionResource{referenceGrantAnyOfGVRs},
 		},
 	}
 }
 
-type crdExistenceChecker interface {
-	CRDExists(schema.GroupVersionResource) (bool, error)
-}
+// crdExistenceChecker reports whether a resource is served by the apiserver. It
+// is a parameter of ensureRequiredCRDs so that tests can substitute a fixed set
+// of installed CRDs for real discovery.
+type crdExistenceChecker func(schema.GroupVersionResource) (bool, error)
 
 func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 	for _, check := range requiredCRDChecks(c) {
@@ -568,7 +593,7 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 		}
 
 		for _, gvr := range check.gvrs {
-			if ok, err := checker.CRDExists(gvr); err != nil {
+			if ok, err := checker(gvr); err != nil {
 				return err
 			} else if !ok {
 				return fmt.Errorf("missing a required CRD: %v", gvr)
@@ -578,7 +603,7 @@ func ensureRequiredCRDs(c *Config, checker crdExistenceChecker) error {
 		for _, gvrGroup := range check.anyOfGVRs {
 			found := false
 			for _, gvr := range gvrGroup {
-				ok, err := checker.CRDExists(gvr)
+				ok, err := checker(gvr)
 				if err != nil {
 					return err
 				}
@@ -601,9 +626,31 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	// metricRecorder is the recorder used to record custom metrics in the controller manager's metrics server.
 	metricRecorder := metrics.NewGlobalCtrlRuntimeMetricsRecorder()
 
-	checker := k8sutils.CRDChecker{Client: mgr.GetClient()}
-	if err := ensureRequiredCRDs(c, checker); err != nil {
+	crdExists := func(gvr schema.GroupVersionResource) (bool, error) {
+		return k8sutils.CRDExists(mgr.GetClient().RESTMapper(), gvr)
+	}
+	if err := ensureRequiredCRDs(c, crdExists); err != nil {
 		return nil, err
+	}
+
+	// Resolve which ReferenceGrant API version (v1 or v1beta1) the cluster serves
+	// once, here, and inject it into every reconciler that evaluates cross-namespace
+	// references. Resolving it per reconciler would repeat the same lookup, and
+	// resolving it per reconcile would hit the RESTMapper - and, for a version the
+	// cluster does not serve, live discovery - on every call.
+	//
+	// The CRD being absent is not fatal here: the operator may run with every
+	// controller that needs ReferenceGrants disabled. Controllers that do need it
+	// are already guarded by the referenceGrantAnyOfGVRs checks in
+	// ensureRequiredCRDs above, which report a clearer error naming the missing
+	// CRD. Default to v1 (the GA version) so the value is always one the
+	// constructors accept.
+	referenceGrantVersion, err := k8sutils.DetectReferenceGrantVersion(mgr.GetClient().RESTMapper())
+	if err != nil {
+		if !errors.Is(err, k8sutils.ErrReferenceGrantCRDNotFound) {
+			return nil, err
+		}
+		referenceGrantVersion = schema.GroupVersion(gatewayv1.GroupVersion)
 	}
 
 	const (
@@ -630,6 +677,20 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			return nil, fmt.Errorf("failed to get pod labels: %w", err)
 		}
 		podLabels = map[string]string{}
+	}
+
+	// aiGatewayInstancesMgr runs the in-process on-prem AI Gateway control plane instances, one per
+	// OnPremAIGateway resource.
+	// NOTE: no diagnostics exposer is configured yet. When the AI Gateway control plane grows a config
+	// dump, add one mirroring diagnostics.NewControlPlaneDiagnosticsExposer (see run.go, where it's passed
+	// to the ControlPlane's multi-instance manager) and pass it here via instances.WithDiagnosticsExposer.
+	// TODO: https://github.com/Kong/kong-operator/issues/5630
+	var aiGatewayInstancesMgr *multiinstanceai.Manager
+	if c.OnPremAIGatewayControllerEnabled {
+		aiGatewayInstancesMgr = multiinstanceai.NewManager(mgr.GetLogger())
+		if err := mgr.Add(aiGatewayInstancesMgr); err != nil {
+			return nil, fmt.Errorf("failed to add AI Gateway instances manager to controller-runtime manager: %w", err)
+		}
 	}
 
 	ctrlOpts := controller.Options{
@@ -661,6 +722,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				AnonymousReportsEnabled: c.AnonymousReports,
 				LoggingMode:             c.LoggingMode,
 				WatchNamespaces:         c.WatchNamespaces,
+				DataPlaneIPFamily:       c.IPFamily,
+				ReferenceGrantVersion:   referenceGrantVersion,
 			},
 		},
 		// ControlPlane controller
@@ -684,6 +747,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				EmitKubernetesEvents:     c.EmitKubernetesEvents,
 				WatchNamespaces:          c.WatchNamespaces,
 				CertTTL:                  c.CertTTL,
+				ReferenceGrantVersion:    referenceGrantVersion,
 			},
 		},
 		// DataPlane controller
@@ -702,6 +766,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				LoggingMode:              c.LoggingMode,
 				ValidateDataPlaneImage:   c.ValidateImages,
 				CertTTL:                  c.CertTTL,
+				DataPlaneIPFamily:        c.IPFamily,
 			},
 		},
 		// DataPlaneBlueGreen controller
@@ -727,6 +792,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ValidateDataPlaneImage:   c.ValidateImages,
 					LoggingMode:              c.LoggingMode,
 					CertTTL:                  c.CertTTL,
+					DataPlaneIPFamily:        c.IPFamily,
 				},
 				DefaultImage:           consts.DefaultDataPlaneImage,
 				KonnectEnabled:         c.KonnectControllersEnabled,
@@ -734,6 +800,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				ValidateDataPlaneImage: c.ValidateImages,
 				LoggingMode:            c.LoggingMode,
 				CertTTL:                c.CertTTL,
+				DataPlaneIPFamily:      c.IPFamily,
 			},
 		},
 		// DataPlaneOwnedServiceFinalizer controller
@@ -782,6 +849,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Scheme:                 mgr.GetScheme(),
 				LoggingMode:            c.LoggingMode,
 				ConfigMapLabelSelector: c.ConfigMapLabelSelector,
+				ReferenceGrantVersion:  referenceGrantVersion,
 			},
 		},
 		// ControlPlaneExtensions controller
@@ -820,6 +888,16 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				TypeConverter:            ssaProvider,
 			},
 		},
+		// On-prem AIGateway (control plane) controller
+		{
+			Enabled: c.OnPremAIGatewayControllerEnabled,
+			Controller: &aigwonprem.Reconciler{
+				Client:           mgr.GetClient(),
+				LoggingMode:      c.LoggingMode,
+				TypeConverter:    ssaProvider,
+				InstancesManager: aiGatewayInstancesMgr,
+			},
+		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when
 		// relevant CRDs change. Enabled whenever at least one SSA-using
 		// controller is active.
@@ -839,9 +917,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		controllers = append(controllers, ControllerDef{
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
+				ControllerOptions:     ctrlOpts,
+				Client:                mgr.GetClient(),
+				LoggingMode:           c.LoggingMode,
+				ReferenceGrantVersion: referenceGrantVersion,
 			},
 		})
 	}
@@ -965,8 +1044,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		controllers = append(controllers,
-			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
-			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
+			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion),
 		)
 		tlsRouteGVR := schema.GroupVersionResource{
 			Group:    gatewayv1.GroupVersion.Group,
@@ -988,33 +1067,33 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			Version:  gatewayv1.GroupVersion.Version,
 			Resource: "grpcroutes",
 		}
-		hasTLSRoute, err := checker.CRDExists(tlsRouteGVR)
+		hasTLSRoute, err := crdExists(tlsRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
-		hasTCPRoute, err := checker.CRDExists(tcpRouteGVR)
+		hasTCPRoute, err := crdExists(tcpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
-		hasGRPCRoute, err := checker.CRDExists(grpcRouteGVR)
+		hasGRPCRoute, err := crdExists(grpcRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
 		}
 		if hasGRPCRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
-		hasUDPRoute, err := checker.CRDExists(udpRouteGVR)
+		hasUDPRoute, err := crdExists(udpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
 		}
 		if hasUDPRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.UDPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.UDPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
 	}
 
@@ -1061,10 +1140,16 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, ssaProvider *controllerpkgssa.TypeConverterProvider) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	mgr ctrl.Manager,
+	fqdnMode bool,
+	clusterDomain string,
+	ssaProvider *controllerpkgssa.TypeConverterProvider,
+	referenceGrantVersion schema.GroupVersion,
+) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain, ssaProvider),
+		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain, ssaProvider, referenceGrantVersion),
 	}
 }
 

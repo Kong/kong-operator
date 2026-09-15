@@ -60,10 +60,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "valid HTTPRoute should pass the validation",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -83,10 +81,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute with no rules should not pass the validation",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-no-rule",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "httproute-no-rule",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -101,10 +97,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute with query param match should pass validation with expression routes",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-query-param-match",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "httproute-query-param-match",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -125,10 +119,8 @@ func TestValidateHTTPRoute(t *testing.T) {
 		{
 			name: "HTTPRoute with query param match should not pass validation when expression routes disabled",
 			httpRoute: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "httproute-query-param-match",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "httproute-query-param-match",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -178,10 +170,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "an HTTPRoute rule with no matches can be routed if it has hostnames to match on",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -198,10 +188,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -227,21 +215,19 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name:         new("httproute.default.basic-httproute.0.0"),
-									PreserveHost: new(true),
-									Protocols:    nil,
-									Hosts: []*string{
-										new("konghq.com"),
-										new("www.konghq.com"),
-									},
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name:         new("httproute.default.basic-httproute.0.0"),
+								PreserveHost: new(true),
+								Protocols:    nil,
+								Hosts: []*string{
+									new("konghq.com"),
+									new("www.konghq.com"),
+								},
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -254,10 +240,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "an HTTPRoute rule with no matches and no hostnames produces a catch-all rule",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					// no hostnames present
@@ -272,10 +256,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -301,17 +283,15 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name:         new("httproute.default.basic-httproute.0.0"),
-									PreserveHost: new(true),
-									Protocols:    nil,
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name:         new("httproute.default.basic-httproute.0.0"),
+								PreserveHost: new(true),
+								Protocols:    nil,
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -324,10 +304,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "a single HTTPRoute with one match and one backendRef results in a single service",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{{
@@ -343,10 +321,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -372,22 +348,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
-									Paths: []*string{
-										new("~/httpbin$"),
-										new("/httpbin/"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.0.0"),
+								Paths: []*string{
+									new("~/httpbin$"),
+									new("/httpbin/"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -400,10 +374,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "an HTTPRoute with regex path matches is supported",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{{
@@ -419,10 +391,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -448,21 +418,19 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
-									Paths: []*string{
-										new("~/httpbin$"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.0.0"),
+								Paths: []*string{
+									new("~/httpbin$"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -475,10 +443,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "an HTTPRoute with exact path matches translates to a terminated Kong regex route",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{
@@ -496,10 +462,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -525,21 +489,19 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
-									Paths: []*string{
-										new("~/httpbin$"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.0.0"),
+								Paths: []*string{
+									new("~/httpbin$"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -552,10 +514,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs results in a single service",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{{
@@ -578,10 +538,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -609,24 +567,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								// only 1 route with two paths should be created
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.0"),
-										Paths: []*string{
-											new("~/httpbin-1$"),
-											new("/httpbin-1/"),
-											new("~/httpbin-2$"),
-											new("/httpbin-2/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										new("~/httpbin-1$"),
+										new("/httpbin-1/"),
+										new("~/httpbin-2$"),
+										new("/httpbin-2/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -642,10 +598,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			msg: "a single HTTPRoute with multiple rules with different backendRefs results in multiple services",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "basic-httproute",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -672,10 +626,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -702,22 +654,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created for this service
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
-									Paths: []*string{
-										new("~/httpbin-1$"),
-										new("/httpbin-1/"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.0.0"),
+								Paths: []*string{
+									new("~/httpbin-1$"),
+									new("/httpbin-1/"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -739,22 +689,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.1.0"),
-									Paths: []*string{
-										new("~/httpbin-2$"),
-										new("/httpbin-2/"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.1.0"),
+								Paths: []*string{
+									new("~/httpbin-2$"),
+									new("/httpbin-2/"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -769,10 +717,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			msg: "a single HTTPRoute with multiple rules and backendRefs generates consolidated routes",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "basic-httproute",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -810,22 +756,16 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v1",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v2",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v2",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v3",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v3",
 					},
 				},
 			},
@@ -854,24 +794,22 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.0"),
-										Paths: []*string{
-											new("~/httpbin-1$"),
-											new("/httpbin-1/"),
-											new("~/httpbin-2$"),
-											new("/httpbin-2/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										new("~/httpbin-1$"),
+										new("/httpbin-1/"),
+										new("~/httpbin-2$"),
+										new("/httpbin-2/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -896,22 +834,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Namespace: "default",
 							Routes: []kongstate.Route{
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.2.0"),
-										Paths: []*string{
-											new("~/httpbin-2$"),
-											new("/httpbin-2/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.2.0"),
+									Paths: []*string{
+										new("~/httpbin-2$"),
+										new("/httpbin-2/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -926,10 +862,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			msg: "a single HTTPRoute with multiple rules with equal backendRefs and different filters results in a single service",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "basic-httproute",
-						Namespace: corev1.NamespaceDefault,
-					},
+					Name:      "basic-httproute",
+					Namespace: corev1.NamespaceDefault,
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -976,10 +910,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -1007,22 +939,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								// two route  should be created, as the filters are different
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.0"),
-										Paths: []*string{
-											new("~/path-0$"),
-											new("/path-0/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										new("~/path-0$"),
+										new("/path-0/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
@@ -1044,22 +974,20 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 									},
 								},
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.1.0"),
-										Paths: []*string{
-											new("~/path-1$"),
-											new("/path-1/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.1.0"),
+									Paths: []*string{
+										new("~/path-1$"),
+										new("/path-1/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
@@ -1090,10 +1018,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "a single HTTPRoute with single rule and multiple matches generates consolidated kong route paths",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{
@@ -1129,16 +1055,12 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v1",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v2",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v2",
 					},
 				},
 			},
@@ -1168,75 +1090,69 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								// First two matches consolidated into a single route
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.0"),
-										Paths: []*string{
-											new("~/path-0$"),
-											new("/path-0/"),
-											new("~/path-1$"),
-											new("/path-1/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										new("~/path-0$"),
+										new("/path-0/"),
+										new("~/path-1$"),
+										new("/path-1/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.2"),
-										Paths: []*string{
-											new("~/path-2$"),
-											new("/path-2/"),
-											new("~/path-3$"),
-											new("/path-3/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Methods:      []*string{new("DELETE")},
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.2"),
+									Paths: []*string{
+										new("~/path-2$"),
+										new("/path-2/"),
+										new("~/path-3$"),
+										new("/path-3/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Methods:      []*string{new("DELETE")},
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Third two matches consolidated into a single route
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.4"),
-										Paths: []*string{
-											new("~/path-4$"),
-											new("/path-4/"),
-											new("~/path-5$"),
-											new("/path-5/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Headers: map[string][]string{
-											"x-header-1": {"x-value-1"},
-											"x-header-2": {"x-value-2"},
-										},
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.4"),
+									Paths: []*string{
+										new("~/path-4$"),
+										new("/path-4/"),
+										new("~/path-5$"),
+										new("/path-5/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Headers: map[string][]string{
+										"x-header-1": {"x-value-1"},
+										"x-header-2": {"x-value-2"},
+									},
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -1250,10 +1166,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "a single HTTPRoute with multiple rules and matches generates consolidated kong route paths",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{
@@ -1318,16 +1232,12 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v1",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "foo-v2",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "foo-v2",
 					},
 				},
 			},
@@ -1356,76 +1266,70 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							Routes: []kongstate.Route{
 								// First two matches from rule one and rule two consolidated into a single route
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.0"),
-										Paths: []*string{
-											new("~/path-0$"),
-											new("/path-0/"),
-											new("~/path-1$"),
-											new("/path-1/"),
-											new("~/path-4$"),
-											new("/path-4/"),
-											new("~/path-5$"),
-											new("/path-5/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.0"),
+									Paths: []*string{
+										new("~/path-0$"),
+										new("/path-0/"),
+										new("~/path-1$"),
+										new("/path-1/"),
+										new("~/path-4$"),
+										new("/path-4/"),
+										new("~/path-5$"),
+										new("/path-5/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 								// Second two matches consolidated into a single route
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.0.2"),
-										Paths: []*string{
-											new("~/path-2$"),
-											new("/path-2/"),
-											new("~/path-3$"),
-											new("/path-3/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Methods:      []*string{new("DELETE")},
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.0.2"),
+									Paths: []*string{
+										new("~/path-2$"),
+										new("/path-2/"),
+										new("~/path-3$"),
+										new("/path-3/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Methods:      []*string{new("DELETE")},
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 
 								// Matches from rule 3, that has different filter, are not consolidated
 								{
-									Route: kong.Route{
-										Name: new("httproute.default.basic-httproute.2.0"),
-										Paths: []*string{
-											new("~/path-6$"),
-											new("/path-6/"),
-											new("~/path-7$"),
-											new("/path-7/"),
-										},
-										PreserveHost: new(true),
-										Protocols:    nil,
-										StripPath:    new(false),
-										Tags: []*string{
-											new("k8s-name:basic-httproute"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1beta1"),
-										},
+									Name: new("httproute.default.basic-httproute.2.0"),
+									Paths: []*string{
+										new("~/path-6$"),
+										new("/path-6/"),
+										new("~/path-7$"),
+										new("/path-7/"),
+									},
+									PreserveHost: new(true),
+									Protocols:    nil,
+									StripPath:    new(false),
+									Tags: []*string{
+										new("k8s-name:basic-httproute"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1beta1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
@@ -1456,10 +1360,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 		{
 			msg: "a single HTTPRoute with timeouts will set the timeout in the service",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -1482,10 +1384,8 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: corev1.NamespaceDefault,
-							Name:      "fake-service",
-						},
+						Namespace: corev1.NamespaceDefault,
+						Name:      "fake-service",
 					},
 				},
 			},
@@ -1511,21 +1411,19 @@ func TestIngressRulesFromHTTPRoutes(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name:         new("httproute.default.basic-httproute.0.0"),
-									PreserveHost: new(true),
-									Protocols:    nil,
-									Hosts: []*string{
-										new("konghq.com"),
-										new("www.konghq.com"),
-									},
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name:         new("httproute.default.basic-httproute.0.0"),
+								PreserveHost: new(true),
+								Protocols:    nil,
+								Hosts: []*string{
+									new("konghq.com"),
+									new("www.konghq.com"),
+								},
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -1571,11 +1469,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 		}
 
 		fakeService = &corev1.Service{
-			TypeMeta: serviceTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-service",
-				Namespace: "default",
-			},
+			TypeMeta:  serviceTypeMeta,
+			Name:      "fake-service",
+			Namespace: "default",
 		}
 	)
 
@@ -1595,11 +1491,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			msg: "a single HTTPRoute with multiple rules sharing the same backend should be translated to one service",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1651,22 +1545,20 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Routes: []kongstate.Route{
 								// Only 1 route should be created.
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-1.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/foo$",
-											"~/bar$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-1"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-1.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/foo$",
+										"~/bar$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-1"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -1680,11 +1572,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			msg: "rules with the same backends in multiple HTTPRoutes from same namespace should be translated to one service",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1700,11 +1590,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-2",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-2",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1748,40 +1636,36 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Routes: []kongstate.Route{
 								// 2 routes should be created for the 2 HTTPRoutes.
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-1.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/foo$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-1"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-1.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/foo$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-1"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-2.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/bar$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-2"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-2.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/bar$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-2"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[1]),
 								},
@@ -1795,11 +1679,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			msg: "rules with the same backends in HTTPRoutes from different namespaces should be translated into multiple services",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1815,11 +1697,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-2",
-						Namespace: "ns-alter",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-2",
+					Namespace: "ns-alter",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -1839,10 +1719,8 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 				Services: []*corev1.Service{fakeService},
 				ReferenceGrants: []*gatewayapi.ReferenceGrant{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "grant-from-ns-alter-to-services",
-							Namespace: "default",
-						},
+						Name:      "grant-from-ns-alter-to-services",
+						Namespace: "default",
 						Spec: gatewayapi.ReferenceGrantSpec{
 							From: []gatewayapi.ReferenceGrantFrom{
 								{
@@ -1886,21 +1764,19 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Parent:    routes[0],
 							Routes: []kongstate.Route{
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-1.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/foo$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-1"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-1.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/foo$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-1"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 								},
@@ -1923,21 +1799,19 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Parent:    routes[1],
 							Routes: []kongstate.Route{
 								{
-									Route: kong.Route{
-										Name:         new("httproute.ns-alter.httproute-2.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/bar$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-2"),
-											new("k8s-namespace:ns-alter"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.ns-alter.httproute-2.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/bar$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-2"),
+										new("k8s-namespace:ns-alter"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[1]),
 								},
@@ -1951,11 +1825,9 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 			msg: "rules with no backends but RequestRedirect filter should be translated to one service",
 			routes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "httproute-1",
-						Namespace: "default",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Name:      "httproute-1",
+					Namespace: "default",
 					Spec: gatewayapi.HTTPRouteSpec{
 						CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 						Rules: []gatewayapi.HTTPRouteRule{
@@ -2002,21 +1874,19 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 							Routes: []kongstate.Route{
 								// 2 routes where one for each rule should be created because they have different filters.
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-1.0.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/kong$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-1"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-1.0.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/kong$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-1"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
@@ -2053,21 +1923,19 @@ func TestIngressRulesFromHTTPRoutesCombinedServicesAcrossHTTPRoutes(t *testing.T
 									},
 								},
 								{
-									Route: kong.Route{
-										Name:         new("httproute.default.httproute-1.1.0"),
-										PreserveHost: new(true),
-										Protocols:    nil,
-										Paths: kong.StringSlice(
-											"~/kuma$",
-										),
-										StripPath: new(false),
-										Tags: []*string{
-											new("k8s-name:httproute-1"),
-											new("k8s-namespace:default"),
-											new("k8s-kind:HTTPRoute"),
-											new("k8s-group:gateway.networking.k8s.io"),
-											new("k8s-version:v1"),
-										},
+									Name:         new("httproute.default.httproute-1.1.0"),
+									PreserveHost: new(true),
+									Protocols:    nil,
+									Paths: kong.StringSlice(
+										"~/kuma$",
+									),
+									StripPath: new(false),
+									Tags: []*string{
+										new("k8s-name:httproute-1"),
+										new("k8s-namespace:default"),
+										new("k8s-kind:HTTPRoute"),
+										new("k8s-group:gateway.networking.k8s.io"),
+										new("k8s-version:v1"),
 									},
 									Ingress: util.FromK8sObject(routes[0]),
 									Plugins: []kong.Plugin{
@@ -2133,10 +2001,8 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 		{
 			msg: "an HTTPRoute with regex path matches is supported",
 			routes: []*gatewayapi.HTTPRoute{{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway"),
 					Rules: []gatewayapi.HTTPRouteRule{{
@@ -2144,13 +2010,9 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							builder.NewHTTPRouteMatch().WithPathRegex("/httpbin$").Build(),
 						},
 						BackendRefs: []gatewayapi.HTTPBackendRef{{
-							BackendRef: gatewayapi.BackendRef{
-								BackendObjectReference: gatewayapi.BackendObjectReference{
-									Name: gatewayapi.ObjectName("fake-service"),
-									Port: new(gatewayapi.PortNumber(80)),
-									Kind: util.StringToGatewayAPIKindPtr("Service"),
-								},
-							},
+							Name: gatewayapi.ObjectName("fake-service"),
+							Port: new(gatewayapi.PortNumber(80)),
+							Kind: util.StringToGatewayAPIKindPtr("Service"),
 						}},
 					}},
 				},
@@ -2158,10 +2020,8 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 			storeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-service",
-							Namespace: corev1.NamespaceDefault,
-						},
+						Name:      "fake-service",
+						Namespace: corev1.NamespaceDefault,
 					},
 				},
 			},
@@ -2187,21 +2047,19 @@ func TestIngressRulesFromHTTPRoutes_RegexPrefix(t *testing.T) {
 							},
 							Namespace: "default",
 							Routes: []kongstate.Route{{ // only 1 route should be created
-								Route: kong.Route{
-									Name: new("httproute.default.basic-httproute.0.0"),
-									Paths: []*string{
-										new("~/httpbin$"),
-									},
-									PreserveHost: new(true),
-									Protocols:    nil,
-									StripPath:    new(false),
-									Tags: []*string{
-										new("k8s-name:basic-httproute"),
-										new("k8s-namespace:default"),
-										new("k8s-kind:HTTPRoute"),
-										new("k8s-group:gateway.networking.k8s.io"),
-										new("k8s-version:v1beta1"),
-									},
+								Name: new("httproute.default.basic-httproute.0.0"),
+								Paths: []*string{
+									new("~/httpbin$"),
+								},
+								PreserveHost: new(true),
+								Protocols:    nil,
+								StripPath:    new(false),
+								Tags: []*string{
+									new("k8s-name:basic-httproute"),
+									new("k8s-namespace:default"),
+									new("k8s-kind:HTTPRoute"),
+									new("k8s-group:gateway.networking.k8s.io"),
+									new("k8s-version:v1beta1"),
 								},
 								Ingress: util.FromK8sObject(routes[0]),
 							}},
@@ -2253,11 +2111,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "single HTTPRoute with no hostname and multiple matches",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2276,18 +2132,14 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			fakeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service-1",
-						},
+						Namespace: "default",
+						Name:      "service-1",
 					},
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.httproute-1.0"),
-					},
+					Name: new("httproute.default.httproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
@@ -2299,19 +2151,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.httproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.0"),
-							Expression:   new(`http.path == "/v1/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.0"),
+						Expression:       new(`http.path == "/v1/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.1"),
-							Expression:   new(`http.path == "/v1/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.1"),
+						Expression:       new(`http.path == "/v1/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2321,11 +2169,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "single HTTPRoute with multiple hostnames and rules",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
 							"foo.com",
@@ -2355,24 +2201,18 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			fakeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service-1",
-						},
+						Namespace: "default",
+						Name:      "service-1",
 					},
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service-2",
-						},
+						Namespace: "default",
+						Name:      "service-2",
 					},
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.httproute-1.0"),
-					},
+					Name: new("httproute.default.httproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
@@ -2381,9 +2221,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.httproute-1.1"),
-					},
+					Name: new("httproute.default.httproute-1.1"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-2").
 							WithNamespace("default").
@@ -2395,37 +2233,29 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.httproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   new(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1.foo.com.0.0"),
+						Expression:       new(`(http.host == "foo.com") && (http.path == "/v1/foo")`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.bar.com.0.0"),
-							Expression:   new(`(http.host =^ ".bar.com") && (http.path == "/v1/foo")`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.bar.com.0.0"),
+						Expression:       new(`(http.host =^ ".bar.com") && (http.path == "/v1/foo")`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
 				"httproute.default.httproute-1.1": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1.foo.com.1.0"),
-							Expression:   new(`(http.host == "foo.com") && (http.path == "/v1/barr")`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1.foo.com.1.0"),
+						Expression:       new(`(http.host == "foo.com") && (http.path == "/v1/barr")`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.bar.com.1.0"),
-							Expression:   new(`(http.host =^ ".bar.com") && (http.path == "/v1/barr")`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.bar.com.1.0"),
+						Expression:       new(`(http.host =^ ".bar.com") && (http.path == "/v1/barr")`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2435,14 +2265,12 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "single HTTPRoute with protocol and SNI annotations",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-						Annotations: map[string]string{
-							"konghq.com/protocols": "https",
-							"konghq.com/snis":      "foo.com",
-						},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
+					Annotations: map[string]string{
+						"konghq.com/protocols": "https",
+						"konghq.com/snis":      "foo.com",
 					},
 					Spec: gatewayapi.HTTPRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
@@ -2464,18 +2292,14 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			fakeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service-1",
-						},
+						Namespace: "default",
+						Name:      "service-1",
 					},
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.httproute-1.0"),
-					},
+					Name: new("httproute.default.httproute-1.0"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
@@ -2487,11 +2311,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.httproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   new(`(http.host == "foo.com") && (tls.sni == "foo.com") && (http.path == "/v1/foo")`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1.foo.com.0.0"),
+						Expression:       new(`(http.host == "foo.com") && (tls.sni == "foo.com") && (http.path == "/v1/foo")`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2501,11 +2323,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			name: "single HTTPRoute with backendTimeout configuration",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2530,21 +2350,17 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			fakeObjects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Namespace: "default",
-							Name:      "service-1",
-						},
+						Namespace: "default",
+						Name:      "service-1",
 					},
 				},
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name:           new("httproute.default.httproute-1.0"),
-						ConnectTimeout: new(500),
-						ReadTimeout:    new(500),
-						WriteTimeout:   new(500),
-					},
+					Name:           new("httproute.default.httproute-1.0"),
+					ConnectTimeout: new(500),
+					ReadTimeout:    new(500),
+					WriteTimeout:   new(500),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("service-1").
 							WithNamespace("default").
@@ -2556,19 +2372,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutes(t *testing.T) {
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.httproute-1.0": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.0"),
-							Expression:   new(`http.path == "/v1/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.0"),
+						Expression:       new(`http.path == "/v1/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.1"),
-							Expression:   new(`http.path == "/v1/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.1"),
+						Expression:       new(`http.path == "/v1/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2623,18 +2435,14 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 		}
 
 		fakeService = &corev1.Service{
-			TypeMeta: serviceTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-service",
-				Namespace: "default",
-			},
+			TypeMeta:  serviceTypeMeta,
+			Name:      "fake-service",
+			Namespace: "default",
 		}
 		fakeService2 = &corev1.Service{
-			TypeMeta: serviceTypeMeta,
-			ObjectMeta: metav1.ObjectMeta{
-				Name:      "fake-service-2",
-				Namespace: "default",
-			},
+			TypeMeta:  serviceTypeMeta,
+			Name:      "fake-service-2",
+			Namespace: "default",
 		}
 	)
 
@@ -2649,11 +2457,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			name: "single HTTPRoute with no hostname and multiple matches",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2676,9 +2482,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.svc.default.fake-service.80"),
-					},
+					Name: new("httproute.default.svc.default.fake-service.80"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
 							WithNamespace("default").
@@ -2690,19 +2494,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.svc.default.fake-service.80": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.0"),
-							Expression:   new(`http.path == "/v1/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.0"),
+						Expression:       new(`http.path == "/v1/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.1"),
-							Expression:   new(`http.path == "/v1/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.1"),
+						Expression:       new(`http.path == "/v1/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2712,11 +2512,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			name: "single HTTPRoute with single rule, multiple hostnames and no matches",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Hostnames: []gatewayapi.Hostname{
 							gatewayapi.Hostname("foo.com"),
@@ -2739,9 +2537,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.svc.default.fake-service.80"),
-					},
+					Name: new("httproute.default.svc.default.fake-service.80"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
 							WithNamespace("default").
@@ -2753,19 +2549,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.svc.default.fake-service.80": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1.foo.com.0.0"),
-							Expression:   new(`http.host == "foo.com"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1.foo.com.0.0"),
+						Expression:       new(`http.host == "foo.com"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1.bar.com.0.0"),
-							Expression:   new(`http.host == "bar.com"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1.bar.com.0.0"),
+						Expression:       new(`http.host == "bar.com"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2775,11 +2567,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			name: "single HTTPRoute with multiple rules pointing to the same backends",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2803,9 +2593,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.svc.default.fake-service.80"),
-					},
+					Name: new("httproute.default.svc.default.fake-service.80"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
 							WithNamespace("default").
@@ -2817,19 +2605,15 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.svc.default.fake-service.80": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.0"),
-							Expression:   new(`http.path == "/v1/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.0"),
+						Expression:       new(`http.path == "/v1/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.1.0"),
-							Expression:   new(`http.path == "/v1/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.1.0"),
+						Expression:       new(`http.path == "/v1/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
@@ -2839,11 +2623,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			name: "multiple HTTPRoutes in the same namespace, where some rules are pointing to the same backends",
 			httpRoutes: []*gatewayapi.HTTPRoute{
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-1",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-1",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2860,11 +2642,9 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 					},
 				},
 				{
-					TypeMeta: httpRouteTypeMeta,
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "default",
-						Name:      "httproute-2",
-					},
+					TypeMeta:  httpRouteTypeMeta,
+					Namespace: "default",
+					Name:      "httproute-2",
 					Spec: gatewayapi.HTTPRouteSpec{
 						Rules: []gatewayapi.HTTPRouteRule{
 							{
@@ -2889,9 +2669,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			},
 			expectedKongServices: []kongstate.Service{
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.svc.default.fake-service.80"),
-					},
+					Name: new("httproute.default.svc.default.fake-service.80"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service").
 							WithNamespace("default").
@@ -2900,9 +2678,7 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 					},
 				},
 				{
-					Service: kong.Service{
-						Name: new("httproute.default.svc.default.fake-service-2.80"),
-					},
+					Name: new("httproute.default.svc.default.fake-service-2.80"),
 					Backends: []kongstate.ServiceBackend{
 						builder.NewKongstateServiceBackend("fake-service-2").
 							WithNamespace("default").
@@ -2914,37 +2690,29 @@ func TestIngressRulesFromHTTPRoutesUsingExpressionRoutesAndCombinedServices(t *t
 			expectedKongRoutes: map[string][]kongstate.Route{
 				"httproute.default.svc.default.fake-service.80": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.0.0"),
-							Expression:   new(`http.path == "/v1/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.0.0"),
+						Expression:       new(`http.path == "/v1/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-2._.0.0"),
-							Expression:   new(`http.path == "/v1/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-2._.0.0"),
+						Expression:       new(`http.path == "/v1/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},
 				"httproute.default.svc.default.fake-service-2.80": {
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-1._.1.0"),
-							Expression:   new(`http.path == "/v2/foo"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-1._.1.0"),
+						Expression:       new(`http.path == "/v2/foo"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 					{
-						Route: kong.Route{
-							Name:         new("httproute.default.httproute-2._.1.0"),
-							Expression:   new(`http.path == "/v2/barr"`),
-							PreserveHost: new(true),
-						},
+						Name:             new("httproute.default.httproute-2._.1.0"),
+						Expression:       new(`http.path == "/v2/barr"`),
+						PreserveHost:     new(true),
 						ExpressionRoutes: true,
 					},
 				},

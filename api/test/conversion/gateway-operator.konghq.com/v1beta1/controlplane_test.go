@@ -45,9 +45,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 						{
 							Group: "konnect.konghq.com",
 							Kind:  "KonnectExtension",
-							NamespacedRef: commonv1alpha1.NamespacedRef{
-								Name: "test-extension",
-							},
+							Name:  "test-extension",
 						},
 					},
 					Deployment: operatorv1beta1.ControlPlaneDeploymentOptions{
@@ -123,10 +121,8 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 												Name: "CONTROLLER_FEATURE_GATES",
 												ValueFrom: &corev1.EnvVarSource{
 													SecretKeyRef: &corev1.SecretKeySelector{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: "secret-with-fg",
-														},
-														Key: "fg-key",
+														Name: "secret-with-fg",
+														Key:  "fg-key",
 													},
 												},
 											},
@@ -134,10 +130,8 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 												Name: "CONTROLLER_ENABLE_CONTROLLER_KONG_PLUGIN",
 												ValueFrom: &corev1.EnvVarSource{
 													SecretKeyRef: &corev1.SecretKeySelector{
-														LocalObjectReference: corev1.LocalObjectReference{
-															Name: "configmap-controllers",
-														},
-														Key: "kp-key",
+														Name: "configmap-controllers",
+														Key:  "kp-key",
 													},
 												},
 											},
@@ -167,9 +161,7 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 										EnvFrom: []corev1.EnvFromSource{
 											{
 												ConfigMapRef: &corev1.ConfigMapEnvSource{
-													LocalObjectReference: corev1.LocalObjectReference{
-														Name: "configmap-controllers",
-													},
+													Name: "configmap-controllers",
 												},
 											},
 										},
@@ -233,11 +225,9 @@ func TestControlPlane_ConvertTo(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			obj := &operatorv1beta1.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.spec,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.spec,
 				Status: operatorv1beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -333,9 +323,7 @@ func TestControlPlane_ConvertFrom(t *testing.T) {
 					{
 						Group: "konnect.konghq.com",
 						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test-extension",
-						},
+						Name:  "test-extension",
 					},
 				},
 			},
@@ -378,11 +366,9 @@ func TestControlPlane_ConvertFrom(t *testing.T) {
 			obj := &operatorv1beta1.ControlPlane{}
 
 			src := &operatorv2beta1.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.src,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.src,
 				Status: operatorv2beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{
@@ -492,9 +478,7 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 					{
 						Group: "konnect.konghq.com",
 						Kind:  "KonnectExtension",
-						NamespacedRef: commonv1alpha1.NamespacedRef{
-							Name: "test-extension",
-						},
+						Name:  "test-extension",
 					},
 				},
 			},
@@ -515,11 +499,9 @@ func TestControlPlane_RoundTrip(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			original := &operatorv2beta1.ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-controlplane",
-					Namespace: "test-namespace",
-				},
-				Spec: tc.src,
+				Name:      "test-controlplane",
+				Namespace: "test-namespace",
+				Spec:      tc.src,
 				Status: operatorv2beta1.ControlPlaneStatus{
 					Conditions: []metav1.Condition{
 						{

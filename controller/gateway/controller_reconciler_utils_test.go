@@ -13,10 +13,12 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -28,8 +30,10 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {
@@ -627,11 +631,9 @@ func TestSetAcceptedOnGateway(t *testing.T) {
 		t.Run(tc.name, func(subt *testing.T) {
 			gateway := gatewayConditionsAndListenersAwareT{
 				Gateway: &gatewayv1.Gateway{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:       "test",
-						Namespace:  "default",
-						Generation: 1,
-					},
+					Name:       "test",
+					Namespace:  "default",
+					Generation: 1,
 					Status: gatewayv1.GatewayStatus{
 						Listeners: tc.listeners,
 					},
@@ -708,7 +710,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport",
+					Value: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport,0.0.0.0:9999 ssl reuseport,[::]:9999 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -743,7 +745,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport",
+					Value: "0.0.0.0:7443 ssl reuseport,[::]:7443 ssl reuseport,0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -773,7 +775,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:16384 ssl reuseport",
+					Value: "0.0.0.0:16384 ssl reuseport,[::]:16384 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -988,7 +990,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					// TCP listener: stream entry without `ssl`.
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:8888 reuseport",
+					Value: "0.0.0.0:8888 reuseport,[::]:8888 reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -1013,7 +1015,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				},
 				{
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:16384 reuseport",
+					Value: "0.0.0.0:16384 reuseport,[::]:16384 reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -1042,7 +1044,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 				{
 					// TCP entries first (sorted), then TLS entries with `ssl`.
 					Name:  "KONG_STREAM_LISTEN",
-					Value: "0.0.0.0:9000 reuseport,0.0.0.0:9443 ssl reuseport",
+					Value: "0.0.0.0:9000 reuseport,[::]:9000 reuseport,0.0.0.0:9443 ssl reuseport,[::]:9443 ssl reuseport",
 				},
 			},
 			expectedPortMap: map[int]int{
@@ -1070,7 +1072,7 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 					},
 				},
 			}
-			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners)
+			portMap, err := setDataPlaneDeploymentListenPorts(&opts, tc.listeners, ipfamily.Dual)
 			if tc.expectedError != nil {
 				require.EqualError(t, tc.expectedError, err.Error())
 				return
@@ -1093,6 +1095,89 @@ func TestSetDataPlaneDeploymentListenPorts(t *testing.T) {
 			)
 		})
 	}
+}
+
+func TestSetDataPlaneDeploymentListenPorts_IPFamily(t *testing.T) {
+	listeners := []gwtypes.Listener{
+		{
+			Name:     "tls",
+			Protocol: gatewayv1.TLSProtocolType,
+			Port:     gatewayv1.PortNumber(8899),
+		},
+	}
+
+	newOpts := func(userStreamListen string) operatorv1beta1.DataPlaneOptions {
+		opts := operatorv1beta1.DataPlaneOptions{
+			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
+				DeploymentOptions: operatorv1beta1.DeploymentOptions{
+					PodTemplateSpec: &corev1.PodTemplateSpec{
+						Spec: corev1.PodSpec{
+							Containers: []corev1.Container{
+								{Name: consts.DataPlaneProxyContainerName},
+							},
+						},
+					},
+				},
+			},
+		}
+		if userStreamListen != "" {
+			opts.Deployment.PodTemplateSpec.Spec.Containers[0].Env = []corev1.EnvVar{
+				{Name: "KONG_STREAM_LISTEN", Value: userStreamListen},
+			}
+		}
+		return opts
+	}
+
+	for _, tt := range []struct {
+		family   ipfamily.IPFamily
+		expected string
+	}{
+		{family: ipfamily.IPv4, expected: "0.0.0.0:8899 ssl reuseport"},
+		{family: ipfamily.IPv6, expected: "[::]:8899 ssl reuseport"},
+		{family: ipfamily.Dual, expected: "0.0.0.0:8899 ssl reuseport,[::]:8899 ssl reuseport"},
+	} {
+		t.Run(tt.family.String(), func(t *testing.T) {
+			opts := newOpts("")
+
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+			require.NoError(t, err)
+
+			container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+			require.NotNil(t, container)
+			assert.Equal(t, tt.expected, k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"))
+		})
+	}
+
+	t.Run("unresolved IP family returns an error", func(t *testing.T) {
+		for _, family := range []ipfamily.IPFamily{ipfamily.Auto, "unknown"} {
+			opts := newOpts("")
+
+			_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, family)
+			require.Error(t, err, "family %q should not silently fall back to IPv4", family)
+		}
+	})
+
+	t.Run("user-configured KONG_STREAM_LISTEN with empty host resolves the wildcard per IP family", func(t *testing.T) {
+		for _, tt := range []struct {
+			family   ipfamily.IPFamily
+			expected string
+		}{
+			{family: ipfamily.IPv4, expected: "0.0.0.0:8899 ssl"},
+			{family: ipfamily.IPv6, expected: "[::]:8899 ssl"},
+			{family: ipfamily.Dual, expected: "0.0.0.0:8899 ssl,[::]:8899 ssl"},
+		} {
+			t.Run(tt.family.String(), func(t *testing.T) {
+				opts := newOpts(":8899 ssl")
+
+				_, err := setDataPlaneDeploymentListenPorts(&opts, listeners, tt.family)
+				require.NoError(t, err)
+
+				container := k8sutils.GetPodContainerByName(&opts.Deployment.PodTemplateSpec.Spec, consts.DataPlaneProxyContainerName)
+				require.NotNil(t, container)
+				assert.Equal(t, tt.expected, k8sutils.EnvValueByName(container.Env, "KONG_STREAM_LISTEN"))
+			})
+		}
+	})
 }
 
 func TestSetDataPlaneIngressServicePorts(t *testing.T) {
@@ -1397,19 +1482,21 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 	}
 }
 
+type getSupportedKindsWithResolvedRefsConditionTestCase struct {
+	name                          string
+	gatewayNamespace              string
+	listener                      gwtypes.Listener
+	referenceGrants               []client.Object
+	secrets                       []client.Object
+	expectedSupportedKinds        []gwtypes.RouteGroupKind
+	expectedResolvedRefsCondition metav1.Condition
+}
+
 func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	var generation int64 = 1
 	ca := helpers.CreateCA(t)
 
-	testCases := []struct {
-		name                          string
-		gatewayNamespace              string
-		listener                      gwtypes.Listener
-		referenceGrants               []client.Object
-		secrets                       []client.Object
-		expectedSupportedKinds        []gwtypes.RouteGroupKind
-		expectedResolvedRefsCondition metav1.Condition
-	}{
+	testCases := []getSupportedKindsWithResolvedRefsConditionTestCase{
 		{
 			name: "no tls, HTTP protocol, no allowed routes",
 			listener: gwtypes.Listener{
@@ -1553,10 +1640,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			secrets: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "default",
-					},
+					Name:      "test-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"tls.crt": ca.CertPEM.Bytes(),
 						"tls.key": ca.KeyPEM.Bytes(),
@@ -1597,10 +1682,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			secrets: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "default",
-					},
+					Name:      "test-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"tls.crt": ca.CertPEM.Bytes(),
 						"tls.key": ca.KeyPEM.Bytes(),
@@ -1765,10 +1848,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			secrets: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "default",
-					},
+					Name:      "test-secret",
+					Namespace: "default",
 					Data: map[string][]byte{
 						"tls.crt": []byte("invalid-cert"),
 						"tls.key": []byte("invalid-key"),
@@ -1810,10 +1891,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			secrets: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "other-namespace",
-					},
+					Name:      "test-secret",
+					Namespace: "other-namespace",
 					Data: map[string][]byte{
 						"tls.crt": ca.CertPEM.Bytes(),
 						"tls.key": ca.KeyPEM.Bytes(),
@@ -1822,9 +1901,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			referenceGrants: []client.Object{
 				&gwtypes.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: "other-namespace",
-					},
+					Namespace: "other-namespace",
 					Spec: gwtypes.ReferenceGrantSpec{
 						From: []gwtypes.ReferenceGrantFrom{
 							{
@@ -1878,10 +1955,8 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			},
 			secrets: []client.Object{
 				&corev1.Secret{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "test-secret",
-						Namespace: "other-namespace",
-					},
+					Name:      "test-secret",
+					Namespace: "other-namespace",
 					Data: map[string][]byte{
 						"tls.crt": ca.CertPEM.Bytes(),
 						"tls.key": ca.KeyPEM.Bytes(),
@@ -1908,13 +1983,33 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		},
 	}
 
+	// The same expectations must hold whichever ReferenceGrant version the
+	// cluster serves.
+	for _, gv := range []schema.GroupVersion{
+		schema.GroupVersion(gatewayv1.GroupVersion),
+		schema.GroupVersion(gatewayv1beta1.GroupVersion),
+	} {
+		t.Run(gv.Version, func(t *testing.T) {
+			runGetSupportedKindsWithResolvedRefsConditionCases(t, gv, testCases, generation)
+		})
+	}
+}
+
+// runGetSupportedKindsWithResolvedRefsConditionCases runs the table against one
+// served ReferenceGrant version, re-typing the grant fixtures to match it.
+func runGetSupportedKindsWithResolvedRefsConditionCases(
+	t *testing.T,
+	gv schema.GroupVersion,
+	testCases []getSupportedKindsWithResolvedRefsConditionTestCase,
+	generation int64,
+) {
 	for _, tc := range testCases {
 
 		ctx := t.Context()
 		client := fakectrlruntimeclient.
 			NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(tc.referenceGrants...).
+			WithObjects(referencegranthelpers.AsVersion(gv, tc.referenceGrants)...).
 			WithObjects(tc.secrets...).
 			Build()
 
@@ -1922,14 +2017,11 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(
 				ctx,
 				client,
+				gv,
 				gatewayv1.Gateway{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayv1.GroupVersion.String(),
-						Kind:       "Gateway",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Namespace: tc.gatewayNamespace,
-					},
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					Namespace:  tc.gatewayNamespace,
 				},
 				generation,
 				tc.listener,
@@ -1959,9 +2051,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -2014,9 +2104,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -2040,9 +2128,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -2076,9 +2162,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -2101,11 +2185,9 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-							ServiceOptions: operatorv2beta1.ServiceOptions{
-								Name: new("custom-ingress"),
-								Annotations: map[string]string{
-									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
-								},
+							Name: new("custom-ingress"),
+							Annotations: map[string]string{
+								"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
 							},
 						},
 					},
@@ -2115,11 +2197,9 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Name: new("custom-ingress"),
-								Annotations: map[string]string{
-									"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
-								},
+							Name: new("custom-ingress"),
+							Annotations: map[string]string{
+								"service.beta.kubernetes.io/aws-load-balancer-type": "nlb",
 							},
 						},
 					},
@@ -2142,9 +2222,7 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Type: corev1.ServiceTypeLoadBalancer,
-							},
+							Type: corev1.ServiceTypeLoadBalancer,
 						},
 					},
 				},
@@ -2164,10 +2242,8 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 					Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 						Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-							ServiceOptions: operatorv2beta1.ServiceOptions{
-								Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
-									"my-label": "my-value",
-								},
+							Labels: map[operatorv2beta1.LabelName]operatorv2beta1.LabelValue{
+								"my-label": "my-value",
 							},
 						},
 					},
@@ -2177,10 +2253,8 @@ func TestGatewayConfigDataPlaneOptionsToDataPlaneOptions(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-									"my-label": "my-value",
-								},
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"my-label": "my-value",
 							},
 						},
 					},
@@ -2258,10 +2332,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2305,10 +2377,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2352,10 +2422,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2400,10 +2468,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2417,10 +2483,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-2",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-2",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2464,10 +2528,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2482,10 +2544,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-2",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-2",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2531,10 +2591,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2549,10 +2607,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-2",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-2",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2602,10 +2658,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2654,18 +2708,14 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-namespace-2",
-						Labels: map[string]string{
-							"kubernetes.io/metadata.name": "test-namespace-2",
-						},
+					Name: "test-namespace-2",
+					Labels: map[string]string{
+						"kubernetes.io/metadata.name": "test-namespace-2",
 					},
 				},
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2710,10 +2760,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2757,10 +2805,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2805,10 +2851,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2854,10 +2898,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2872,10 +2914,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 					},
 				},
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-2",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-2",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2920,10 +2960,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -2968,10 +3006,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3022,10 +3058,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3079,10 +3113,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3131,18 +3163,14 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-namespace-2",
-						Labels: map[string]string{
-							"kubernetes.io/metadata.name": "test-namespace-2",
-						},
+					Name: "test-namespace-2",
+					Labels: map[string]string{
+						"kubernetes.io/metadata.name": "test-namespace-2",
 					},
 				},
 				&gwtypes.TLSRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "tls-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "tls-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.TLSRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3187,10 +3215,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3234,10 +3260,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3282,10 +3306,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3331,10 +3353,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3349,10 +3369,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 					},
 				},
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-2",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-2",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3397,10 +3415,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3445,10 +3461,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3499,10 +3513,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3556,10 +3568,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3608,18 +3618,14 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&corev1.Namespace{
-					ObjectMeta: metav1.ObjectMeta{
-						Name: "test-namespace-2",
-						Labels: map[string]string{
-							"kubernetes.io/metadata.name": "test-namespace-2",
-						},
+					Name: "test-namespace-2",
+					Labels: map[string]string{
+						"kubernetes.io/metadata.name": "test-namespace-2",
 					},
 				},
 				&gwtypes.GRPCRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grpc-route-1",
-						Namespace: "test-namespace-2",
-					},
+					Name:      "grpc-route-1",
+					Namespace: "test-namespace-2",
 					Spec: gwtypes.GRPCRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3677,14 +3683,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.Gateway{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayv1.GroupVersion.String(),
-						Kind:       "Gateway",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-b",
-						Namespace: "default",
-					},
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					Name:       "gw-b",
+					Namespace:  "default",
 					Spec: gwtypes.GatewaySpec{
 						Listeners: []gwtypes.Listener{
 							{
@@ -3701,10 +3703,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 				//   - parentRef[1] → gw-b, sectionName=l2  (NOT gw-a)
 				// So this route should contribute exactly 1 to gw-a.l1 and 0 to gw-a.l2.
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "multi-parent-route",
-						Namespace: "default",
-					},
+					Name:      "multi-parent-route",
+					Namespace: "default",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3757,14 +3757,10 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			Objects: []client.Object{
 				// gw-1 in namespace "ns-b" — a *different* Gateway that happens to share the name.
 				&gwtypes.Gateway{
-					TypeMeta: metav1.TypeMeta{
-						APIVersion: gatewayv1.GroupVersion.String(),
-						Kind:       "Gateway",
-					},
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "gw-1",
-						Namespace: "ns-b",
-					},
+					APIVersion: gatewayv1.GroupVersion.String(),
+					Kind:       "Gateway",
+					Name:       "gw-1",
+					Namespace:  "ns-b",
 					Spec: gwtypes.GatewaySpec{
 						Listeners: []gwtypes.Listener{
 							{
@@ -3779,10 +3775,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 				// Route lives in ns-b, parentRef has no explicit Namespace, so per Gateway API
 				// spec it defaults to the Route's namespace (ns-b). It targets ns-b/gw-1, NOT ns-a/gw-1.
 				&gwtypes.HTTPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "route-targeting-ns-b-gw",
-						Namespace: "ns-b",
-					},
+					Name:      "route-targeting-ns-b-gw",
+					Namespace: "ns-b",
 					Spec: gwtypes.HTTPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3835,10 +3829,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udp-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "udp-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3883,10 +3875,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udp-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "udp-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3932,10 +3922,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udp-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "udp-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -3987,10 +3975,8 @@ func TestCountAttachedRoutesForGatewayListener(t *testing.T) {
 			},
 			Objects: []client.Object{
 				&gwtypes.UDPRoute{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "udp-route-1",
-						Namespace: "test-namespace",
-					},
+					Name:      "udp-route-1",
+					Namespace: "test-namespace",
 					Spec: gwtypes.UDPRouteSpec{
 						CommonRouteSpec: gwtypes.CommonRouteSpec{
 							ParentRefs: []gwtypes.ParentReference{
@@ -4041,10 +4027,8 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 		{
 			name: "merge with non-overlapping fields",
 			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-1",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-1",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4056,18 +4040,14 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 				},
 			},
 			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeNodePort,
-									},
+									Type: corev1.ServiceTypeNodePort,
 								},
 							},
 						},
@@ -4075,10 +4055,8 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 				},
 			},
 			expectedConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4089,9 +4067,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeNodePort,
-									},
+									Type: corev1.ServiceTypeNodePort,
 								},
 							},
 						},
@@ -4102,10 +4078,8 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 		{
 			name: "merge with overlapping fields (gatewayConfig2 overrides gatewayConfig1)",
 			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-1",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-1",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4116,9 +4090,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeNodePort,
-									},
+									Type: corev1.ServiceTypeNodePort,
 								},
 							},
 						},
@@ -4126,10 +4098,8 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 				},
 			},
 			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4140,9 +4110,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeLoadBalancer,
-									},
+									Type: corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -4150,10 +4118,8 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 				},
 			},
 			expectedConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4164,9 +4130,7 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeLoadBalancer,
-									},
+									Type: corev1.ServiceTypeLoadBalancer,
 								},
 							},
 						},
@@ -4177,27 +4141,21 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 		{
 			name: "merge when one config has nil DataPlaneOptions",
 			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-1",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-1",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: nil,
 				},
 			},
 			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeNodePort,
-									},
+									Type: corev1.ServiceTypeNodePort,
 								},
 							},
 						},
@@ -4205,18 +4163,14 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 				},
 			},
 			expectedConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 						Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
 							Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
 								Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
-									ServiceOptions: operatorv2beta1.ServiceOptions{
-										Type: corev1.ServiceTypeNodePort,
-									},
+									Type: corev1.ServiceTypeNodePort,
 								},
 							},
 						},
@@ -4227,28 +4181,22 @@ func TestMergeGatewayConfigurations(t *testing.T) {
 		{
 			name: "merge when both configs have nil DataPlaneOptions",
 			gatewayConfig1: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-1",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-1",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: nil,
 				},
 			},
 			gatewayConfig2: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: nil,
 				},
 			},
 			expectedConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "gateway-config-2",
-					Namespace: "default",
-				},
+				Name:      "gateway-config-2",
+				Namespace: "default",
 				Spec: operatorv2beta1.GatewayConfigurationSpec{
 					DataPlaneOptions: nil,
 				},
@@ -4276,11 +4224,9 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 	}
 
 	existingGatewayConfig := &operatorv2beta1.GatewayConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:            "existing-gateway-config",
-			Namespace:       "default",
-			ResourceVersion: "123",
-		},
+		Name:            "existing-gateway-config",
+		Namespace:       "default",
+		ResourceVersion: "123",
 		Spec: GatewayConfigurationSpec{
 			Konnect: &operatorv2beta1.KonnectOptions{
 				Source: new(commonv1alpha1.EntitySourceOrigin),
@@ -4305,10 +4251,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				Spec: gwtypes.GatewayClassSpec{},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			existingGatewayConfig: nil,
 			expectedGatewayConfig: new(GatewayConfiguration),
@@ -4330,10 +4274,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
 				existingGatewayConfig,
@@ -4357,10 +4299,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 			},
 			existingGatewayConfig: nil,
 			expectedGatewayConfig: nil,
@@ -4389,10 +4329,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gateway-class",
 					Infrastructure:   &gatewayv1.GatewayInfrastructure{},
@@ -4413,10 +4351,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				Spec: gwtypes.GatewayClassSpec{},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gateway-class",
 					Infrastructure: &gatewayv1.GatewayInfrastructure{
@@ -4450,10 +4386,8 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 			},
 			gateway: &gwtypes.Gateway{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-gateway",
-					Namespace: "default",
-				},
+				Name:      "test-gateway",
+				Namespace: "default",
 				Spec: gwtypes.GatewaySpec{
 					GatewayClassName: "test-gateway-class",
 					Infrastructure: &gatewayv1.GatewayInfrastructure{
@@ -4468,11 +4402,9 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 			existingGatewayConfig: []*operatorv2beta1.GatewayConfiguration{
 				existingGatewayConfig,
 				{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:            "gw-gateway-config",
-						Namespace:       "default",
-						ResourceVersion: "123",
-					},
+					Name:            "gw-gateway-config",
+					Namespace:       "default",
+					ResourceVersion: "123",
 					Spec: GatewayConfigurationSpec{
 						DataPlaneOptions: &GatewayConfigDataPlaneOptions{
 							Deployment: operatorv2beta1.DataPlaneDeploymentOptions{
@@ -4485,11 +4417,9 @@ func TestGetOrCreateGatewayConfiguration(t *testing.T) {
 				},
 			},
 			expectedGatewayConfig: &operatorv2beta1.GatewayConfiguration{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:            "gw-gateway-config",
-					Namespace:       "default",
-					ResourceVersion: "123",
-				},
+				Name:            "gw-gateway-config",
+				Namespace:       "default",
+				ResourceVersion: "123",
 				Spec: GatewayConfigurationSpec{
 					Konnect: &operatorv2beta1.KonnectOptions{
 						Source: new(commonv1alpha1.EntitySourceOrigin),
@@ -4563,10 +4493,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"infra-label": "infra-value",
-								},
+							Labels: map[string]string{
+								"infra-label": "infra-value",
 							},
 						},
 					},
@@ -4574,10 +4502,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-									"infra-label": "infra-value",
-								},
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"infra-label": "infra-value",
 							},
 						},
 					},
@@ -4590,10 +4516,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Annotations: map[string]string{
-									"existing": "value",
-								},
+							Annotations: map[string]string{
+								"existing": "value",
 							},
 						},
 					},
@@ -4608,10 +4532,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Annotations: map[string]string{
-									"infra-ann": "infra-ann-value",
-								},
+							Annotations: map[string]string{
+								"infra-ann": "infra-ann-value",
 							},
 						},
 					},
@@ -4619,11 +4541,9 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Annotations: map[string]string{
-									"existing":  "value",
-									"infra-ann": "infra-ann-value",
-								},
+							Annotations: map[string]string{
+								"existing":  "value",
+								"infra-ann": "infra-ann-value",
 							},
 						},
 					},
@@ -4636,11 +4556,9 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-									"conflict-key": "gatewayconfig-value",
-									"other-key":    "other-value",
-								},
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"conflict-key": "gatewayconfig-value",
+								"other-key":    "other-value",
 							},
 						},
 					},
@@ -4655,10 +4573,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"conflict-key": "infra-wins",
-								},
+							Labels: map[string]string{
+								"conflict-key": "infra-wins",
 							},
 						},
 					},
@@ -4666,11 +4582,9 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-									"conflict-key": "infra-wins",
-									"other-key":    "other-value",
-								},
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"conflict-key": "infra-wins",
+								"other-key":    "other-value",
 							},
 						},
 					},
@@ -4683,9 +4597,7 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{"existing-pod-label": "v"},
-							},
+							Labels: map[string]string{"existing-pod-label": "v"},
 						},
 					},
 				},
@@ -4699,11 +4611,9 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Labels: map[string]string{
-									"existing-pod-label": "v",
-									"infra-pod-label":    "pod-val",
-								},
+							Labels: map[string]string{
+								"existing-pod-label": "v",
+								"infra-pod-label":    "pod-val",
 							},
 						},
 					},
@@ -4711,10 +4621,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-									"infra-pod-label": "pod-val",
-								},
+							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+								"infra-pod-label": "pod-val",
 							},
 						},
 					},
@@ -4739,10 +4647,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 					DeploymentOptions: operatorv1beta1.DeploymentOptions{
 						PodTemplateSpec: &corev1.PodTemplateSpec{
-							ObjectMeta: metav1.ObjectMeta{
-								Annotations: map[string]string{
-									"infra-pod-ann": "ann-val",
-								},
+							Annotations: map[string]string{
+								"infra-pod-ann": "ann-val",
 							},
 						},
 					},
@@ -4750,10 +4656,8 @@ func TestMergeInfrastructureIntoDataPlane(t *testing.T) {
 				Network: operatorv1beta1.DataPlaneNetworkOptions{
 					Services: &operatorv1beta1.DataPlaneServices{
 						Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-							ServiceOptions: operatorv1beta1.ServiceOptions{
-								Annotations: map[string]string{
-									"infra-pod-ann": "ann-val",
-								},
+							Annotations: map[string]string{
+								"infra-pod-ann": "ann-val",
 							},
 						},
 					},
@@ -4794,19 +4698,15 @@ func TestSetGatewayNameLabelInDataPlane(t *testing.T) {
 			Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
 				DeploymentOptions: operatorv1beta1.DeploymentOptions{
 					PodTemplateSpec: &corev1.PodTemplateSpec{
-						ObjectMeta: metav1.ObjectMeta{
-							Labels: map[string]string{"existing": "pod-label"},
-						},
+						Labels: map[string]string{"existing": "pod-label"},
 					},
 				},
 			},
 			Network: operatorv1beta1.DataPlaneNetworkOptions{
 				Services: &operatorv1beta1.DataPlaneServices{
 					Ingress: &operatorv1beta1.DataPlaneServiceOptions{
-						ServiceOptions: operatorv1beta1.ServiceOptions{
-							Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
-								"existing": "svc-label",
-							},
+						Labels: map[operatorv1beta1.LabelName]operatorv1beta1.LabelValue{
+							"existing": "svc-label",
 						},
 					},
 				},
@@ -4857,10 +4757,8 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 	)
 
 	gateway := &gwtypes.Gateway{
-		ObjectMeta: metav1.ObjectMeta{
-			Namespace: gwNamespace,
-			Name:      gwName,
-		},
+		Namespace: gwNamespace,
+		Name:      gwName,
 		Spec: gwtypes.GatewaySpec{
 			GatewayClassName: "kong",
 			Listeners: []gatewayv1.Listener{
@@ -4913,10 +4811,8 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 
 	t.Run("KonnectExtension carries gateway-name label", func(t *testing.T) {
 		fakeKonnectCP := &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: gwNamespace,
-				Name:      "fake-konnect-cp",
-			},
+			Namespace: gwNamespace,
+			Name:      "fake-konnect-cp",
 		}
 		konnectExt, err := reconciler.createKonnectExtension(ctx, gateway, fakeKonnectCP)
 		require.NoError(t, err)
@@ -4936,10 +4832,8 @@ func TestGenerateDataPlaneNetworkPolicy(t *testing.T) {
 			"app": "test",
 		}
 		defaultDataPlane = &operatorv1beta1.DataPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: testNamespace,
-				Name:      testDataPlaneName,
-			},
+			Namespace: testNamespace,
+			Name:      testDataPlaneName,
 			Spec: operatorv1beta1.DataPlaneSpec{
 				DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
 					Deployment: operatorv1beta1.DataPlaneDeploymentOptions{
@@ -5314,15 +5208,11 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			gw := &gwtypes.Gateway{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: gatewayv1.GroupVersion.String(),
-					Kind:       "Gateway",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:       "test-gw",
-					Namespace:  "test-namespace",
-					Generation: 1,
-				},
+				APIVersion: gatewayv1.GroupVersion.String(),
+				Kind:       "Gateway",
+				Name:       "test-gw",
+				Namespace:  "test-namespace",
+				Generation: 1,
 				Spec: gwtypes.GatewaySpec{
 					Listeners: tc.listeners,
 				},
@@ -5387,10 +5277,8 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 		currentAuthRef konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef, programmed bool,
 	) *konnectv1alpha2.KonnectGatewayControlPlane {
 		kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{
-			ObjectMeta: metav1.ObjectMeta{
-				Namespace: "default",
-				Name:      "test-kgcp",
-			},
+			Namespace: "default",
+			Name:      "test-kgcp",
 		}
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
 			Name: legacyKonnectName,

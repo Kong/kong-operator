@@ -6,7 +6,6 @@ import (
 	"github.com/go-logr/logr"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -28,10 +27,8 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 		{
 			name: "correct ReferenceGrant and an existing Service as backendRef returns a KongStateBackend with a Service",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -62,10 +59,8 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 			objects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-service",
-							Namespace: corev1.NamespaceDefault,
-						},
+						Name:      "fake-service",
+						Namespace: corev1.NamespaceDefault,
 						Spec: corev1.ServiceSpec{
 							Ports: []corev1.ServicePort{
 								builder.NewServicePort().WithPort(80).Build(),
@@ -90,10 +85,8 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 		{
 			name: "no ReferenceGrant and an existing Service as backendRef doesn't return a KongStateBackend with the Service",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{
@@ -114,10 +107,8 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 			objects: store.FakeObjects{
 				Services: []*corev1.Service{
 					{
-						ObjectMeta: metav1.ObjectMeta{
-							Name:      "fake-service",
-							Namespace: corev1.NamespaceDefault,
-						},
+						Name:      "fake-service",
+						Namespace: corev1.NamespaceDefault,
 					},
 				},
 			},
@@ -126,10 +117,8 @@ func TestBackendRefsToKongStateBackends(t *testing.T) {
 		{
 			name: "ReferenceGrant and a non existing Service as backendRef doesn't return a KongStateBackend with the Service",
 			route: &gatewayapi.HTTPRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "basic-httproute",
-					Namespace: corev1.NamespaceDefault,
-				},
+				Name:      "basic-httproute",
+				Namespace: corev1.NamespaceDefault,
 				Spec: gatewayapi.HTTPRouteSpec{
 					CommonRouteSpec: commonRouteSpecMock("fake-gateway-1"),
 					Hostnames: []gatewayapi.Hostname{

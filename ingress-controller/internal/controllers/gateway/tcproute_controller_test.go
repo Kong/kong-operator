@@ -14,15 +14,14 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func newTCPRoute(backendRef gatewayapi.BackendRef) gatewayapi.TCPRoute {
 	return gatewayapi.TCPRoute{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "route",
-			Namespace:  "default",
-			Generation: 1,
-		},
+		Name:       "route",
+		Namespace:  "default",
+		Generation: 1,
 		Spec: gatewayapi.TCPRouteSpec{
 			Rules: []gatewayapi.TCPRouteRule{{
 				BackendRefs: []gatewayapi.BackendRef{backendRef},
@@ -37,7 +36,7 @@ func TestGetTCPRouteRuleReason(t *testing.T) {
 
 	otherNS := gatewayapi.Namespace("other")
 	grantFromTCPRouteToService := gatewayapi.ReferenceGrant{
-		ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "other"},
+		Name: "grant", Namespace: "other",
 		Spec: gatewayapi.ReferenceGrantSpec{
 			From: []gatewayapi.ReferenceGrantFrom{{
 				Group:     gatewayapi.V1Group,
@@ -53,80 +52,61 @@ func TestGetTCPRouteRuleReason(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		enableRefGrant     bool
 		objects            []client.Object
 		route              gatewayapi.TCPRoute
 		wantReason         gatewayapi.RouteConditionReason
 		wantMessageContain string
 	}{
 		{
-			name:           "resolves",
-			enableRefGrant: true,
+			name: "resolves",
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
+				&corev1.Service{Name: "svc", Namespace: "default"},
 			},
 			route:      newTCPRoute(serviceBackendRef(nil)),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
 			name:               "backend service missing",
-			enableRefGrant:     true,
 			objects:            []client.Object{},
 			route:              newTCPRoute(serviceBackendRef(nil)),
 			wantReason:         gatewayapi.RouteReasonBackendNotFound,
 			wantMessageContain: "target default/svc",
 		},
 		{
-			name:           "unsupported backend kind",
-			enableRefGrant: true,
-			objects:        []client.Object{},
+			name:    "unsupported backend kind",
+			objects: []client.Object{},
 			route: newTCPRoute(gatewayapi.BackendRef{
-				BackendObjectReference: gatewayapi.BackendObjectReference{
-					Name:  "svc",
-					Kind:  util.StringToGatewayAPIKindPtr("Foo"),
-					Group: util.StringToTypedPtr[*gatewayapi.Group]("example.com"),
-				},
+				Name:  "svc",
+				Kind:  util.StringToGatewayAPIKindPtr("Foo"),
+				Group: util.StringToTypedPtr[*gatewayapi.Group]("example.com"),
 			}),
 			wantReason:         gatewayapi.RouteReasonInvalidKind,
 			wantMessageContain: "unsupported type example.com/Foo",
 		},
 		{
-			name:           "cross-namespace without ReferenceGrant CRD",
-			enableRefGrant: false,
+			name: "cross-namespace without matching grant",
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
-			},
-			route:              newTCPRoute(serviceBackendRef(&otherNS)),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
-			wantMessageContain: "install ReferenceGrant CRD and configure a proper grant",
-		},
-		{
-			name:           "cross-namespace without matching grant",
-			enableRefGrant: true,
-			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 			},
 			route:              newTCPRoute(serviceBackendRef(&otherNS)),
 			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
 			wantMessageContain: "no ReferenceGrant allowing reference is configured",
 		},
 		{
-			name:           "cross-namespace with matching grant",
-			enableRefGrant: true,
+			name: "cross-namespace with matching grant",
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 				grantFromTCPRouteToService.DeepCopy(),
 			},
 			route:      newTCPRoute(serviceBackendRef(&otherNS)),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
-			name:           "cross-namespace grant for wrong from-kind (TLSRoute, not TCPRoute)",
-			enableRefGrant: true,
+			name: "cross-namespace grant for wrong from-kind (TLSRoute, not TCPRoute)",
 			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}},
+				&corev1.Service{Name: "svc", Namespace: "other"},
 				&gatewayapi.ReferenceGrant{
-					ObjectMeta: metav1.ObjectMeta{Name: "grant", Namespace: "other"},
+					Name: "grant", Namespace: "other",
 					Spec: gatewayapi.ReferenceGrantSpec{
 						From: []gatewayapi.ReferenceGrantFrom{{
 							Group:     gatewayapi.V1Group,
@@ -146,28 +126,35 @@ func TestGetTCPRouteRuleReason(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).
-				WithObjects(tc.objects...).
-				Build()
-			reconciler := &TCPRouteReconciler{
-				Client:               cl,
-				Log:                  logger,
-				enableReferenceGrant: tc.enableRefGrant,
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fakeclient.NewClientBuilder().
+						WithScheme(scheme.Get()).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objects)...).
+						Build()
+					reconciler := &TCPRouteReconciler{
+						Client:                cl,
+						Log:                   logger,
+						ReferenceGrantVersion: gv,
+					}
 
-			reason, msg, err := reconciler.getTCPRouteRuleReason(ctx, tc.route)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantReason, reason)
-			if tc.wantMessageContain != "" {
-				assert.Contains(t, msg, tc.wantMessageContain)
+					reason, msg, err := reconciler.getTCPRouteRuleReason(ctx, tc.route)
+					require.NoError(t, err)
+					assert.Equal(t, tc.wantReason, reason)
+					if tc.wantMessageContain != "" {
+						assert.Contains(t, msg, tc.wantMessageContain)
+					}
+				})
 			}
 		})
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test lists ReferenceGrants
+// but never seeds one, so it asserts denial and gets an empty list at either version.
+// The grant-permitted path is covered against both versions by TestGetTCPRouteRuleReason.
 func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
@@ -188,9 +175,9 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 	t.Run("inserts new condition when missing", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses()
 
@@ -210,7 +197,7 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -231,9 +218,9 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 	t.Run("no-op when condition already matches", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "default"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -249,9 +236,9 @@ func TestSetRouteConditionResolvedRefsCondition_TCPRoute(t *testing.T) {
 	t.Run("cross-namespace without grant flips condition to false", func(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}}).
+			WithObjects(&corev1.Service{Name: "svc", Namespace: "other"}).
 			Build()
-		r := &TCPRouteReconciler{Client: cl, Log: logger, enableReferenceGrant: true}
+		r := &TCPRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTCPRoute(serviceBackendRef(&otherNS))
 		parentStatuses := newParentStatuses()
 
@@ -280,11 +267,9 @@ func TestIsTCPReferenceGranted(t *testing.T) {
 	}
 
 	backendRef := gatewayapi.BackendRef{
-		BackendObjectReference: gatewayapi.BackendObjectReference{
-			Name:  specificName,
-			Kind:  &svcKind,
-			Group: &emptyGroup,
-		},
+		Name:  specificName,
+		Kind:  &svcKind,
+		Group: &emptyGroup,
 	}
 
 	tests := []struct {

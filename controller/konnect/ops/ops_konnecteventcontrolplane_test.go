@@ -10,7 +10,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
@@ -121,16 +120,12 @@ func TestGetKonnectEventGatewayForUID(t *testing.T) {
 
 func testKonnectEventGateway() *konnectv1alpha1.KonnectEventGateway {
 	return &konnectv1alpha1.KonnectEventGateway{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: konnectv1alpha1.GroupVersion.String(),
-			Kind:       "KonnectEventGateway",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "event-control-plane",
-			Namespace:  "default",
-			UID:        "event-control-plane-uid",
-			Generation: 3,
-		},
+		APIVersion: konnectv1alpha1.GroupVersion.String(),
+		Kind:       "KonnectEventGateway",
+		Name:       "event-control-plane",
+		Namespace:  "default",
+		UID:        "event-control-plane-uid",
+		Generation: 3,
 		Spec: konnectv1alpha1.KonnectEventGatewaySpec{
 			KonnectConfiguration: konnectv1alpha2.KonnectConfiguration{
 				APIAuthConfigurationRef: konnectv1alpha2.KonnectAPIAuthConfigurationRef{

@@ -32,10 +32,8 @@ func TestAdoptMatchDataPlaneGroupConfigurationSuccess(t *testing.T) {
 	maxRps := int64(200)
 
 	cfg := &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cfg",
-			Namespace: "default",
-		},
+		Name:      "test-cfg",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version: "3.5.0.0",
 			DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{
@@ -114,10 +112,8 @@ func TestAdoptMatchDataPlaneGroupConfigurationMismatch(t *testing.T) {
 	maxRps := int64(200)
 
 	cfg := &konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfiguration{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "test-cfg-mismatch",
-			Namespace: "default",
-		},
+		Name:      "test-cfg-mismatch",
+		Namespace: "default",
 		Spec: konnectv1alpha1.KonnectCloudGatewayDataPlaneGroupConfigurationSpec{
 			Version: "3.5.0.0",
 			DataplaneGroups: []konnectv1alpha1.KonnectConfigurationDataPlaneGroup{

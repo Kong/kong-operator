@@ -10,6 +10,8 @@ import (
 type GeneratedSDK interface {
 	GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK
 	GetAIGatewayAuthStrategiesSDK() sdkkonnectgo.AIGatewayAuthStrategiesSDK
+	GetAIGatewayCACertificatesSDK() sdkkonnectgo.AIGatewayCACertificatesSDK
+	GetAIGatewayCertificatesSDK() sdkkonnectgo.AIGatewayCertificatesSDK
 	GetAIGatewayConsumersSDK() sdkkonnectgo.AIGatewayConsumersSDK
 	GetAIGatewayConsumerGroupsSDK() sdkkonnectgo.AIGatewayConsumerGroupsSDK
 	GetAIGatewayDataPlaneCertificatesSDK() sdkkonnectgo.AIGatewayDataPlaneCertificatesSDK
@@ -17,6 +19,7 @@ type GeneratedSDK interface {
 	GetAIGatewayModelsSDK() sdkkonnectgo.AIGatewayModelsSDK
 	GetAIGatewayModelProvidersSDK() sdkkonnectgo.AIGatewayModelProvidersSDK
 	GetAIGatewayPoliciesSDK() sdkkonnectgo.AIGatewayPoliciesSDK
+	GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNIsSDK
 	GetEventGatewayBackendClustersSDK() sdkkonnectgo.EventGatewayBackendClustersSDK
 	GetEventGatewayDataPlaneCertificatesSDK() sdkkonnectgo.EventGatewayDataPlaneCertificatesSDK
 	GetEventGatewayListenersSDK() sdkkonnectgo.EventGatewayListenersSDK
@@ -47,6 +50,16 @@ func (w sdkWrapper) GetAIGatewayAgentsSDK() sdkkonnectgo.AIGatewayAgentsSDK {
 // GetAIGatewayAuthStrategiesSDK returns the SDK to operate AIGatewayAuthStrategy.
 func (w sdkWrapper) GetAIGatewayAuthStrategiesSDK() sdkkonnectgo.AIGatewayAuthStrategiesSDK {
 	return w.sdk.AIGatewayAuthStrategies
+}
+
+// GetAIGatewayCACertificatesSDK returns the SDK to operate AIGatewayCACertificate.
+func (w sdkWrapper) GetAIGatewayCACertificatesSDK() sdkkonnectgo.AIGatewayCACertificatesSDK {
+	return w.sdk.AIGatewayCACertificates
+}
+
+// GetAIGatewayCertificatesSDK returns the SDK to operate AIGatewayCertificate.
+func (w sdkWrapper) GetAIGatewayCertificatesSDK() sdkkonnectgo.AIGatewayCertificatesSDK {
+	return w.sdk.AIGatewayCertificates
 }
 
 // GetAIGatewayConsumersSDK returns the SDK to operate AIGatewayConsumer.
@@ -82,6 +95,11 @@ func (w sdkWrapper) GetAIGatewayModelProvidersSDK() sdkkonnectgo.AIGatewayModelP
 // GetAIGatewayPoliciesSDK returns the SDK to operate AIGatewayPolicy.
 func (w sdkWrapper) GetAIGatewayPoliciesSDK() sdkkonnectgo.AIGatewayPoliciesSDK {
 	return w.sdk.AIGatewayPolicies
+}
+
+// GetAIGatewaySNIsSDK returns the SDK to operate AIGatewaySNI.
+func (w sdkWrapper) GetAIGatewaySNIsSDK() sdkkonnectgo.AIGatewaySNIsSDK {
+	return w.sdk.AIGatewaySNIs
 }
 
 // GetEventGatewayBackendClustersSDK returns the SDK to operate EventGatewayBackendCluster.

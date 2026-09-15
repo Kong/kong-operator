@@ -37,10 +37,8 @@ type handleServiceRefTestCase[
 }
 
 var testKongServiceOK = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "svc-ok",
-		Namespace: "default",
-	},
+	Name:      "svc-ok",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongServiceSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -51,9 +49,7 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -66,10 +62,8 @@ var testKongServiceOK = &configurationv1alpha1.KongService{
 }
 
 var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "svc-with-cp-ref-unprogrammed",
-		Namespace: "default",
-	},
+	Name:      "svc-with-cp-ref-unprogrammed",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongServiceSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -80,9 +74,7 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "12345",
-			},
+			ID:             "12345",
 			ControlPlaneID: "123456789",
 		},
 		Conditions: []metav1.Condition{
@@ -95,10 +87,8 @@ var testKongServiceWithCPRefUnprogrammed = &configurationv1alpha1.KongService{
 }
 
 var testKongServiceNotProgrammed = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "svc-not-programmed",
-		Namespace: "default",
-	},
+	Name:      "svc-not-programmed",
+	Namespace: "default",
 	Status: configurationv1alpha1.KongServiceStatus{
 		Conditions: []metav1.Condition{
 			{
@@ -113,10 +103,8 @@ var testKongServiceNotProgrammed = &configurationv1alpha1.KongService{
 // a ControlPlane ref, and Status.Konnect == nil (never synced to Konnect).
 // Used to test the nil pointer dereference regression in handleKongServiceRef.
 var testKongServiceNotProgrammedWithCPRef = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "svc-not-programmed-with-cp-ref",
-		Namespace: "default",
-	},
+	Name:      "svc-not-programmed-with-cp-ref",
+	Namespace: "default",
 	Spec: configurationv1alpha1.KongServiceSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -137,12 +125,10 @@ var testKongServiceNotProgrammedWithCPRef = &configurationv1alpha1.KongService{
 }
 
 var testKongServiceBeingDeleted = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:              "svc-being-deleted",
-		Namespace:         "default",
-		DeletionTimestamp: &metav1.Time{Time: time.Now()},
-		Finalizers:        []string{KonnectCleanupFinalizer},
-	},
+	Name:              "svc-being-deleted",
+	Namespace:         "default",
+	DeletionTimestamp: &metav1.Time{Time: time.Now()},
+	Finalizers:        []string{KonnectCleanupFinalizer},
 }
 
 // Cross-namespace fixtures: service and its CP both live in svc-ns,
@@ -150,10 +136,8 @@ var testKongServiceBeingDeleted = &configurationv1alpha1.KongService{
 const svcNamespace = "svc-ns"
 
 var testKongServiceCrossNs = &configurationv1alpha1.KongService{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "svc-cross-ns",
-		Namespace: svcNamespace,
-	},
+	Name:      "svc-cross-ns",
+	Namespace: svcNamespace,
 	Spec: configurationv1alpha1.KongServiceSpec{
 		ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
 			Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -165,9 +149,7 @@ var testKongServiceCrossNs = &configurationv1alpha1.KongService{
 	},
 	Status: configurationv1alpha1.KongServiceStatus{
 		Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
-			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-				ID: "svc-cross-ns-id",
-			},
+			ID:             "svc-cross-ns-id",
 			ControlPlaneID: "cp-cross-ns-id",
 		},
 		Conditions: []metav1.Condition{
@@ -180,10 +162,8 @@ var testKongServiceCrossNs = &configurationv1alpha1.KongService{
 }
 
 var testControlPlaneCrossNs = &konnectv1alpha2.KonnectGatewayControlPlane{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "cp-cross-ns",
-		Namespace: svcNamespace,
-	},
+	Name:      "cp-cross-ns",
+	Namespace: svcNamespace,
 	Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
 		KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
 			ID: "cp-cross-ns-id",
@@ -199,10 +179,8 @@ var testControlPlaneCrossNs = &konnectv1alpha2.KonnectGatewayControlPlane{
 
 // testKongRouteToSvcGrant allows KongRoute in `default` to reference KongService in `svc-ns`.
 var testKongRouteToSvcGrant = &configurationv1alpha1.KongReferenceGrant{
-	ObjectMeta: metav1.ObjectMeta{
-		Name:      "route-to-svc",
-		Namespace: svcNamespace,
-	},
+	Name:      "route-to-svc",
+	Namespace: svcNamespace,
 	Spec: configurationv1alpha1.KongReferenceGrantSpec{
 		From: []configurationv1alpha1.ReferenceGrantFrom{
 			{
@@ -225,10 +203,8 @@ func TestHandleServiceRef(t *testing.T) {
 		{
 			name: "has service ref",
 			ent: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-1",
-					Namespace: "default",
-				},
+				Name:      "route-1",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -263,10 +239,8 @@ func TestHandleServiceRef(t *testing.T) {
 		{
 			name: "with service ref to a service that is being deleted",
 			ent: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-with-service-ref-being-deleted",
-					Namespace: "default",
-				},
+				Name:      "route-with-service-ref-being-deleted",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -286,10 +260,8 @@ func TestHandleServiceRef(t *testing.T) {
 		{
 			name: "has service ref to an unprogrammed service",
 			ent: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-1",
-					Namespace: "default",
-				},
+				Name:      "route-1",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -332,10 +304,8 @@ func TestHandleServiceRef(t *testing.T) {
 			// The fix uses kongSvc.GetKonnectID() which is nil-safe.
 			name: "has service ref to an unprogrammed service with nil Konnect status (2nd reconciliation, regression for nil panic)",
 			ent: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-1",
-					Namespace: "default",
-				},
+				Name:      "route-1",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -383,14 +353,10 @@ func TestHandleServiceRef(t *testing.T) {
 			// using the service's namespace (from serviceRef.namespace), not the route's.
 			name: "has cross-namespace service ref with valid grant",
 			ent: &configurationv1alpha1.KongRoute{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongRoute",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-cross-ns",
-					Namespace: "default",
-				},
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongRoute",
+				Name:       "route-cross-ns",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -427,14 +393,10 @@ func TestHandleServiceRef(t *testing.T) {
 			// reconciliation does not proceed.
 			name: "has cross-namespace service ref without grant returns ReferenceNotGrantedError",
 			ent: &configurationv1alpha1.KongRoute{
-				TypeMeta: metav1.TypeMeta{
-					APIVersion: configurationv1alpha1.GroupVersion.String(),
-					Kind:       "KongRoute",
-				},
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-cross-ns-no-grant",
-					Namespace: "default",
-				},
+				APIVersion: configurationv1alpha1.GroupVersion.String(),
+				Kind:       "KongRoute",
+				Name:       "route-cross-ns-no-grant",
+				Namespace:  "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -457,10 +419,8 @@ func TestHandleServiceRef(t *testing.T) {
 		{
 			name: "has service ref which has an unprogrammed cp",
 			ent: &configurationv1alpha1.KongRoute{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "route-1",
-					Namespace: "default",
-				},
+				Name:      "route-1",
+				Namespace: "default",
 				Spec: configurationv1alpha1.KongRouteSpec{
 					ServiceRef: &configurationv1alpha1.ServiceRef{
 						Type: configurationv1alpha1.ServiceRefNamespacedRef,
@@ -567,14 +527,10 @@ func testHandleServiceRef[
 // Programmed=Unknown instead of False.
 func TestReconcile_CrossNamespaceServiceRefWithoutGrant(t *testing.T) {
 	route := &configurationv1alpha1.KongRoute{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "KongRoute",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      "route-cross-ns-no-grant",
-			Namespace: "default",
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "KongRoute",
+		Name:       "route-cross-ns-no-grant",
+		Namespace:  "default",
 		Spec: configurationv1alpha1.KongRouteSpec{
 			ServiceRef: &configurationv1alpha1.ServiceRef{
 				Type: configurationv1alpha1.ServiceRefNamespacedRef,

@@ -97,9 +97,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		)
 
 		tg := &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: transitGatewayName,
-			},
+			Name: transitGatewayName,
 			Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 				NetworkRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
@@ -221,9 +219,7 @@ func TestKonnectCloudGatewayTransitGateway(t *testing.T) {
 		)
 
 		tg := &konnectv1alpha1.KonnectCloudGatewayTransitGateway{
-			ObjectMeta: metav1.ObjectMeta{
-				Name: transitGatewayName,
-			},
+			Name: transitGatewayName,
 			Spec: konnectv1alpha1.KonnectCloudGatewayTransitGatewaySpec{
 				NetworkRef: commonv1alpha1.ObjectRef{
 					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

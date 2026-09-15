@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1 "github.com/kong/kong-operator/v2/api/configuration/v1"
@@ -19,10 +18,8 @@ func TestResolveDependencies_KongPlugin(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongPlugin",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongPlugin",
+				Namespace: testNamespace,
 			},
 			cache: cacheStoresFromObjs(t,
 				testSecret(t, "1"),
@@ -33,10 +30,8 @@ func TestResolveDependencies_KongPlugin(t *testing.T) {
 		{
 			name: "KongPlugin -> Secret referenced by ConfigFrom (secret with the same name exists in multiple namespaces)",
 			object: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongPlugin",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongPlugin",
+				Namespace: testNamespace,
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "1",
@@ -54,10 +49,8 @@ func TestResolveDependencies_KongPlugin(t *testing.T) {
 		{
 			name: "KongPlugin -> Secret referenced by ConfigFrom does not exist in the same namespace as the KongPlugin",
 			object: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongPlugin",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongPlugin",
+				Namespace: testNamespace,
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{
 						Secret: "2",
@@ -75,10 +68,8 @@ func TestResolveDependencies_KongPlugin(t *testing.T) {
 		{
 			name: "KongPlugin -> two Secrets referenced by ConfigPatches (Secret with the same name exists in multiple namespaces)",
 			object: &configurationv1.KongPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongPlugin",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongPlugin",
+				Namespace: testNamespace,
 				ConfigPatches: []configurationv1.ConfigPatch{
 					{
 						ValueFrom: configurationv1.ConfigSource{
@@ -117,9 +108,7 @@ func TestResolveDependencies_KongClusterPlugin(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-KongClusterPlugin",
-				},
+				Name: "test-KongClusterPlugin",
 			},
 			cache: cacheStoresFromObjs(t,
 				testSecret(t, "1"),
@@ -130,9 +119,7 @@ func TestResolveDependencies_KongClusterPlugin(t *testing.T) {
 		{
 			name: "KongClusterPlugin -> Secret referenced by ConfigFrom (Secret with the same name exists in multiple namespaces)",
 			object: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-KongClusterPlugin",
-				},
+				Name: "test-KongClusterPlugin",
 				ConfigFrom: &configurationv1.NamespacedConfigSource{
 					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: testNamespace,
@@ -151,9 +138,7 @@ func TestResolveDependencies_KongClusterPlugin(t *testing.T) {
 		{
 			name: "KongClusterPlugin -> Secret referenced by ConfigFrom does not exists",
 			object: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-KongClusterPlugin",
-				},
+				Name: "test-KongClusterPlugin",
 				ConfigFrom: &configurationv1.NamespacedConfigSource{
 					SecretValue: configurationv1.NamespacedSecretValueFromSource{
 						Namespace: testNamespace,
@@ -172,9 +157,7 @@ func TestResolveDependencies_KongClusterPlugin(t *testing.T) {
 		{
 			name: "KongClusterPlugin -> two Secrets referenced by ConfigPatches (Secret with the same name exists in multiple namespaces)",
 			object: &configurationv1.KongClusterPlugin{
-				ObjectMeta: metav1.ObjectMeta{
-					Name: "test-KongClusterPlugin",
-				},
+				Name: "test-KongClusterPlugin",
 				ConfigPatches: []configurationv1.NamespacedConfigPatch{
 					{
 						ValueFrom: configurationv1.NamespacedConfigSource{
@@ -220,10 +203,8 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongConsumer",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongConsumer",
+				Namespace: testNamespace,
 			},
 			cache: cacheStoresFromObjs(t,
 				testKongPlugin(t, "1"),
@@ -234,12 +215,10 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "KongConsumer -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name)",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongconsumer",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
-					},
+				Name:      "test-kongconsumer",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -252,12 +231,10 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "KongConsumer -> plugins - annotation (KongPlugin and KongClusterPlugin with different names)",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongconsumer",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
-					},
+				Name:      "test-kongconsumer",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -270,12 +247,10 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "KongConsumer -> plugins - annotation (KongClusterPlugin)",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongconsumer",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
-					},
+				Name:      "test-kongconsumer",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -288,10 +263,8 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "KongConsumer -> Secret from credentials",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongconsumer",
-					Namespace: testNamespace,
-				},
+				Name:        "test-kongconsumer",
+				Namespace:   testNamespace,
 				Credentials: []string{"1"},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -303,10 +276,8 @@ func TestResolveDependencies_KongConsumer(t *testing.T) {
 		{
 			name: "KongConsumer -> non existing Secret from credentials",
 			object: &configurationv1.KongConsumer{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-kongconsumer",
-					Namespace: testNamespace,
-				},
+				Name:        "test-kongconsumer",
+				Namespace:   testNamespace,
 				Credentials: []string{"non-existing"},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -326,10 +297,8 @@ func TestResolveDependencies_KongConsumerGroup(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &configurationv1beta1.KongConsumerGroup{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongConsumerGroup",
-					Namespace: testNamespace,
-				},
+				Name:      "test-KongConsumerGroup",
+				Namespace: testNamespace,
 			},
 			cache: cacheStoresFromObjs(t,
 				testKongPlugin(t, "1"),
@@ -340,12 +309,10 @@ func TestResolveDependencies_KongConsumerGroup(t *testing.T) {
 		{
 			name: "KongConsumerGroup -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name)",
 			object: &configurationv1beta1.KongConsumerGroup{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongConsumerGroup",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
-					},
+				Name:      "test-KongConsumerGroup",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -358,12 +325,10 @@ func TestResolveDependencies_KongConsumerGroup(t *testing.T) {
 		{
 			name: "KongConsumerGroup -> plugins - annotation (KongPlugin and KongClusterPlugin with different names)",
 			object: &configurationv1beta1.KongConsumerGroup{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongConsumerGroup",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
-					},
+				Name:      "test-KongConsumerGroup",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -376,12 +341,10 @@ func TestResolveDependencies_KongConsumerGroup(t *testing.T) {
 		{
 			name: "KongConsumerGroup -> plugins - annotation (KongClusterPlugin)",
 			object: &configurationv1beta1.KongConsumerGroup{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongConsumerGroup",
-					Namespace: testNamespace,
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
-					},
+				Name:      "test-KongConsumerGroup",
+				Namespace: testNamespace,
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -403,10 +366,8 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		{
 			name: "no dependencies",
 			object: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongServiceFacade",
-					Namespace: "test-namespace",
-				},
+				Name:      "test-KongServiceFacade",
+				Namespace: "test-namespace",
 			},
 			cache: cacheStoresFromObjs(t,
 				testKongPlugin(t, "1"),
@@ -417,13 +378,11 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		{
 			name: "KongServiceFacade -> plugins - annotation (KongPlugin and KongClusterPlugin with the same name) and KongUpstreamPolicy",
 			object: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongServiceFacade",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "1",
-					},
+				Name:      "test-KongServiceFacade",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 2",
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "1",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -437,12 +396,10 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		{
 			name: "KongServiceFacade -> plugins - annotation (KongPlugin and KongClusterPlugin with different names)",
 			object: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongServiceFacade",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
-					},
+				Name:      "test-KongServiceFacade",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "1, 3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -456,13 +413,11 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		{
 			name: "KongServiceFacade -> plugins - annotation (KongClusterPlugin) and KongUpstreamPolicy",
 			object: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongServiceFacade",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						annotations.AnnotationPrefix + annotations.PluginsKey: "3",
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "3",
-					},
+				Name:      "test-KongServiceFacade",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					annotations.AnnotationPrefix + annotations.PluginsKey: "3",
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey:  "3",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -476,12 +431,10 @@ func TestResolveDependencies_KongServiceFacade(t *testing.T) {
 		{
 			name: "KongServiceFacade -> KongUpstreamPolicy - the same name in different namespaces",
 			object: &incubatorv1alpha1.KongServiceFacade{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-KongServiceFacade",
-					Namespace: "test-namespace",
-					Annotations: map[string]string{
-						configurationv1beta1.KongUpstreamPolicyAnnotationKey: "1",
-					},
+				Name:      "test-KongServiceFacade",
+				Namespace: "test-namespace",
+				Annotations: map[string]string{
+					configurationv1beta1.KongUpstreamPolicyAnnotationKey: "1",
 				},
 			},
 			cache: cacheStoresFromObjs(t,
@@ -504,10 +457,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 		{
 			name: "no dependencies - parent reference is nil",
 			object: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-custom-entity",
-					Namespace: testNamespace,
-				},
+				Name:      "test-custom-entity",
+				Namespace: testNamespace,
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "test-entity",
 					ParentRef:  nil,
@@ -522,10 +473,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 		{
 			name: "parent reference to KongPlugin",
 			object: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-custom-entity",
-					Namespace: testNamespace,
-				},
+				Name:      "test-custom-entity",
+				Namespace: testNamespace,
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{
@@ -546,10 +495,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 		{
 			name: "parent reference to KongClusterPlugin",
 			object: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-custom-entity",
-					Namespace: testNamespace,
-				},
+				Name:      "test-custom-entity",
+				Namespace: testNamespace,
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{
@@ -570,10 +517,8 @@ func TestResolveDependencies_KongCustomEntity(t *testing.T) {
 		{
 			name: "parent reference to KongPlugin in a different namespace",
 			object: &configurationv1alpha1.KongCustomEntity{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-custom-entity",
-					Namespace: testNamespace,
-				},
+				Name:      "test-custom-entity",
+				Namespace: testNamespace,
 				Spec: configurationv1alpha1.KongCustomEntitySpec{
 					EntityType: "test-entity",
 					ParentRef: &configurationv1alpha1.ObjectReference{

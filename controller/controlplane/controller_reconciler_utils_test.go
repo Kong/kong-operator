@@ -5,7 +5,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -29,17 +28,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "grant exists for controlplane",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -57,10 +52,8 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "no grants exist in namespace",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants:      []client.Object{},
 			expectedError:       true,
@@ -70,17 +63,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "grant exists but for different namespace",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -99,17 +88,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "grant exists but for different kind",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -128,17 +113,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "grant exists but for different group",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -157,17 +138,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "multiple grants exist, one matches",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -179,10 +156,8 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 					},
 				},
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-2",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-2",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -200,17 +175,13 @@ func TestEnsureWatchNamespaceGrantsForNamespace(t *testing.T) {
 			name:      "grant with multiple from entries, one matches",
 			namespace: "target-ns",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 			},
 			existingGrants: []client.Object{
 				&operatorv1alpha1.WatchNamespaceGrant{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "grant-1",
-						Namespace: "target-ns",
-					},
+					Name:      "grant-1",
+					Namespace: "target-ns",
 					Spec: operatorv1alpha1.WatchNamespaceGrantSpec{
 						From: []operatorv1alpha1.WatchNamespaceGrantFrom{
 							{
@@ -262,10 +233,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "nil watchNamespaces spec - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: nil,
@@ -278,10 +247,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeAll - empty operator watchNamespaces - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -296,10 +263,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeAll - non-empty operator watchNamespaces - should fail",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -315,10 +280,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeOwn - operator allows own namespace - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -333,10 +296,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeOwn - empty operator watchNamespaces - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -351,10 +312,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeOwn - operator doesn't allow own namespace - should fail",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -370,10 +329,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeList - empty operator watchNamespaces - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -389,10 +346,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeList - all requested namespaces allowed - should pass",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -408,10 +363,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeList - partial match - should fail",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -428,10 +381,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeList - no match - should fail",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{
@@ -448,10 +399,8 @@ func TestValidateWatchNamespaces(t *testing.T) {
 		{
 			name: "WatchNamespacesTypeList - single namespace not allowed - should fail",
 			controlPlane: &ControlPlane{
-				ObjectMeta: metav1.ObjectMeta{
-					Name:      "test-cp",
-					Namespace: "cp-ns",
-				},
+				Name:      "test-cp",
+				Namespace: "cp-ns",
 				Spec: gwtypes.ControlPlaneSpec{
 					ControlPlaneOptions: gwtypes.ControlPlaneOptions{
 						WatchNamespaces: &operatorv2beta1.WatchNamespaces{

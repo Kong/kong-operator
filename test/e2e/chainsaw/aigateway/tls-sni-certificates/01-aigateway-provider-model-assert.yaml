@@ -1,0 +1,19 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: tls-sni-chat-model
+  namespace: ($namespace)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+  (id != null): true

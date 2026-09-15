@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"reflect"
 
-	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -74,9 +73,7 @@ func (r *Reconciler) listGatewayClassesForGatewayConfig(ctx context.Context, obj
 			string(params.Kind) == "GatewayConfiguration" &&
 			params.Name == gatewayConfig.Name {
 			recs = append(recs, reconcile.Request{
-				NamespacedName: types.NamespacedName{
-					Name: gwc.Name,
-				},
+				Name: gwc.Name,
 			})
 		}
 	}

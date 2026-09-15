@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -102,16 +101,12 @@ func TestGetEventGatewayVirtualClusterConsumePolicyForUID(t *testing.T) {
 
 func testEventGatewayVirtualClusterConsumePolicy() *configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy {
 	return &configurationv1alpha1.EventGatewayVirtualClusterConsumePolicy{
-		TypeMeta: metav1.TypeMeta{
-			APIVersion: configurationv1alpha1.GroupVersion.String(),
-			Kind:       "EventGatewayVirtualClusterConsumePolicy",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "consume-policy",
-			Namespace:  "default",
-			UID:        "consume-policy-uid",
-			Generation: 2,
-		},
+		APIVersion: configurationv1alpha1.GroupVersion.String(),
+		Kind:       "EventGatewayVirtualClusterConsumePolicy",
+		Name:       "consume-policy",
+		Namespace:  "default",
+		UID:        "consume-policy-uid",
+		Generation: 2,
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterConsumePolicySpec{
 			EventGatewayVirtualClusterRef: commonv1alpha1.ObjectRef{
 				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,

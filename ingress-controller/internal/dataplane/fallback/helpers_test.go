@@ -25,27 +25,21 @@ const (
 
 func testIngressClass(t *testing.T, name string) *netv1.IngressClass {
 	return helpers.WithTypeMeta(t, &netv1.IngressClass{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 	})
 }
 
 func testService(t *testing.T, name string) *corev1.Service {
 	return helpers.WithTypeMeta(t, &corev1.Service{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 }
 
 func testSecret(t *testing.T, name string, modifiers ...func(s *corev1.Secret)) *corev1.Secret {
 	s := helpers.WithTypeMeta(t, &corev1.Secret{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 	for _, mod := range modifiers {
 		mod(s)
@@ -55,19 +49,15 @@ func testSecret(t *testing.T, name string, modifiers ...func(s *corev1.Secret)) 
 
 func testKongServiceFacade(t *testing.T, name string) *incubatorv1alpha1.KongServiceFacade {
 	return helpers.WithTypeMeta(t, &incubatorv1alpha1.KongServiceFacade{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 }
 
 func testKongPlugin(t *testing.T, name string, modifiers ...func(p *configurationv1.KongPlugin)) *configurationv1.KongPlugin {
 	p := helpers.WithTypeMeta(t, &configurationv1.KongPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 	for _, mod := range modifiers {
 		mod(p)
@@ -77,19 +67,15 @@ func testKongPlugin(t *testing.T, name string, modifiers ...func(p *configuratio
 
 func testKongClusterPlugin(t *testing.T, name string) *configurationv1.KongClusterPlugin {
 	return helpers.WithTypeMeta(t, &configurationv1.KongClusterPlugin{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 }
 
 func testKongUpstreamPolicy(t *testing.T, name string, modifiers ...func(kup *configurationv1beta1.KongUpstreamPolicy)) *configurationv1beta1.KongUpstreamPolicy {
 	kup := helpers.WithTypeMeta(t, &configurationv1beta1.KongUpstreamPolicy{
-		ObjectMeta: metav1.ObjectMeta{
-			Name:      name,
-			Namespace: testNamespace,
-		},
+		Name:      name,
+		Namespace: testNamespace,
 	})
 	for _, mod := range modifiers {
 		mod(kup)
@@ -155,9 +141,7 @@ type MockObject struct {
 // NewMockObject creates a new mock object with the given name.
 func NewMockObject(name string) *MockObject {
 	return &MockObject{
-		ObjectMeta: metav1.ObjectMeta{
-			Name: name,
-		},
+		Name: name,
 	}
 }
 

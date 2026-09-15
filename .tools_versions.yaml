@@ -7,7 +7,7 @@ golangci-lint: "2.13.2"
 # renovate: datasource=github-releases depName=GoogleContainerTools/skaffold
 skaffold: "2.24.0"
 # renovate: datasource=github-releases depName=go-delve/delve
-dlv: "1.27.1"
+dlv: "1.27.2"
 # renovate: datasource=github-releases depName=gotestyourself/gotestsum
 gotestsum: "1.13.0"
 # renovate: datasource=github-releases depName=elastic/crd-ref-docs
@@ -15,7 +15,7 @@ crd-ref-docs: "0.3.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/crdify
 crdify: "0.6.0"
 # renovate: datasource=github-releases depName=kubernetes-sigs/controller-runtime
-setup-envtest: "0.25.0"
+setup-envtest: "0.25.1"
 # renovate: datasource=github-releases depName=rhysd/actionlint
 actionlint: "1.7.12"
 # renovate: datasource=github-releases depName=koalaman/shellcheck
@@ -42,13 +42,13 @@ shellcheck: "0.11.0"
 # TODO: Make this work.
 #
 # todo: datasource=git-tags depName=vuln registryUrl=https://go.googlesource.com
-govulncheck: "1.5.0"
+govulncheck: "1.7.0"
 # renovate: datasource=github-releases depName=jlandowner/helm-chartsnap
 chartsnap: "0.6.0"
 # renovate: datasource=github-releases depName=stackrox/kube-linter
 kube-linter: "0.8.3"
 # renovate: datasource=github-releases depName=cert-manager/cert-manager
-cert-manager: "1.21.1"
+cert-manager: "1.21.2"
 # renovate: datasource=github-releases depName=kyverno/chainsaw
 chainsaw: "v0.2.15"
 # renovate: datasource=github-releases depName=fullstorydev/grpcurl

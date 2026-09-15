@@ -11,7 +11,6 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8stypes "k8s.io/apimachinery/pkg/types"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -33,10 +32,8 @@ func TestCreateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: new("svc-1"),
@@ -75,11 +72,9 @@ func TestCreateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-						UID:       k8stypes.UID("abcd-1234"),
-					},
+					Name:      "svc-1",
+					Namespace: "default",
+					UID:       k8stypes.UID("abcd-1234"),
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Host: "example.com",
@@ -117,10 +112,8 @@ func TestCreateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: new("svc-1"),
@@ -136,10 +129,8 @@ func TestCreateKongService(t *testing.T) {
 			},
 			expectedError: CantPerformOperationWithoutControlPlaneIDError{
 				Entity: &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 				},
 				Op: CreateOp,
 			},
@@ -149,10 +140,8 @@ func TestCreateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: new("svc-1"),
@@ -197,10 +186,8 @@ func TestCreateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: new("svc-1"),
@@ -274,9 +261,7 @@ func TestDeleteKongService(t *testing.T) {
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -306,9 +291,7 @@ func TestDeleteKongService(t *testing.T) {
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -340,9 +323,7 @@ func TestDeleteKongService(t *testing.T) {
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -403,9 +384,7 @@ func TestUpdateKongService(t *testing.T) {
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -440,10 +419,8 @@ func TestUpdateKongService(t *testing.T) {
 			mockServicePair: func(t *testing.T) (*mocks.MockServicesSDK, *configurationv1alpha1.KongService) {
 				sdk := mocks.NewMockServicesSDK(t)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "svc-1",
-						Namespace: "default",
-					},
+					Name:      "svc-1",
+					Namespace: "default",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						KongServiceAPISpec: configurationv1alpha1.KongServiceAPISpec{
 							Name: new("svc-1"),
@@ -452,9 +429,7 @@ func TestUpdateKongService(t *testing.T) {
 					Status: configurationv1alpha1.KongServiceStatus{
 						Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
 							ControlPlaneID: "12345",
-							KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
-								ID: "123456789",
-							},
+							ID:             "123456789",
 						},
 					},
 				}
@@ -506,18 +481,14 @@ func TestUpdateKongService(t *testing.T) {
 
 func TestCreateAndUpdateKongService_KubernetesMetadataConsistency(t *testing.T) {
 	svc := &configurationv1alpha1.KongService{
-		TypeMeta: metav1.TypeMeta{
-			Kind:       "KongService",
-			APIVersion: "configuration.konghq.com/v1alpha1",
-		},
-		ObjectMeta: metav1.ObjectMeta{
-			Name:       "svc-1",
-			Namespace:  "default",
-			UID:        k8stypes.UID(uuid.NewString()),
-			Generation: 2,
-			Annotations: map[string]string{
-				metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
-			},
+		Kind:       "KongService",
+		APIVersion: "configuration.konghq.com/v1alpha1",
+		Name:       "svc-1",
+		Namespace:  "default",
+		UID:        k8stypes.UID(uuid.NewString()),
+		Generation: 2,
+		Annotations: map[string]string{
+			metadata.AnnotationKeyTags: "tag1,tag2,duplicate-tag",
 		},
 		Status: configurationv1alpha1.KongServiceStatus{
 			Konnect: &konnectv1alpha2.KonnectEntityStatusWithControlPlaneAndCertificateAndCACertificatesRefs{
@@ -574,11 +545,9 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 					&sdkkonnectops.UpsertServiceResponse{}, nil,
 				)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "adopt-service-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "adopt-service-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -615,11 +584,9 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 					&sdkkonnecterrs.NotFoundError{},
 				)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "adopt-service-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "adopt-service-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
@@ -662,11 +629,9 @@ func TestAdoptKongServiceOverride(t *testing.T) {
 					}, nil,
 				)
 				svc := &configurationv1alpha1.KongService{
-					ObjectMeta: metav1.ObjectMeta{
-						Name:      "adopt-service-1",
-						Namespace: "default",
-						UID:       "abcd-0001",
-					},
+					Name:      "adopt-service-1",
+					Namespace: "default",
+					UID:       "abcd-0001",
 					Spec: configurationv1alpha1.KongServiceSpec{
 						Adopt: &commonv1alpha1.AdoptOptions{
 							From: commonv1alpha1.AdoptSourceKonnect,
