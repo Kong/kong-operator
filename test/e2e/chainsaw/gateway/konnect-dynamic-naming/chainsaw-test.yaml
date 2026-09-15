@@ -4,14 +4,10 @@ metadata:
   name: gateway-konnect-dynamic-naming
 spec:
   description: |
-    Non-regression lock for the default (dynamic) naming path of Gateway-owned
-    KonnectGatewayControlPlanes.
-
-    Without the static-naming annotation the operator generates
-    "<gateway-name>-<random suffix>" for the Kubernetes resource and uses that same string
-    as the Konnect Control Plane name, which is the invariant introduced in #3357. The fix
-    for #4079 qualifies the Konnect name with the namespace only under static naming; this
-    test makes sure the dynamic path is not changed by accident.
+    Non-regression lock for the default (dynamic) naming path. Without the static-naming
+    annotation the operator generates "<gateway-name>-<random suffix>" and uses that same
+    string as the Konnect name (#3357). The #4079 fix qualifies the Konnect name only under
+    static naming: this makes sure the dynamic path is not changed by accident.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -21,9 +17,8 @@ spec:
       value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
     - name: gateway_image
       value: (env('GATEWAY_IMAGE'))
-    # A short literal rather than the usual "<test_name>-gateway": the assertions below
-    # compare the generated name against the namespace, and a name that already embeds the
-    # namespace would make those comparisons meaningless.
+    # A short literal rather than the usual "<test_name>-gateway": a name already embedding
+    # the namespace would make the comparisons below meaningless.
     - name: gateway_name
       value: edge-gw
     - name: listener_http_port
@@ -50,10 +45,8 @@ spec:
 
     - name: 03-create-gateway-configuration
       description: |
-        Create the Konnect-backed GatewayConfiguration and GatewayClass. These are local
-        files rather than the shared templates because the shared
-        apply-assert-gatewayConfiguration.yaml always emits an explicit authRef.namespace,
-        which would require a KongReferenceGrant this test does not need.
+        Local files rather than the shared templates: apply-assert-gatewayConfiguration.yaml
+        always emits an explicit authRef.namespace, which would need a KongReferenceGrant.
       try:
         - apply:
             file: 01-gatewayconfiguration.yaml
@@ -75,12 +68,9 @@ spec:
     - name: 06-assert-dynamic-naming-invariants
       description: |
         The Konnect name equals the generated Kubernetes name (#3357) and is not qualified
-        with the namespace. This is a script rather than an assertion tree because it
-        compares two fields of the same resource against each other, and the expected
-        values are not known up front: the name carries a random suffix.
-
-        The preceding step already waited for the resource, so a single read is enough --
-        chainsaw runs a script exactly once, with no retry.
+        with the namespace. A script rather than an assertion tree because it compares two
+        fields of the same resource, whose values are not known up front. The preceding step
+        already waited for the resource, so one read is enough -- scripts do not retry.
       try:
         - script:
             env:
@@ -108,20 +98,19 @@ spec:
                 exit 1
               fi
 
-              # Invariant from #3357: on the dynamic path the two names are the same string.
+              # #3357: on the dynamic path the two names are the same string.
               if [ "${K8S_NAME}" != "${KONNECT_NAME}" ]; then
                 echo "FAIL: the Konnect name must equal the Kubernetes name on the dynamic naming path (#3357)" >&2
                 exit 1
               fi
 
-              # The #4079 fix must qualify the Konnect name with the namespace ONLY under
-              # static naming.
+              # #4079 qualifies the Konnect name ONLY under static naming.
               if [ "${KONNECT_NAME}" = "${NAMESPACE}-${GATEWAY_NAME}" ]; then
                 echo "FAIL: the dynamic Konnect name must not be qualified with the namespace" >&2
                 exit 1
               fi
 
-              # Dynamic naming appends a random suffix, so the bare Gateway name is wrong.
+              # Dynamic naming appends a random suffix.
               if [ "${K8S_NAME}" = "${GATEWAY_NAME}" ]; then
                 echo "FAIL: the dynamic Kubernetes name must carry a random suffix" >&2
                 exit 1
@@ -129,10 +118,9 @@ spec:
 
     - name: 07-cleanup
       description: |
-        Delete the Gateway and wait for its Konnect-backed children to be gone before
-        chainsaw tears the namespace down, so the operator can still authenticate to
-        Konnect while deprovisioning. The error operation succeeds only when nothing
-        matches, so it doubles as "wait until gone".
+        Delete the Gateway and wait for its Konnect-backed children to be gone, so the
+        operator can still authenticate while deprovisioning. The error operation succeeds
+        only when nothing matches, so it doubles as "wait until gone".
       timeouts:
         delete: 120s
         error: 120s

@@ -5369,11 +5369,9 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 	ns := func(s string) *string { return &s }
 
-	// legacyKonnectName is the name a Control Plane created before the #4079 fix carries:
-	// the unqualified Gateway name, not "<namespace>-<gateway-name>". Every case below seeds
-	// it and asserts it survives, because enforceKonnectGatewayControlPlaneSpec must never
-	// touch spec.createControlPlaneRequest.name. If it ever did, every Control Plane already
-	// created in Konnect would be silently renamed on the first reconcile after an upgrade.
+	// The unqualified name a Control Plane created before the #4079 fix carries. Every case
+	// seeds it and asserts it survives: renaming it here would rename every Control Plane
+	// already created in Konnect, on the first reconcile after an upgrade.
 	const legacyKonnectName = "test-kgcp"
 
 	authRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -5521,8 +5519,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 			require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(tt.kgcp), &got))
 			assert.Equal(t, tt.wantAuthRef, got.Spec.KonnectConfiguration.APIAuthConfigurationRef)
 
-			// The Konnect-side name is write-once at creation time and must never be
-			// reconciled, whether or not the authRef was patched.
+			// The Konnect-side name is write-once at creation, patched authRef or not.
 			require.NotNil(t, got.Spec.CreateControlPlaneRequest)
 			assert.Equal(t, legacyKonnectName, got.Spec.CreateControlPlaneRequest.Name,
 				"spec.createControlPlaneRequest.name must not be modified on an existing KonnectGatewayControlPlane")
@@ -5582,20 +5579,15 @@ func TestHasStaticNaming(t *testing.T) {
 	}
 }
 
-// TestKonnectControlPlaneName covers the derivation of the Konnect-side Control Plane name.
-//
-// The Kubernetes name and the Konnect name have different uniqueness scopes:
-// (namespace, kind, name) versus (org_id, name). Under static naming the Kubernetes name is
-// the unqualified Gateway name, so the Konnect name must be qualified with the namespace to
-// avoid HTTP 409 conflicts between same-named Gateways in different namespaces (#4079). Under
-// dynamic naming the two names must stay identical, which is the invariant from #3357.
+// TestKonnectControlPlaneName covers the derivation of the Konnect-side Control Plane name:
+// namespace-qualified under static naming (#4079), identical to the Kubernetes name on the
+// dynamic path (#3357).
 func TestKonnectControlPlaneName(t *testing.T) {
 	testCases := []struct {
 		name        string
 		annotations map[string]string
-		// staticNaming says whether the Gateway opts in. When false, the Konnect name must
-		// equal the generated Kubernetes name, which carries a random suffix and therefore
-		// cannot be asserted as a literal.
+		// When false, the Konnect name must equal the generated Kubernetes name, which
+		// carries a random suffix and cannot be asserted as a literal.
 		staticNaming        bool
 		expectedKonnectName string
 	}{
@@ -5637,7 +5629,7 @@ func TestKonnectControlPlaneName(t *testing.T) {
 				},
 			}
 
-			// Derive the Kubernetes name exactly as createKonnectGatewayControlPlane does.
+			// Derived exactly as createKonnectGatewayControlPlane does it.
 			kgcp := &konnectv1alpha2.KonnectGatewayControlPlane{}
 			kgcpName := setObjectNamespaceName(gateway, kgcp)
 			konnectName := konnectControlPlaneName(gateway, kgcpName)
@@ -5645,7 +5637,7 @@ func TestKonnectControlPlaneName(t *testing.T) {
 			assert.Equal(t, gateway.Namespace, kgcp.Namespace)
 
 			if tc.staticNaming {
-				// The Kubernetes name stays unqualified: that is the point of the annotation.
+				// Unqualified Kubernetes name: the point of the annotation.
 				assert.Equal(t, gateway.Name, kgcp.Name)
 				assert.Equal(t, tc.expectedKonnectName, konnectName)
 				assert.NotEqual(t, kgcpName, konnectName,
@@ -5653,8 +5645,7 @@ func TestKonnectControlPlaneName(t *testing.T) {
 				return
 			}
 
-			// Dynamic naming: the generated name carries a random suffix, so assert the
-			// relationship between the two names rather than a literal value.
+			// Random suffix: assert the relationship between the names, not a literal.
 			assert.Equal(t, kgcpName, konnectName,
 				"under dynamic naming the Konnect name must equal the Kubernetes name (#3357)")
 			assert.NotEqual(t, gateway.Name, kgcpName,

@@ -1884,12 +1884,9 @@ func hasStaticNaming(gateway *gwtypes.Gateway) bool {
 }
 
 // konnectControlPlaneName returns the name to use for the Control Plane created in Konnect.
-//
-// The Kubernetes name and the Konnect name have different uniqueness scopes:
-// (namespace, kind, name) versus (org_id, name). Under static naming the Kubernetes name is
-// the unqualified Gateway name, which is not unique within a Konnect organization, so the
-// namespace is prepended. Under dynamic naming the Kubernetes name already carries a random
-// suffix and is used as is, preserving the behavior introduced in #3357.
+// Konnect names are unique per (org_id, name), so under static naming -- where the Kubernetes
+// name is the bare Gateway name -- the namespace is prepended. The dynamic name already
+// carries a random suffix and is used as is (#3357).
 func konnectControlPlaneName(gateway *gwtypes.Gateway, kgcpName string) string {
 	if hasStaticNaming(gateway) {
 		return fmt.Sprintf("%s-%s", gateway.Namespace, gateway.Name)

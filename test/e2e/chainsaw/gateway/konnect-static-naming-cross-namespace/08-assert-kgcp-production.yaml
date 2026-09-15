@@ -1,9 +1,6 @@
-# This is the regression assertion of #4079.
-#
-# The spec check alone would pass even if Konnect rejected the request, because it only
-# inspects what the operator wrote locally. Programmed=True with a non-null Konnect ID on
-# THIS second Control Plane is what proves the create succeeded: before the fix this
-# resource stayed Programmed=False, looping on a 409 conflict with the staging one.
+# The regression assertion of #4079. The spec check alone would pass even with Konnect
+# rejecting the request, as it only inspects what the operator wrote locally; Programmed
+# plus a Konnect ID on THIS second Control Plane is what proves the create succeeded.
 apiVersion: konnect.konghq.com/v1alpha2
 kind: KonnectGatewayControlPlane
 metadata:

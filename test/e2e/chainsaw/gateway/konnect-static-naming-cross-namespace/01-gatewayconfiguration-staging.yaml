@@ -1,6 +1,5 @@
 # Konnect-backed GatewayConfiguration and GatewayClass for the "staging" environment.
-# The KonnectAPIAuthConfiguration lives in the same namespace, so authRef carries no
-# namespace and no KongReferenceGrant is needed.
+# The auth config is same-namespace, so authRef needs no namespace and no KongReferenceGrant.
 apiVersion: gateway-operator.konghq.com/v2beta1
 kind: GatewayConfiguration
 metadata:
@@ -21,7 +20,7 @@ spec:
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
-  # Cluster-scoped, so it must be unique across concurrent test runs.
+  # Cluster-scoped: must be unique across concurrent runs.
   name: (join('-', [($test_name), 'staging-gateway-class']))
 spec:
   controllerName: konghq.com/gateway-operator

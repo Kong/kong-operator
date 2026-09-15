@@ -1,6 +1,5 @@
-# Gateway with the SAME name as the staging one, in a different namespace, also with
-# static naming. Before the #4079 fix both Gateways asked Konnect for a Control Plane
-# named "edge-gw", and this second create failed with HTTP 409.
+# SAME name as the staging Gateway, different namespace, also statically named. Before the
+# #4079 fix both asked Konnect for "edge-gw" and this second create failed with HTTP 409.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

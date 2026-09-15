@@ -1,6 +1,5 @@
-# Gateway in the "staging" namespace with static naming enabled.
-# Its name is deliberately identical to the Gateway created in the "production"
-# namespace: that is the condition that triggers the Konnect 409 of #4079.
+# Statically named, and deliberately identical to the Gateway in the "production"
+# namespace: the condition that triggers the Konnect 409 of #4079.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

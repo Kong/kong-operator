@@ -25,15 +25,9 @@ import (
 	"github.com/kong/kong-operator/v2/test/helpers/deploy"
 )
 
-// TestGatewayKonnectControlPlaneStaticNaming covers the naming of the KonnectGatewayControlPlane
-// created for a Gateway that opts into static naming via the
-// gateway-operator.konghq.com/static-naming annotation.
-//
-// The Kubernetes name and the Konnect name have different uniqueness scopes:
-// (namespace, kind, name) versus (org_id, name). Under static naming the Kubernetes name must
-// stay the unqualified Gateway name, while the Konnect name must be qualified with the namespace
-// so that same-named Gateways in different namespaces do not collide in Konnect with an HTTP 409
-// (#4079).
+// TestGatewayKonnectControlPlaneStaticNaming asserts that a statically-named Gateway gets a
+// KonnectGatewayControlPlane keeping the bare Gateway name in Kubernetes, and a
+// namespace-qualified name in Konnect so same-named Gateways do not collide (#4079).
 func TestGatewayKonnectControlPlaneStaticNaming(t *testing.T) {
 	t.Parallel()
 
@@ -97,25 +91,24 @@ func TestGatewayKonnectControlPlaneStaticNaming(t *testing.T) {
 		return kgcp.Spec.CreateControlPlaneRequest != nil
 	}, envtestconsts.WaitTime, envtestconsts.TickTime, "exactly one KonnectGatewayControlPlane should be created")
 
-	// The Kubernetes name stays unqualified: that is the point of the annotation.
+	// Unqualified Kubernetes name: the point of the annotation.
 	assert.Equal(t, gatewayName, kgcp.Name,
 		"the KonnectGatewayControlPlane Kubernetes name must match the Gateway name under static naming")
-	// The Konnect name is qualified with the namespace to keep it unique within the organization.
+	// Qualified Konnect name, unique within the org.
 	assert.Equal(t, gwNs.Name+"-"+gatewayName, kgcp.Spec.CreateControlPlaneRequest.Name,
 		"the Konnect Control Plane name must be qualified with the Gateway namespace")
 }
 
 // TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility asserts that a
-// KonnectGatewayControlPlane created before the #4079 fix -- whose
-// spec.createControlPlaneRequest.name is the old unqualified Gateway name -- is left alone on
-// upgrade. Renaming it would rename the Control Plane in Konnect, and creating a second one
-// would provision a duplicate Control Plane.
+// KonnectGatewayControlPlane created before the #4079 fix keeps its old unqualified Konnect
+// name on upgrade -- renaming it would rename the Control Plane in Konnect -- and keeps being
+// resolved by the resources referring to it.
 func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.T) {
 	t.Parallel()
 
 	const (
 		gatewayName = "edge-gw"
-		// legacyKonnectName is what the operator wrote before the fix: the unqualified name.
+		// What the operator wrote before the fix.
 		legacyKonnectName = gatewayName
 	)
 
@@ -141,9 +134,8 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 	)
 	t.Cleanup(func() { _ = c.Delete(ctx, gwConfig) })
 
-	// Create the GatewayClass without accepting it yet: the reconciler ignores Gateways whose
-	// GatewayClass is not Accepted, which gives us a window to seed the pre-existing
-	// KonnectGatewayControlPlane before any reconciliation happens.
+	// Not Accepted yet: the reconciler ignores such Gateways, leaving a window to seed the
+	// pre-existing KonnectGatewayControlPlane before any reconciliation.
 	gc := deploy.GatewayClass(t, ctx, c,
 		func(obj client.Object) { obj.SetName("static-naming-bc-gc") },
 		deploy.WithGatewayClassControllerName(vars.ControllerName()),
@@ -176,9 +168,8 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 		Name:      "my-auth",
 		Namespace: new(gwNs.Name),
 	}
-	// Match what the reconciler looks for: same namespace, managed-by label, owned by the Gateway.
-	// The client strips TypeMeta from the object returned by Create, so restore it before
-	// deriving the owner reference from it.
+	// Match what the reconciler looks for: namespace, managed-by label, owner. Create strips
+	// TypeMeta from the returned object, so restore it before deriving the owner reference.
 	gw.TypeMeta = metav1.TypeMeta{
 		APIVersion: gatewayv1.GroupVersion.String(),
 		Kind:       "Gateway",
@@ -190,9 +181,8 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 	t.Log("accepting the GatewayClass so the Gateway starts reconciling")
 	require.Eventually(t, testutils.GatewayClassAcceptedStatusUpdate(t, ctx, gc.Name, c), envtestconsts.WaitTime, envtestconsts.TickTime)
 
-	// The seeded Control Plane never becomes Programmed (there is no Konnect backend in envtest),
-	// so this condition proves the reconciler took the "one existing Control Plane" branch and
-	// called enforceKonnectGatewayControlPlaneSpec rather than creating a new one.
+	// This condition is only set on the "found exactly one" branch, so it proves the reconciler
+	// picked up the seeded Control Plane instead of creating a new one.
 	t.Log("waiting for the Gateway to report on the existing KonnectGatewayControlPlane")
 	require.Eventually(t, func() bool {
 		var got gatewayv1.Gateway
@@ -222,10 +212,9 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 	}, envtestconsts.WaitTime, envtestconsts.TickTime,
 		"an existing KonnectGatewayControlPlane must not be renamed")
 
-	// Resources referring to the Control Plane do so by Kubernetes name, which the fix leaves
-	// alone -- so an old-naming Control Plane must keep resolving. The KonnectExtension is the
-	// reference the operator itself creates, and it is only reached once the Control Plane is
-	// Programmed, which has to be faked here because envtest has no Konnect backend.
+	// References to the Control Plane use the Kubernetes name, which the fix leaves alone.
+	// The KonnectExtension is the one the operator creates itself, and it is only reached once
+	// the Control Plane is Programmed -- faked here, as envtest has no Konnect backend.
 	t.Log("marking the existing KonnectGatewayControlPlane as Programmed")
 	require.Eventually(t, func() bool {
 		var got konnectv1alpha2.KonnectGatewayControlPlane
@@ -257,7 +246,7 @@ func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.
 		if ref.KonnectNamespacedRef == nil {
 			return false
 		}
-		// The Kubernetes name, not the Konnect name: unchanged by the #4079 fix.
+		// The Kubernetes name, not the Konnect one.
 		return ref.KonnectNamespacedRef.Name == gatewayName
 	}, envtestconsts.WaitTime, envtestconsts.TickTime,
 		"the KonnectExtension must reference the existing Control Plane by its Kubernetes name")
