@@ -53,18 +53,16 @@ type Reconciler struct {
 	eventRecorder events.EventRecorder
 }
 
-// base returns the shared generic reconciler wired with the KegDataPlane
-// configuration.
-func (r *Reconciler) base() *shareddataplane.Reconciler[
+type sharedReconciler = shareddataplane.Reconciler[
 	*eventgatewayv1alpha1.KegDataPlane,
 	*konnectv1alpha1.KonnectEventGateway,
 	*configurationv1alpha1.EventGatewayDataPlaneCertificate,
-] {
-	return &shareddataplane.Reconciler[
-		*eventgatewayv1alpha1.KegDataPlane,
-		*konnectv1alpha1.KonnectEventGateway,
-		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
-	]{
+]
+
+// base returns the shared generic reconciler wired with the KegDataPlane
+// configuration.
+func (r *Reconciler) base() *sharedReconciler {
+	return &sharedReconciler{
 		Client:                   r.Client,
 		LoggingMode:              r.LoggingMode,
 		ClusterCASecretName:      r.ClusterCASecretName,
@@ -81,12 +79,4 @@ func (r *Reconciler) base() *shareddataplane.Reconciler[
 func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorder(ControllerName)
 	return r.base().SetupWithManager(ctx, mgr)
-}
-
-// Reconcile moves the current state of a KegDataPlane toward the desired state.
-func (r *Reconciler) Reconcile(
-	ctx context.Context,
-	egdp *eventgatewayv1alpha1.KegDataPlane,
-) (ctrl.Result, error) {
-	return r.base().Reconcile(ctx, egdp)
 }

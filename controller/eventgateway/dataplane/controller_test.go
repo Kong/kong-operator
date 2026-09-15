@@ -117,10 +117,10 @@ func newNotProgrammedKEG() *konnectv1alpha1.KonnectEventGateway {
 	return keg
 }
 
-// newTestReconciler builds a Reconciler wired to cl and recorder.
+// newTestReconciler builds a shared reconciler wired to cl and recorder.
 // The fake client is wrapped with an interceptor that populates TypeMeta on
 // KegDataPlane objects after Get, because the fake client does not set it.
-func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reconciler {
+func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *sharedReconciler {
 	wrapped := interceptor.NewClient(cl, interceptor.Funcs{
 		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			if err := c.Get(ctx, key, obj, opts...); err != nil {
@@ -138,14 +138,14 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 			return nil
 		},
 	})
-	return &Reconciler{
+	return (&Reconciler{
 		Client:                   wrapped,
 		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
 		CertTTL:                  pkgconsts.DefaultCertTTL,
-	}
+	}).base()
 }
 
 // getEGDP fetches the fresh KegDataPlane from the fake client.
