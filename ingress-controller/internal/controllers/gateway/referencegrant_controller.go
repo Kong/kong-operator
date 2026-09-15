@@ -52,12 +52,9 @@ type ReferenceGrantReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *ReferenceGrantReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	gv, ok, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
+	gv, err := ctrlutils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
 	if err != nil {
-		return fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
-	}
-	if !ok {
-		return fmt.Errorf("neither v1 nor v1beta1 ReferenceGrant CRD found")
+		return err
 	}
 	r.referenceGrantVersion = gv
 
