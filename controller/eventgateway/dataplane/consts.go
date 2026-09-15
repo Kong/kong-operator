@@ -16,6 +16,10 @@ limitations under the License.
 
 package dataplane
 
+import (
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
+)
+
 const (
 	// ControllerName is the name used for logging and event recording.
 	ControllerName = "keg-dataplane"
@@ -27,10 +31,10 @@ const (
 	DefaultHealthPort int32 = 8080
 
 	// KonnectCertVolumeName is the name of the volume that holds the Konnect mTLS certificate.
-	KonnectCertVolumeName = "konnect-cert"
+	KonnectCertVolumeName = shareddataplane.KonnectCertVolumeName
 
 	// KonnectCertMountPath is the path where the Konnect certificate Secret is mounted in the keg container.
-	KonnectCertMountPath = "/var/konnect-client-certificate/"
+	KonnectCertMountPath = shareddataplane.KonnectCertMountPath
 )
 
 // -----------------------------------------------------------------------------

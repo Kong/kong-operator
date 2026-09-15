@@ -14,6 +14,8 @@ import (
 	"math/big"
 	"net"
 	"time"
+
+	corev1 "k8s.io/api/core/v1"
 )
 
 type KeyType string
@@ -202,6 +204,23 @@ func getPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
 // returned cert can be used as CA for it. Default is RSA key type unless overridden using WithKeyType option.
 func MustGenerateCertPEMFormat(opts ...certificateOption) (cert []byte, key []byte) {
 	return CertToPEMFormat(MustGenerateCert(opts...))
+}
+
+// MustGenerateCASecret generates a self-signed CA certificate and returns it
+// in a Kubernetes Secret using the standard TLS data keys.
+func MustGenerateCASecret(namespace, name, commonName string) *corev1.Secret {
+	cert, key := MustGenerateCertPEMFormat(
+		WithCommonName(commonName),
+		WithCATrue(),
+	)
+	return &corev1.Secret{
+		Namespace: namespace,
+		Name:      name,
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       cert,
+			corev1.TLSPrivateKeyKey: key,
+		},
+	}
 }
 
 // CertToPEMFormat converts a [tls.Certificate] to PEM format.

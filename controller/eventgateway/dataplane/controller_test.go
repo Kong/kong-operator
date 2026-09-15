@@ -43,6 +43,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	pkgconsts "github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/test/helpers/certificate"
 )
 
 // -----------------------------------------------------------------
@@ -50,10 +51,23 @@ import (
 // -----------------------------------------------------------------
 
 const (
+	testCASecretName      = "test-ca"
+	testCASecretNamespace = "test-ns"
+	testDPName            = "my-dp"
+
 	reconcileTestNS      = testCASecretNamespace
 	reconcileTestDPName  = testDPName
 	reconcileTestKEGName = "my-keg"
 )
+
+// caSecret builds the cluster CA Secret used across Reconcile tests.
+func caSecret() *corev1.Secret {
+	return certificate.MustGenerateCASecret(
+		testCASecretNamespace,
+		testCASecretName,
+		"Kong Test CA",
+	)
+}
 
 // newReconcileEGDP builds the standard KegDataPlane used across Reconcile tests.
 func newReconcileEGDP() *eventgatewayv1alpha1.KegDataPlane {
@@ -103,10 +117,10 @@ func newNotProgrammedKEG() *konnectv1alpha1.KonnectEventGateway {
 	return keg
 }
 
-// newTestReconciler builds a Reconciler wired to cl and recorder.
+// newTestReconciler builds a shared reconciler wired to cl and recorder.
 // The fake client is wrapped with an interceptor that populates TypeMeta on
 // KegDataPlane objects after Get, because the fake client does not set it.
-func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reconciler {
+func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *sharedReconciler {
 	wrapped := interceptor.NewClient(cl, interceptor.Funcs{
 		Get: func(ctx context.Context, c client.WithWatch, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
 			if err := c.Get(ctx, key, obj, opts...); err != nil {
@@ -124,14 +138,14 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *Reco
 			return nil
 		},
 	})
-	return &Reconciler{
+	return (&Reconciler{
 		Client:                   wrapped,
 		TypeConverter:            managedfields.NewDeducedTypeConverter(),
 		eventRecorder:            recorder,
 		ClusterCASecretName:      testCASecretName,
 		ClusterCASecretNamespace: testCASecretNamespace,
 		CertTTL:                  pkgconsts.DefaultCertTTL,
-	}
+	}).base()
 }
 
 // getEGDP fetches the fresh KegDataPlane from the fake client.
@@ -165,7 +179,7 @@ func drainEvents(recorder *events.FakeRecorder) []string {
 	}
 }
 
-// newProgrammedKonnectCert builds a EventGatewayDataPlaneCertificate with Programmed=True,
+// newProgrammedKonnectCert builds an EventGatewayDataPlaneCertificate with Programmed=True,
 // modelling the state after the Konnect controller has registered it.
 func newProgrammedKonnectCert() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
@@ -220,13 +234,15 @@ func TestReconciler_Reconcile(t *testing.T) {
 			wantResult: ctrl.Result{},
 		},
 		{
-			name: "KonnectEventGateway not found: error returned (runtime handles backoff), KonnectResolved=False",
+			// A missing KonnectEventGateway is an expected, user-fixable state:
+			// Reconcile returns no error and the control plane watch re-triggers
+			// the reconcile once it appears.
+			name: "KonnectEventGateway not found: no error, watch re-triggers, KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				egdp := getEGDP(t, cl)
@@ -238,14 +254,16 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "KonnectEventGateway not yet programmed: error returned (runtime handles backoff), KonnectResolved=False",
+			// A not yet Programmed KonnectEventGateway is an expected transient
+			// state: Reconcile returns no error and the control plane watch
+			// re-triggers the reconcile once it flips Programmed.
+			name: "KonnectEventGateway not yet programmed: no error, watch re-triggers, KonnectResolved=False",
 			objects: []client.Object{
 				newReconcileEGDP(),
 				newNotProgrammedKEG(),
 				caSecret(),
 			},
 			wantResult: ctrl.Result{},
-			wantErr:    true,
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 				egdp := getEGDP(t, cl)
