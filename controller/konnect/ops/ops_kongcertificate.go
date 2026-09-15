@@ -21,6 +21,7 @@ func createCertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.CertificatesSDK,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -57,7 +58,7 @@ func createCertificate(
 
 	// Generate the input for the creation.
 	// This may fetch the Secret if the Certificate source type is SecretRef.
-	input, err := kongCertificateToCertificateInput(ctx, cl, cert)
+	input, err := kongCertificateToCertificateInput(ctx, cl, configStoreSecretsSDK, cert)
 	if err != nil {
 		return err
 	}
@@ -91,6 +92,7 @@ func updateCertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.CertificatesSDK,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -100,7 +102,7 @@ func updateCertificate(
 
 	// Generate the input for the update.
 	// This may fetch the Secret if the Certificate source type is SecretRef.
-	input, err := kongCertificateToCertificateInput(ctx, cl, cert)
+	input, err := kongCertificateToCertificateInput(ctx, cl, configStoreSecretsSDK, cert)
 	if err != nil {
 		return err
 	}
@@ -126,12 +128,22 @@ func updateCertificate(
 func deleteCertificate(
 	ctx context.Context,
 	sdk sdkkonnectgo.CertificatesSDK,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	id := cert.Status.Konnect.GetKonnectID()
 	_, err := sdk.DeleteCertificate(ctx, cert.GetControlPlaneID(), id)
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, cert); errWrap != nil {
 		return handleDeleteError(ctx, err, cert)
+	}
+
+	// Remove the Config Store secret this KongCertificate's key was routed to,
+	// if any (see consts.VaultSecretAnnotation). Recorded in status rather than
+	// recomputed, since the source Secret may no longer exist by now.
+	if vs := cert.Status.VaultSecret; vs != nil {
+		if err := deleteVaultSecret(ctx, configStoreSecretsSDK, vs); err != nil {
+			return fmt.Errorf("failed to delete %s's Config Store secret %q: %w", cert.GetTypeName(), vs.Key, err)
+		}
 	}
 
 	return nil
@@ -141,6 +153,7 @@ func adoptCertificate(
 	ctx context.Context,
 	cl client.Client,
 	sdk sdkkonnectgo.CertificatesSDK,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
 	cert *configurationv1alpha1.KongCertificate,
 ) error {
 	cpID := cert.GetControlPlaneID()
@@ -178,7 +191,7 @@ func adoptCertificate(
 	case commonv1alpha1.AdoptModeOverride:
 		certCopy := cert.DeepCopy()
 		certCopy.SetKonnectID(konnectID)
-		if err = updateCertificate(ctx, cl, sdk, certCopy); err != nil {
+		if err = updateCertificate(ctx, cl, sdk, configStoreSecretsSDK, certCopy); err != nil {
 			return err
 		}
 	case commonv1alpha1.AdoptModeMatch:
@@ -195,36 +208,77 @@ func adoptCertificate(
 	return nil
 }
 
-func fetchTLSDataFromSecret(ctx context.Context, cl client.Client, parentNamespace string, secretRef *commonv1alpha1.NamespacedRef) (certData, keyData string, err error) {
+func fetchTLSDataFromSecret(
+	ctx context.Context,
+	cl client.Client,
+	parentNamespace string,
+	secretRef *commonv1alpha1.NamespacedRef,
+) (certData, keyData string, secret *corev1.Secret, err error) {
 	if secretRef == nil {
-		return "", "", fmt.Errorf("secretRef is nil")
+		return "", "", nil, fmt.Errorf("secretRef is nil")
 	}
 	ns := parentNamespace
 	if secretRef.Namespace != nil && *secretRef.Namespace != "" {
 		ns = *secretRef.Namespace
 	}
-	secret := &corev1.Secret{}
+	secret = &corev1.Secret{}
 	if err := cl.Get(ctx, client.ObjectKey{
 		Namespace: ns,
 		Name:      secretRef.Name,
 	}, secret); err != nil {
-		return "", "", fmt.Errorf("failed to fetch Secret %s/%s: %w", ns, secretRef.Name, err)
+		return "", "", nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", ns, secretRef.Name, err)
 	}
 
 	certBytes, ok := secret.Data["tls.crt"]
 	if !ok {
-		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.crt'", ns, secretRef.Name)
+		return "", "", nil, fmt.Errorf("secret %s/%s is missing key 'tls.crt'", ns, secretRef.Name)
 	}
 	keyBytes, ok := secret.Data["tls.key"]
 	if !ok {
-		return "", "", fmt.Errorf("secret %s/%s is missing key 'tls.key'", ns, secretRef.Name)
+		return "", "", nil, fmt.Errorf("secret %s/%s is missing key 'tls.key'", ns, secretRef.Name)
 	}
 
-	return string(certBytes), string(keyBytes), nil
+	return string(certBytes), string(keyBytes), secret, nil
+}
+
+// fetchPrimaryTLSDataFromSecret fetches the certificate's primary secretRef
+// data and, when its Secret carries consts.VaultSecretAnnotation, routes the
+// key value to the named KongVault's Config Store instead of sending it to
+// Konnect: cert.Status.VaultSecret is updated to record where it went, so a
+// later reconcile can push a rotated value to the same entry and deletion can
+// remove it without needing the Secret to still exist by then.
+//
+// Only the primary secretRef is routed this way; secretRefAlt is unaffected
+// (see PRD amendment open question 7 on extending this to cert/cert_alt/key_alt).
+func fetchPrimaryTLSDataFromSecret(
+	ctx context.Context,
+	cl client.Client,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
+	cert *configurationv1alpha1.KongCertificate,
+	secretRef *commonv1alpha1.NamespacedRef,
+) (certData, keyData string, err error) {
+	certData, keyData, secret, err := fetchTLSDataFromSecret(ctx, cl, cert.GetNamespace(), secretRef)
+	if err != nil {
+		return "", "", err
+	}
+
+	vaultRef, status, marked, err := pushKeyToVault(ctx, cl, configStoreSecretsSDK, secret, keyData)
+	if err != nil {
+		return "", "", err
+	}
+	if marked {
+		keyData = vaultRef
+		cert.Status.VaultSecret = status
+	}
+
+	return certData, keyData, nil
 }
 
 func kongCertificateToCertificateInput(
-	ctx context.Context, cl client.Client, cert *configurationv1alpha1.KongCertificate,
+	ctx context.Context,
+	cl client.Client,
+	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
+	cert *configurationv1alpha1.KongCertificate,
 ) (sdkkonnectcomp.CertificateRequest, error) {
 	var certData, keyData, certAltData, keyAltData string
 
@@ -239,14 +293,15 @@ func kongCertificateToCertificateInput(
 
 		var err error
 		parentNamespace := cert.GetNamespace()
-		certData, keyData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, secretRef)
+		certData, keyData, err = fetchPrimaryTLSDataFromSecret(ctx, cl, configStoreSecretsSDK, cert, secretRef)
 		if err != nil {
 			return sdkkonnectcomp.CertificateRequest{}, err
 		}
 
-		// Optional alternative cert/key.
+		// Optional alternative cert/key. Not routed through a vault: see
+		// fetchPrimaryTLSDataFromSecret's doc comment.
 		if cert.Spec.SecretRefAlt != nil {
-			certAltData, keyAltData, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, cert.Spec.SecretRefAlt)
+			certAltData, keyAltData, _, err = fetchTLSDataFromSecret(ctx, cl, parentNamespace, cert.Spec.SecretRefAlt)
 			if err != nil {
 				return sdkkonnectcomp.CertificateRequest{}, err
 			}

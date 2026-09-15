@@ -35,6 +35,7 @@ type SDKWrapper interface {
 	GetDataPlaneCertificatesSDK() sdkkonnectgo.DPCertificatesSDK
 	GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK
 	GetMCPServersSDK() *sdkkonnectgo.MCPServers
+	GetConfigStoreSecretsSDK() sdkkonnectgo.ConfigStoreSecretsSDK
 
 	GeneratedSDK
 
@@ -178,6 +179,11 @@ func (w sdkWrapper) GetCloudGatewaysSDK() sdkkonnectgo.CloudGatewaysSDK {
 // GetMCPServersSDK returns the SDK to operate MCP servers.
 func (w sdkWrapper) GetMCPServersSDK() *sdkkonnectgo.MCPServers {
 	return w.sdk.MCPServers
+}
+
+// GetConfigStoreSecretsSDK returns the SDK to operate secrets within a Konnect Config Store.
+func (w sdkWrapper) GetConfigStoreSecretsSDK() sdkkonnectgo.ConfigStoreSecretsSDK {
+	return w.sdk.ConfigStoreSecrets
 }
 
 // SDKToken is a token used to authenticate with the Konnect SDK.
