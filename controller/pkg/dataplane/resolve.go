@@ -39,62 +39,84 @@ import (
 var errControlPlaneNotProgrammed = errors.New("control plane is not yet Programmed")
 
 // resolveControlPlane resolves the control plane referenced by the DataPlane.
-// It sets the control plane resolved condition on the DataPlane and returns
-// the resolved control plane if successful.
-func (r *Reconciler[T, CP, Cert]) resolveControlPlane(
+// It sets the kind-specific control plane resolved condition on the DataPlane
+// and returns the resolved control plane if successful.
+//
+// TODO(issue-5666): when a DataPlane switches its control plane reference
+// from one kind to another (e.g. KonnectAIGateway -> OnPremAIGateway), the
+// previous kind's resolution condition is never cleared from status: each
+// kind reports under its own condition type and SSA keeps untouched entries.
+// Clear the resolution conditions of all other configured kinds here (or
+// switch to a single shared condition type) when a second kind is wired.
+func (r *Reconciler[T, Cert]) resolveControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
-	cpName string,
-) (CP, error) {
-	cp := r.Config.NewControlPlaneObject()
+	ref ControlPlaneRef,
+) (ResolvedControlPlane, error) {
+	cpKind, ok := r.Config.ControlPlaneKind(ref.Kind)
+	if !ok {
+		return ResolvedControlPlane{}, fmt.Errorf(
+			"%s %s/%s references unsupported control plane kind %q in controlPlaneRef",
+			r.Config.Kind, dp.GetNamespace(), dp.GetName(), ref.Kind)
+	}
+
+	cp := cpKind.NewObject()
 	err := r.Get(ctx, types.NamespacedName{
-		Name:      cpName,
+		Name:      ref.Name,
 		Namespace: dp.GetNamespace(),
 	}, cp)
 
 	if apierrors.IsNotFound(err) {
-		log.Debug(logger, "referenced "+r.Config.ControlPlaneKind+" not found",
-			"ref", cpName)
+		log.Debug(logger, "referenced "+cpKind.Kind+" not found",
+			"ref", ref.Name)
 
 		setStatusCondition(dp, metav1.Condition{
-			Type:               r.Config.Conditions.ControlPlaneResolvedType,
+			Type:               cpKind.Conditions.ResolvedType,
 			Status:             metav1.ConditionFalse,
-			Reason:             r.Config.Conditions.ControlPlaneNotFoundReason,
-			Message:            r.Config.Conditions.ControlPlaneNotFoundMessage,
+			Reason:             cpKind.Conditions.NotFoundReason,
+			Message:            cpKind.Conditions.NotFoundMessage,
 			ObservedGeneration: dp.GetGeneration(),
 		})
 
-		return cp, err
+		return ResolvedControlPlane{}, err
 	}
 	if err != nil {
-		return cp, err
+		return ResolvedControlPlane{}, err
 	}
 
-	// Check that the control plane is Programmed (i.e. exists in Konnect).
-	if !apimeta.IsStatusConditionTrue(cp.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType) {
-		log.Debug(logger, "referenced "+r.Config.ControlPlaneKind+" is not yet Programmed",
-			"ref", cpName)
+	resolved := ResolvedControlPlane{
+		Kind:      cpKind.Kind,
+		IsKonnect: cpKind.IsKonnect,
+		Object:    cp,
+	}
+
+	// Only Konnect-backed control planes are checked for the Konnect
+	// Programmed condition (i.e. that they exist on Konnect).
+	if cpKind.IsKonnect &&
+		!apimeta.IsStatusConditionTrue(cp.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType) {
+		log.Debug(logger, "referenced "+cpKind.Kind+" is not yet Programmed",
+			"ref", ref.Name)
 
 		setStatusCondition(dp, metav1.Condition{
-			Type:               r.Config.Conditions.ControlPlaneResolvedType,
+			Type:               cpKind.Conditions.ResolvedType,
 			Status:             metav1.ConditionFalse,
-			Reason:             r.Config.Conditions.ControlPlaneNotProgrammedReason,
-			Message:            r.Config.Conditions.ControlPlaneNotProgrammedMessage,
+			Reason:             cpKind.Conditions.NotProgrammedReason,
+			Message:            cpKind.Conditions.NotProgrammedMessage,
 			ObservedGeneration: dp.GetGeneration(),
 		})
 
-		return cp, fmt.Errorf("referenced %s %q: %w",
-			r.Config.ControlPlaneKind, cpName, errControlPlaneNotProgrammed)
+		return resolved, fmt.Errorf("referenced %s %q: %w",
+			cpKind.Kind, ref.Name, errControlPlaneNotProgrammed)
 	}
 
 	setStatusCondition(dp, metav1.Condition{
-		Type:               r.Config.Conditions.ControlPlaneResolvedType,
+		Type:               cpKind.Conditions.ResolvedType,
 		Status:             metav1.ConditionTrue,
-		Reason:             r.Config.Conditions.ControlPlaneResolvedReason,
-		Message:            r.Config.Conditions.ControlPlaneResolvedMessage,
+		Reason:             cpKind.Conditions.ResolvedReason,
+		Message:            cpKind.Conditions.ResolvedMessage,
 		ObservedGeneration: dp.GetGeneration(),
 	})
 
-	return cp, nil
+	return resolved, nil
 }

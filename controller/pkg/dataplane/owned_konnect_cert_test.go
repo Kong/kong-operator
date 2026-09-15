@@ -273,11 +273,11 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			}
 
 			if tc.preCall {
-				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret, certificateChecksum(certSecret))
+				_, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, certificateChecksum(certSecret))
 				require.NoError(t, err)
 			}
 
-			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, aigwcp, certSecret, certificateChecksum(certSecret))
+			programmed, err := r.ensureKonnectCertificate(t.Context(), logr.Discard(), aigwdp, resolvedTestCP(aigwcp), certSecret, certificateChecksum(certSecret))
 
 			if tc.wantErrContains != "" {
 				require.Error(t, err)

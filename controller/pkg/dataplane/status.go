@@ -48,7 +48,7 @@ func setStatusCondition(dp k8sutils.ConditionsAware, condition metav1.Condition)
 // which requires the controller to have observed the current generation and
 // all desired replicas to be updated and available.
 // Status is not patched here; the caller flushes via applyStatus.
-func (r *Reconciler[T, CP, Cert]) ensureReadyStatus(
+func (r *Reconciler[T, Cert]) ensureReadyStatus(
 	ctx context.Context,
 	dp T,
 ) error {
@@ -104,7 +104,7 @@ func (r *Reconciler[T, CP, Cert]) ensureReadyStatus(
 }
 
 // applyStatus patches the DataPlane status subresource via SSA.
-func (r *Reconciler[T, CP, Cert]) applyStatus(
+func (r *Reconciler[T, Cert]) applyStatus(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,

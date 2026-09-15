@@ -37,11 +37,11 @@ import (
 // ensureKonnectCertificate ensures a DataPlane certificate resource exists for
 // the given DataPlane, referencing the provisioned mTLS Secret and the
 // resolved control plane.
-func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
+func (r *Reconciler[T, Cert]) ensureKonnectCertificate(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	certSecret *corev1.Secret,
 	certChecksum string,
 ) (programmed bool, err error) {
@@ -103,7 +103,7 @@ func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
 // It sets KonnectCertificateRegistered=False on the DataPlane when not yet
 // programmed and returns false so the caller can return early; the Owns()
 // watch will retrigger once the Konnect controller flips Programmed to True.
-func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
+func (r *Reconciler[T, Cert]) checkKonnectCertificateProgrammed(
 	ctx context.Context,
 	dp T,
 	desired Cert,

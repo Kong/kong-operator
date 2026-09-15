@@ -117,7 +117,10 @@ func Test_resolveControlPlane(t *testing.T) {
 			r := &testReconciler{Client: cl, Config: testConfig}
 
 			aigwdp := newAIGWDP()
-			gotCP, err := r.resolveControlPlane(context.Background(), logger, aigwdp, aigwcpNM)
+			gotCP, err := r.resolveControlPlane(context.Background(), logger, aigwdp, ControlPlaneRef{
+				Kind: testControlPlaneKind.Kind,
+				Name: aigwcpNM,
+			})
 
 			if tc.wantErr {
 				require.Error(t, err)
@@ -133,9 +136,9 @@ func Test_resolveControlPlane(t *testing.T) {
 			require.NoError(t, err)
 
 			if tc.wantCP {
-				require.NotNil(t, gotCP)
+				require.NotNil(t, gotCP.Object)
 			} else {
-				assert.Nil(t, gotCP)
+				assert.Nil(t, gotCP.Object)
 			}
 
 			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType))

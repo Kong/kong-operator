@@ -210,6 +210,22 @@ func Test_addLabelsForDataPlaneDeployment(t *testing.T) {
 	}
 }
 
+// resolvedTestCP wraps a KonnectAIGateway into the ResolvedControlPlane
+// expected by the deployment builders. A nil control plane returns the zero
+// ResolvedControlPlane: wrapping a typed nil pointer would produce a non-nil
+// Object interface and misrepresent an unconfigured control plane as
+// configured.
+func resolvedTestCP(cp *konnectv1alpha1.KonnectAIGateway) ResolvedControlPlane {
+	if cp == nil {
+		return ResolvedControlPlane{}
+	}
+	return ResolvedControlPlane{
+		Kind:      testControlPlaneKind.Kind,
+		IsKonnect: true,
+		Object:    cp,
+	}
+}
+
 // -----------------------------------------------------------------
 // generateBaseDeployment
 // -----------------------------------------------------------------
@@ -220,7 +236,7 @@ func Test_GenerateBaseDeployment_hardening(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", testConfig)
 	require.NoError(t, err)
 	require.Len(t, d.Spec.Template.Spec.Containers, 1)
 	container := d.Spec.Template.Spec.Containers[0]
@@ -274,7 +290,7 @@ func Test_GenerateBaseDeployment_LabelsAndAnnotations(t *testing.T) {
 	}
 	aigwcp := testKonnectAIGateway()
 
-	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, aigwcp, "kong/aigw:test", "cert-secret", "", testConfig)
+	d, err := GenerateBaseDeployment(logr.Discard(), aigwdp, resolvedTestCP(aigwcp), "kong/aigw:test", "cert-secret", "", testConfig)
 	require.NoError(t, err)
 
 	assert.Equal(t, "value", d.Labels["deployment-label"])
@@ -393,7 +409,7 @@ func Test_BuildDeployment(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, tt.aigwcp, tt.image, tt.certSecretName, "", testConfig)
+			u, err := BuildDeployment(logr.Discard(), tc, tt.aigwdp, resolvedTestCP(tt.aigwcp), tt.image, tt.certSecretName, "", testConfig)
 			if tt.wantErr {
 				require.Error(t, err)
 				return
@@ -447,7 +463,7 @@ func Test_ensureDeployment(t *testing.T) {
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			// Run once first so the object exists, then drain the creation event.
 			prepareRecorder: func(r *testReconciler, rec *events.FakeRecorder) {
-				_ = r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret", "")
+				_ = r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, resolvedTestCP(validCP), "cert-secret", "")
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -482,7 +498,7 @@ func Test_ensureDeployment(t *testing.T) {
 				tc2.prepareRecorder(r, recorder)
 			}
 
-			err := r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, validCP, "cert-secret", "")
+			err := r.ensureDeployment(context.Background(), logr.Discard(), aigwdp, resolvedTestCP(validCP), "cert-secret", "")
 
 			if tc2.wantErr {
 				require.Error(t, err)

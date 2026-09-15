@@ -41,11 +41,28 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
+// konnectAIGatewayKind wires the KonnectAIGateway control plane kind into the
+// shared generic DataPlane reconciler.
+var konnectAIGatewayKind = shareddataplane.ControlPlaneKindConfig{
+	Kind:                      "KonnectAIGateway",
+	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	IsKonnect:                 true,
+	Conditions: shareddataplane.ControlPlaneConditions{
+		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+	},
+}
+
 // config wires the AIGatewayDataPlane specific behavior into the shared
 // generic DataPlane reconciler.
 var config = shareddataplane.Config[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]{
 	ControllerName: ControllerName,
@@ -54,9 +71,6 @@ var config = shareddataplane.Config[
 	NewObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{}
 	},
-	NewControlPlaneObject: func() *konnectv1alpha1.KonnectAIGateway {
-		return &konnectv1alpha1.KonnectAIGateway{}
-	},
 	NewCertificateObject: func() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 		return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	},
@@ -64,14 +78,16 @@ var config = shareddataplane.Config[
 		return &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 	},
 
-	ControlPlaneRefName: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
+	ControlPlaneRef: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) shareddataplane.ControlPlaneRef {
 		if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
-			return ""
+			return shareddataplane.ControlPlaneRef{}
 		}
-		return aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name
+		return shareddataplane.ControlPlaneRef{
+			Kind: konnectAIGatewayKind.Kind,
+			Name: aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+		}
 	},
-	ControlPlaneKind:          "KonnectAIGateway",
-	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	ControlPlanes: []shareddataplane.ControlPlaneKindConfig{konnectAIGatewayKind},
 
 	Conditions: shareddataplane.Conditions{
 		ReadyType:                    string(aigatewayv1alpha1.ReadyType),
@@ -83,14 +99,6 @@ var config = shareddataplane.Config[
 		UnableToProvisionReason:      string(aigatewayv1alpha1.UnableToProvisionReason),
 		CertificateProvisionedType:   string(aigatewayv1alpha1.CertificateProvisionedType),
 		CertificateProvisionedReason: string(aigatewayv1alpha1.CertificateProvisionedReason),
-
-		ControlPlaneResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
-		ControlPlaneResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
-		ControlPlaneNotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		ControlPlaneNotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		ControlPlaneNotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
 
 		KonnectCertificateRegisteredType:           string(aigatewayv1alpha1.KonnectCertificateRegisteredType),
 		KonnectCertificateRegisteredReason:         string(aigatewayv1alpha1.KonnectCertificateRegisteredReason),
@@ -117,10 +125,7 @@ var config = shareddataplane.Config[
 	CleanupStaleCertificates:      cleanupStaleCertificates,
 	ExtraWatches:                  extraWatches,
 
-	Deployment: shareddataplane.DeploymentConfig[
-		*aigatewayv1alpha1.AIGatewayDataPlane,
-		*konnectv1alpha1.KonnectAIGateway,
-	]{
+	Deployment: shareddataplane.DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:         consts.AIGatewayDataPlaneContainerName,
 		RelatedImageEnvVar:    consts.RelatedImageAIGatewayDataPlaneEnvVar,
 		DefaultImage:          consts.DefaultAIGatewayDataPlaneImage,
@@ -260,15 +265,15 @@ func serviceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *shareddatapla
 }
 
 // buildContainer builds the AI Gateway container and the additional volumes it
-// requires. cp is nil when the AIGatewayDataPlane has no ControlPlaneRef
+// requires. cp.Object is nil when the AIGatewayDataPlane has no ControlPlaneRef
 // configured.
 func buildContainer(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	certSecretName string,
 ) (corev1.Container, []corev1.Volume, error) {
-	envVars, err := buildAIGatewayEnvVars(aigatewaycp, certSecretName)
+	envVars, err := buildAIGatewayEnvVars(konnectAIGatewayFromResolved(cp), certSecretName)
 	if err != nil {
 		return corev1.Container{}, nil, err
 	}
@@ -293,6 +298,22 @@ func buildContainer(
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 	return container, volumes, nil
+}
+
+// konnectAIGatewayFromResolved returns the KonnectAIGateway carried by the
+// resolved control plane, or nil when the AIGatewayDataPlane has no control
+// plane reference configured. It panics on a resolved control plane of an
+// unexpected kind: AIGatewayDataPlane only supports KonnectAIGateway for now,
+// so a mismatch is a programming error.
+func konnectAIGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *konnectv1alpha1.KonnectAIGateway {
+	if cp.Object == nil {
+		return nil
+	}
+	aigatewaycp, ok := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
+	if !ok {
+		panic(fmt.Sprintf("AIGatewayDataPlane referenced an unsupported control plane kind %q", cp.Kind))
+	}
+	return aigatewaycp
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables
@@ -368,10 +389,11 @@ func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum s
 // registers a new entity rather than mutating the previous one in place.
 func buildAIGatewayDataPlaneCertificate(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
 	certChecksum string,
 ) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	aigatewaycp := konnectAIGatewayFromResolved(cp)
 	// certName must also be used as Konnect's Title, not just this CR's own
 	// K8s name: Konnect enforces a "unique-certificate-per-entity" constraint
 	// scoped to (gateway, title), not per gateway alone. A constant Title
@@ -431,9 +453,10 @@ func cleanupStaleCertificates(
 	cl client.Client,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certChecksum string,
 ) error {
+	aigatewaycp := konnectAIGatewayFromResolved(cp)
 	if aigatewaycp != nil {
 		if err := cleanupStaleKonnectCertificates(ctx, cl, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
 			return err

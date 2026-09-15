@@ -72,7 +72,7 @@ type ServicePort struct {
 
 // ensureService reconciles the Service for the given DataPlane and returns the
 // live Service object (with Status populated).
-func (r *Reconciler[T, CP, Cert]) ensureService(
+func (r *Reconciler[T, Cert]) ensureService(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
