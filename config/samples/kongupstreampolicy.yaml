@@ -1,0 +1,68 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: httpbin-deployment
+  labels:
+    app: httpbin
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: httpbin
+  template:
+    metadata:
+      labels:
+        app: httpbin
+    spec:
+      containers:
+        - name: httpbin
+          image: kong/httpbin:0.1.0
+          ports:
+            - containerPort: 80
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: httpbin-deployment
+  labels:
+    app: httpbin
+  annotations:
+    # Attaches the KongUpstreamPolicy below to every Kong Upstream generated
+    # for this Service.
+    konghq.com/upstream-policy: httpbin-upstream-policy
+spec:
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 80
+  selector:
+    app: httpbin
+  type: ClusterIP
+---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongUpstreamPolicy
+metadata:
+  name: httpbin-upstream-policy
+spec:
+  algorithm: consistent-hashing
+  slots: 100
+  hashOn:
+    cookie: session-id
+    cookiePath: /
+  healthchecks:
+    active:
+      type: http
+      httpPath: /status/200
+      concurrency: 10
+      healthy:
+        interval: 5
+        successes: 3
+      unhealthy:
+        timeouts: 3
+        interval: 5
+    passive:
+      type: http
+      healthy:
+        successes: 3
+      unhealthy:
+        timeouts: 5
