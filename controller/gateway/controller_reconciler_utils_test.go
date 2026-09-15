@@ -12,10 +12,12 @@ import (
 	networkingv1 "k8s.io/api/networking/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
@@ -29,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func TestParseKongProxyListenEnv(t *testing.T) {
@@ -1396,19 +1399,21 @@ func TestGatewayStatusNeedsUpdate(t *testing.T) {
 	}
 }
 
+type getSupportedKindsWithResolvedRefsConditionTestCase struct {
+	name                          string
+	gatewayNamespace              string
+	listener                      gwtypes.Listener
+	referenceGrants               []client.Object
+	secrets                       []client.Object
+	expectedSupportedKinds        []gwtypes.RouteGroupKind
+	expectedResolvedRefsCondition metav1.Condition
+}
+
 func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 	var generation int64 = 1
 	ca := helpers.CreateCA(t)
 
-	testCases := []struct {
-		name                          string
-		gatewayNamespace              string
-		listener                      gwtypes.Listener
-		referenceGrants               []client.Object
-		secrets                       []client.Object
-		expectedSupportedKinds        []gwtypes.RouteGroupKind
-		expectedResolvedRefsCondition metav1.Condition
-	}{
+	testCases := []getSupportedKindsWithResolvedRefsConditionTestCase{
 		{
 			name: "no tls, HTTP protocol, no allowed routes",
 			listener: gwtypes.Listener{
@@ -1907,13 +1912,33 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 		},
 	}
 
+	// The same expectations must hold whichever ReferenceGrant version the
+	// cluster serves.
+	for _, gv := range []schema.GroupVersion{
+		schema.GroupVersion(gatewayv1.GroupVersion),
+		schema.GroupVersion(gatewayv1beta1.GroupVersion),
+	} {
+		t.Run(gv.Version, func(t *testing.T) {
+			runGetSupportedKindsWithResolvedRefsConditionCases(t, gv, testCases, generation)
+		})
+	}
+}
+
+// runGetSupportedKindsWithResolvedRefsConditionCases runs the table against one
+// served ReferenceGrant version, re-typing the grant fixtures to match it.
+func runGetSupportedKindsWithResolvedRefsConditionCases(
+	t *testing.T,
+	gv schema.GroupVersion,
+	testCases []getSupportedKindsWithResolvedRefsConditionTestCase,
+	generation int64,
+) {
 	for _, tc := range testCases {
 
 		ctx := t.Context()
 		client := fakectrlruntimeclient.
 			NewClientBuilder().
 			WithScheme(scheme.Get()).
-			WithObjects(tc.referenceGrants...).
+			WithObjects(referencegranthelpers.AsVersion(gv, tc.referenceGrants)...).
 			WithObjects(tc.secrets...).
 			Build()
 
@@ -1921,6 +1946,7 @@ func TestGetSupportedKindsWithResolvedRefsCondition(t *testing.T) {
 			supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(
 				ctx,
 				client,
+				gv,
 				gatewayv1.Gateway{
 					TypeMeta: metav1.TypeMeta{
 						APIVersion: gatewayv1.GroupVersion.String(),

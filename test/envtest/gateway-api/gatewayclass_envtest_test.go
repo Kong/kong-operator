@@ -378,8 +378,9 @@ func testGatewayWithGatewayClassReconciliation(
 					Namespace: ns.Name,
 					Name:      svc.Name,
 				},
-				DataplaneClient:   mocks.Dataplane{},
-				ReferenceIndexers: ctrlref.NewCacheIndexers(logr.Discard()),
+				DataplaneClient:       mocks.Dataplane{},
+				ReferenceIndexers:     ctrlref.NewCacheIndexers(logr.Discard()),
+				ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 			}
 			envtest.StartReconciler(ctx, t, scheme, cfg, gwReconciler, envtest.WithWatchNamespace(ns.Name))
 

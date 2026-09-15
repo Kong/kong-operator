@@ -14,6 +14,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -83,6 +84,15 @@ type Reconciler struct {
 
 	// WatchNamespaces is a list of namespaces to watch. If empty (default), all namespaces are watched.
 	WatchNamespaces []string
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at startup and passed down to every
+	// ControlPlane instance this reconciler schedules.
+	//
+	// Resolving it once is safe because requiredCRDChecks gates the ControlPlane
+	// controller on a ReferenceGrant CRD being present: the operator refuses to start
+	// without one, so there is always something to detect.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -477,6 +487,7 @@ func (r *Reconciler) constructControlPlaneManagerConfigOptions(
 	}
 
 	cfgOpts := []managercfg.Opt{
+		WithReferenceGrantVersion(r.ReferenceGrantVersion),
 		WithRestConfig(r.RestConfig, r.KubeConfigPath),
 		WithCacheSyncPeriod(r.CacheSyncPeriod),
 		WithKongAdminService(types.NamespacedName{

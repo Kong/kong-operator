@@ -2,7 +2,6 @@ package manager
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"reflect"
 
@@ -17,7 +16,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/crds"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/gateway"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
@@ -69,23 +67,6 @@ func setupControllers(
 	kongAdminAPIEndpointsNotifier configuration.EndpointsNotifier,
 	adminAPIsDiscoverer configuration.AdminAPIsDiscoverer,
 ) ([]ControllerDef, error) {
-	// Resolve which ReferenceGrant API version (v1 or v1beta1) is served by the
-	// cluster, so the ReferenceGrant DynamicCRDController waits on the version
-	// that's actually installed. The CRD being absent is not fatal here: this
-	// value is only consumed by that controller, which may well be disabled (an
-	// ingress-only ControlPlane has every Gateway API controller turned off).
-	// Default to v1 (the GA version) as the wait-target so the
-	// DynamicCRDController can still pick the CRD up if it is installed later.
-	// Reconcilers that genuinely need ReferenceGrants fail loudly on their own,
-	// in their SetupWithManager.
-	referenceGrantGV, err := utils.DetectReferenceGrantVersion(mgr.GetRESTMapper())
-	if err != nil {
-		if !errors.Is(err, utils.ErrReferenceGrantCRDNotFound) {
-			return nil, err
-		}
-		referenceGrantGV = schema.GroupVersion(gatewayv1.GroupVersion)
-	}
-
 	// HTTPRoute presence is resolved once here: the KongUpstreamPolicy controller
 	// watches HTTPRoutes to set ancestor status, and cannot pick that up later at
 	// runtime.
@@ -330,19 +311,20 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/Gateway"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs:     baseGatewayCRDs(),
+				RequiredCRDs:     append(baseGatewayCRDs(), referenceGrantGVR(c)),
 				Controller: &gateway.GatewayReconciler{
-					Client:               mgr.GetClient(),
-					Log:                  ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Gateway"),
-					Scheme:               mgr.GetScheme(),
-					DataplaneClient:      dataplaneClient,
-					PublishServiceRef:    c.PublishService.OrEmpty(),
-					PublishServiceUDPRef: c.PublishServiceUDP,
-					AddressOverrides:     c.PublishStatusAddress,
-					AddressOverridesUDP:  c.PublishStatusAddressUDP,
-					CacheSyncTimeout:     c.CacheSyncTimeout,
-					ReferenceIndexers:    referenceIndexers,
-					GatewayNN:            controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Gateway"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					PublishServiceRef:     c.PublishService.OrEmpty(),
+					PublishServiceUDPRef:  c.PublishServiceUDP,
+					AddressOverrides:      c.PublishStatusAddress,
+					AddressOverridesUDP:   c.PublishStatusAddressUDP,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					ReferenceIndexers:     referenceIndexers,
+					GatewayNN:             controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -352,19 +334,23 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/HTTPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1.GroupVersion.Group,
-					Version:  gatewayv1.GroupVersion.Version,
-					Resource: "httproutes",
-				}),
+				RequiredCRDs: append(baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "httproutes",
+					},
+					referenceGrantGVR(c),
+				),
 				Controller: &gateway.HTTPRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("HTTPRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("HTTPRoute"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					StatusQueue:           kubernetesStatusQueue,
+					GatewayNN:             controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -374,17 +360,14 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/ReferenceGrant"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    referenceGrantGV.Group,
-					Version:  referenceGrantGV.Version,
-					Resource: "referencegrants",
-				}),
+				RequiredCRDs:     append(baseGatewayCRDs(), referenceGrantGVR(c)),
 				Controller: &gateway.ReferenceGrantReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("ReferenceGrant"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("ReferenceGrant"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -394,19 +377,23 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TLSRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1.GroupVersion.Group,
-					Version:  gatewayv1.GroupVersion.Version,
-					Resource: "tlsroutes",
-				}),
+				RequiredCRDs: append(baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "tlsroutes",
+					},
+					referenceGrantGVR(c),
+				),
 				Controller: &gateway.TLSRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TLSRoute"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					StatusQueue:           kubernetesStatusQueue,
+					GatewayNN:             controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -438,19 +425,23 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/UDPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1.GroupVersion.Group,
-					Version:  gatewayv1.GroupVersion.Version,
-					Resource: "udproutes",
-				}),
+				RequiredCRDs: append(baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "udproutes",
+					},
+					referenceGrantGVR(c),
+				),
 				Controller: &gateway.UDPRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("UDPRoute"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					StatusQueue:           kubernetesStatusQueue,
+					GatewayNN:             controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -460,19 +451,23 @@ func setupControllers(
 				Manager:          mgr,
 				Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("Dynamic/TCPRoute"),
 				CacheSyncTimeout: c.CacheSyncTimeout,
-				RequiredCRDs: append(baseGatewayCRDs(), schema.GroupVersionResource{
-					Group:    gatewayv1.GroupVersion.Group,
-					Version:  gatewayv1.GroupVersion.Version,
-					Resource: "tcproutes",
-				}),
+				RequiredCRDs: append(baseGatewayCRDs(),
+					schema.GroupVersionResource{
+						Group:    gatewayv1.GroupVersion.Group,
+						Version:  gatewayv1.GroupVersion.Version,
+						Resource: "tcproutes",
+					},
+					referenceGrantGVR(c),
+				),
 				Controller: &gateway.TCPRouteReconciler{
-					Client:           mgr.GetClient(),
-					Log:              ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPRoute"),
-					Scheme:           mgr.GetScheme(),
-					DataplaneClient:  dataplaneClient,
-					CacheSyncTimeout: c.CacheSyncTimeout,
-					StatusQueue:      kubernetesStatusQueue,
-					GatewayNN:        controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					Client:                mgr.GetClient(),
+					Log:                   ctrl.LoggerFrom(ctx).WithName("controllers").WithName("TCPRoute"),
+					Scheme:                mgr.GetScheme(),
+					DataplaneClient:       dataplaneClient,
+					CacheSyncTimeout:      c.CacheSyncTimeout,
+					StatusQueue:           kubernetesStatusQueue,
+					GatewayNN:             controllers.NewOptionalNamespacedName(c.GatewayToReconcile),
+					ReferenceGrantVersion: c.ReferenceGrantVersion,
 				},
 			},
 		},
@@ -512,6 +507,23 @@ func setupControllers(
 	}
 
 	return controllers, nil
+}
+
+// referenceGrantGVR returns the ReferenceGrant resource at whichever API version the
+// cluster serves, as resolved once at operator startup.
+//
+// Every reconciler that evaluates cross-namespace references must list this in its
+// RequiredCRDs. The ReferenceGrant CRD is a hard requirement of those reconcilers:
+// started without it, their ReferenceGrant informer never syncs and every
+// cross-namespace reference is denied with no indication of why. Declaring the
+// dependency instead keeps the reconciler parked on the DynamicCRDController's CRD
+// watch, which logs that it is waiting and starts it as soon as the CRD appears.
+func referenceGrantGVR(c managercfg.Config) schema.GroupVersionResource {
+	gv := c.ReferenceGrantVersion
+	if gv.Empty() {
+		gv = schema.GroupVersion(gatewayv1.GroupVersion)
+	}
+	return gv.WithResource("referencegrants")
 }
 
 // baseGatewayCRDs returns a slice of base CRDs required for running all the Gateway API controllers.

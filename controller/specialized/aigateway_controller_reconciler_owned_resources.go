@@ -196,7 +196,7 @@ func (r *AIGatewayReconciler) configurePlugins(
 	}
 
 	// check if referencing the credential secret is allowed by referencegrants.
-	msg, allowed, err := secretref.CheckReferenceGrantForSecret(ctx, r.Client, aiGateway, gatewayv1.SecretObjectReference{
+	msg, allowed, err := secretref.CheckReferenceGrantForSecret(ctx, r.Client, r.ReferenceGrantVersion, aiGateway, gatewayv1.SecretObjectReference{
 		Name:      gatewayv1.ObjectName(credentialSecretName),
 		Namespace: new(gatewayv1.Namespace(credentialSecretNamespace)),
 	})

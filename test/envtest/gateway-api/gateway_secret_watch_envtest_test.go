@@ -34,6 +34,7 @@ func TestGatewaySecretWatch_UpdatesResolvedRefsOnSecretRotation(t *testing.T) {
 		Scheme:                scheme,
 		Namespace:             ns.Name,
 		DefaultDataPlaneImage: "kong:latest",
+		ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 	}
 	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 

@@ -2,6 +2,7 @@ package manager
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"slices"
@@ -554,6 +555,7 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Resource: "kongvaults",
 				},
 			},
+			anyOfGVRs: [][]schema.GroupVersionResource{referenceGrantAnyOfGVRs},
 		},
 	}
 }
@@ -608,6 +610,26 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 	if err := ensureRequiredCRDs(c, crdExists); err != nil {
 		return nil, err
+	}
+
+	// Resolve which ReferenceGrant API version (v1 or v1beta1) the cluster serves
+	// once, here, and inject it into every reconciler that evaluates cross-namespace
+	// references. Resolving it per reconciler would repeat the same lookup, and
+	// resolving it per reconcile would hit the RESTMapper - and, for a version the
+	// cluster does not serve, live discovery - on every call.
+	//
+	// The CRD being absent is not fatal here: the operator may run with every
+	// controller that needs ReferenceGrants disabled. Controllers that do need it
+	// are already guarded by the referenceGrantAnyOfGVRs checks in
+	// ensureRequiredCRDs above, which report a clearer error naming the missing
+	// CRD. Default to v1 (the GA version) so the value is always one the
+	// constructors accept.
+	referenceGrantVersion, err := k8sutils.DetectReferenceGrantVersion(mgr.GetClient().RESTMapper())
+	if err != nil {
+		if !errors.Is(err, k8sutils.ErrReferenceGrantCRDNotFound) {
+			return nil, err
+		}
+		referenceGrantVersion = schema.GroupVersion(gatewayv1.GroupVersion)
 	}
 
 	const (
@@ -665,6 +687,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				AnonymousReportsEnabled: c.AnonymousReports,
 				LoggingMode:             c.LoggingMode,
 				WatchNamespaces:         c.WatchNamespaces,
+				ReferenceGrantVersion:   referenceGrantVersion,
 			},
 		},
 		// ControlPlane controller
@@ -688,6 +711,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				EmitKubernetesEvents:     c.EmitKubernetesEvents,
 				WatchNamespaces:          c.WatchNamespaces,
 				CertTTL:                  c.CertTTL,
+				ReferenceGrantVersion:    referenceGrantVersion,
 			},
 		},
 		// DataPlane controller
@@ -786,6 +810,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				Scheme:                 mgr.GetScheme(),
 				LoggingMode:            c.LoggingMode,
 				ConfigMapLabelSelector: c.ConfigMapLabelSelector,
+				ReferenceGrantVersion:  referenceGrantVersion,
 			},
 		},
 		// ControlPlaneExtensions controller
@@ -843,9 +868,10 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		controllers = append(controllers, ControllerDef{
 			Enabled: c.AIGatewayControllerEnabled,
 			Controller: &specialized.AIGatewayReconciler{
-				ControllerOptions: ctrlOpts,
-				Client:            mgr.GetClient(),
-				LoggingMode:       c.LoggingMode,
+				ControllerOptions:     ctrlOpts,
+				Client:                mgr.GetClient(),
+				LoggingMode:           c.LoggingMode,
+				ReferenceGrantVersion: referenceGrantVersion,
 			},
 		})
 	}
@@ -969,8 +995,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 		)
 
 		controllers = append(controllers,
-			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
-			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider),
+			newGatewayAPIHybridController[gwtypes.Gateway](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion),
+			newGatewayAPIHybridController[gwtypes.HTTPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion),
 		)
 		tlsRouteGVR := schema.GroupVersionResource{
 			Group:    gatewayv1.GroupVersion.Group,
@@ -997,28 +1023,28 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tlsRouteGVR.String(), err)
 		}
 		if hasTLSRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TLSRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
 		hasTCPRoute, err := crdExists(tcpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", tcpRouteGVR.String(), err)
 		}
 		if hasTCPRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.TCPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
 		hasGRPCRoute, err := crdExists(grpcRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", grpcRouteGVR.String(), err)
 		}
 		if hasGRPCRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.GRPCRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
 		hasUDPRoute, err := crdExists(udpRouteGVR)
 		if err != nil {
 			return nil, fmt.Errorf("failed to check existence of CRD %s: %w", udpRouteGVR.String(), err)
 		}
 		if hasUDPRoute {
-			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.UDPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider))
+			controllers = append(controllers, newGatewayAPIHybridController[gwtypes.UDPRoute](mgr, c.FQDNModeEnabled, c.ClusterDomain, ssaProvider, referenceGrantVersion))
 		}
 	}
 
@@ -1065,10 +1091,16 @@ func newKonnectPluginController[
 	}
 }
 
-func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](mgr ctrl.Manager, fqdnMode bool, clusterDomain string, ssaProvider *controllerpkgssa.TypeConverterProvider) ControllerDef {
+func newGatewayAPIHybridController[t converter.RootObject, tPtr converter.RootObjectPtr[t]](
+	mgr ctrl.Manager,
+	fqdnMode bool,
+	clusterDomain string,
+	ssaProvider *controllerpkgssa.TypeConverterProvider,
+	referenceGrantVersion schema.GroupVersion,
+) ControllerDef {
 	return ControllerDef{
 		Enabled:    true,
-		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain, ssaProvider),
+		Controller: hybridgateway.NewHybridGatewayReconciler[t, tPtr](mgr, fqdnMode, clusterDomain, ssaProvider, referenceGrantVersion),
 	}
 }
 

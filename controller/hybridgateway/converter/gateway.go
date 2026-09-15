@@ -38,14 +38,25 @@ type gatewayConverter struct {
 	controlPlaneRef *commonv1alpha1.ControlPlaneRef
 	outputStore     []client.Object
 	expectedGVKs    []schema.GroupVersionKind
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved when the converter is constructed.
+	referenceGrantVersion schema.GroupVersion
 }
 
 // newGatewayConverter returns a new instance of gatewayConverter.
-func newGatewayConverter(gateway *gwtypes.Gateway, cl client.Client) APIConverter[gwtypes.Gateway] {
+// referenceGrantVersion selects which ReferenceGrant API version is listed when
+// evaluating cross-namespace listener certificateRefs.
+func newGatewayConverter(
+	gateway *gwtypes.Gateway,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.Gateway] {
 	return &gatewayConverter{
-		Client:      cl,
-		gateway:     gateway,
-		outputStore: []client.Object{},
+		Client:                cl,
+		gateway:               gateway,
+		referenceGrantVersion: referenceGrantVersion,
+		outputStore:           []client.Object{},
 		expectedGVKs: []schema.GroupVersionKind{
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongCertificate"},
 			{Group: configurationv1alpha1.GroupVersion.Group, Version: configurationv1alpha1.GroupVersion.Version, Kind: "KongSNI"},
@@ -230,7 +241,7 @@ func (c *gatewayConverter) processListenerCertificate(
 	}
 
 	// Check if the Gateway is allowed to reference the Secret via ReferenceGrants.
-	whyNotGranted, isGranted, err := secretref.CheckReferenceGrantForSecret(ctx, c.Client, c.gateway, certRefWithNamespace)
+	whyNotGranted, isGranted, err := secretref.CheckReferenceGrantForSecret(ctx, c.Client, c.referenceGrantVersion, c.gateway, certRefWithNamespace)
 	if err != nil {
 		return fmt.Errorf("failed to check ReferenceGrant for secret %s/%s: %w", secretNamespace, certRef.Name, err)
 	}
