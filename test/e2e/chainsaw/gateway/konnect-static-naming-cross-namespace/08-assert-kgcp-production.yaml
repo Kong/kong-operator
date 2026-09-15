@@ -8,7 +8,7 @@ metadata:
   namespace: ($production_namespace)
 spec:
   createControlPlaneRequest:
-    name: (join('-', [($production_namespace), ($gateway_name)]))
+    name: (join('_', [($production_namespace), ($gateway_name)]))
 status:
   (conditions[?type == 'Programmed']):
     - status: 'True'

@@ -95,7 +95,7 @@ func TestGatewayKonnectControlPlaneStaticNaming(t *testing.T) {
 	assert.Equal(t, gatewayName, kgcp.Name,
 		"the KonnectGatewayControlPlane Kubernetes name must match the Gateway name under static naming")
 	// Qualified Konnect name, unique within the org.
-	assert.Equal(t, gwNs.Name+"-"+gatewayName, kgcp.Spec.CreateControlPlaneRequest.Name,
+	assert.Equal(t, gwNs.Name+"_"+gatewayName, kgcp.Spec.CreateControlPlaneRequest.Name,
 		"the Konnect Control Plane name must be qualified with the Gateway namespace")
 }
 

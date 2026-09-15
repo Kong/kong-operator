@@ -91,7 +91,7 @@ const (
 	// are named as the Gateway resource.
 	//
 	// NOTE: Kubernetes names only. The Control Plane in Konnect is named
-	// "<namespace>-<gateway-name>", as Konnect names are unique per org.
+	// "<namespace>_<gateway-name>", as Konnect names are unique per org.
 	GatewayStaticNamingAnnotation = OperatorAnnotationPrefix + "static-naming"
 
 	// CertExpiresAtAnnotation is the annotation used to store the certificate expiration time

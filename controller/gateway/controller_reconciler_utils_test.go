@@ -5483,7 +5483,7 @@ func TestKonnectControlPlaneName(t *testing.T) {
 			name:                "static naming qualifies the Konnect name with the namespace",
 			annotations:         map[string]string{consts.GatewayStaticNamingAnnotation: "true"},
 			staticNaming:        true,
-			expectedKonnectName: "staging-edge-gw",
+			expectedKonnectName: "staging_edge-gw",
 		},
 		{
 			name:         "annotation set to false leaves the dynamic name untouched",

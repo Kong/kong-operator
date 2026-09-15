@@ -142,7 +142,7 @@
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
 - Gateway: When using `gateway-operator.konghq.com/static-naming: "true"`, the name of
   the Control Plane created in Konnect is now qualified with the Gateway's namespace
-  (`<namespace>-<gateway-name>`), preventing HTTP 409 conflicts between Gateways sharing
+  (`<namespace>_<gateway-name>`), preventing HTTP 409 conflicts between Gateways sharing
   a name across namespaces in the same Konnect organization. The Kubernetes
   `KonnectGatewayControlPlane` resource name is unchanged and still matches the Gateway's
   name. Control Planes already created in Konnect are not renamed.

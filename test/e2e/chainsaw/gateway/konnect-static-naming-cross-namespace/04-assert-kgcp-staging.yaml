@@ -6,7 +6,7 @@ metadata:
   namespace: ($staging_namespace)
 spec:
   createControlPlaneRequest:
-    name: (join('-', [($staging_namespace), ($gateway_name)]))
+    name: (join('_', [($staging_namespace), ($gateway_name)]))
 status:
   # Programmed plus a Konnect ID: the Control Plane was created, not merely requested.
   (conditions[?type == 'Programmed']):
