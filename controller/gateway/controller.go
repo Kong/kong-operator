@@ -77,6 +77,10 @@ type Reconciler struct {
 	AnonymousReportsEnabled bool
 	LoggingMode             logging.Mode
 	WatchNamespaces         []string
+
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -117,7 +121,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// reconciliation for all supported gateway objects that are referenced in a "from"
 		// instance.
 		Watches(
-			&gwtypes.ReferenceGrant{},
+			k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
 		// watch for KongReferenceGrants to keep managed Konnect API auth grants in sync.
@@ -304,7 +308,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	}
 
 	gwConditionAware.initProgrammedAndListenersStatus()
-	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion); err != nil {
 		return ctrl.Result{}, err
 	}
 	// Validate the infrastructure.parametersRef early. If it references an

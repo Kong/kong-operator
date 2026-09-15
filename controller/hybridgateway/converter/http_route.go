@@ -43,16 +43,28 @@ type httpRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(
+	httpRoute *gwtypes.HTTPRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
 		Client:        cl,
 		outputStore:   []client.Object{},
 		route:         httpRoute,
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 		// IMPORTANT: The order of this slice is significant during resource cleanup operations.
 		// While resources deletion order should take into account dependencies their main goal is to ensure safe cleanup preventing
 		// security issues (e.g., scenarios where routes remain active while security plugins are deleted first).
@@ -147,7 +159,10 @@ func (c *httpRouteConverter) GetExpectedGVKs() []schema.GroupVersionKind {
 // The function respects controller ownership and only manages ParentStatus entries
 // for Gateways controlled by this controller, leaving other controllers' entries untouched.
 func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger logr.Logger) (updated bool, stop bool, err error) {
-	return route.UpdateRouteStatus(ctx, logger, c.Client, c.route, c.expectedGVKs, route.BuildResolvedRefsConditionForHTTPRoute)
+	return route.UpdateRouteStatus(
+		ctx, logger, c.Client, c.referenceGrantVersion, c.route, c.expectedGVKs,
+		route.BuildResolvedRefsConditionForHTTPRoute,
+	)
 }
 
 // DesiredResourcesReady implements DesiredStateReadinessChecker. It decides whether orphan cleanup may
@@ -316,6 +331,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

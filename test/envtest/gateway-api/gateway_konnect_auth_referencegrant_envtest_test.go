@@ -34,6 +34,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant(t *testing.T) {
 		Scheme:                scheme,
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
+		ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 	}
 	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 
@@ -228,6 +229,7 @@ func TestGatewayKonnectAPIAuthReferenceGrant_CleanupOnGatewayDeletion(t *testing
 		Scheme:                scheme,
 		Namespace:             gwNs.Name,
 		DefaultDataPlaneImage: "kong:latest",
+		ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 	}
 	envtest.StartReconcilers(ctx, t, mgr, logs, r)
 

@@ -24,7 +24,13 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/helpers/certificate"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+// testReferenceGrantVersion is the version used by tests in this package that are not
+// sensitive to which one the cluster serves; see referencegranthelpers.V1. Tests that
+// depend on a grant being found run against referencegranthelpers.Versions instead.
+var testReferenceGrantVersion = referencegranthelpers.V1()
 
 func TestNewGatewayConverter(t *testing.T) {
 	tests := []struct {
@@ -62,7 +68,7 @@ func TestNewGatewayConverter(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			converter := newGatewayConverter(tt.gateway, fakeClient)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion)
 
 			require.NotNil(t, converter)
 
@@ -203,7 +209,7 @@ func TestBuildKongCertificate(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			converter := newGatewayConverter(tt.gateway, fakeClient).(*gatewayConverter)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 			converter.controlPlaneRef = tt.controlPlaneRef
 
 			cert, err := converter.buildKongCertificate(tt.listener, tt.certRef, tt.secretNamespace, tt.tags)
@@ -245,7 +251,7 @@ func TestBuildKongCertificate_SamePortDifferentListenersDifferentNames(t *testin
 	}
 
 	fakeClient := fake.NewClientBuilder().Build()
-	converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+	converter := newGatewayConverter(gateway, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 	converter.controlPlaneRef = controlPlaneRef
 
 	certRef := gatewayv1.SecretObjectReference{Name: "tls-secret"}
@@ -388,7 +394,7 @@ func TestBuildKongSNI(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			converter := newGatewayConverter(tt.gateway, fakeClient).(*gatewayConverter)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 
 			sni, err := converter.buildKongSNI(tt.listener, tt.kongCert, tt.tags)
 
@@ -411,6 +417,11 @@ func TestBuildKongSNI(t *testing.T) {
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test does list
+// ReferenceGrants, but never seeds one - its cross-namespace cases assert denial, and
+// the error case fails the List outright. Both outcomes are identical whichever version
+// is listed, so a second run would add no signal. Note the gap this leaves: the Gateway
+// converter's grant-permitted path has no unit test at either version.
 func TestProcessListenerCertificate(t *testing.T) {
 	cert, key := certificate.MustGenerateCertPEMFormat()
 
@@ -898,7 +909,7 @@ func TestProcessListenerCertificate(t *testing.T) {
 
 			tt.setupMocks(t, fakeClient)
 
-			converter := newGatewayConverter(tt.gateway, fakeClient).(*gatewayConverter)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 			converter.controlPlaneRef = tt.controlPlaneRef
 
 			err := converter.processListenerCertificate(
@@ -1762,7 +1773,7 @@ func TestTranslate(t *testing.T) {
 
 			tt.setupMocks(t, fakeClient)
 
-			converter := newGatewayConverter(tt.gateway, fakeClient)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion)
 			count, err := converter.Translate(context.Background(), logr.Discard())
 
 			if tt.expectError {
@@ -1826,7 +1837,7 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 
 	t.Run("all objects convert successfully", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient).(*gatewayConverter)
+		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 		converter.outputStore = []client.Object{validObj, validObj2}
 		objs, err := converter.GetOutputStore(ctx, logger)
 		require.NoError(t, err)
@@ -1837,7 +1848,7 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 
 	t.Run("one object fails conversion", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient).(*gatewayConverter)
+		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 		badObj := &badObject{Name: "bad1"}
 		converter.outputStore = []client.Object{validObj, badObj, validObj2}
 		objs, err := converter.GetOutputStore(ctx, logger)
@@ -1851,7 +1862,7 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 
 	t.Run("all objects fail conversion", func(t *testing.T) {
 		fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
-		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient).(*gatewayConverter)
+		converter := newGatewayConverter(&gwtypes.Gateway{}, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 		badObj1 := &badObject{Name: "bad1"}
 		badObj2 := &badObject{Name: "bad2"}
 		converter.outputStore = []client.Object{badObj1, badObj2}
@@ -1897,7 +1908,7 @@ func TestGatewayConverter_GetOutputStore(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			fakeClient := fake.NewClientBuilder().Build()
-			converter := newGatewayConverter(tt.gateway, fakeClient)
+			converter := newGatewayConverter(tt.gateway, fakeClient, testReferenceGrantVersion)
 
 			require.NotNil(t, converter)
 
@@ -2074,7 +2085,7 @@ func TestHandleOrphanedResource(t *testing.T) {
 				WithScheme(scheme.Get()).
 				Build()
 
-			converter := newGatewayConverter(gateway, fakeClient).(*gatewayConverter)
+			converter := newGatewayConverter(gateway, fakeClient, testReferenceGrantVersion).(*gatewayConverter)
 
 			resourceMap := tt.resource(tt.gatewayUID)
 			unstructuredObj := &unstructured.Unstructured{}

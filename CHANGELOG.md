@@ -60,6 +60,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Fixes
+
+- Fix compatibility with Gateway API in version lower than v1.5.0,
+  where `ReferenceGrant` is only served at `v1beta1`.
+  [#5683](https://github.com/Kong/kong-operator/pull/5683)
+  [#5693](https://github.com/Kong/kong-operator/pull/5693)
+
 ## [v2.3.1]
 
 > Release date: 2026-09-09

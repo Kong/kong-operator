@@ -29,7 +29,7 @@ func TestNewConverterUDPRoute(t *testing.T) {
 	route := newUDPRouteForTranslation()
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
-	converter, err := NewConverter(*route, fakeClient, false, "")
+	converter, err := NewConverter(*route, fakeClient, false, "", testReferenceGrantVersion)
 	require.NoError(t, err)
 	_, ok := converter.(*udpRouteConverter)
 	require.True(t, ok)
@@ -45,7 +45,7 @@ func TestUDPRouteConverter_Translate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newUDPRouteConverter(route, fakeClient, false, "")
+	converter := newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -93,7 +93,7 @@ func TestUDPRouteConverter_TranslateKeepsOldestRouteForSameListener(t *testing.T
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newUDPRouteConverter(olderRoute, fakeClient, false, "")
+	converter := newUDPRouteConverter(olderRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -132,7 +132,7 @@ func TestUDPRouteConverter_TranslateSkipsNewerRouteForSameListener(t *testing.T)
 		olderRoute,
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newUDPRouteConverter(newerRoute, fakeClient, false, "")
+	converter := newUDPRouteConverter(newerRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -193,7 +193,7 @@ func TestUDPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newUDPRouteConverter(route, fakeClient, false, "")
+	converter := newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -263,7 +263,7 @@ func TestUDPRouteConverter_HandleOrphanedResource(t *testing.T) {
 			setup: func() (*udpRouteConverter, *unstructured.Unstructured) {
 				resource := newUDPUnstructuredResource("")
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+				return newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*udpRouteConverter), resource
 			},
 			wantSkip: true,
 		},
@@ -275,7 +275,7 @@ func TestUDPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				// same backend Service+port, so both routes' refs are on the shared resource.
 				resource := newUDPUnstructuredResource(routeKey + ",default/other-udproute")
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+				return newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*udpRouteConverter), resource
 			},
 			wantSkip: true,
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
@@ -288,7 +288,7 @@ func TestUDPRouteConverter_HandleOrphanedResource(t *testing.T) {
 				routeKey := client.ObjectKeyFromObject(route).String()
 				resource := newUDPUnstructuredResource(routeKey)
 				fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(resource).Build()
-				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+				return newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*udpRouteConverter), resource
 			},
 			assertFn: func(t *testing.T, resource *unstructured.Unstructured) {
 				_, exists := resource.GetAnnotations()[consts.GatewayOperatorHybridRoutesUDPRouteAnnotation]
@@ -309,7 +309,7 @@ func TestUDPRouteConverter_HandleOrphanedResource(t *testing.T) {
 						},
 					}).
 					Build()
-				return newUDPRouteConverter(route, fakeClient, false, "").(*udpRouteConverter), resource
+				return newUDPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion).(*udpRouteConverter), resource
 			},
 			wantErr:     true,
 			wantSkip:    true,

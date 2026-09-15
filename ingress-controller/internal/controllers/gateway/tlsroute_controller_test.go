@@ -14,6 +14,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func newTLSRoute(backendRef gatewayapi.BackendRef) gatewayapi.TLSRoute {
@@ -163,27 +164,35 @@ func TestGetTLSRouteRuleReason(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Get()).
-				WithObjects(tc.objects...).
-				Build()
-			reconciler := &TLSRouteReconciler{
-				Client: cl,
-				Log:    logger,
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fakeclient.NewClientBuilder().
+						WithScheme(scheme.Get()).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objects)...).
+						Build()
+					reconciler := &TLSRouteReconciler{
+						Client:                cl,
+						Log:                   logger,
+						ReferenceGrantVersion: gv,
+					}
 
-			reason, msg, err := reconciler.getTLSRouteRuleReason(ctx, tc.route)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantReason, reason)
-			if tc.wantMessageContain != "" {
-				assert.Contains(t, msg, tc.wantMessageContain)
+					reason, msg, err := reconciler.getTLSRouteRuleReason(ctx, tc.route)
+					require.NoError(t, err)
+					assert.Equal(t, tc.wantReason, reason)
+					if tc.wantMessageContain != "" {
+						assert.Contains(t, msg, tc.wantMessageContain)
+					}
+				})
 			}
 		})
 	}
 }
 
+// Pinned to a single ReferenceGrant version on purpose: this test lists ReferenceGrants
+// but never seeds one, so it asserts denial and gets an empty list at either version.
+// The grant-permitted path is covered against both versions by TestGetTLSRouteRuleReason.
 func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 	ctx := t.Context()
 	logger := logr.Discard()
@@ -206,7 +215,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
-		r := &TLSRouteReconciler{Client: cl, Log: logger}
+		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses()
 
@@ -226,7 +235,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 		cl := fakeclient.NewClientBuilder().
 			WithScheme(scheme.Get()).
 			Build()
-		r := &TLSRouteReconciler{Client: cl, Log: logger}
+		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -249,7 +258,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}}).
 			Build()
-		r := &TLSRouteReconciler{Client: cl, Log: logger}
+		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(nil))
 		parentStatuses := newParentStatuses(metav1.Condition{
 			Type:   string(gatewayapi.RouteConditionResolvedRefs),
@@ -269,7 +278,7 @@ func TestSetRouteConditionResolvedRefsCondition_TLSRoute(t *testing.T) {
 			WithScheme(scheme.Get()).
 			WithObjects(&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "other"}}).
 			Build()
-		r := &TLSRouteReconciler{Client: cl, Log: logger}
+		r := &TLSRouteReconciler{Client: cl, Log: logger, ReferenceGrantVersion: testReferenceGrantVersion}
 		route := newTLSRoute(serviceBackendRef(&otherNS))
 		parentStatuses := newParentStatuses()
 

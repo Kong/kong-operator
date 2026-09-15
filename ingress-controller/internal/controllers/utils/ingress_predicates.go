@@ -1,21 +1,13 @@
 package utils
 
 import (
-	"errors"
-	"fmt"
-
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
-	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
-	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 const defaultIngressClassAnnotation = "ingressclass.kubernetes.io/is-default-class"
@@ -79,29 +71,4 @@ func IsIngressClassEmpty(obj client.Object) bool {
 		}
 		return true
 	}
-}
-
-// ErrReferenceGrantCRDNotFound is returned by DetectReferenceGrantVersion when the
-// cluster serves neither the v1 nor the v1beta1 ReferenceGrant CRD.
-var ErrReferenceGrantCRDNotFound = errors.New("neither v1 nor v1beta1 ReferenceGrant CRD found")
-
-// DetectReferenceGrantVersion returns the GroupVersion of whichever ReferenceGrant
-// API version is served by the cluster, preferring v1 and falling back to v1beta1
-// (ReferenceGrant was promoted from v1beta1 to v1 in gateway-api v1.5.0; older
-// clusters only serve v1beta1). It returns ErrReferenceGrantCRDNotFound if neither
-// is installed, and a wrapped lookup error if the lookup itself failed.
-func DetectReferenceGrantVersion(restMapper meta.RESTMapper) (schema.GroupVersion, error) {
-	for _, gv := range []schema.GroupVersion{
-		schema.GroupVersion(gatewayv1.GroupVersion),
-		schema.GroupVersion(gatewayv1beta1.GroupVersion),
-	} {
-		exists, err := k8sutils.CRDExists(restMapper, gv.WithResource("referencegrants"))
-		if err != nil {
-			return schema.GroupVersion{}, fmt.Errorf("failed to detect the ReferenceGrant API version: %w", err)
-		}
-		if exists {
-			return gv, nil
-		}
-	}
-	return schema.GroupVersion{}, ErrReferenceGrantCRDNotFound
 }

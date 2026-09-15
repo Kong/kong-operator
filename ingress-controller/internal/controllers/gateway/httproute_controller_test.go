@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func init() {
@@ -425,22 +426,27 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Scheme).
-				WithObjects(tc.objects...).
-				Build()
-			reconciler := &HTTPRouteReconciler{
-				Client: cl,
-				Log:    logger,
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fakeclient.NewClientBuilder().
+						WithScheme(scheme.Scheme).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objects)...).
+						Build()
+					reconciler := &HTTPRouteReconciler{
+						Client:                cl,
+						Log:                   logger,
+						ReferenceGrantVersion: gv,
+					}
 
-			reason, msg, err := reconciler.getHTTPRouteRuleReason(ctx, tc.route)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantReason, reason)
-			if tc.wantMessageContain != "" {
-				assert.Contains(t, msg, tc.wantMessageContain)
+					reason, msg, err := reconciler.getHTTPRouteRuleReason(ctx, tc.route)
+					require.NoError(t, err)
+					assert.Equal(t, tc.wantReason, reason)
+					if tc.wantMessageContain != "" {
+						assert.Contains(t, msg, tc.wantMessageContain)
+					}
+				})
 			}
 		})
 	}

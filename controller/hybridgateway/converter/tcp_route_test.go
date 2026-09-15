@@ -24,7 +24,7 @@ func TestNewConverterTCPRoute(t *testing.T) {
 	route := newTCPRouteForTranslation()
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).Build()
 
-	converter, err := NewConverter(*route, fakeClient, false, "")
+	converter, err := NewConverter(*route, fakeClient, false, "", testReferenceGrantVersion)
 	require.NoError(t, err)
 	_, ok := converter.(*tcpRouteConverter)
 	require.True(t, ok)
@@ -40,7 +40,7 @@ func TestTCPRouteConverter_Translate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(route, fakeClient, false, "")
+	converter := newTCPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -88,7 +88,7 @@ func TestTCPRouteConverter_TranslateKeepsOldestRouteForSameListener(t *testing.T
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(olderRoute, fakeClient, false, "")
+	converter := newTCPRouteConverter(olderRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -127,7 +127,7 @@ func TestTCPRouteConverter_TranslateSkipsNewerRouteForSameListener(t *testing.T)
 		olderRoute,
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(newerRoute, fakeClient, false, "")
+	converter := newTCPRouteConverter(newerRoute, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)
@@ -188,7 +188,7 @@ func TestTCPRouteConverter_TranslateBackendClientCertificate(t *testing.T) {
 		newEndpointSlice("backend-service", "default", []string{"10.0.1.1", "10.0.1.2"}),
 	)
 	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(objects...).Build()
-	converter := newTCPRouteConverter(route, fakeClient, false, "")
+	converter := newTCPRouteConverter(route, fakeClient, false, "", testReferenceGrantVersion)
 
 	resourceCount, err := converter.Translate(t.Context(), logr.Discard())
 	require.NoError(t, err)

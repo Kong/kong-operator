@@ -174,6 +174,7 @@ func TestGatewayInfrastructureLabels(t *testing.T) {
 			Scheme:                scheme,
 			Namespace:             ns.Name,
 			DefaultDataPlaneImage: consts.DefaultDataPlaneImage,
+			ReferenceGrantVersion: envtest.ReferenceGrantVersion,
 		},
 		&dpreconciler.Reconciler{
 			Client:                   c,
