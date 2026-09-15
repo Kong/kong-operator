@@ -937,6 +937,30 @@ func TestCleanOrphanedResourcesWaitBehavior(t *testing.T) {
 		require.Len(t, serviceList.Items, 1)
 	})
 
+	// The root deletion path runs with waitForDeletes: false so that a single pass
+	// issues the deletes for every GVK and the caller can release the root finalizer
+	// immediately, instead of holding the Gateway API object in Terminating for one
+	// reconcile per GVK.
+	t.Run("deletion path issues deletes for all GVKs in one pass without requeueing", func(t *testing.T) {
+		cl := newClient()
+		requeue, err := cleanOrphanedResources[gwtypes.HTTPRoute, *gwtypes.HTTPRoute](ctx, cl, logger, fakeConv, orphanCleanupOptions{waitForDeletes: false})
+		require.NoError(t, err)
+		require.False(t, requeue, "no requeue should be needed once every orphan has been issued a delete")
+
+		// The later GVK must be deleted in the same pass rather than waiting for the
+		// still-terminating KongRoute of the earlier GVK.
+		serviceList := &unstructured.UnstructuredList{}
+		serviceList.SetGroupVersionKind(gvks[1])
+		require.NoError(t, cl.List(ctx, serviceList))
+		require.Empty(t, serviceList.Items)
+
+		// The already-terminating resource is left to its own finalizer.
+		routeList := &unstructured.UnstructuredList{}
+		routeList.SetGroupVersionKind(gvks[0])
+		require.NoError(t, cl.List(ctx, routeList))
+		require.Len(t, routeList.Items, 1)
+	})
+
 	t.Run("cleanup requeues when orphan delete conflicts", func(t *testing.T) {
 		conflictGVK := []schema.GroupVersionKind{
 			{Group: "configuration.konghq.com", Version: "v1alpha1", Kind: "KongService"},

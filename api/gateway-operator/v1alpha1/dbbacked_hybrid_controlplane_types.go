@@ -38,7 +38,15 @@ type DBBackedHybridControlPlane struct {
 }
 
 // DBBackedHybridControlPlaneSpec stands for the desired state of the DBBackedHybridControlPlane.
-type DBBackedHybridControlPlaneSpec struct{}
+type DBBackedHybridControlPlaneSpec struct {
+	DeploymentOptions DBBackedHybridControlPlaneDeploymentOptions `json:"deployment"`
+
+	Network DBBackedHybridControlPlaneNetworkOptions `json:"network"`
+}
+
+type DBBackedHybridControlPlaneDeploymentOptions struct{}
+
+type DBBackedHybridControlPlaneNetworkOptions struct{}
 
 // DBBackedHybridControlPlaneStatus represents the observed state of the DBBackedHybridControlPlane.
 type DBBackedHybridControlPlaneStatus struct {

@@ -509,8 +509,15 @@ type orphanCleanupOptions struct {
 	// waitForDeletes, when true, makes cleanup process one GVK at a time and
 	// requeue until every orphan of that type is fully gone before moving on,
 	// enforcing deletion ordering across resource types (e.g. delete KongRoute
-	// before KongPluginBinding). When false, all GVKs are processed in a single
-	// pass and resources already being deleted are not waited on.
+	// before KongPluginBinding). Use it while the root object still exists, where
+	// pruning a subset of the generated resources must not reorder the remaining
+	// desired state.
+	//
+	// When false, all GVKs are processed in a single pass and resources already
+	// being deleted are not waited on. A pass that returns no requeue guarantees
+	// every orphan has been issued a delete, which is what the root deletion path
+	// needs: each generated Kong resource then completes its own Konnect delete
+	// through its own finalizer, independently of the root object.
 	waitForDeletes bool
 }
 

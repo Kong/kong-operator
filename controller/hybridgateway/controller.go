@@ -356,7 +356,7 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 
 	// Clean up all generated resources by calling the same cleanup logic as orphan cleanup
 	// but with no desired resources (simulating what cleanOrphanedResources does when desiredObjects is empty)
-	orphansDeleted, err := r.cleanupGeneratedResources(ctx, logger, conv)
+	requeue, err := r.cleanupGeneratedResources(ctx, logger, conv)
 	if err != nil {
 		if result, ok := requeueOnConflict(err, logger, "Deletion cleanup conflicted, requeueing"); ok {
 			return result, nil
@@ -371,9 +371,10 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 		return ctrl.Result{}, fmt.Errorf("failed to cleanup generated resources: %w", err)
 	}
 
-	// If resources are still being deleted, requeue to continue the multi-step deletion process.
-	// We must wait for all resources to be fully deleted before removing the finalizer.
-	if orphansDeleted {
+	// A generated resource changed between the orphan decision and the delete, so the
+	// optimistic-lock precondition rejected it. Requeue to re-evaluate rather than
+	// releasing the finalizer with deletes still outstanding.
+	if requeue {
 		log.Debug(logger, "Resource deletion cleanup in progress, requeueing to continue")
 		r.eventRecorder.Eventf(
 			obj,
@@ -384,7 +385,8 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 		return ctrl.Result{Requeue: true}, nil
 	}
 
-	// All resources have been deleted, now we can remove the finalizer.
+	// Every generated resource has now been issued a delete (or was already
+	// terminating), so the finalizer can be released.
 	log.Debug(logger, "All generated resources deleted, removing finalizer")
 
 	// Remove finalizer using patch for safer concurrent updates.
@@ -413,7 +415,7 @@ func requeueOnConflict(err error, logger logr.Logger, message string) (ctrl.Resu
 // This is similar to cleanOrphanedResources but treats all owned resources as orphans
 // since we want to delete everything when the Route is being deleted.
 // Returns:
-//   - bool: true if any resources were deleted and a requeue is needed
+//   - bool: true if a requeue is needed before the root finalizer can be released
 //   - error: any error that occurred during cleanup
 func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 	ctx context.Context,
@@ -422,7 +424,14 @@ func (r *HybridGatewayReconciler[t, tPtr]) cleanupGeneratedResources(
 ) (bool, error) {
 	// On the deletion path we create a fresh converter but do not run Translate(),
 	// so cleanOrphanedResources() sees no desired output objects. That makes all
-	// owned generated resources orphan candidates, and we wait for their deletion
-	// before releasing the root finalizer.
-	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: true})
+	// owned generated resources orphan candidates.
+	//
+	// Issuing the deletes is enough; we deliberately do not wait for the resources to
+	// disappear. Every generated Kong resource carries its own finalizer and controller
+	// that performs the Konnect delete and retries until its own dependencies are gone,
+	// so cleanup still converges once the root object is gone. Waiting instead costs one
+	// reconcile per GVK, and each extra second the root is held in Terminating is a
+	// second in which a client that recreates the same name can adopt the dying object
+	// and strip this finalizer with a full-replace apply.
+	return cleanOrphanedResources[t, tPtr](ctx, r.Client, logger, conv, orphanCleanupOptions{waitForDeletes: false})
 }
