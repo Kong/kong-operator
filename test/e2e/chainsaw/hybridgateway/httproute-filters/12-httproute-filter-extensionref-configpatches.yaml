@@ -1,0 +1,82 @@
+##
+# KongPlugin whose configuration keeps the non-sensitive fields in spec.config and patches the
+# sensitive one in from a Secret via spec.configPatches, attached to an HTTPRoute through an
+# ExtensionRef filter.
+#
+# Required bindings:
+#   - test_name: The test name label to match (used for labels)
+#   - config_patches_secret_name: Name of the Secret holding the patched value
+#   - config_patches_plugin_name: Name of the KongPlugin patching its config from that Secret
+#   - http_route_config_patches_name: Name of the HTTPRoute resource
+#   - http_route_config_patches_namespace: Namespace of the HTTPRoute resource
+#   - config_patches_fqdn: Hostname of the HTTPRoute
+#   - gateway_name: Name of the Gateway parent resource
+#   - httpbin_deployment_name: Name of the httpbin backend service
+#   - httpbin_deployment_namespace: Namespace of the httpbin backend service
+
+---
+# The Secret carrying only the patched value. The stored value must itself be valid JSON, since it
+# is interpolated into the JSON patch value position, hence the embedded quoting.
+# The konghq.com/secret label is required for the operator to watch it.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: ($config_patches_secret_name)
+  namespace: ($http_route_config_patches_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+    konghq.com/secret: "true"
+stringData:
+  header: '"X-Config-Patch:from-patch"'
+---
+# The KongPlugin declares the header list in spec.config and patches its first element in.
+apiVersion: configuration.konghq.com/v1
+kind: KongPlugin
+metadata:
+  name: ($config_patches_plugin_name)
+  namespace: ($http_route_config_patches_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+plugin: response-transformer
+config:
+  add:
+    headers: []
+configPatches:
+  - path: /add/headers/0
+    valueFrom:
+      secretKeyRef:
+        name: ($config_patches_secret_name)
+        key: header
+---
+# The HTTPRoute attaching the KongPlugin through an ExtensionRef filter.
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: ($http_route_config_patches_name)
+  namespace: ($http_route_config_patches_namespace)
+  labels:
+    chainsaw/test: ($test_name)
+  annotations:
+    konghq.com/strip-path: "false"
+spec:
+  hostnames:
+    - ($config_patches_fqdn)
+  parentRefs:
+    - group: gateway.networking.k8s.io
+      kind: Gateway
+      name: ($gateway_name)
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /get
+      filters:
+        - type: ExtensionRef
+          extensionRef:
+            group: configuration.konghq.com
+            kind: KongPlugin
+            name: ($config_patches_plugin_name)
+      backendRefs:
+        - name: ($httpbin_deployment_name)
+          port: 80
+          namespace: ($httpbin_deployment_namespace)
