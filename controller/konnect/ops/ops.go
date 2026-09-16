@@ -926,14 +926,22 @@ func getMatchingEntryFromListResponseData[
 // with each request and makes the reconciliation loop requeue the resource
 // instead of performing the backoff.
 func ClearInstanceFromError(err error) error {
+	// Some delete operations wrap the typed SDK error in a richer error that
+	// carries extra context for the reconciler (KonnectConfigStoreNotEmptyError
+	// carries the keys of the entries blocking the deletion). Keep such
+	// wrappers intact so reconcilers can act on them; the instance field of
+	// the underlying typed error is still cleared in place. This check must
+	// stay ahead of the typed-error branches below, which unwrap and would
+	// otherwise silently drop the wrapper.
+	if _, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err); ok {
+		if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
+			errBadRequest.Instance = ""
+		}
+		return err
+	}
+
 	if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
 		errBadRequest.Instance = ""
-		// Keep richer wrappers intact (e.g. KonnectConfigStoreNotEmptyError
-		// carrying the blocking entry keys) so reconcilers can act on them;
-		// the instance field is cleared in place either way.
-		if _, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err); ok {
-			return err
-		}
 		return errBadRequest
 	}
 

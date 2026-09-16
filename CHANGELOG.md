@@ -129,9 +129,15 @@
   instantly removed every stored certificate/key and broke the SNIs referencing
   them). Konnect rejects deleting a non-empty config store, so the operator now
   keeps the CR's cleanup finalizer, sets the `Programmed` condition to `False`
-  with reason `DeletionBlocked` listing the blocking entry keys, and retries with
-  backoff. Deletion proceeds automatically once the entries are removed from the
-  store in Konnect.
+  with reason `DeletionBlocked` listing the blocking entry keys, and retries on
+  a fixed interval. Deletion proceeds automatically once the entries are
+  removed from the store in Konnect.
+  Recovery: while deletion is blocked the CR stays in `Terminating` (this also
+  blocks deletion of the containing namespace). Either remove the entries from
+  the config store in Konnect — the deletion then proceeds on its own — or, to
+  abandon the store in Konnect instead, remove the
+  `gateway.konghq.com/konnect-cleanup` finalizer from the CR manually, which
+  leaves the config store and its entries orphaned in Konnect.
   [#5708](https://github.com/Kong/kong-operator/issues/5708)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.

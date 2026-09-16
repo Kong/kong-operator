@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"slices"
 	"strings"
 
@@ -41,17 +42,28 @@ type KonnectConfigStoreNotEmptyError struct {
 	// ConfigStoreID is the Konnect ID of the config store.
 	ConfigStoreID string
 	// Keys are the keys of the secret entries blocking the deletion, sorted
-	// alphabetically. Nil when listing the entries failed.
+	// alphabetically and deduplicated. Empty when the store listed no entries
+	// (e.g. they were removed between the rejected delete and the listing).
+	// Nil when listing the entries failed; see ListErr.
 	Keys []string
+	// ListErr, when non-nil, is the error that prevented listing the blocking
+	// entry keys.
+	ListErr error
 	// Err is the underlying Konnect API error.
 	Err error
 }
 
 // Error implements the error interface.
 func (e KonnectConfigStoreNotEmptyError) Error() string {
-	if e.Keys == nil {
+	switch {
+	case e.ListErr != nil:
 		return fmt.Sprintf(
 			"config store %s still holds secret entries (listing them failed), deletion blocked: %v",
+			e.ConfigStoreID, e.Err,
+		)
+	case len(e.Keys) == 0:
+		return fmt.Sprintf(
+			"config store %s was reported as not empty but no secret entries were listed, deletion blocked: %v",
 			e.ConfigStoreID, e.Err,
 		)
 	}
@@ -74,13 +86,14 @@ const maxKeysInDeletionBlockedMessage = 10
 // config store deletion is blocked by the secret entries it still holds, so
 // the user knows exactly what to clean up before deletion can proceed.
 func (e KonnectConfigStoreNotEmptyError) DeletionBlockedMessage() string {
-	if e.Keys == nil {
-		return "deletion blocked: the config store still holds secret entries; " +
-			"remove the entries from Konnect and the deletion will proceed automatically"
-	}
-	if len(e.Keys) == 0 {
+	if e.ListErr != nil {
 		return "deletion blocked: the config store still holds secret entries " +
 			"(could not list their keys); remove the entries from Konnect and the deletion will proceed automatically"
+	}
+	if len(e.Keys) == 0 {
+		return "deletion blocked: Konnect rejected the deletion because the config store still holds " +
+			"secret entries, but no entries were listed (they may have just been removed); " +
+			"the deletion will be retried automatically"
 	}
 	if len(e.Keys) <= maxKeysInDeletionBlockedMessage {
 		return fmt.Sprintf(
@@ -140,8 +153,24 @@ func deleteKonnectConfigStoreGuarded(
 	return KonnectConfigStoreNotEmptyError{
 		ConfigStoreID: obj.GetKonnectStatus().GetKonnectID(),
 		Keys:          keys,
+		ListErr:       listErr,
 		Err:           err,
 	}
+}
+
+// pageAfterCursorFromNextPageURL extracts the page[after] item cursor from a
+// next-page URI as returned in Konnect list responses' meta.page.next. The SDK
+// models Next as a full URI while the list requests' PageAfter parameter
+// expects only the item cursor, so the URI must be parsed.
+func pageAfterCursorFromNextPageURL(next *string) (string, error) {
+	if next == nil {
+		return "", nil
+	}
+	u, err := url.Parse(*next)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse next page URI %q: %w", *next, err)
+	}
+	return u.Query().Get("page[after]"), nil
 }
 
 // listConfigStoreSecretKeys lists the keys of all secret entries held by the
@@ -176,13 +205,26 @@ func listConfigStoreSecretKeys(
 			}
 		}
 
-		next := resp.ListConfigStoreSecretsResponse.Meta.Page.GetNext()
-		if next == nil {
+		next, err := pageAfterCursorFromNextPageURL(resp.ListConfigStoreSecretsResponse.Meta.Page.GetNext())
+		if err != nil {
+			// The listed keys are only used for the user-facing condition
+			// message; return what was collected so far rather than failing.
+			ctrllog.FromContext(ctx).
+				Info("failed to parse next page cursor, returning partial list of config store secret entries",
+					"type", obj.GetTypeName(),
+					"id", obj.GetKonnectStatus().GetKonnectID(),
+					"error", err.Error(),
+				)
 			break
 		}
-		pageAfter = next
+		if next == "" || (pageAfter != nil && next == *pageAfter) {
+			// No further page, or the cursor did not advance: stop to avoid
+			// collecting the same page repeatedly.
+			break
+		}
+		pageAfter = &next
 	}
 
 	slices.Sort(keys)
-	return keys, nil
+	return slices.Compact(keys), nil
 }
