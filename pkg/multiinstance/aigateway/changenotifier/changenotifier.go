@@ -29,7 +29,7 @@ func New() *ChangeNotifier {
 	return &ChangeNotifier{
 		// Buffered so that NotifyChange never blocks the caller: the configuration
 		// controllers keep reconciling even when no instance is running yet.
-		// ponytail: fixed-size buffer, changes are dropped when full; per-parent
+		// ponytail: fixed-size buffer, the oldest change is evicted when full; per-parent
 		// channels keyed by OnPremAIGateway NN if fan-out correctness ever matters.
 		ch: make(chan Change, 128),
 		// Set this to nil initially to make receiving from it block until allocated with make.
@@ -61,8 +61,23 @@ func (c *ChangeNotifier) NotifyChange(
 	}:
 	case <-c.closedCh:
 	default:
-		// The buffer is full: drop the change rather than block the caller. The next
-		// change for the same parent, or the instance's periodic sync, catches up.
+		// The buffer is full: evict the oldest buffered change to admit this one, so that
+		// bursts keep the freshest state and the newest change for a parent still reaches
+		// the consumer, which coalesces changes per gateway before syncing. A change can
+		// still be dropped if the buffer refills concurrently, and an evicted change whose
+		// parent never sees another event is not re-driven.
+		select {
+		case <-c.ch:
+		default:
+		}
+		select {
+		case c.ch <- Change{
+			ID:       obj.GetUID(),
+			ParentNN: parent,
+			Object:   obj,
+		}:
+		default:
+		}
 	}
 }
 

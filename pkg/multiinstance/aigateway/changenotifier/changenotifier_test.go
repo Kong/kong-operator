@@ -2,6 +2,7 @@ package changenotifier
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -36,17 +37,28 @@ func TestNotifyChange_SendsChange(t *testing.T) {
 	}
 }
 
-func TestNotifyChange_DropsWhenBufferFull(t *testing.T) {
+func TestNotifyChange_EvictsOldestWhenBufferFull(t *testing.T) {
 	n := New()
 	defer n.Close()
 
-	for range cap(n.ch) {
-		n.NotifyChange(t.Context(), nil, testObject("uid"))
+	for i := range cap(n.ch) {
+		n.NotifyChange(t.Context(), nil, testObject(types.UID(fmt.Sprintf("uid-%d", i))))
 	}
-	// Buffer is full: this must not block and must be dropped.
+	// Buffer is full: this must not block and must evict the oldest change.
 	n.NotifyChange(t.Context(), nil, testObject("uid-overflow"))
 
 	require.Len(t, n.ch, cap(n.ch))
+	// The newest change is retained at the back of the buffer, the oldest was evicted.
+	var first, last types.UID
+	for range cap(n.ch) {
+		id := (<-n.NotifyChannel()).ID
+		if first == "" {
+			first = id
+		}
+		last = id
+	}
+	require.Equal(t, types.UID("uid-1"), first)
+	require.Equal(t, types.UID("uid-overflow"), last)
 }
 
 func TestNotifyChange_ContextCancelled(t *testing.T) {

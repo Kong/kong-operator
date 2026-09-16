@@ -163,6 +163,29 @@ func (i *Instance) sendConfig(
 
 }
 
+// syncPending pushes the configuration for every gateway with pending changes and removes
+// the synced ones from the set. Failed syncs stay in the set so that the timer retries
+// them. lastSyncTS is updated on every attempt so that bursts of changes debounce even
+// when syncs fail.
+func (i *Instance) syncPending(
+	ctx context.Context,
+	pending map[types.NamespacedName]struct{},
+	lastSyncTS *time.Time,
+) {
+	if len(pending) == 0 {
+		return
+	}
+	*lastSyncTS = time.Now()
+	for nn := range pending {
+		if err := i.sendConfig(ctx, &nn); err != nil {
+			i.logger.Error(err, "Failed to send configuration",
+				"namespace", nn.Namespace, "name", nn.Name)
+			continue
+		}
+		delete(pending, nn)
+	}
+}
+
 // Run runs the instance. It blocks until the passed context is cancelled.
 func (i *Instance) Run(ctx context.Context) error {
 	i.logger.Info("Running on-prem AI Gateway control plane instance")
@@ -212,24 +235,27 @@ func (i *Instance) Run(ctx context.Context) error {
 
 	var (
 		ch         = i.cn.NotifyChannel()
-		lastSyncTS = time.Time{}
+		lastSyncTS time.Time
 		// TODO: make this configurable
 		minimumInterval = time.Second
 		// TODO: make this configurable
 		syncInterval = 3 * time.Second
 		timer        = time.NewTicker(syncInterval)
+		// pending holds the gateways with configuration changes that have not been synced
+		// yet. Changes arriving within the debounce window land here and are re-driven by
+		// the timer instead of being dropped, as are syncs that failed.
+		pending = map[types.NamespacedName]struct{}{}
 	)
 	defer timer.Stop()
 
 forLoop:
 	for {
 		select {
-		// Handle periodic sync based on the timer.
+		// Handle periodic sync based on the timer: it re-drives changes that were
+		// debounced and syncs that failed. It does not touch lastSyncTS when there is
+		// nothing to sync, so idle ticks never push the debounce window out.
 		case <-timer.C:
-			lastSyncTS = time.Now()
-			// TODO: cache the information about gateway to sync so that timer
-			// can trigger the sync without gateway event notifications.
-			i.logger.Info("Syncing...")
+			i.syncPending(ctx, pending, &lastSyncTS)
 
 		// Handle sync based on cluster change events.
 		case change := <-ch:
@@ -241,17 +267,15 @@ forLoop:
 			)
 			logger.Info("Received change notification")
 
-			if time.Since(lastSyncTS) < minimumInterval {
-				// Debounce
+			if change.ParentNN == nil {
+				// TODO: handle nil gw
+				logger.Info("Change has no parent gateway reference, skipping")
 				continue
 			}
 
-			// TODO: handle nil gw
-			gw := change.ParentNN
-
-			lastSyncTS = time.Now()
-			if err := i.sendConfig(ctx, gw); err != nil {
-				logger.Error(err, "Failed to send configuration")
+			pending[*change.ParentNN] = struct{}{}
+			if time.Since(lastSyncTS) >= minimumInterval {
+				i.syncPending(ctx, pending, &lastSyncTS)
 			}
 
 		// A crashed instance manager (e.g. unreachable API server) tears the instance down:
