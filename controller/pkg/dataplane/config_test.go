@@ -207,18 +207,21 @@ var testConfig = Config[
 		LabelManaged:   k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
 
-	Service: ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
-		Description:         "Ingress",
-		NameSuffix:          "-ingress",
-		DefaultPortName:     "ingress",
-		DefaultPort:         testDefaultIngressPort,
-		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
-		Options:             testServiceOptions,
+	Services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		{
+			Description:         "Ingress",
+			NameSuffix:          "-ingress",
+			DefaultPortName:     "ingress",
+			DefaultPort:         testDefaultIngressPort,
+			ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+			Options:             testServiceOptions,
+
+			SetStatusAddresses: testSetStatusAddresses,
+		},
 	},
 
-	HPAScalingSpec:     testHPAScalingSpec,
-	SetStatusReplicas:  testSetStatusReplicas,
-	SetStatusAddresses: testSetStatusAddresses,
+	HPAScalingSpec:    testHPAScalingSpec,
+	SetStatusReplicas: testSetStatusReplicas,
 }
 
 func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
@@ -315,6 +318,7 @@ func buildTestContainer(
 	cp ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName
+	_ string, // adminCertSecretName
 ) (corev1.Container, []corev1.Volume, error) {
 	aigatewaycp, _ := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
 	if aigatewaycp != nil && aigatewaycp.Status.Endpoints == nil {
@@ -527,3 +531,92 @@ func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
 func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
 func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
 func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
+
+// -----------------------------------------------------------------
+// validateConfig
+// -----------------------------------------------------------------
+
+func Test_validateConfig(t *testing.T) {
+	ingress := ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Description: "Ingress",
+	}
+	admin := ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Description: "Admin",
+	}
+
+	tests := []struct {
+		name     string
+		services []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		wantErr  bool
+	}{
+		{
+			name: "no status-feeding entry: invalid (the DataPlane status would never be populated)",
+			services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+				ingress, admin,
+			},
+			wantErr: true,
+		},
+		{
+			name:     "empty Services: invalid (the DataPlane status would never be populated)",
+			services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{},
+			wantErr:  true,
+		},
+		{
+			name: "one status-feeding entry: valid",
+			services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+				func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+					c := ingress
+					c.SetStatusAddresses = testSetStatusAddresses
+					return c
+				}(),
+				admin,
+			},
+		},
+		{
+			name: "two status-feeding entries: invalid",
+			services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+				func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+					c := ingress
+					c.SetStatusAddresses = testSetStatusAddresses
+					return c
+				}(),
+				func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+					c := admin
+					c.SetStatusAddresses = testSetStatusAddresses
+					return c
+				}(),
+			},
+			wantErr: true,
+		},
+		{
+			name: "status-feeding entry combined with Enabled: invalid",
+			services: []ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+				func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+					c := ingress
+					c.SetStatusAddresses = testSetStatusAddresses
+					c.Enabled = func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+					return c
+				}(),
+			},
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &testReconciler{
+				Config: func() Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate] {
+					cfg := testConfig
+					cfg.Services = tc.services
+					return cfg
+				}(),
+			}
+			err := r.validateConfig()
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

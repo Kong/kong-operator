@@ -137,18 +137,21 @@ var config = shareddataplane.Config[
 		BuildContainer: buildContainer,
 	},
 
-	Service: shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
-		Description:         "Kafka",
-		NameSuffix:          "-kafka",
-		DefaultPortName:     "kafka",
-		DefaultPort:         DefaultKafkaPort,
-		ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
-		Options:             serviceOptions,
+	Services: []shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
+		{
+			Description:         "Kafka",
+			NameSuffix:          "-kafka",
+			DefaultPortName:     "kafka",
+			DefaultPort:         DefaultKafkaPort,
+			ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
+			Options:             serviceOptions,
+
+			SetStatusAddresses: setStatusAddresses,
+		},
 	},
 
-	HPAScalingSpec:     hpaScalingSpec,
-	SetStatusReplicas:  setStatusReplicas,
-	SetStatusAddresses: setStatusAddresses,
+	HPAScalingSpec:    hpaScalingSpec,
+	SetStatusReplicas: setStatusReplicas,
 }
 
 // replicas returns the replica count to seed on the Deployment: the static
@@ -265,6 +268,7 @@ func buildContainer(
 	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName: KEG always provisions its certificate Secret.
+	_ string, // adminCertSecretName: KEG never provisions an admin certificate.
 ) (corev1.Container, []corev1.Volume, error) {
 	envVars, err := buildKEGEnvVars(egdp, konnectEventGatewayFromResolved(cp))
 	if err != nil {

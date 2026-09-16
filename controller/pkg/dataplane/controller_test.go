@@ -136,7 +136,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 		svc := &corev1.Service{
 			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},
 		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Services[0], svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)
@@ -149,7 +149,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 	t.Run("LoadBalancer with no ingress sets ServiceReady=False", func(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Services[0], svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)
@@ -168,7 +168,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 				},
 			},
 		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Services[0], svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)

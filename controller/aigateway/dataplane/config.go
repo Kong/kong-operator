@@ -151,6 +151,9 @@ var config = shareddataplane.Config[
 		ServiceReadyMessage:      aigatewayv1alpha1.ServiceReadyMessage,
 		WaitingForAddressReason:  string(aigatewayv1alpha1.WaitingForAddressReason),
 		WaitingForAddressMessage: aigatewayv1alpha1.WaitingForAddressMessage,
+
+		AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+		AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
 	},
 
 	CertificateLabelKey:      consts.SecretAIGatewayDataPlaneCertificateLabel,
@@ -184,18 +187,41 @@ var config = shareddataplane.Config[
 		LabelManaged:          k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
 
-	Service: shareddataplane.ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
-		Description:         "Ingress",
-		NameSuffix:          "-ingress",
-		DefaultPortName:     "ingress",
-		DefaultPort:         DefaultIngressPort,
-		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
-		Options:             serviceOptions,
+	// The primary (ingress) Service always exists; the Admin API Service is
+	// only exposed for on-prem control planes, which push configuration to
+	// the DataPlane's Admin API over it. With any other control plane kind
+	// (or none) it must not exist.
+	Services: []shareddataplane.ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		{
+			Description:         "Ingress",
+			NameSuffix:          "-ingress",
+			DefaultPortName:     "ingress",
+			DefaultPort:         DefaultIngressPort,
+			ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+			Options:             serviceOptions,
+
+			SetStatusAddresses: setStatusAddresses,
+		},
+		{
+			Description:         "Admin",
+			NameSuffix:          AdminServiceNameSuffix,
+			DefaultPortName:     "admin",
+			DefaultPort:         DefaultAdminPort,
+			ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+			Enabled:             isAdminListenerEnabled,
+		},
 	},
 
-	HPAScalingSpec:     hpaScalingSpec,
-	SetStatusReplicas:  setStatusReplicas,
-	SetStatusAddresses: setStatusAddresses,
+	// Likewise for the Admin API TLS server certificate the on-prem control
+	// plane verifies when pushing configuration.
+	AdminCertificate: &shareddataplane.AdminCertificateConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:  isAdminListenerEnabled,
+		Subject:  adminCertificateSubject,
+		LabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
+	},
+
+	HPAScalingSpec:    hpaScalingSpec,
+	SetStatusReplicas: setStatusReplicas,
 }
 
 func podTemplateSpec(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *corev1.PodTemplateSpec {
@@ -282,10 +308,14 @@ func serviceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *shareddatapla
 	if aigwdp.Spec.Network == nil || aigwdp.Spec.Network.Services == nil || aigwdp.Spec.Network.Services.Ingress == nil {
 		return nil
 	}
-	ingress := aigwdp.Spec.Network.Services.Ingress
+	return serviceOptionsFromAPI(aigwdp.Spec.Network.Services.Ingress)
+}
 
-	ports := make([]shareddataplane.ServicePort, 0, len(ingress.Ports))
-	for _, p := range ingress.Ports {
+// serviceOptionsFromAPI converts the API ServiceOptions into the shared
+// representation.
+func serviceOptionsFromAPI(opts *aigatewayv1alpha1.ServiceOptions) *shareddataplane.ServiceOptions {
+	ports := make([]shareddataplane.ServicePort, 0, len(opts.Ports))
+	for _, p := range opts.Ports {
 		ports = append(ports, shareddataplane.ServicePort{
 			Name:       p.Name,
 			Port:       p.Port,
@@ -294,18 +324,18 @@ func serviceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *shareddatapla
 		})
 	}
 
-	labels := make(map[string]string, len(ingress.Labels))
-	for k, v := range ingress.Labels {
+	labels := make(map[string]string, len(opts.Labels))
+	for k, v := range opts.Labels {
 		labels[string(k)] = string(v)
 	}
 
 	return &shareddataplane.ServiceOptions{
-		Type:                  ingress.Type,
-		Annotations:           ingress.Annotations,
+		Type:                  opts.Type,
+		Annotations:           opts.Annotations,
 		Labels:                labels,
-		ExternalTrafficPolicy: ingress.ExternalTrafficPolicy,
-		TrafficDistribution:   ingress.TrafficDistribution,
-		InternalTrafficPolicy: ingress.InternalTrafficPolicy,
+		ExternalTrafficPolicy: opts.ExternalTrafficPolicy,
+		TrafficDistribution:   opts.TrafficDistribution,
+		InternalTrafficPolicy: opts.InternalTrafficPolicy,
 		Ports:                 ports,
 	}
 }
@@ -318,8 +348,9 @@ func buildContainer(
 	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 ) (corev1.Container, []corev1.Volume, error) {
-	envVars, err := buildAIGatewayEnvVars(konnectAIGatewayFromResolved(cp), certSecretName)
+	envVars, err := buildAIGatewayEnvVars(cp, certSecretName, adminCertSecretName)
 	if err != nil {
 		return corev1.Container{}, nil, err
 	}
@@ -334,13 +365,20 @@ func buildContainer(
 	// manual reference): omit the volumeMount too, a Pod can't mount a volume
 	// that doesn't exist.
 	if certSecretName != "" {
-		container.VolumeMounts = []corev1.VolumeMount{
-			{
-				Name:      KonnectCertVolumeName,
-				MountPath: KonnectCertMountPath,
-				ReadOnly:  true,
-			},
-		}
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      KonnectCertVolumeName,
+			MountPath: KonnectCertMountPath,
+			ReadOnly:  true,
+		})
+	}
+	// Likewise for the Admin API certificate Secret, provisioned only for
+	// on-prem control planes.
+	if adminCertSecretName != "" {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      AdminCertVolumeName,
+			MountPath: AdminCertMountPath,
+			ReadOnly:  true,
+		})
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 	return container, volumes, nil
@@ -370,15 +408,45 @@ func isOnPremControlPlaneRef(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool 
 		aigwdp.Spec.ControlPlaneRef.Type == aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef
 }
 
-// buildAIGatewayEnvVars builds the AI Gateway environment variables
-// from required hardcoded values and KonnectAIGateway (controlplane) status.
-// aigatewaycp is nil when the AIGatewayDataPlane has no ControlPlaneRef
-// configured; in that case the Konnect-endpoint env vars are omitted and the
-// user is expected to supply them manually (e.g. via PodTemplateSpec).
+// onPremControlPlane reports whether the resolved control plane is an
+// on-prem (non-Konnect) one.
+func onPremControlPlane(cp shareddataplane.ResolvedControlPlane) bool {
+	return cp.IsResolved() && !cp.IsKonnect
+}
+
+// isAdminListenerEnabled reports whether the DataPlane's Admin API must be
+// exposed: only an on-prem control plane (OnPremAIGateway) consumes it, pushing
+// configuration to the DataPlane over the admin listener. cp is the zero
+// ResolvedControlPlane when the AIGatewayDataPlane has no control plane
+// reference configured.
+func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane) bool {
+	return onPremControlPlane(cp)
+}
+
+// adminCertificateSubject returns the subject of the Admin API TLS server
+// certificate: the in-cluster DNS name of the admin Service, which is also the
+// name the on-prem control plane uses to reach the Admin API.
+func adminCertificateSubject(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
+	return fmt.Sprintf("%s%s.%s.svc", aigwdp.Name, AdminServiceNameSuffix, aigwdp.Namespace)
+}
+
+// buildAIGatewayEnvVars builds the AI Gateway environment variables for the
+// resolved control plane cp. cp.Object is nil when the AIGatewayDataPlane has
+// no ControlPlaneRef configured; in that case the Konnect-endpoint env vars
+// are omitted and the user is expected to supply them manually (e.g. via
+// PodTemplateSpec). An on-prem control plane emits the admin listener (and
+// admin certificate) env vars instead of the Konnect ones. certSecretName is
+// the Konnect client certificate Secret and adminCertSecretName the provisioned
+// Admin API certificate Secret, both empty when none was provisioned.
 func buildAIGatewayEnvVars(
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
+	adminCertSecretName string,
 ) ([]corev1.EnvVar, error) {
+	if onPremControlPlane(cp) {
+		return buildOnPremEnvVars(adminCertSecretName), nil
+	}
+
 	envVars := RequiredHardcodedEnvVars()
 	if certSecretName != "" {
 		envVars = append(
@@ -388,6 +456,7 @@ func buildAIGatewayEnvVars(
 		)
 	}
 
+	aigatewaycp := konnectAIGatewayFromResolved(cp)
 	if aigatewaycp == nil {
 		return envVars, nil
 	}
@@ -406,6 +475,31 @@ func buildAIGatewayEnvVars(
 		corev1.EnvVar{Name: EnvKongClusterTelemetryEndpoint, Value: tpHost + ":443"},
 		corev1.EnvVar{Name: EnvKongClusterTelemetryServerName, Value: tpHost},
 	), nil
+}
+
+// buildOnPremEnvVars returns the environment variables to boot the AI Gateway
+// with an on-prem control plane, wiring the SSL Admin API listener and its
+// certificate together: the listener is only announced when the admin
+// certificate Secret has been provisioned, since an SSL listener without a
+// certificate would prevent Kong from booting.
+func buildOnPremEnvVars(adminCertSecretName string) []corev1.EnvVar {
+	envVars := RequiredOnPremEnvVars()
+	if adminCertSecretName == "" {
+		return envVars
+	}
+	return append(
+		envVars,
+		corev1.EnvVar{Name: EnvKongAdminListen, Value: fmt.Sprintf("0.0.0.0:%d ssl", DefaultAdminPort)},
+		corev1.EnvVar{Name: EnvKongAdminSSLCert, Value: AdminCertMountPath + "tls.crt"},
+		corev1.EnvVar{Name: EnvKongAdminSSLCertKey, Value: AdminCertMountPath + "tls.key"},
+		// The control plane pushes configuration over this listener, so
+		// it must authenticate: it presents a client certificate signed
+		// by the same cluster CA, which the provisioned Secret carries as
+		// ca.crt. Without this any workload able to reach the admin
+		// Service could reconfigure the gateway.
+		corev1.EnvVar{Name: EnvKongNginxAdminSSLClientCertificate, Value: AdminCertMountPath + "ca.crt"},
+		corev1.EnvVar{Name: EnvKongNginxAdminSSLVerifyClient, Value: "on"},
+	)
 }
 
 // certEntityName derives the AIGatewayDataPlaneCertificate CR name from the

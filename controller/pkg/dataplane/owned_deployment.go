@@ -46,10 +46,11 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	dp T,
 	cp ResolvedControlPlane,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
-	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, certChecksum, r.Config)
+	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
@@ -131,10 +132,11 @@ func BuildDeployment[T Object, Cert CertificateObject](
 	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 	cfg Config[T, Cert],
 ) (*unstructured.Unstructured, error) {
-	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, certChecksum, cfg)
+	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -203,6 +205,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 	cfg Config[T, Cert],
 ) (*appsv1.Deployment, error) {
@@ -211,7 +214,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 
 	selector := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
 
-	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName)
+	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName, adminCertSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +228,17 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 				Name: KonnectCertVolumeName,
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: certSecretName,
+				},
+			})
+	}
+	// Likewise for the Admin API certificate Secret.
+	if adminCertSecretName != "" {
+		volumes = append(
+			volumes,
+			corev1.Volume{
+				Name: AdminCertVolumeName,
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: adminCertSecretName,
 				},
 			})
 	}

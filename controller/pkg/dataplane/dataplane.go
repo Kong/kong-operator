@@ -127,6 +127,13 @@ type Conditions struct {
 	WaitingForAddressReason string
 	// WaitingForAddressMessage is the message used while the Service waits for an external address.
 	WaitingForAddressMessage string
+
+	// AdminCertificateProvisionedType is the type of the Admin API server
+	// certificate condition. Only used when AdminCertificate is configured.
+	AdminCertificateProvisionedType string
+	// AdminCertificateProvisionedReason is the reason used when the Admin
+	// API certificate Secret has been provisioned.
+	AdminCertificateProvisionedReason string
 }
 
 // DeploymentConfig carries the type specific bits of the owned Deployment.
@@ -152,16 +159,17 @@ type DeploymentConfig[T Object] struct {
 
 	// BuildContainer builds the DataPlane container and the additional volumes
 	// it requires. The Konnect certificate volume itself is managed by the
-	// shared machinery and appended separately when certSecretName is not empty.
-	// cp.Object is nil when the DataPlane has no control plane reference
-	// configured.
-	BuildContainer func(dp T, cp ResolvedControlPlane, image, certSecretName string) (corev1.Container, []corev1.Volume, error)
+	// shared machinery and appended separately when certSecretName is not empty,
+	// and so is the Admin API certificate volume when adminCertSecretName is
+	// not empty. cp.Object is nil when the DataPlane has no control plane
+	// reference configured.
+	BuildContainer func(dp T, cp ResolvedControlPlane, image, certSecretName, adminCertSecretName string) (corev1.Container, []corev1.Volume, error)
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
 }
 
-// ServiceConfig carries the type specific bits of the owned Service.
+// ServiceConfig carries the type specific bits of an owned Service.
 type ServiceConfig[T Object] struct {
 	// Description is the human-readable Service description used in logs,
 	// errors and events (e.g. "Ingress", "Kafka").
@@ -177,6 +185,39 @@ type ServiceConfig[T Object] struct {
 	ManagedByLabelValue string
 	// Options returns the user-provided Service options, or nil.
 	Options func(T) *ServiceOptions
+	// Enabled, when non-nil, reports whether this Service should be reconciled
+	// for the DataPlane given its resolved control plane. A disabled Service
+	// is not created, and a Service left over from an earlier reconcile in
+	// which the predicate was true is removed. Must not be combined with
+	// SetStatusAddresses: the status-feeding Service is always reconciled.
+	Enabled func(dp T, cp ResolvedControlPlane) bool
+	// SetStatusAddresses, when non-nil, marks this Service as the one feeding
+	// the DataPlane status: its addresses are copied into the status through
+	// this function, and its readiness feeds the ServiceReady condition
+	// (see Conditions). Exactly one Services entry must set it, and it cannot
+	// be combined with Enabled: a Service the status depends on must never
+	// become deletable. SetupWithManager rejects configurations violating
+	// either rule.
+	SetStatusAddresses func(dp T, addrs []operatorv1beta1.Address)
+}
+
+// AdminCertificateConfig carries the configuration of the Admin API TLS
+// server certificate provisioned for the DataPlane. Control plane kinds that
+// push configuration to the DataPlane's Admin API (e.g. OnPremAIGateway)
+// require the DataPlane to serve its Admin API over TLS with a certificate
+// the control plane trusts.
+type AdminCertificateConfig[T Object] struct {
+	// Enabled reports whether the Admin API certificate should be provisioned
+	// for the DataPlane given its resolved control plane.
+	Enabled func(dp T, cp ResolvedControlPlane) bool
+	// Subject returns the certificate subject, used as the Common Name and
+	// the sole DNS SAN (e.g. the in-cluster DNS name of the admin Service).
+	Subject func(dp T) string
+	// LabelKey marks the provisioned Admin API certificate Secret. It must
+	// be distinct from Config.CertificateLabelKey so the two Secrets never
+	// collide in the owner-scoped Secret listings performed during
+	// provisioning.
+	LabelKey string
 }
 
 // Config wires the type specific behavior of a specialized DataPlane
@@ -271,16 +312,26 @@ type Config[T Object, Cert CertificateObject] struct {
 
 	// Deployment configures the owned Deployment.
 	Deployment DeploymentConfig[T]
-	// Service configures the owned Service.
-	Service ServiceConfig[T]
+
+	// Services configures the owned Services. Exactly one entry must feed
+	// the DataPlane status (SetStatusAddresses, e.g. the ingress Service);
+	// the rest are reconciled only while their Enabled predicate (nil means
+	// always enabled) passes, and a gated-off entry is removed instead.
+	Services []ServiceConfig[T]
+
+	// AdminCertificate, when non-nil, enables provisioning of the Admin API
+	// TLS server certificate Secret for the DataPlane, gated on
+	// AdminCertificate.Enabled. The Secret is signed by the cluster CA
+	// using Config.EnsureCertificate and its name is passed to
+	// Deployment.BuildContainer so the container can wire the admin
+	// listener to it.
+	AdminCertificate *AdminCertificateConfig[T]
 
 	// HPAScalingSpec returns the HPA scaling spec, or nil when horizontal
 	// scaling is not configured.
 	HPAScalingSpec func(T) *k8sresources.HPAScalingSpec
 	// SetStatusReplicas copies the Deployment replica counts into the DataPlane status.
 	SetStatusReplicas func(dp T, replicas, readyReplicas int32)
-	// SetStatusAddresses converts the Service addresses into the DataPlane status.
-	SetStatusAddresses func(dp T, addrs []operatorv1beta1.Address)
 }
 
 // ControlPlaneKindConfig returns the ControlPlaneKindConfig for the given kind.
@@ -320,6 +371,10 @@ type Reconciler[T Object, Cert CertificateObject] struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	if err := r.validateConfig(); err != nil {
+		return fmt.Errorf("invalid %s reconciler config: %w", r.Config.Kind, err)
+	}
+
 	blder := ctrl.NewControllerManagedBy(mgr).
 		For(r.Config.NewObject()).
 		Owns(&appsv1.Deployment{}).
@@ -345,6 +400,28 @@ func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Man
 		blder = r.Config.ExtraWatches(blder, mgr)
 	}
 	return blder.Complete(reconcile.AsReconciler(r.Client, r))
+}
+
+// validateConfig checks the invariants of the Services configuration:
+// exactly one entry must feed the DataPlane status (SetStatusAddresses, which
+// also drives the ServiceReady condition), and a status-feeding entry must not
+// be gated by Enabled (a Service the status depends on must never become
+// deletable).
+func (r *Reconciler[T, Cert]) validateConfig() error {
+	statusFeeding := 0
+	for _, svcCfg := range r.Config.Services {
+		if svcCfg.SetStatusAddresses == nil {
+			continue
+		}
+		statusFeeding++
+		if svcCfg.Enabled != nil {
+			return fmt.Errorf("Services entry %q: SetStatusAddresses and Enabled are mutually exclusive", svcCfg.Description)
+		}
+	}
+	if statusFeeding != 1 {
+		return fmt.Errorf("exactly one Services entry must set SetStatusAddresses, got %d", statusFeeding)
+	}
+	return nil
 }
 
 // Reconcile moves the current state of a DataPlane toward the desired state.
@@ -428,7 +505,7 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// the Konnect controller flips Programmed to True.
 	// Certificate automation only applies to Konnect-backed control planes.
 	certProgrammed := true
-	if cp.IsConfigured() && cp.IsKonnect && certSecret != nil {
+	if cp.IsResolved() && cp.IsKonnect && certSecret != nil {
 		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, dp, cp, certSecret, certChecksum)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -440,9 +517,49 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		return ctrl.Result{}, nil
 	}
 
+	// Provision the Admin API TLS server certificate Secret when the resolved
+	// control plane kind requires one (control planes that push configuration
+	// to the DataPlane's Admin API). When the requirement goes away (e.g. the
+	// control plane reference changed to a kind that doesn't consume the Admin
+	// API, or was removed), any leftover certificate Secret and the
+	// corresponding condition are removed below, once the Deployment has been
+	// rebuilt without the admin certificate wiring.
+	var adminCertSecretName string
+	var removeAdminCertificate bool
+	switch {
+	case r.Config.AdminCertificate == nil:
+	case r.Config.AdminCertificate.Enabled(dp, cp):
+		adminCertResult, adminCertSecret, err := r.ensureAdminCertificateSecret(ctx, dp)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		// Return early if the Secret was just created/updated so the
+		// Deployment picks up the Secret name on the next reconcile. No
+		// explicit requeue is needed, the watch on the owned Secret triggers it.
+		if adminCertResult != op.Noop {
+			return ctrl.Result{}, nil
+		}
+		if adminCertSecret != nil {
+			adminCertSecretName = adminCertSecret.Name
+		}
+	default:
+		removeAdminCertificate = true
+	}
+
 	// Reconcile the full Deployment spec.
-	if err := r.ensureDeployment(ctx, logger, dp, cp, certSecretName, certChecksum); err != nil {
+	if err := r.ensureDeployment(ctx, logger, dp, cp, certSecretName, adminCertSecretName, certChecksum); err != nil {
 		return ctrl.Result{}, err
+	}
+
+	// Only once the Deployment no longer mounts the admin certificate is it
+	// safe to remove the leftover Admin API certificate Secret(s) from an
+	// earlier reconcile in which AdminCertificate.Enabled was true: deleting
+	// before the rebuild would leave the Deployment referencing a Secret that
+	// no longer exists, so new pods could not start.
+	if removeAdminCertificate {
+		if err := r.deleteAdminCertificateSecretsIfOwned(ctx, logger, dp); err != nil {
+			return ctrl.Result{}, err
+		}
 	}
 
 	// Once the rollout onto the current certificate is confirmed complete (no
@@ -467,16 +584,28 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		return ctrl.Result{}, err
 	}
 
-	// Ensure the Service and set its readiness condition.
-	// nil svc means the cache hasn't caught up yet; the Owns() watch will
-	// trigger another reconcile once the Service appears.
-	svc, err := r.ensureService(ctx, logger, dp)
-	if err != nil {
-		return ctrl.Result{}, err
-	}
-	if svc != nil {
-		if err := r.ensureServiceReadyCondition(dp, svc); err != nil {
+	// Ensure the Services. The entry feeding the DataPlane status
+	// (SetStatusAddresses) is always reconciled and drives the ServiceReady
+	// condition; the remaining entries are gated by their Enabled
+	// predicates: a gated-off Service (e.g. an admin Service that only
+	// applies to a subset of control plane kinds) is removed instead.
+	for _, svcCfg := range r.Config.Services {
+		if svcCfg.SetStatusAddresses == nil && svcCfg.Enabled != nil && !svcCfg.Enabled(dp, cp) {
+			if err := r.deleteServiceIfOwned(ctx, logger, dp, svcCfg); err != nil {
+				return ctrl.Result{}, err
+			}
+			continue
+		}
+		// nil svc means the cache hasn't caught up yet; the Owns() watch will
+		// trigger another reconcile once the Service appears.
+		svc, err := r.ensureService(ctx, logger, dp, svcCfg)
+		if err != nil {
 			return ctrl.Result{}, err
+		}
+		if svcCfg.SetStatusAddresses != nil && svc != nil {
+			if err := r.ensureServiceReadyCondition(dp, svcCfg, svc); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 	}
 
@@ -485,17 +614,18 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 }
 
 // ensureServiceReadyCondition sets the ServiceReady condition and populates
-// the status addresses based on the live Service.
+// the status addresses based on the live status-feeding Service.
 func (r *Reconciler[T, Cert]) ensureServiceReadyCondition(
 	dp T,
+	svcCfg ServiceConfig[T],
 	svc *corev1.Service,
 ) error {
 	svcAddrs, err := address.AddressesFromService(svc)
 	if err != nil {
 		return fmt.Errorf("failed to get addresses from %s Service for %s %s/%s: %w",
-			r.Config.Service.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+			svcCfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
-	r.Config.SetStatusAddresses(dp, svcAddrs)
+	svcCfg.SetStatusAddresses(dp, svcAddrs)
 
 	if serviceIsReady(svc) {
 		k8sutils.SetCondition(

@@ -9,8 +9,10 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/tools/events"
@@ -44,7 +46,7 @@ func Test_GenerateBaseService(t *testing.T) {
 	)
 
 	aigwdp := minimalAIGWDP(ns, name)
-	svc := GenerateBaseService(aigwdp, testConfig.Service)
+	svc := GenerateBaseService(aigwdp, testConfig.Services[0])
 
 	assert.Equal(t, "v1", svc.APIVersion)
 	assert.Equal(t, "Service", svc.Kind)
@@ -204,7 +206,7 @@ func Test_GenerateServiceOverlay(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := GenerateServiceOverlay(tc.aigwdp, testConfig.Service, testServiceOptions(tc.aigwdp))
+			svc := GenerateServiceOverlay(tc.aigwdp, testConfig.Services[0], testServiceOptions(tc.aigwdp))
 			require.NotNil(t, svc)
 			tc.check(t, svc)
 		})
@@ -301,7 +303,7 @@ func Test_BuildService(t *testing.T) {
 
 	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
-			obj, err := BuildService(tc, testcase.aigwdp, testConfig.Service)
+			obj, err := BuildService(tc, testcase.aigwdp, testConfig.Services[0])
 			if testcase.wantErr {
 				require.Error(t, err)
 				return
@@ -348,7 +350,7 @@ func Test_ensureService(t *testing.T) {
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(r *testReconciler, rec *events.FakeRecorder) {
-				_, _ = r.ensureService(context.Background(), logr.Discard(), aigwdp)
+				_, _ = r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Services[0])
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -396,7 +398,7 @@ func Test_ensureService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			svc, err := r.ensureService(context.Background(), logr.Discard(), aigwdp)
+			svc, err := r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Services[0])
 
 			if testcase.wantErr {
 				require.Error(t, err)
@@ -417,6 +419,94 @@ func Test_ensureService(t *testing.T) {
 				}
 			} else {
 				assert.Empty(t, recorder.Events, "expected no events but got %d", len(recorder.Events))
+			}
+		})
+	}
+}
+
+// -----------------------------------------------------------------
+// deleteServiceIfOwned
+// -----------------------------------------------------------------
+
+func Test_deleteServiceIfOwned(t *testing.T) {
+	const (
+		ns     = "test-ns"
+		dpName = "my-dp"
+	)
+
+	adminSvcCfg := ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Description: "Admin",
+		NameSuffix:  "-admin",
+	}
+
+	tests := []struct {
+		name        string
+		seed        func() *corev1.Service // returns the seeded Service, or nil for none
+		wantDeleted bool
+	}{
+		{
+			name: "service does not exist: no-op",
+			seed: func() *corev1.Service { return nil },
+		},
+		{
+			name: "service owned by the DataPlane: deleted",
+			seed: func() *corev1.Service {
+				return &corev1.Service{
+					Name: dpName + "-admin", Namespace: ns,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "aigateway.konghq.com/v1alpha1",
+						Kind:       "AIGatewayDataPlane",
+						Name:       dpName,
+						UID:        "dp-uid",
+						Controller: new(true),
+					}},
+				}
+			},
+			wantDeleted: true,
+		},
+		{
+			name: "service not owned by the DataPlane: left untouched",
+			seed: func() *corev1.Service {
+				return &corev1.Service{
+					Name: dpName + "-admin", Namespace: ns,
+					OwnerReferences: []metav1.OwnerReference{{
+						APIVersion: "aigateway.konghq.com/v1alpha1",
+						Kind:       "AIGatewayDataPlane",
+						Name:       "some-other-dp",
+						UID:        "some-other-uid",
+						Controller: new(true),
+					}},
+				}
+			},
+		},
+	}
+
+	for _, testcase := range tests {
+		t.Run(testcase.name, func(t *testing.T) {
+			aigwdp := minimalAIGWDP(ns, dpName)
+			aigwdp.UID = types.UID("dp-uid")
+
+			var seeded *corev1.Service
+			builder := fake.NewClientBuilder().WithScheme(managerscheme.Get())
+			if s := testcase.seed(); s != nil {
+				seeded = s
+				builder = builder.WithObjects(s)
+			}
+			recorder := events.NewFakeRecorder(10)
+			r := &testReconciler{
+				Config:        testConfig,
+				Client:        builder.Build(),
+				TypeConverter: managedfields.NewDeducedTypeConverter(),
+				EventRecorder: recorder,
+			}
+
+			require.NoError(t, r.deleteServiceIfOwned(context.Background(), logr.Discard(), aigwdp, adminSvcCfg))
+
+			err := r.Get(context.Background(), types.NamespacedName{Namespace: ns, Name: dpName + "-admin"}, &corev1.Service{})
+			if testcase.wantDeleted {
+				assert.True(t, apierrors.IsNotFound(err))
+			} else if seeded != nil {
+				require.NoError(t, err, "service must be left in place")
 			}
 		})
 	}
