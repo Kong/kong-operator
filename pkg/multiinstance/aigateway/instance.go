@@ -219,13 +219,16 @@ func (i *Instance) Run(ctx context.Context) error {
 		syncInterval = 3 * time.Second
 		timer        = time.NewTicker(syncInterval)
 	)
+	defer timer.Stop()
+
 forLoop:
 	for {
 		select {
 		// Handle periodic sync based on the timer.
 		case <-timer.C:
-			// TODO: sync
 			lastSyncTS = time.Now()
+			// TODO: cache the information about gateway to sync so that timer
+			// can trigger the sync without gateway event notifications.
 			i.logger.Info("Syncing...")
 
 		// Handle sync based on cluster change events.
@@ -246,7 +249,6 @@ forLoop:
 			// TODO: handle nil gw
 			gw := change.ParentNN
 
-			// TODO: sync
 			lastSyncTS = time.Now()
 			if err := i.sendConfig(ctx, gw); err != nil {
 				logger.Error(err, "Failed to send configuration")
