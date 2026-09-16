@@ -1,10 +1,12 @@
 package envtest
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -178,9 +180,12 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-model",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			// TODO: fix this when on prem ai gateway ref is added
+			// https://github.com/Kong/kong-operator/issues/5666
 			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
@@ -210,7 +215,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		for _, entry := range logs.All() {
-			if entry.Message == "Received change notification" {
+			if entry.Message == "Received change notification" &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "name" && f.String == "test-model" }) &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "namespace" && f.String == ns.Name }) {
 				return
 			}
 		}
