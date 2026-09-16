@@ -284,11 +284,11 @@ type Config[T Object, Cert CertificateObject] struct {
 	SetStatusAddresses func(dp T, addrs []operatorv1beta1.Address)
 }
 
-// ControlPlaneKind returns the ControlPlaneKindConfig for the given kind.
-func (c Config[T, Cert]) ControlPlaneKind(kind string) (ControlPlaneKindConfig, bool) {
-	for _, cpKind := range c.ControlPlanes {
-		if cpKind.Kind == kind {
-			return cpKind, true
+// ControlPlaneKindConfig returns the ControlPlaneKindConfig for the given kind.
+func (c Config[T, Cert]) ControlPlaneKindConfig(kind string) (ControlPlaneKindConfig, bool) {
+	for _, cpKindCfg := range c.ControlPlanes {
+		if cpKindCfg.Kind == kind {
+			return cpKindCfg, true
 		}
 	}
 	return ControlPlaneKindConfig{}, false
