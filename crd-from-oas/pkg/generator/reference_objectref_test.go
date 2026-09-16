@@ -110,9 +110,32 @@ func TestTemplateReferences_ObjectRefField(t *testing.T) {
 	require.Equal(t, "PortalPage", ref.DefaultKind)
 	require.False(t, ref.MultiKind)
 	// Same-type ObjectRefField references carry the entity's parent
-	// reference field so the resolver can reject cross-parent references.
+	// reference field so the resolver can reject cross-parent references,
+	// and are marked so the resolver can reject self-references.
+	require.True(t, ref.SameTypeRef)
 	require.Equal(t, "PortalRef", ref.SameParentRefField)
 	require.Equal(t, "Portal", ref.SameParentRefKind)
+}
+
+// TestTemplateReferences_ObjectRefField_DifferentKindNoSelfGuard verifies
+// that an ObjectRefField reference whose kind differs from the entity is not
+// marked same-type, so its resolver emits no self-reference guard.
+func TestTemplateReferences_ObjectRefField_DifferentKindNoSelfGuard(t *testing.T) {
+	parsed := portalPageParsedSpec()
+	g := newTestGeneratorWithParsed(t, parsed, map[string][]config.ReferenceConfig{
+		"PortalPage": {{
+			Path:       "spec.apiSpec.parentPageIDRef",
+			Kinds:      []string{"Portal"},
+			ResolvesTo: "id",
+		}},
+	})
+
+	refs := g.templateReferences("PortalPage")
+	require.Len(t, refs, 1)
+	require.True(t, refs[0].ObjectRefField)
+	require.False(t, refs[0].SameTypeRef)
+	require.Empty(t, refs[0].SameParentRefField)
+	require.Empty(t, refs[0].SameParentRefKind)
 }
 
 // TestTemplateReferences_ObjectRefField_NoParentNoGuard verifies that a
@@ -128,6 +151,9 @@ func TestTemplateReferences_ObjectRefField_NoParentNoGuard(t *testing.T) {
 	refs := g.templateReferences("PortalPage")
 	require.Len(t, refs, 1)
 	require.True(t, refs[0].ObjectRefField)
+	// The reference is still same-type, so the self-reference guard applies;
+	// only the same-parent guard is tied to having a parent.
+	require.True(t, refs[0].SameTypeRef)
 	require.Empty(t, refs[0].SameParentRefField)
 	require.Empty(t, refs[0].SameParentRefKind)
 }
@@ -213,14 +239,22 @@ func TestGenerateSDKOps_ObjectRefFieldResolver(t *testing.T) {
 	require.Contains(t, content, "func resolvePortalPageParentPageIDRef(ctx context.Context, cl client.Client, obj *PortalPage) ([]string, error)")
 	require.Contains(t, content, "ref := obj.Spec.APISpec.ParentPageIDRef")
 	require.Contains(t, content, "if ref == nil {")
-	// konnectID passes through without a lookup.
+	// konnectID passes through without a lookup, but a same-type reference
+	// pointing at the object's own Konnect ID is rejected: admission cannot
+	// catch it because the ID is only known after programming.
 	require.Contains(t, content, "case commonv1alpha1.ObjectRefTypeKonnectID:")
+	require.Contains(t, content, `if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {`)
+	require.Contains(t, content, `ReferenceSelfError{Kind: "PortalPage", Namespace: obj.GetNamespace(), Name: obj.GetName()}`)
 	require.Contains(t, content, "return []string{*ref.KonnectID}, nil")
 	// namespacedRef resolves via the client, defaulting the namespace and
 	// rejecting cross-namespace references.
 	require.Contains(t, content, "case commonv1alpha1.ObjectRefTypeNamespacedRef:")
 	require.Contains(t, content, "ns := obj.GetNamespace()")
 	require.Contains(t, content, "ReferenceCrossNamespaceError")
+	// The namespacedRef self-reference is rejected by CEL at admission time;
+	// the resolver guards against it as well.
+	require.Contains(t, content, "if ns == obj.GetNamespace() && name == obj.GetName() {")
+	require.Contains(t, content, `ReferenceSelfError{Kind: "PortalPage", Namespace: ns, Name: name}`)
 	require.Contains(t, content, `Kind: "PortalPage"`)
 	require.Contains(t, content, "id := referenced.GetKonnectID()")
 	require.Contains(t, content, "return []string{id}, nil")

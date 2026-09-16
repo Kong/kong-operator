@@ -47,6 +47,12 @@ func resolvePortalPageParentPageIDRef(ctx context.Context, cl client.Client, obj
 		if ref.KonnectID == nil {
 			return nil, fmt.Errorf("reference at spec.apiSpec.parentPageIDRef has type konnectID but no konnectID set")
 		}
+		// A same-type reference must not point at the object itself. The
+		// object's own Konnect ID is only known after it is programmed, so
+		// this cannot be rejected at admission time: guard here instead.
+		if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {
+			return nil, ReferenceSelfError{Kind: "PortalPage", Namespace: obj.GetNamespace(), Name: obj.GetName()}
+		}
 		return []string{*ref.KonnectID}, nil
 	case commonv1alpha1.ObjectRefTypeNamespacedRef:
 		if ref.NamespacedRef == nil {
@@ -59,6 +65,11 @@ func resolvePortalPageParentPageIDRef(ctx context.Context, cl client.Client, obj
 		name := ref.NamespacedRef.Name
 		if ns != obj.GetNamespace() {
 			return nil, ReferenceCrossNamespaceError{Kind: "PortalPage", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+		// Rejected at admission time by a CEL rule on the CRD; guard here as
+		// well so the resolver stays correct when validation is bypassed.
+		if ns == obj.GetNamespace() && name == obj.GetName() {
+			return nil, ReferenceSelfError{Kind: "PortalPage", Namespace: ns, Name: name}
 		}
 		var referenced PortalPage
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, &referenced); err != nil {

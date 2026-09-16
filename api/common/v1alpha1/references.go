@@ -126,6 +126,21 @@ func (e ReferenceDifferentParentError) Error() string {
 	return fmt.Sprintf("%s %s/%s belongs to a different %s than the referrer", e.Kind, e.Namespace, e.Name, e.ParentKind)
 }
 
+// ReferenceSelfError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points at the referencing object itself.
+// Such a reference can never resolve to a usable ID.
+//
+// +kubebuilder:object:generate=false
+type ReferenceSelfError struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func (e ReferenceSelfError) Error() string {
+	return fmt.Sprintf("%s %s/%s must not reference itself", e.Kind, e.Namespace, e.Name)
+}
+
 // ObjectRefsDiffer reports whether a and b are known to point at different
 // objects. It returns false when no conclusion can be drawn: the refs use
 // different types, or either ref is incomplete. An empty or nil namespacedRef

@@ -1033,6 +1033,14 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		if ref.KonnectID == nil {
 			return nil, fmt.Errorf("reference at {{.Path}} has type konnectID but no konnectID set")
 		}
+{{- if .SameTypeRef}}
+		// A same-type reference must not point at the object itself. The
+		// object's own Konnect ID is only known after it is programmed, so
+		// this cannot be rejected at admission time: guard here instead.
+		if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: obj.GetNamespace(), Name: obj.GetName()}
+		}
+{{- end}}
 		return []string{*ref.KonnectID}, nil
 	case {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef:
 		if ref.NamespacedRef == nil {
@@ -1046,6 +1054,13 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 {{- if not .SupportCrossNamespaceReference}}
 		if ns != obj.GetNamespace() {
 			return nil, ReferenceCrossNamespaceError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+{{- end}}
+{{- if .SameTypeRef}}
+		// Rejected at admission time by a CEL rule on the CRD; guard here as
+		// well so the resolver stays correct when validation is bypassed.
+		if ns == obj.GetNamespace() && name == obj.GetName() {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
 		}
 {{- end}}
 		var referenced {{.DefaultKind}}
@@ -3914,6 +3929,11 @@ type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayEr
 // from the referrer's. Konnect scopes child entities under their parent, so
 // such a reference can never resolve to a usable ID.
 type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 {{range .RefTypes}}
 // {{.TypeName}} references {{.KindsSentence}} in the cluster. The referenced
 // object's Konnect {{.ResolvesTo}} is used where the Konnect API accepts it.

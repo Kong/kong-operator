@@ -2773,8 +2773,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
-	// (the object is not programmed until the reference resolves), so reject
-	// it at admission time.
+	// (the object is not programmed until the reference resolves). The CEL
+	// rule below covers the namespacedRef arm at admission time; the
+	// konnectID arm cannot be checked at admission (the object's own Konnect
+	// ID is only known after it is programmed), so the generated resolver
+	// rejects it instead (see SameTypeRef).
 	for _, ref := range g.templateReferences(entityName) {
 		if !ref.ObjectRefField || len(ref.Kinds) != 1 || ref.Kinds[0] != entityName {
 			continue
@@ -4585,6 +4588,11 @@ type TemplateReferenceConfig struct {
 	// inject the resolved value as a plain string into the SDK payload under
 	// the OAS property's snake_case key (e.g. "parent_page_id").
 	ObjectRefField bool
+	// SameTypeRef is true when an ObjectRefField reference's only kind is
+	// the entity itself (e.g. PortalPage's parentPageIDRef). The resolver
+	// rejects such references when they point at the referencing object
+	// itself, which can never resolve to a usable ID.
+	SameTypeRef bool
 	// SameParentRefField is the Go name of the spec field holding the
 	// entity's parent reference (e.g. "PortalRef"). It is set only for
 	// same-type ObjectRefField references (e.g. PortalPage's
@@ -4706,9 +4714,10 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		// Same-type ObjectRefField references (e.g. PortalPage's
 		// parentPageIDRef) resolve to an ID embedded in a request scoped to
 		// the referrer's parent, so the resolver guards against referencing
-		// an object under a different parent.
+		// the object itself or an object under a different parent.
+		sameTypeRef := objectRefField && len(ref.Kinds) == 1 && ref.Kinds[0] == entityName
 		var sameParentRefField, sameParentRefKind string
-		if objectRefField && len(ref.Kinds) == 1 && ref.Kinds[0] == entityName {
+		if sameTypeRef {
 			if rc := g.config.ReconcilerConfig[entityName]; rc != nil && rc.ParentRef != nil {
 				sameParentRefField = goFieldName(rc.ParentRef.FieldName)
 				sameParentRefKind = rc.ParentEntityKind()
@@ -4742,6 +4751,7 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			ObjectWrapKey:        objectWrapKey,
 			DirectScalarRef:      directScalarRef,
 			ObjectRefField:       objectRefField,
+			SameTypeRef:          sameTypeRef,
 			SameParentRefField:   sameParentRefField,
 			SameParentRefKind:    sameParentRefKind,
 		}
