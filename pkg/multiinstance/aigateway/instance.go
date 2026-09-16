@@ -198,9 +198,17 @@ func (i *Instance) Run(ctx context.Context) error {
 	i.client = mgr.GetClient()
 
 	mgrErrCh := make(chan error, 1)
-	go func() { mgrErrCh <- mgr.Start(ctx) }()
-	// Drain the manager result so its goroutine never leaks.
-	defer func() { <-mgrErrCh }()
+	go func() {
+		mgrErrCh <- mgr.Start(ctx)
+		close(mgrErrCh)
+	}()
+	defer func() {
+		// Drain the manager result so its goroutine never leaks.
+		select {
+		case <-mgrErrCh:
+		default:
+		}
+	}()
 
 	var (
 		ch         = i.cn.NotifyChannel()
