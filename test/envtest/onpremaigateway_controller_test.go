@@ -231,9 +231,22 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		return n
 	}
 
+	// The render step runs unobserved: sendConfig only logs on failure. Assert that no
+	// render failed, so a broken instance-cache field index or a conversion failure cannot
+	// hide behind the notification checks above.
+	countSendFailures := func() (n int) {
+		for _, entry := range logs.All() {
+			if entry.Message == "Failed to send configuration" {
+				n++
+			}
+		}
+		return n
+	}
+
 	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.Positive(ct, countModelNotifications(time.Time{}))
+		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 
 	t.Log("Deleting the AIGatewayModel")
@@ -243,5 +256,6 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Log("Expecting the instance to receive the model's deletion notification, addressed to its parent gateway")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
 		assert.Positive(ct, countModelNotifications(deleteStart))
+		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 }
