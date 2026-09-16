@@ -3,10 +3,12 @@ package dataplane
 import (
 	"cmp"
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -34,6 +36,149 @@ func newKonnectAIGW(ns, name string, programmed metav1.ConditionStatus) *konnect
 	}
 }
 
+func Test_resolveControlPlane_OnPremReadiness(t *testing.T) {
+	const (
+		ns       = "test-ns"
+		onpremNM = "my-onprem-aigwcp"
+	)
+
+	newOnPremAIGW := func(ready metav1.ConditionStatus) *aigatewayv1alpha1.OnPremAIGateway {
+		return &aigatewayv1alpha1.OnPremAIGateway{
+			Namespace: ns, Name: onpremNM,
+			Status: aigatewayv1alpha1.OnPremAIGatewayStatus{
+				Conditions: []metav1.Condition{
+					{
+						Type:   string(aigatewayv1alpha1.ReadyType),
+						Status: ready,
+						Reason: string(ready),
+					},
+				},
+			},
+		}
+	}
+
+	newAIGWDP := func() *aigatewayv1alpha1.AIGatewayDataPlane {
+		return &aigatewayv1alpha1.AIGatewayDataPlane{
+			Namespace: ns, Name: "my-dp",
+			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+					Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+					OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: onpremNM},
+				},
+			},
+		}
+	}
+
+	scheme := managerscheme.Get()
+	logger := zap.New()
+
+	tests := []struct {
+		name string
+		// nil = not in cluster
+		onprem            *aigatewayv1alpha1.OnPremAIGateway
+		wantCP            bool
+		wantErr           bool
+		wantTransientErr  bool // error is one of the expected transient (non-retried) errors
+		wantConditionTrue bool
+		wantReason        string
+	}{
+		{
+			name:              "onprem not found: sets NotFound condition and returns error",
+			onprem:            nil,
+			wantCP:            false,
+			wantErr:           true,
+			wantTransientErr:  true,
+			wantConditionTrue: false,
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		},
+		{
+			name:              "onprem not yet Ready: sets NotReady condition and returns transient error",
+			onprem:            newOnPremAIGW(metav1.ConditionFalse),
+			wantCP:            false,
+			wantErr:           true,
+			wantTransientErr:  true,
+			wantConditionTrue: false,
+			wantReason:        string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
+		},
+		{
+			name:              "onprem Ready: returns onprem and sets Resolved condition",
+			onprem:            newOnPremAIGW(metav1.ConditionTrue),
+			wantCP:            true,
+			wantErr:           false,
+			wantConditionTrue: true,
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			var objects []client.Object
+			if tc.onprem != nil {
+				objects = append(objects, tc.onprem)
+			}
+			base := fake.NewClientBuilder().
+				WithScheme(scheme).
+				WithObjects(objects...).
+				WithStatusSubresource(objects...).
+				Build()
+			r := &testReconciler{Client: base, Config: testConfig}
+
+			aigwdp := newAIGWDP()
+			// Seed a stale resolution condition of the other (Konnect) kind to
+			// verify it gets cleaned up when resolving the on-prem kind.
+			aigwdp.Status.Conditions = []metav1.Condition{{
+				Type:   string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+				Status: metav1.ConditionFalse,
+				Reason: string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+			}}
+
+			gotCP, err := r.resolveControlPlane(context.Background(), logger, aigwdp, ControlPlaneRef{
+				Kind: testOnPremControlPlaneKind.Kind,
+				Name: onpremNM,
+			})
+
+			if tc.wantErr {
+				require.Error(t, err)
+				// A not-found (or not-yet-Ready) control plane is an expected
+				// transient state that the reconcile does not retry with error
+				// backoff.
+				assert.True(t,
+					apierrors.IsNotFound(err) ||
+						errors.Is(err, errControlPlaneNotProgrammed) ||
+						errors.Is(err, errControlPlaneNotReady),
+					"expected a transient (non-retried) resolution error, got: %v", err)
+				// The stale resolution condition of the other kind must still
+				// have been removed.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)),
+					"stale resolution condition of the other control plane kind must be removed")
+				cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayResolvedType))
+				require.NotNil(t, cond, "OnPremAIGatewayResolved condition must be set")
+				assert.Equal(t, tc.wantReason, cond.Reason)
+				assert.Equal(t, metav1.ConditionFalse, cond.Status)
+				return
+			}
+			require.NoError(t, err)
+
+			require.NotNil(t, gotCP.Object)
+			assert.Equal(t, testOnPremControlPlaneKind.Kind, gotCP.Kind)
+			assert.False(t, gotCP.IsKonnect)
+
+			// The other kind's resolution condition must have been removed.
+			assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)),
+				"stale resolution condition of the other control plane kind must be removed")
+
+			cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.OnPremAIGatewayResolvedType))
+			require.NotNil(t, cond, "OnPremAIGatewayResolved condition must be set")
+			assert.Equal(t, tc.wantReason, cond.Reason)
+			if tc.wantConditionTrue {
+				assert.Equal(t, metav1.ConditionTrue, cond.Status)
+			} else {
+				assert.Equal(t, metav1.ConditionFalse, cond.Status)
+			}
+		})
+	}
+}
+
 func Test_resolveControlPlane(t *testing.T) {
 	const (
 		ns       = "test-ns"
@@ -45,7 +190,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			Namespace: ns, Name: "my-dp",
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
-					KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpNM},
+					KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpNM},
 				},
 			},
 		}
@@ -80,7 +225,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			wantCP:            false,
 			wantErr:           true,
 			wantConditionTrue: false,
-			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
 			name:              "aigwcp not yet programmed: sets NotProgrammed condition and returns error",
@@ -96,7 +241,7 @@ func Test_resolveControlPlane(t *testing.T) {
 			wantCP:            true,
 			wantErr:           false,
 			wantConditionTrue: true,
-			wantReason:        string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+			wantReason:        string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 		},
 		{
 			name:    "GET returns unexpected error: propagated to caller",

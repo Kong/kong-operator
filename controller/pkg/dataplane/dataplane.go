@@ -261,9 +261,8 @@ type Config[T Object, Cert CertificateObject] struct {
 	// Unlike Konnect certificate registration, this hook is intentionally not
 	// gated on cp.IsKonnect: stale Konnect certificate entities still need
 	// cleanup after a DataPlane switches to a non-Konnect control plane.
-	// TODO(issue-5666): implementations must tolerate (kind-switch on) a
-	// resolved control plane of any configured kind once a DataPlane supports
-	// more than one; today they may assume cp is empty or Konnect-backed.
+	// Implementations must tolerate a resolved control plane of any configured
+	// kind (or an unconfigured one).
 	CleanupStaleCertificates func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
 	// ExtraWatches, when non-nil, registers additional watches on the
 	// controller builder (e.g. a watch on user-referenced certificate
@@ -368,12 +367,14 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	if ref.Name != "" {
 		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
 		if err != nil {
-			// A missing or not yet Programmed control plane is an expected,
-			// user-fixable state: resolveControlPlane has set the resolution
-			// condition and the control plane watch re-triggers the reconcile
-			// once the control plane appears or flips Programmed, so there is
-			// no need to retry with error backoff.
-			if apierrors.IsNotFound(err) || errors.Is(err, errControlPlaneNotProgrammed) {
+			// A missing, not yet Programmed, or not yet Ready control plane is
+			// an expected, user-fixable state: resolveControlPlane has set the
+			// resolution condition and the control plane watch re-triggers the
+			// reconcile once the control plane appears or becomes healthy, so
+			// there is no need to retry with error backoff.
+			if apierrors.IsNotFound(err) ||
+				errors.Is(err, errControlPlaneNotProgrammed) ||
+				errors.Is(err, errControlPlaneNotReady) {
 				return ctrl.Result{}, nil
 			}
 			return ctrl.Result{}, err

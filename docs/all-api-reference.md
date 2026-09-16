@@ -6421,8 +6421,9 @@ The Type field determines which sub-field is active.
 
 | Field | Description |
 | --- | --- |
-| `type` _[ControlPlaneRefType](#aigateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. Currently only konnectNamespacedRef is supported. |
-| `konnectNamespacedRef` _[KonnectNamespacedRef](#aigateway-konghq-com-v1alpha1-types-konnectnamespacedref)_ | KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `type` _[ControlPlaneRefType](#aigateway-konghq-com-v1alpha1-types-controlplanereftype)_ | Type indicates the type of the control plane being referenced. |
+| `konnectNamespacedRef` _[NamespacedRef](#aigateway-konghq-com-v1alpha1-types-namespacedref)_ | KonnectNamespacedRef references a KonnectAIGateway (controlplane) resource in the same namespace. Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct. |
+| `onpremNamespacedRef` _[NamespacedRef](#aigateway-konghq-com-v1alpha1-types-namespacedref)_ | OnPremNamespacedRef references an OnPremAIGateway (controlplane) resource in the same namespace. Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct. |
 
 _Appears in:_
 
@@ -6446,6 +6447,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnectNamespacedRef` | ControlPlaneRefTypeKonnectNamespacedRef references a KonnectAIGateway<br />resource in the same namespace as the DataPlane.<br /> |
+| `onpremNamespacedRef` | ControlPlaneRefTypeOnPremNamespacedRef references an OnPremAIGateway<br />resource in the same namespace as the DataPlane.<br /> |
 
 #### DeploymentOptions
 
@@ -6486,21 +6488,6 @@ _Appears in:_
 
 - [Scaling](#aigateway-konghq-com-v1alpha1-types-scaling)
 
-#### KonnectNamespacedRef
-
-
-KonnectNamespacedRef is a reference to a KonnectAIGateway resource in the same namespace.
-
-
-
-| Field | Description |
-| --- | --- |
-| `name` _string_ | Name is the name of the KonnectAIGateway (controlplane) resource. |
-
-_Appears in:_
-
-- [ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)
-
 #### LabelName
 
 _Underlying type:_ `string`
@@ -6526,6 +6513,23 @@ LabelValue is a label value with constraints matching Kubernetes label value req
 _Appears in:_
 
 - [ServiceOptions](#aigateway-konghq-com-v1alpha1-types-serviceoptions)
+
+#### NamespacedRef
+
+
+NamespacedRef is a reference to a namespaced resource. It is shared by the
+different ControlPlaneRef types, which reference control planes in the same
+namespace as the referencing AIGatewayDataPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the referenced resource. |
+
+_Appears in:_
+
+- [ControlPlaneRef](#aigateway-konghq-com-v1alpha1-types-controlplaneref)
 
 #### NetworkOptions
 
