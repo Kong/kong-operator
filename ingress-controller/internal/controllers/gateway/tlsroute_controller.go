@@ -24,14 +24,13 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
-	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
-	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	k8sobj "github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -48,11 +47,9 @@ type TLSRouteReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 
-	// If enableReferenceGrant is true, we will check for ReferenceGrant if backend in another
-	// namespace is in backendRefs.
-	// If it is false, referencing backend in different namespace will be rejected.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -61,17 +58,6 @@ type TLSRouteReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the TLSRouteReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling TLSRoutes.
-	// Once the TLSRouteReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
-		Resource: "referencegrants",
-	})
-
 	blder := ctrl.NewControllerManagedBy(mgr).
 		Named("tlsroute-controller").
 		WithOptions(controller.Options{
@@ -97,12 +83,10 @@ func (r *TLSRouteReconciler) SetupWithManager(mgr ctrl.Manager) error {
 			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForGateway),
 		)
 
-	if r.enableReferenceGrant {
-		blder.Watches(&gatewayapi.ReferenceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForReferenceGrant),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTLSRouteFrom)),
-		)
-	}
+	blder.Watches(k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listTLSRoutesForReferenceGrant),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasTLSRouteFrom)),
+	)
 
 	if r.StatusQueue != nil {
 		blder.WatchesRawSource(
@@ -278,7 +262,7 @@ func (r *TLSRouteReconciler) listTLSRoutesForGateway(ctx context.Context, obj cl
 // listTLSRoutesForReferenceGrant is a watch predicate which finds all TLSRoutes
 // mentioned in a From clause for a ReferenceGrant.
 func (r *TLSRouteReconciler) listTLSRoutesForReferenceGrant(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			errInvalidType,
@@ -311,7 +295,7 @@ func (r *TLSRouteReconciler) listTLSRoutesForReferenceGrant(ctx context.Context,
 }
 
 func referenceGrantHasTLSRouteFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -646,22 +630,18 @@ func (r *TLSRouteReconciler) getTLSRouteRuleReason(ctx context.Context, tlsRoute
 			// verify that a ReferenceGrant permits the reference.
 			if tlsRoute.Namespace != backendNamespace {
 				differentNamespaceMsg := fmt.Sprintf("%s is in a different namespace than the TLSRoute (namespace %s)", targetNN, tlsRoute.Namespace)
-				if !r.enableReferenceGrant {
-					return gatewayapi.RouteReasonRefNotPermitted,
-						differentNamespaceMsg + " install ReferenceGrant CRD and configure a proper grant",
-						nil
-				}
 
-				referenceGrantList := &gatewayapi.ReferenceGrantList{}
+				referenceGrantList := k8sutils.NewReferenceGrantList(r.ReferenceGrantVersion)
 				if err := r.List(ctx, referenceGrantList, client.InNamespace(backendNamespace)); err != nil {
 					return "", "", err
 				}
+				referenceGrants := k8sutils.ReferenceGrantItems(referenceGrantList)
 				notGrantedMsg := differentNamespaceMsg + " and no ReferenceGrant allowing reference is configured"
-				if len(referenceGrantList.Items) == 0 {
+				if len(referenceGrants) == 0 {
 					return gatewayapi.RouteReasonRefNotPermitted, notGrantedMsg, nil
 				}
 				var isGranted bool
-				for _, grant := range referenceGrantList.Items {
+				for _, grant := range referenceGrants {
 					if isTLSReferenceGranted(grant.Spec, backendRef, tlsRoute.Namespace) {
 						isGranted = true
 						break

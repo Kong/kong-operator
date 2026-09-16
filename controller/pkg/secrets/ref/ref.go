@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
@@ -20,7 +21,7 @@ import (
 func ReferenceGrantForSecretFrom(group gatewayv1.Group, kind gatewayv1.Kind) predicate.TypedFuncs[client.Object] {
 	return predicate.NewPredicateFuncs(
 		func(obj client.Object) bool {
-			grant, ok := obj.(*gwtypes.ReferenceGrant)
+			grant, ok := k8sutils.AsReferenceGrant(obj)
 			if !ok {
 				return false
 			}
@@ -73,9 +74,14 @@ func DoesFieldReferenceCoreV1Secret(secretRef gatewayv1.SecretObjectReference, f
 // CheckReferenceGrantForSecret checks if the reference from the object (fromObj) to the secret specified in secretRef
 // is granted. It is expected that secretRef.Namespace is set otherwise an error is returned. Examining returned values
 // makes sense only if err is nil. When isReferenceGranted is false, whyNotGranted provides the reason (otherwise it is
-// expected to be discarded).
+// expected to be discarded). referenceGrantVersion selects which ReferenceGrant API version to list, the zero value
+// resolves to v1.
 func CheckReferenceGrantForSecret(
-	ctx context.Context, c client.Client, fromObj client.Object, secretRef gatewayv1.SecretObjectReference,
+	ctx context.Context,
+	c client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	fromObj client.Object,
+	secretRef gatewayv1.SecretObjectReference,
 ) (whyNotGranted string, isReferenceGranted bool, err error) {
 	if secretRef.Namespace == nil || *secretRef.Namespace == "" {
 		return "", false, fmt.Errorf("caller must ensure that Namespace in SecretObjectReference is set (bug in the code)")
@@ -86,6 +92,7 @@ func CheckReferenceGrantForSecret(
 
 	allowed, err := k8sutils.AllowedByReferenceGrants(
 		ctx, c,
+		referenceGrantVersion,
 		gwtypes.ReferenceGrantFrom{
 			Group:     gatewayv1.Group(fromObj.GetObjectKind().GroupVersionKind().Group),
 			Kind:      gatewayv1.Kind(fromObj.GetObjectKind().GroupVersionKind().Kind),

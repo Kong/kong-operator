@@ -3,6 +3,7 @@ package watch
 import (
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 
@@ -10,6 +11,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	configurationv1beta1 "github.com/kong/kong-operator/v2/api/configuration/v1beta1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // Watcher defines a resource and a mapping function for controller-runtime watches.
@@ -22,7 +24,8 @@ type Watcher struct {
 }
 
 // Watches returns a list of Watcher objects for the given resource type.
-func Watches(obj client.Object, cl client.Client) []Watcher {
+// referenceGrantVersion selects which ReferenceGrant API version is watched.
+func Watches(obj client.Object, cl client.Client, referenceGrantVersion schema.GroupVersion) []Watcher {
 	switch obj.(type) {
 	case *gwtypes.HTTPRoute:
 		return []Watcher{
@@ -68,7 +71,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			},
 			{
 				MapHTTPRouteForReferenceGrant(cl),
-				&gwtypes.ReferenceGrant{},
+				k8sutils.NewReferenceGrant(referenceGrantVersion),
 			},
 			{
 				MapHTTPRouteForKongUpstreamPolicy(cl),
@@ -123,7 +126,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			},
 			{
 				MapTLSRouteForReferenceGrant(cl),
-				&gwtypes.ReferenceGrant{},
+				k8sutils.NewReferenceGrant(referenceGrantVersion),
 			},
 			{
 				MapTLSRouteForClientCertSecret(cl),
@@ -146,7 +149,7 @@ func Watches(obj client.Object, cl client.Client) []Watcher {
 			},
 			{
 				MapGatewayForReferenceGrant(cl),
-				&gwtypes.ReferenceGrant{},
+				k8sutils.NewReferenceGrant(referenceGrantVersion),
 			},
 		}
 	default:

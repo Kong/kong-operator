@@ -17,7 +17,15 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
+
+// testReferenceGrantVersion is the version used by tests that are not sensitive to
+// which one the cluster serves; see referencegranthelpers.V1. Tests that depend on a
+// grant being found run against referencegranthelpers.Versions instead.
+// In production it is resolved once at startup and injected into the reconcilers;
+// these tests construct reconcilers directly, so they must set it themselves.
+var testReferenceGrantVersion = referencegranthelpers.V1()
 
 func TestReadyConditionExistsForObservedGeneration(t *testing.T) {
 	t.Log("checking programmed condition for currently ready gateway")
@@ -386,7 +394,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 		name             string
 		gatewayNamespace string
 		certRef          gatewayapi.SecretObjectReference
-		referenceGrants  []gatewayapi.ReferenceGrant
+		referenceGrants  []*gatewayapi.ReferenceGrant
 		expectedReason   string
 	}{
 		{
@@ -411,7 +419,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
@@ -454,7 +462,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
@@ -493,7 +501,7 @@ func TestGetReferenceGrantConditionReason(t *testing.T) {
 				Name:      "testSecret",
 				Namespace: new(gatewayapi.Namespace("otherNamespace")),
 			},
-			referenceGrants: []gatewayapi.ReferenceGrant{
+			referenceGrants: []*gatewayapi.ReferenceGrant{
 				{
 					ObjectMeta: metav1.ObjectMeta{
 						Namespace: "otherNamespace",
@@ -563,8 +571,9 @@ func TestUpdateAddressesAndListenersStatus_UpdatesAddressesWhenProgrammed(t *tes
 		Build()
 
 	r := &GatewayReconciler{
-		Client: cl,
-		Log:    logr.Discard(),
+		Client:                cl,
+		Log:                   logr.Discard(),
+		ReferenceGrantVersion: testReferenceGrantVersion,
 	}
 
 	listenerStatuses := []gatewayapi.ListenerStatus{}

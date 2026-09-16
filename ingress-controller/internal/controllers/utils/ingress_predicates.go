@@ -2,8 +2,6 @@ package utils
 
 import (
 	netv1 "k8s.io/api/networking/v1"
-	"k8s.io/apimachinery/pkg/api/meta"
-	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
@@ -73,21 +71,4 @@ func IsIngressClassEmpty(obj client.Object) bool {
 		}
 		return true
 	}
-}
-
-// CRDExists returns false if CRD does not exist.
-func CRDExists(restMapper meta.RESTMapper, gvr schema.GroupVersionResource) bool {
-	if _, err := restMapper.KindsFor(gvr); err == nil {
-		return true
-	} else if meta.IsNoMatchError(err) {
-		// The RESTMapper may have stale cached discovery data. Reset() forces it to
-		// re-discover resources, allowing it to find CRDs installed after initialization.
-		// meta.RESTMapper doesn't include Reset(), but some implementations (e.g. DynamicRESTMapper) do.
-		if resettable, ok := restMapper.(interface{ Reset() }); ok {
-			resettable.Reset()
-			_, err = restMapper.KindsFor(gvr)
-			return err == nil
-		}
-	}
-	return false
 }

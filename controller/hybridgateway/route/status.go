@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // SetStatusConditions updates the status conditions for a specific ParentReference managed by the given controller.
@@ -488,7 +489,13 @@ func BuildProgrammedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRo
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.HTTPRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForHTTPRoute(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.HTTPRoute,
+) (*metav1.Condition, error) {
 	conditionSet := false
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
@@ -499,7 +506,7 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 	for _, rule := range route.Spec.Rules {
 		for _, bRef := range rule.BackendRefs {
 			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef.BackendRef)
+			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, referenceGrantVersion, route, bRef.BackendRef)
 			if err != nil {
 				return nil, err
 			}
@@ -577,7 +584,13 @@ func BuildResolvedRefsConditionForHTTPRoute(ctx context.Context, logger logr.Log
 // Returns:
 //   - *metav1.Condition: Condition indicating resolved refs status
 //   - error: Any error encountered during evaluation
-func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logger, cl client.Client, route *gwtypes.TLSRoute) (*metav1.Condition, error) {
+func BuildResolvedRefsConditionForTLSRoute(
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	route *gwtypes.TLSRoute,
+) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
 		Type:    string(gwtypes.RouteConditionResolvedRefs),
 		Status:  metav1.ConditionTrue,
@@ -587,7 +600,7 @@ func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logg
 	for _, rule := range route.Spec.Rules {
 		for _, bRef := range rule.BackendRefs {
 			// BackendRef namespace.
-			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, route, bRef)
+			bRefValidCond, err := backendRefResolvedCondition(ctx, logger, cl, referenceGrantVersion, route, bRef)
 			if err != nil {
 				return nil, err
 			}
@@ -621,7 +634,10 @@ func BuildResolvedRefsConditionForTLSRoute(ctx context.Context, logger logr.Logg
 //
 //   - error: any error happened in checking the validity of the backendRef.
 func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.SupportedRoutePtr[T]](
-	ctx context.Context, logger logr.Logger, cl client.Client,
+	ctx context.Context,
+	logger logr.Logger,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
 	route TPtr, bRef gwtypes.BackendRef,
 ) (*metav1.Condition, error) {
 	cond := &metav1.Condition{
@@ -666,7 +682,7 @@ func backendRefResolvedCondition[T gwtypes.SupportedRoute, TPtr gwtypes.Supporte
 	// Check if the referenced object is permitted by the reference grant if in a different namespace.
 	if bRefNamespace != route.GetNamespace() {
 		// Use CheckReferenceGrant helper to check if the reference is permitted.
-		permitted, found, err := CheckReferenceGrant(ctx, cl, &bRef, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace())
+		permitted, found, err := CheckReferenceGrant(ctx, cl, referenceGrantVersion, &bRef, route.GetObjectKind().GroupVersionKind().Kind, route.GetNamespace())
 		if err != nil {
 			return nil, fmt.Errorf("failed to check ReferenceGrant for BackendRef %s/%s: %w", bRefNamespace, bRef.Name, err)
 		}
@@ -1149,6 +1165,9 @@ func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gw
 // 2. Lists all ReferenceGrants in the target namespace
 // 3. Checks if any ReferenceGrant permits the HTTPRoute to access the BackendRef
 //
+// referenceGrantVersion selects which ReferenceGrant API version to list. It is
+// resolved once at controller setup.
+//
 // Returns:
 // - permitted: true if a ReferenceGrant allows the cross-namespace access
 // - found: true if ReferenceGrants exist in the target namespace (regardless of permission)
@@ -1156,25 +1175,32 @@ func IsRouteReferenceGranted(grantSpec gwtypes.ReferenceGrantSpec, backendRef gw
 //
 // Note: This function does NOT check if namespaces are the same - it assumes cross-namespace
 // access and will return an error if no namespace is set on the BackendRef.
-func CheckReferenceGrant(ctx context.Context, cl client.Client, bRef *gwtypes.BackendRef, routeKind string, routeNamespace string) (permitted bool, found bool, err error) {
+func CheckReferenceGrant(
+	ctx context.Context,
+	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	bRef *gwtypes.BackendRef,
+	routeKind string,
+	routeNamespace string,
+) (permitted bool, found bool, err error) {
 	// Check that the backendRef has a namespace set and if not return an error.
 	if bRef.Namespace == nil || *bRef.Namespace == "" {
 		return false, false, fmt.Errorf("backendRef namespace is not set for cross-namespace reference check, name %s", bRef.Name)
 	}
 
-	// List ReferenceGrants in the backend ref namespace.
-	grantList := &gwtypes.ReferenceGrantList{}
+	grantList := k8sutils.NewReferenceGrantList(referenceGrantVersion)
 	if err := cl.List(ctx, grantList, client.InNamespace(string(*bRef.Namespace))); err != nil {
 		return false, false, fmt.Errorf("failed to list ReferenceGrants in namespace %s: %w", *bRef.Namespace, err)
 	}
+	grants := k8sutils.ReferenceGrantItems(grantList)
 
 	// No ReferenceGrants found.
-	if len(grantList.Items) == 0 {
+	if len(grants) == 0 {
 		return false, false, nil
 	}
 
 	// Check if any ReferenceGrant permits this reference
-	for _, grant := range grantList.Items {
+	for _, grant := range grants {
 		if IsRouteReferenceGranted(grant.Spec, *bRef, routeKind, routeNamespace) {
 			return true, true, nil
 		}

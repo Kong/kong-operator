@@ -76,6 +76,9 @@ type Reconciler struct {
 	AnonymousReportsEnabled bool
 	LoggingMode             logging.Mode
 	WatchNamespaces         []string
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 }
 
 // provisionDataPlaneFailRequeueAfter is the time duration after which we retry provisioning
@@ -116,7 +119,7 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		// reconciliation for all supported gateway objects that are referenced in a "from"
 		// instance.
 		Watches(
-			&gwtypes.ReferenceGrant{},
+			k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
 			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
 			builder.WithPredicates(ref.ReferenceGrantForSecretFrom(gatewayv1.GroupName, gatewayv1beta1.Kind("Gateway")))).
 		// watch for KongReferenceGrants to keep managed Konnect API auth grants in sync.
@@ -151,14 +154,13 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		)
 	}
 
-	crdChecker := k8sutils.CRDChecker{Client: r.Client}
 	// Add TLSRoute watch only if TLSRoute CRD is present in the cluster, to avoid watching for a resource that doesn't exist and that would trigger reconciliation for all the Gateways on every event in the cluster.
 	tlsRouteGVR := schema.GroupVersionResource{
 		Group:    gatewayv1.GroupVersion.Group,
 		Version:  gatewayv1.GroupVersion.Version,
 		Resource: "tlsroutes",
 	}
-	tlsRouteExist, err := crdChecker.CRDExists(tlsRouteGVR)
+	tlsRouteExist, err := k8sutils.CRDExists(r.RESTMapper(), tlsRouteGVR)
 	if err != nil {
 		return fmt.Errorf("failed to check if TLSRoute CRD exists: %w", err)
 	}
@@ -249,7 +251,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	}
 
 	gwConditionAware.initProgrammedAndListenersStatus()
-	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client); err != nil {
+	if err := gwConditionAware.setResolvedRefsAndSupportedKinds(ctx, r.Client, r.ReferenceGrantVersion); err != nil {
 		return ctrl.Result{}, err
 	}
 	acceptedCondition, _ := k8sutils.GetCondition(kcfgconsts.ConditionType(gatewayv1.GatewayConditionAccepted), gwConditionAware)

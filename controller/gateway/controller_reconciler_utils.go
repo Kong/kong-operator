@@ -21,6 +21,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/strategicpatch"
@@ -913,9 +914,13 @@ func (g *gatewayConditionsAndListenersAwareT) initProgrammedAndListenersStatus()
 	}
 }
 
-func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(ctx context.Context, c client.Client) error {
+func (g *gatewayConditionsAndListenersAwareT) setResolvedRefsAndSupportedKinds(
+	ctx context.Context, c client.Client, referenceGrantVersion schema.GroupVersion,
+) error {
 	for i, listener := range g.Spec.Listeners {
-		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(ctx, c, *g.Gateway, g.Generation, listener)
+		supportedKinds, resolvedRefsCondition, err := getSupportedKindsWithResolvedRefsCondition(
+			ctx, c, referenceGrantVersion, *g.Gateway, g.Generation, listener,
+		)
 		if err != nil {
 			return err
 		}
@@ -1475,7 +1480,14 @@ func setDataPlaneIngressServicePorts(
 
 // getSupportedKindsWithResolvedRefsCondition returns all the route kinds supported by the listener, along with the resolvedRefs
 // condition, that is based on the presence of errors in such a field.
-func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Client, gateway gatewayv1.Gateway, generation int64, listener gatewayv1.Listener) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
+func getSupportedKindsWithResolvedRefsCondition(
+	ctx context.Context,
+	c client.Client,
+	referenceGrantVersion schema.GroupVersion,
+	gateway gatewayv1.Gateway,
+	generation int64,
+	listener gatewayv1.Listener,
+) (supportedKinds []gatewayv1.RouteGroupKind, resolvedRefsCondition metav1.Condition, err error) {
 	supportedKinds = make([]gatewayv1.RouteGroupKind, 0)
 	resolvedRefsCondition = metav1.Condition{
 		Type:               string(gatewayv1.ListenerConditionResolvedRefs),
@@ -1515,7 +1527,7 @@ func getSupportedKindsWithResolvedRefsCondition(ctx context.Context, c client.Cl
 				isValidGroupKind = false
 			}
 
-			msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, &gateway, certificateRef)
+			msg, isReferenceGranted, err := ref.CheckReferenceGrantForSecret(ctx, c, referenceGrantVersion, &gateway, certificateRef)
 			if err != nil {
 				return nil, metav1.Condition{}, fmt.Errorf("failed to resolve reference: %w", err)
 			}

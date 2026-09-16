@@ -9,18 +9,11 @@ import (
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
-	"sigs.k8s.io/controller-runtime/pkg/client"
 )
 
-// CRDChecker verifies whether the resource type defined by GVR is supported by the k8s apiserver.
-type CRDChecker struct {
-	Client client.Client
-}
-
 // CRDExists returns true if the apiserver supports the specified group/version/resource.
-func (c CRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
-	_, err := c.Client.RESTMapper().KindFor(gvr)
-
+func CRDExists(r meta.RESTMapper, gvr schema.GroupVersionResource) (bool, error) {
+	_, err := r.KindFor(gvr)
 	if meta.IsNoMatchError(err) {
 		return false, nil
 	}
@@ -48,6 +41,13 @@ func (c CRDChecker) CRDExists(gvr schema.GroupVersionResource) (bool, error) {
 
 		// Otherwise it's a different error, report a missing CRD.
 		return false, err
+	}
+
+	// Any other error leaves the existence of the CRD unknown: reporting it as
+	// installed would let callers set up watches for a type the apiserver may
+	// not serve.
+	if err != nil {
+		return false, fmt.Errorf("unexpected error when looking up CRD (%v): %w", gvr, err)
 	}
 
 	return true, nil

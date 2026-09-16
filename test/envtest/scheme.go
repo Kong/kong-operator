@@ -5,6 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	k8sscheme "k8s.io/client-go/kubernetes/scheme"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1alpha2 "sigs.k8s.io/gateway-api/apis/v1alpha2"
@@ -48,3 +49,9 @@ func Scheme(t *testing.T, opts ...SchemeOption) *k8sruntime.Scheme {
 
 	return s
 }
+
+// ReferenceGrantVersion is the ReferenceGrant API version that envtest-based tests
+// hand to the reconcilers they construct directly. envtest installs the Gateway API
+// CRDs pinned by GATEWAY_API_VERSION (resolved from go.mod), which serve ReferenceGrant
+// at both v1 and v1beta1. Thus for now use in test suite v1.
+var ReferenceGrantVersion = schema.GroupVersion(gatewayv1.GroupVersion)

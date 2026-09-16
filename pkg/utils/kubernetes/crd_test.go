@@ -1,18 +1,28 @@
 package kubernetes
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/runtime/schema"
-	fakectrlruntimeclient "sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 )
 
-func TestCRDChecker(t *testing.T) {
+var errDiscoveryUnavailable = errors.New("discovery is unavailable")
+
+type erroringRESTMapper struct {
+	meta.RESTMapper
+}
+
+func (erroringRESTMapper) KindFor(schema.GroupVersionResource) (schema.GroupVersionKind, error) {
+	return schema.GroupVersionKind{}, errDiscoveryUnavailable
+}
+
+func TestCRDExists(t *testing.T) {
 	testcases := []struct {
 		name        string
 		restMapper  func() meta.RESTMapper
@@ -57,7 +67,7 @@ func TestCRDChecker(t *testing.T) {
 					Kind:    "Gateway",
 				}, meta.RESTScopeNamespace)
 
-				return meta.NewDefaultRESTMapper(nil)
+				return restMapper
 			},
 			CRD: schema.GroupVersionResource{
 				Group:   gatewayv1.GroupVersion.Group,
@@ -66,7 +76,7 @@ func TestCRDChecker(t *testing.T) {
 				// Ref: https://github.com/kubernetes/client-go/issues/1082
 				Resource: "gatewaies",
 			},
-			expected:    false,
+			expected:    true,
 			expectedErr: nil,
 		},
 		{
@@ -84,17 +94,20 @@ func TestCRDChecker(t *testing.T) {
 			expected:    false,
 			expectedErr: nil,
 		},
+		{
+			name: "returns an error when the lookup itself fails",
+			restMapper: func() meta.RESTMapper {
+				return erroringRESTMapper{RESTMapper: meta.NewDefaultRESTMapper(nil)}
+			},
+			CRD:         operatorv1beta1.DataPlaneGVR(),
+			expected:    false,
+			expectedErr: errDiscoveryUnavailable,
+		},
 	}
 
 	for _, tc := range testcases {
 		t.Run(tc.name, func(t *testing.T) {
-			fakeClient := fakectrlruntimeclient.
-				NewClientBuilder().
-				WithRESTMapper(tc.restMapper()).
-				Build()
-
-			checker := CRDChecker{Client: fakeClient}
-			ok, err := checker.CRDExists(tc.CRD)
+			ok, err := CRDExists(tc.restMapper(), tc.CRD)
 
 			if tc.expectedErr != nil {
 				require.Error(t, err)
@@ -121,34 +134,22 @@ func BenchmarkCRDExists(b *testing.B) {
 			Kind:    "DataPlane",
 		}, meta.RESTScopeNamespace)
 
-		fakeClient := fakectrlruntimeclient.
-			NewClientBuilder().
-			WithRESTMapper(restMapper).
-			Build()
-
-		checker := CRDChecker{Client: fakeClient}
 		gvr := operatorv1beta1.DataPlaneGVR()
 
 		b.ResetTimer()
 		for b.Loop() {
-			_, _ = checker.CRDExists(gvr)
+			_, _ = CRDExists(restMapper, gvr)
 		}
 	})
 
 	b.Run("CRD_not_found", func(b *testing.B) {
 		restMapper := meta.NewDefaultRESTMapper(nil)
 
-		fakeClient := fakectrlruntimeclient.
-			NewClientBuilder().
-			WithRESTMapper(restMapper).
-			Build()
-
-		checker := CRDChecker{Client: fakeClient}
 		gvr := operatorv1beta1.DataPlaneGVR()
 
 		b.ResetTimer()
 		for b.Loop() {
-			_, _ = checker.CRDExists(gvr)
+			_, _ = CRDExists(restMapper, gvr)
 		}
 	})
 }
