@@ -3,6 +3,7 @@ package envtest
 import (
 	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,7 +102,9 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 // TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies the configuration-change
 // pipeline end to end: an AIGatewayModel pointing at an OnPremAIGateway is reconciled by the
 // onpremconfig controller, which notifies the shared ChangeNotifier, which wakes the running
-// control plane instance so that it re-renders the gateway's configuration document.
+// control plane instance so that it re-renders the gateway's configuration document. It also
+// verifies that deleting the model notifies the instance with the parent gateway reference
+// that the reconciler stored in its cache.
 func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Parallel()
 
@@ -212,15 +215,33 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	}
 	require.NoError(t, cl.Create(ctx, model))
 
-	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+	// The reconciler writes no status in this setup (DataplaneClient is unset), so a model
+	// create triggers exactly one reconcile and one change notification, with no requeue
+	// after it. The log line carries no create/delete distinction, so the deletion check
+	// below only counts notifications logged after the delete.
+	countModelNotifications := func(since time.Time) (n int) {
 		for _, entry := range logs.All() {
-			if entry.Message == "Received change notification" &&
+			if entry.Time.After(since) &&
+				entry.Message == "Received change notification" &&
 				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "name" && f.String == "test-model" }) &&
 				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "namespace" && f.String == ns.Name }) {
-				return
+				n++
 			}
 		}
-		assert.Fail(ct, "instance did not receive the AIGatewayModel change notification")
+		return n
+	}
+
+	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countModelNotifications(time.Time{}))
+	}, waitTime, tickTime)
+
+	t.Log("Deleting the AIGatewayModel")
+	deleteStart := time.Now()
+	require.NoError(t, cl.Delete(ctx, model))
+
+	t.Log("Expecting the instance to receive the model's deletion notification, addressed to its parent gateway")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countModelNotifications(deleteStart))
 	}, waitTime, tickTime)
 }

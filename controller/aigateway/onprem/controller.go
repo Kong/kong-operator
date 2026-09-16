@@ -206,14 +206,10 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 	return ctrl.Result{}, nil
 }
 
-// configFromSpec builds the control plane instance configuration from the OnPremAIGateway spec:
-// its AIGatewayModels, assembled into an aigw.Document and rendered into a dbless payload.
-//
-// No CRD fields drive convert.Options yet (OnPremAIGatewaySpec is still empty; the engineering
-// brief's spec.conversion - modelSelectorSources, labelTagPrefix, strict - is a follow-up), so
-// this always renders non-strict: with only AIGatewayModel converted so far, every model's
-// dangling model_providers/policies/auth_strategies references would otherwise turn into fatal
-// errors instead of warnings.
+// configFromSpec builds the control plane instance configuration from the OnPremAIGateway spec.
+// AIGatewayModel assembly and dbless rendering live in Instance.sendConfig, which converts
+// non-strict until spec.conversion options drive convert.Options: dangling references are
+// warnings, not fatal errors.
 // TODO: https://github.com/Kong/kong-operator/issues/5569
 func (r *Reconciler) configFromSpec(
 	ctx context.Context,
