@@ -12767,7 +12767,6 @@ Allowed values:
 Package v1alpha1 contains API Schema definitions for the gateway-operator.konghq.com v1alpha1 API group.
 
 - [AIGateway](#gateway-operator-konghq-com-v1alpha1-aigateway)
-- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 - [DataPlaneMetricsExtension](#gateway-operator-konghq-com-v1alpha1-dataplanemetricsextension)
 - [KongPluginInstallation](#gateway-operator-konghq-com-v1alpha1-kongplugininstallation)
 - [WatchNamespaceGrant](#gateway-operator-konghq-com-v1alpha1-watchnamespacegrant)
@@ -12806,25 +12805,6 @@ unique-ness, e.t.c.<br /><br />See: https://kubernetes.io/docs/reference/using-a
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[AIGatewaySpec](#gateway-operator-konghq-com-v1alpha1-types-aigatewayspec)_ | Spec is the desired state of the AIGateway. |
 | `status` _[AIGatewayStatus](#gateway-operator-konghq-com-v1alpha1-types-aigatewaystatus)_ | Status is the observed state of the AIGateway. |
-
-### DBBackedHybridControlPlane
-
-
-DBBackedHybridControlPlane stands for a control plane role in the DB backed hybrid mode deployed on prem.
-In the DB backed hybrid mode, the control plane is responsible for accepting configuration from KO spawned KIC instances
-and storing it in the database. The control plane is also responsible for propagating the configuration to the
-data plane instances. The control plane is not responsible for serving traffic, which is the responsibility of the
-data plane instances.
-
-<!-- db_backed_hybrid_control_plane description placeholder -->
-
-| Field | Description |
-| --- | --- |
-| `apiVersion` _string_ | `gateway-operator.konghq.com/v1alpha1`
-| `kind` _string_ | `DBBackedHybridControlPlane`
-| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
-| `spec` _[DBBackedHybridControlPlaneSpec](#gateway-operator-konghq-com-v1alpha1-types-dbbackedhybridcontrolplanespec)_ |  |
-| `status` _[DBBackedHybridControlPlaneStatus](#gateway-operator-konghq-com-v1alpha1-types-dbbackedhybridcontrolplanestatus)_ |  |
 
 ### DataPlaneMetricsExtension
 
@@ -13028,33 +13008,6 @@ Azure, e.t.c.).
 _Appears in:_
 
 - [LargeLanguageModels](#gateway-operator-konghq-com-v1alpha1-types-largelanguagemodels)
-
-#### DBBackedHybridControlPlaneSpec
-
-
-DBBackedHybridControlPlaneSpec stands for the desired state of the DBBackedHybridControlPlane.
-
-
-
-
-_Appears in:_
-
-- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
-
-#### DBBackedHybridControlPlaneStatus
-
-
-DBBackedHybridControlPlaneStatus represents the observed state of the DBBackedHybridControlPlane.
-
-
-
-| Field | Description |
-| --- | --- |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the latest available observations of a DBBackedHybridControlPlane's current state. |
-
-_Appears in:_
-
-- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1alpha1-dbbackedhybridcontrolplane)
 
 #### DataPlaneMetricsExtensionSpec
 
@@ -13327,6 +13280,7 @@ _Appears in:_
 Package v1beta1 contains API Schema definitions for the gateway-operator.konghq.com v1beta1 API group.
 
 - [ControlPlane](#gateway-operator-konghq-com-v1beta1-controlplane)
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1beta1-dbbackedhybridcontrolplane)
 - [DataPlane](#gateway-operator-konghq-com-v1beta1-dataplane)
 - [GatewayConfiguration](#gateway-operator-konghq-com-v1beta1-gatewayconfiguration)
 
@@ -13344,6 +13298,25 @@ ControlPlane is the Schema for the controlplanes API
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[ControlPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-controlplanespec)_ |  |
 | `status` _[ControlPlaneStatus](#gateway-operator-konghq-com-v1beta1-types-controlplanestatus)_ |  |
+
+### DBBackedHybridControlPlane
+
+
+DBBackedHybridControlPlane stands for a control plane role in the DB backed hybrid mode deployed on prem.
+In the DB backed hybrid mode, the control plane is responsible for accepting configuration from KO spawned KIC instances
+and storing it in the database. The control plane is also responsible for propagating the configuration to the
+data plane instances. The control plane is not responsible for serving traffic, which is the responsibility of the
+data plane instances.
+
+<!-- db_backed_hybrid_control_plane description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `gateway-operator.konghq.com/v1beta1`
+| `kind` _string_ | `DBBackedHybridControlPlane`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[DBBackedHybridControlPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanespec)_ |  |
+| `status` _[DBBackedHybridControlPlaneStatus](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanestatus)_ |  |
 
 ### DataPlane
 
@@ -13393,6 +13366,7 @@ Address describes an address which can be either an IP address or a hostname.
 
 _Appears in:_
 
+- [DBBackedHybridControlPlaneAdminGUIServiceStatus](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneadminguiservicestatus)
 - [DataPlaneStatus](#gateway-operator-konghq-com-v1beta1-types-dataplanestatus)
 - [RolloutStatusService](#gateway-operator-konghq-com-v1beta1-types-rolloutstatusservice)
 
@@ -13441,6 +13415,26 @@ Allowed values:
 | --- | --- |
 | `IPAddress` | IPAddressType is a textual representation of a numeric IP address. IPv4<br />addresses must be in dotted-decimal form. IPv6 addresses<br />must be in a standard IPv6 text representation<br />(see [RFC 5952](https://tools.ietf.org/html/rfc5952)).<br />This type is intended for specific addresses. Address ranges are not<br />supported (e.g. you can not use a CIDR range like 127.0.0.0/24 as an<br />IPAddress).<br /> |
 | `Hostname` | HostnameAddressType represents a DNS based ingress point. This is similar to the<br />corresponding hostname field in Kubernetes load balancer status. For<br />example, this concept may be used for cloud load balancers where a DNS<br />name is used to expose a load balancer.<br /> |
+
+#### AdminGUIState
+
+_Underlying type:_ `string`
+
+AdminGUIState represents the enabled or disabled state of the Admin GUI service.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneServiceAdminGUIOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneserviceadminguioptions)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | AdminGUIStateEnabled indicates that the Admin GUI service is enabled.<br /> |
+| `disabled` | AdminGUIStateDisabled indicates that the Admin GUI service is disabled.<br /> |
 
 #### BlueGreenStrategy
 
@@ -13533,6 +13527,257 @@ ControlPlaneStatus defines the observed state of ControlPlane.
 _Appears in:_
 
 - [ControlPlane](#gateway-operator-konghq-com-v1beta1-controlplane)
+
+#### DBBackedHybridControlPlaneAdminGUIServiceStatus
+
+
+DBBackedHybridControlPlaneAdminGUIServiceStatus represents the status of the Admin GUI (Kong Manager) service for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type represents the type of the service for the Admin GUI of the DBBackedHybridControlPlane. |
+| `name` _string_ | Name indicates the name of the service for the Admin GUI of the DBBackedHybridControlPlane. |
+| `address` _[Address](#gateway-operator-konghq-com-v1beta1-types-address)_ | Address represents the address of the service for the Admin GUI of the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneStatus](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanestatus)
+
+#### DBBackedHybridControlPlaneDatabaseConnectionInfo
+
+
+DBBackedHybridControlPlaneDatabaseConnectionInfo represents the database connection information for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `databaseHost` _string_ | DatabaseHost represents the host of the database for the DBBackedHybridControlPlane. |
+| `databasePort` _int32_ | DatabasePort represents the port of the database for the DBBackedHybridControlPlane. |
+| `databaseUser` _string_ | DatabaseUser represents the user of the database for the DBBackedHybridControlPlane. |
+| `databasePassword` _[DBBackedHybridControlPlaneDatabasePassword](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepassword)_ | DatabasePassword represents the password of the database for the DBBackedHybridControlPlane. |
+| `databaseName` _string_ | DatabaseName represents the name of the database for the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)
+
+#### DBBackedHybridControlPlaneDatabasePassword
+
+
+DBBackedHybridControlPlaneDatabasePassword represents the password for the database of the DBBackedHybridControlPlane.
+It is typically sourced from a Kubernetes Secret.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[DBBackedHybridControlPlaneDatabasePasswordType](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepasswordtype)_ | Type indicates the source type of the database password. |
+| `secretRef` _[DBBackedHybridControlPlaneDatabasePasswordSecretRef](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepasswordsecretref)_ | SecretRef represents the reference to the Kubernetes Secret containing the database password. It is required if the Type is set to "Secret". |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabaseConnectionInfo](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectioninfo)
+
+#### DBBackedHybridControlPlaneDatabasePasswordSecretRef
+
+
+DBBackedHybridControlPlaneDatabasePasswordSecretRef represents a reference to a Kubernetes Secret containing the database password for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name represents the name of the Kubernetes Secret containing the database password. |
+| `key` _string_ | Key represents the key within the Kubernetes Secret that holds the database password. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabasePassword](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepassword)
+
+#### DBBackedHybridControlPlaneDatabasePasswordType
+
+_Underlying type:_ `string`
+
+DBBackedHybridControlPlaneDatabasePasswordType represents the sourcetype of the database password for the DBBackedHybridControlPlane.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabasePassword](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepassword)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `secretRef` | DBBackedHybridControlPlaneDatabasePasswordTypeSecretRef indicates that the database password is sourced from a Kubernetes Secret.<br /> |
+
+#### DBBackedHybridControlPlaneDeploymentOptions
+
+
+DBBackedHybridControlPlaneDeploymentOptions represents the deployment options for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `replicas` _*int32_ | Replicas describes the number of desired pods. This is a pointer to distinguish between explicit zero and not specified. This is effectively shorthand for setting a scaling minimum and maximum to the same value. This field and the scaling field are mutually exclusive: You can only configure one or the other. |
+| `scaling` _[Scaling](#gateway-operator-konghq-com-v1beta1-types-scaling)_ | Scaling defines the scaling options for the deployment. |
+| `podTemplateSpec` _[PodTemplateSpec](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#podtemplatespec-v1-core)_ | PodTemplateSpec defines PodTemplateSpec for Deployment's pods. It's being applied on top of the generated Deployments using [StrategicMergePatch](https://pkg.go.dev/k8s.io/apimachinery/pkg/util/strategicpatch#StrategicMergePatch). |
+| `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
+| `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
+| `license` _[DBBackedHybridControlPlaneLicense](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicense)_ | License represents the license information for the DBBackedHybridControlPlane. |
+| `database` _[DBBackedHybridControlPlaneDatabaseConnectionInfo](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectioninfo)_ | Database represents the database connection information for the DBBackedHybridControlPlane. |
+| `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanespec)
+
+#### DBBackedHybridControlPlaneLicense
+
+
+DBBackedHybridControlPlaneLicense represents the license information for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[DBBackedHybridControlPlaneLicenseType](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicensetype)_ | Type represents the type of specifying the license for the DBBackedHybridControlPlane. Now only `secretRef` is supported, which means the license is specified by a Kubernetes Secret reference. |
+| `secretRef` _[DBBackedHybridControlPlaneLicenseSecretRef](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicensesecretref)_ | SecretRef represents a reference to a Kubernetes Secret that contains the license for the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)
+
+#### DBBackedHybridControlPlaneLicenseSecretRef
+
+
+DBBackedHybridControlPlaneLicenseSecretRef represents a reference to a Kubernetes Secret that contains the license for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name represents the name of the Kubernetes Secret that contains the license for the DBBackedHybridControlPlane. |
+| `key` _string_ | Key represents the key in the Kubernetes Secret that contains the license for the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneLicense](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicense)
+
+#### DBBackedHybridControlPlaneLicenseType
+
+_Underlying type:_ `string`
+
+DBBackedHybridControlPlaneLicenseType represents the type of specifying the license for the DBBackedHybridControlPlane.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneLicense](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicense)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `secretRef` | DBBackedHybridControlPlaneLicenseTypeSecretRef represents the license type of specifying the license for the DBBackedHybridControlPlane by a Kubernetes Secret reference.<br /> |
+
+#### DBBackedHybridControlPlaneNetworkOptions
+
+
+DBBackedHybridControlPlaneNetworkOptions represents the network-related options for the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `services` _[DBBackedHybridControlPlaneServiceOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneserviceoptions)_ |  |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneSpec](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanespec)
+
+#### DBBackedHybridControlPlaneServiceAdminGUIOptions
+
+
+DBBackedHybridControlPlaneServiceAdminGUIOptions represents the service options for the
+Admin GUI ("Kong manager") of the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `enabled` _[AdminGUIState](#gateway-operator-konghq-com-v1beta1-types-adminguistate)_ | Enabled represents whether the Admin GUI is enabled or disabled for the DBBackedHybridControlPlane. |
+| `type` _[ServiceType](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#servicetype-v1-core)_ | Type represents the type of the service for the Admin GUI of the DBBackedHybridControlPlane. |
+| `port` _int32_ |  |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneServiceOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneserviceoptions)
+
+#### DBBackedHybridControlPlaneServiceOptions
+
+
+DBBackedHybridControlPlaneServiceOptions represents the service-related options for the DBBackedHybridControlPlane.
+A DB backed hybrid control plane has the following services exposed:
+- Admin API (receiving administrative requests and Kong configuration)
+- Cluster service (dispatching Kong configuration to dataplanes)
+- Cluster telemetry service (collecting telemetry data from the dataplanes)
+- Admin GUI (Kong Manager, providing the web interface for administrative tasks)
+- Status service (providing the health and status information of the control plane)
+Currently only the Admin GUI service options are configurable. Other services have fixed configurations.
+
+
+
+| Field | Description |
+| --- | --- |
+| `adminGUI` _[DBBackedHybridControlPlaneServiceAdminGUIOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneserviceadminguioptions)_ | AdminUI represents the service options for the Admin GUI of the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanenetworkoptions)
+
+#### DBBackedHybridControlPlaneSpec
+
+
+DBBackedHybridControlPlaneSpec stands for the desired state of the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `deployment` _[DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)_ |  |
+| `network` _[DBBackedHybridControlPlaneNetworkOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanenetworkoptions)_ |  |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1beta1-dbbackedhybridcontrolplane)
+
+#### DBBackedHybridControlPlaneStatus
+
+
+DBBackedHybridControlPlaneStatus represents the observed state of the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions represent the latest available observations of a DBBackedHybridControlPlane's current state. |
+| `selector` _string_ | Selector contains a unique DataPlane identifier used as a deterministic label selector that is used throughout its dependent resources. This is used e.g. as a label selector for DataPlane's Services, Deployments and PodDisruptionBudgets. |
+| `readyReplicas` _int32_ | ReadyReplicas indicates how many replicas have reported to be ready. |
+| `replicas` _int32_ | Replicas indicates how many replicas have been set for the DataPlane. |
+| `adminGUIServiceStatus` _[DBBackedHybridControlPlaneAdminGUIServiceStatus](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplaneadminguiservicestatus)_ | AdminGUIServiceStatus indicates the status of the Admin GUI (Kong Manager) service for the DBBackedHybridControlPlane. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlane](#gateway-operator-konghq-com-v1beta1-dbbackedhybridcontrolplane)
 
 #### DataPlaneDeploymentOptions
 
@@ -13779,6 +14024,7 @@ version, as well as Env variable overrides.
 
 _Appears in:_
 
+- [DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)
 - [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)
 
 #### GatewayConfigDataPlaneNetworkOptions
@@ -14200,6 +14446,7 @@ Scaling defines the scaling options for the deployment.
 
 _Appears in:_
 
+- [DBBackedHybridControlPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedeploymentoptions)
 - [DataPlaneDeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-dataplanedeploymentoptions)
 - [DeploymentOptions](#gateway-operator-konghq-com-v1beta1-types-deploymentoptions)
 
