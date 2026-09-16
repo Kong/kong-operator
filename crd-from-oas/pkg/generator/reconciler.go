@@ -134,6 +134,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+{{- if .NeedsObjectRefImport}}
+	{{.ObjectRefImportAlias}} "{{.ObjectRefImportPath}}"
+{{- end}}
 )
 
 const (
@@ -188,6 +191,17 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
+	{{- if .ObjectRefField}}
+	{{- range .AccessorExprs}}
+	if ref := {{.}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := ent.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		out = append(out, ns+"/"+ref.NamespacedRef.Name)
+	}
+	{{- end}}
+	{{- else}}
 	{{- range .AccessorExprs}}
 	for _, ref := range {{.}} {
 {{- if $cr.MultiKind}}
@@ -205,6 +219,7 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
+	{{- end}}
 	{{- end}}
 	return out
 }
@@ -378,6 +393,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
+{{- if .NeedsObjectRefImport}}
+	{{.ObjectRefImportAlias}} "{{.ObjectRefImportPath}}"
+{{- end}}
 )
 
 const (
@@ -431,6 +449,17 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	}
 	var out []string
 	{{- $cr := .}}
+	{{- if .ObjectRefField}}
+	{{- range .AccessorExprs}}
+	if ref := {{.}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := ent.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		out = append(out, ns+"/"+ref.NamespacedRef.Name)
+	}
+	{{- end}}
+	{{- else}}
 	{{- range .AccessorExprs}}
 	for _, ref := range {{.}} {
 {{- if $cr.MultiKind}}
@@ -448,6 +477,7 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
+	{{- end}}
 	{{- end}}
 	return out
 }
@@ -495,6 +525,11 @@ type crossRefWatchData struct {
 	// MultiKind is true when any contributing reference may point to more than
 	// one kind, in which case Kind is required and always populated on each ref.
 	MultiKind bool
+	// ObjectRefField is true when the contributing references are ObjectRef
+	// fields (single *commonv1alpha1.ObjectRef, e.g. "parentPageIDRef") rather
+	// than []<RefType> slices. The extractor then reads the namespacedRef arm
+	// of each single ObjectRef instead of ranging a slice.
+	ObjectRefField bool
 }
 
 type reconcilerEntityMetadata struct {
@@ -770,6 +805,30 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 
 	crossRefs := g.buildCrossRefWatchData(metadata.EntityName)
 
+	// ObjectRefField extractors switch on the ObjectRefType* constants. When
+	// the ObjectRef type is imported from a common package, that package must
+	// be imported here too; otherwise the constants live in the API package
+	// (already imported) and are qualified with its alias.
+	objectRefTypePrefix := ""
+	needsObjectRefImport := false
+	objectRefImportPath := ""
+	objectRefImportAlias := ""
+	for _, cr := range crossRefs {
+		if !cr.ObjectRefField {
+			continue
+		}
+		if g.objectRefImported() {
+			imp := g.config.CommonTypes.ObjectRef.Import
+			objectRefTypePrefix = importQualifier(imp)
+			needsObjectRefImport = true
+			objectRefImportPath = imp.Path
+			objectRefImportAlias = imp.Alias
+		} else {
+			objectRefTypePrefix = metadata.APIGroupPackageAlias + "."
+		}
+		break
+	}
+
 	var buf strings.Builder
 	data := struct {
 		EntityName           string
@@ -779,6 +838,10 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		APIGroupPackagePath  string
 		APIGroupPackageAlias string
 		CrossRefs            []crossRefWatchData
+		ObjectRefTypePrefix  string
+		NeedsObjectRefImport bool
+		ObjectRefImportPath  string
+		ObjectRefImportAlias string
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -787,6 +850,10 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 		APIGroupPackagePath:  metadata.APIGroupPackagePath,
 		APIGroupPackageAlias: metadata.APIGroupPackageAlias,
 		CrossRefs:            crossRefs,
+		ObjectRefTypePrefix:  objectRefTypePrefix,
+		NeedsObjectRefImport: needsObjectRefImport,
+		ObjectRefImportPath:  objectRefImportPath,
+		ObjectRefImportAlias: objectRefImportAlias,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -833,6 +900,9 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 			}
 			if multiKind {
 				cr.MultiKind = true
+			}
+			if ref.ObjectRefField {
+				cr.ObjectRefField = true
 			}
 			cr.AccessorExprs = append(cr.AccessorExprs, expr)
 		}
