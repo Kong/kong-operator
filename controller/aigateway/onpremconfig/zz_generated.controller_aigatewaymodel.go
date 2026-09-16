@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -94,7 +93,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetupWithManager(mgr c
 		For(
 			&aiconfigurationv1alpha1.AIGatewayModel{},
 			builder.WithPredicates(
-				predicate.GenerationChangedPredicate{},
+				GenerationChangedPredicate{},
 			),
 		).
 		Complete(r)

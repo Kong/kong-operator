@@ -100,7 +100,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 		For(
 			&{{.PackageImportAlias}}.{{.Kind}}{},
 			builder.WithPredicates(
-				predicate.GenerationChangedPredicate{},
+				GenerationChangedPredicate{},
 			),
 		).
 		Complete(r)
