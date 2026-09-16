@@ -60,7 +60,7 @@ type aiconfigurationv1alpha1AIGatewayModelReconciler struct {
 	DataplaneClient  controllers.DataPlane
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
-	ChangeNotifier   changenotifier.ChangeNotifier
+	ChangeNotifier   *changenotifier.ChangeNotifier
 	Cache            map[types.NamespacedName]struct{}
 }
 
@@ -110,8 +110,10 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetLogger(l logr.Logge
 
 // Reconcile processes the watched objects
 func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if r.Cache == nil {
+		r.Cache = make(map[types.NamespacedName]struct{})
+	}
 	obj := new(aiconfigurationv1alpha1.AIGatewayModel)
-
 	logger := r.Log.
 		WithValues("aiconfigurationv1alpha1AIGatewayModel", req.NamespacedName).
 		WithValues("namespace", req.Namespace).
@@ -125,7 +127,9 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 				obj.Namespace = req.Namespace
 				obj.Name = req.Name
 				obj.Kind = "AIGatewayModel"
-				r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+				if r.ChangeNotifier != nil {
+					r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+				}
 				delete(r.Cache, req.NamespacedName)
 			}
 			return ctrl.Result{}, nil
@@ -143,7 +147,9 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 		parent.Name = parentRef.NamespacedRef.Name
 	}
 
-	r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
+	if r.ChangeNotifier != nil {
+		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -151,9 +157,8 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 		delete(r.Cache, req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
-
 	// if status updates are enabled report the status for the object
-	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+	if r.DataplaneClient != nil && r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status", configurationStatus)
 		conditions, updateNeeded := ctrlutils.EnsureProgrammedCondition(
@@ -177,7 +182,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 			}, nil
 		}
 
-		logger.Info("Status update not needed", "namespace", req.Namespace, "name", req.Name)
+		logger.Info("Status update not needed")
 	}
 
 	return ctrl.Result{}, nil

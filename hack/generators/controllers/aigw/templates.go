@@ -19,6 +19,7 @@ import (
 {{- if .ConfigStatusNotificationsEnabled }}
 	"k8s.io/apimachinery/pkg/runtime/schema"
 {{- end}}
+	"k8s.io/apimachinery/pkg/types"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -32,6 +33,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 {{- end}}
 
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 {{- if .ProgrammedCondition.UpdatesEnabled }}
@@ -41,6 +43,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/status"
 {{- end}}
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 
 	{{.PackageImportAlias}} "{{.Package}}"
 )
@@ -60,7 +63,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 {{- if .ConfigStatusNotificationsEnabled }}
 	StatusQueue      *status.Queue
 {{- end}}
-	ChangeNotifier   changenotifier.ChangeNotifier
+	ChangeNotifier   *changenotifier.ChangeNotifier
 	Cache            map[types.NamespacedName]struct{}
 }
 
@@ -115,6 +118,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+	if r.Cache == nil {
+		r.Cache = make(map[types.NamespacedName]struct{})
+	}
 	obj := new({{.PackageImportAlias}}.{{.Kind}})
 	logger := r.Log.
 		WithValues("{{.PackageAlias}}{{.Kind}}", req.NamespacedName).
@@ -129,7 +135,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 				obj.Namespace = req.Namespace
 				obj.Name = req.Name
 				obj.Kind = "{{.Kind}}"
-				r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+				if r.ChangeNotifier != nil {
+					r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+				}
 				delete(r.Cache, req.NamespacedName)
 			}
 			return ctrl.Result{}, nil
@@ -147,7 +155,9 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		parent.Name = parentRef.NamespacedRef.Name
 	}
 
-	r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
+	if r.ChangeNotifier != nil {
+		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
+	}
 
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
@@ -158,7 +168,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 {{- if .ConfigStatusNotificationsEnabled }}
 	// if status updates are enabled report the status for the object
-	if r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
+	if r.DataplaneClient != nil && r.DataplaneClient.AreKubernetesObjectReportsEnabled() {
 		{{- if .ProgrammedCondition.UpdatesEnabled }}
 		configurationStatus := r.DataplaneClient.KubernetesObjectConfigurationStatus(obj)
 		logger.Info("Updating programmed condition status", "configuration_status",configurationStatus)

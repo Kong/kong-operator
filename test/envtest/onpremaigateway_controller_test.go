@@ -45,6 +45,9 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
 			InstancesManager: instancesMgr,
+			RestConfig:       cfg,
+			Scheme:           scheme.Get(),
+			CacheSyncTimeout: waitTime,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -93,10 +96,10 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	}, waitTime, tickTime)
 }
 
-// TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies that an AIGatewayModel
-// pointing at an OnPremAIGateway drives its rendered configuration: creating one changes
-// status.configHash, exercising the index registration, the watch on AIGatewayModel, and the
-// drift-detection loop together.
+// TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies the configuration-change
+// pipeline end to end: an AIGatewayModel pointing at an OnPremAIGateway is reconciled by the
+// onpremconfig controller, which notifies the shared ChangeNotifier, which wakes the running
+// control plane instance so that it re-renders the gateway's configuration document.
 func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Parallel()
 
@@ -115,6 +118,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
 			InstancesManager: instancesMgr,
+			RestConfig:       cfg,
+			Scheme:           scheme.Get(),
+			CacheSyncTimeout: waitTime,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -137,8 +143,6 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		}
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
-	hashBefore := onprem.Status.ConfigHash
-	require.NotEmpty(t, hashBefore)
 
 	t.Log("Creating the AIGatewayModelProvider the model's target references")
 	provider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
@@ -203,12 +207,13 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	}
 	require.NoError(t, cl.Create(ctx, model))
 
-	t.Log("Expecting the rendered configuration hash to change")
+	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
-			return
+		for _, entry := range logs.All() {
+			if entry.Message == "Received change notification" {
+				return
+			}
 		}
-		assert.NotEqual(ct, hashBefore, onprem.Status.ConfigHash)
-		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
+		assert.Fail(ct, "instance did not receive the AIGatewayModel change notification")
 	}, waitTime, tickTime)
 }

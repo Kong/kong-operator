@@ -10,10 +10,17 @@ import (
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/client-go/rest"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/config"
+	ctrlmetricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	aigwonpremconfig "github.com/kong/kong-operator/v2/controller/aigateway/onpremconfig"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/instances"
@@ -33,13 +40,32 @@ func Hash(cfg Config) (string, error) {
 	return hex.EncodeToString(sum[:]), nil
 }
 
-// Instance is a single on-prem AI Gateway control plane instance.
+// Env carries the process-level dependencies an instance needs to build and run its own
+// controller-runtime manager. They never drift with the spec, so they stay out of Config,
+// which is hashed for drift detection.
+type Env struct {
+	// RestConfig is the rest config used to reach the Kubernetes API server.
+	RestConfig *rest.Config
+
+	// Scheme is the scheme the instance's manager registers its objects in.
+	Scheme *runtime.Scheme
+
+	// CacheSyncTimeout is the cache sync timeout for the instance's controllers.
+	CacheSyncTimeout time.Duration
+}
+
+// Instance is a single on-prem AI Gateway control plane instance. It runs its own
+// controller-runtime manager hosting the configuration-entity controllers
+// (AIGatewayModel, and its sibling kinds as they are added), so that the controllers
+// start and stop together with the OnPremAIGateway resource that owns the instance.
 type Instance struct {
 	id     manager.ID
 	logger logr.Logger
-	client client.Client
+	env    Env
 	cfg    Config
 	cn     *changenotifier.ChangeNotifier
+	// client is the instance's own manager client, set in Run once the manager is built.
+	client client.Client
 }
 
 var _ instances.Instance = &Instance{}
@@ -48,16 +74,15 @@ var _ instances.Instance = &Instance{}
 func NewInstance(
 	id manager.ID,
 	logger logr.Logger,
-	cl client.Client,
 	cfg Config,
-	cn *changenotifier.ChangeNotifier,
+	env Env,
 ) *Instance {
 	return &Instance{
 		id:     id,
 		logger: logger.WithValues("instanceID", id.String()),
-		client: cl,
+		env:    env,
 		cfg:    cfg,
-		cn:     cn,
+		cn:     changenotifier.New(),
 	}
 }
 
@@ -91,6 +116,24 @@ func (i *Instance) DiagnosticsHandler() http.Handler {
 	return nil
 }
 
+// newCtrlManager builds the instance's own lightweight controller-runtime manager.
+func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
+	// ponytail: every instance watches all AIGatewayModels with its own informers, unscoped.
+	// Scope the cache once the gateway ref carries namespace/kind semantics and N instances
+	// ever becomes a real cost.
+	return ctrl.NewManager(i.env.RestConfig, ctrl.Options{
+		Scheme: i.env.Scheme,
+		Logger: i.logger,
+		// Every instance registers a controller with the same name; controller-runtime keeps
+		// a global list of controller names and panics on duplicates unless this is set.
+		Controller:             config.Controller{SkipNameValidation: new(true)},
+		Metrics:                ctrlmetricsserver.Options{BindAddress: "0"},
+		HealthProbeBindAddress: "0",
+		// No leader election and no webhooks: instances are ephemeral, one per OnPremAIGateway.
+		// No cache namespace scoping: AIGatewayModels may reference the gateway from any namespace.
+	})
+}
+
 func (i *Instance) sendConfig(
 	ctx context.Context,
 	gw *types.NamespacedName,
@@ -108,7 +151,6 @@ func (i *Instance) sendConfig(
 	if err != nil {
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
-	_ = warnings
 	_ = payload
 
 	for _, w := range warnings {
@@ -122,18 +164,52 @@ func (i *Instance) sendConfig(
 }
 
 // Run runs the instance. It blocks until the passed context is cancelled.
-//
-// It's a no-op for now: it holds nothing but the instance's identity and configuration. Configuration
-// assembly and pushing it to the AI Gateway data planes go here.
-// TODO: https://github.com/Kong/kong-operator/issues/5569
 func (i *Instance) Run(ctx context.Context) error {
 	i.logger.Info("Running on-prem AI Gateway control plane instance")
+	defer i.cn.Close()
+
+	mgr, err := i.newCtrlManager()
+	if err != nil {
+		return fmt.Errorf("creating instance controller-runtime manager: %w", err)
+	}
+
+	// The field index is used by translator.BuildDocument to list the AIGatewayModels
+	// referencing this gateway. It lives on the instance's own cache, alongside its only
+	// consumer.
+	// TODO: This will require adjustments for indexing excluding the KonnectAIGateway.
+	for _, opt := range index.OptionsForAIGatewayModel() {
+		if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
+			return fmt.Errorf("registering AIGatewayModel field index: %w", err)
+		}
+	}
+
+	// The configuration-entity controllers run on the instance's own manager and feed the
+	// instance's own ChangeNotifier.
+	cs := &aigwonpremconfig.Controllers{
+		Client:           mgr.GetClient(),
+		Scheme:           i.env.Scheme,
+		Log:              i.logger,
+		CacheSyncTimeout: i.env.CacheSyncTimeout,
+		ChangeNotifier:   i.cn,
+	}
+	if err := cs.SetupWithManager(ctx, mgr); err != nil {
+		return fmt.Errorf("setting up configuration-entity controllers: %w", err)
+	}
+	i.client = mgr.GetClient()
+
+	mgrErrCh := make(chan error, 1)
+	go func() { mgrErrCh <- mgr.Start(ctx) }()
+	// Drain the manager result so its goroutine never leaks.
+	defer func() { <-mgrErrCh }()
+
 	var (
-		ch              = i.cn.NotifyChannel()
+		ch         = i.cn.NotifyChannel()
+		lastSyncTS = time.Time{}
+		// TODO: make this configurable
 		minimumInterval = time.Second
-		lastSyncTs      = time.Time{}
-		syncInterval    = 3 * time.Second
-		timer           = time.NewTicker(syncInterval)
+		// TODO: make this configurable
+		syncInterval = 3 * time.Second
+		timer        = time.NewTicker(syncInterval)
 	)
 forLoop:
 	for {
@@ -141,19 +217,20 @@ forLoop:
 		// Handle periodic sync based on the timer.
 		case <-timer.C:
 			// TODO: sync
-			lastSyncTs = time.Now()
+			lastSyncTS = time.Now()
 			i.logger.Info("Syncing...")
 
 		// Handle sync based on cluster change events.
 		case change := <-ch:
 			obj := change.Object
-			i.logger.Info("Received change notification",
+			logger := i.logger.WithValues(
 				"ID", change.ID,
 				"namespace", obj.GetNamespace(),
 				"name", obj.GetName(),
 			)
+			logger.Info("Received change notification")
 
-			if time.Since(lastSyncTs) < minimumInterval {
+			if time.Since(lastSyncTS) < minimumInterval {
 				// Debounce
 				continue
 			}
@@ -162,10 +239,16 @@ forLoop:
 			gw := change.ParentNN
 
 			// TODO: sync
-			lastSyncTs = time.Now()
+			lastSyncTS = time.Now()
 			if err := i.sendConfig(ctx, gw); err != nil {
-				i.logger.Error(err, "Failed to send configuration")
+				logger.Error(err, "Failed to send configuration")
 			}
+
+		// A crashed instance manager (e.g. unreachable API server) tears the instance down:
+		// the multi-instance manager removes it and the OnPremAIGateway reconciler reschedules it.
+		case err := <-mgrErrCh:
+			i.logger.Error(err, "Instance controller manager failed")
+			return fmt.Errorf("instance controller manager failed: %w", err)
 
 		case <-ctx.Done():
 			break forLoop

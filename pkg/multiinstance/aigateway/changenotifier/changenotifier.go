@@ -15,6 +15,8 @@ type ChangeNotifier struct {
 	once     sync.Once
 }
 
+// Change is a single notification about a configuration entity change, addressed to the
+// OnPremAIGateway identified by ParentNN.
 type Change struct {
 	ID       types.UID
 	ParentNN *types.NamespacedName
@@ -24,7 +26,11 @@ type Change struct {
 // New creates a new instance of ChangeNotifier.
 func New() *ChangeNotifier {
 	return &ChangeNotifier{
-		ch: make(chan Change),
+		// Buffered so that NotifyChange never blocks the caller: the configuration
+		// controllers keep reconciling even when no instance is running yet.
+		// ponytail: fixed-size buffer, changes are dropped when full; per-parent
+		// channels keyed by OnPremAIGateway NN if fan-out correctness ever matters.
+		ch: make(chan Change, 128),
 		// Set this to nil initially to make receiving from it block until allocated with make.
 		closedCh: nil,
 	}
@@ -50,6 +56,9 @@ func (c *ChangeNotifier) NotifyChange(
 		Object:   obj,
 	}:
 	case <-c.closedCh:
+	default:
+		// The buffer is full: drop the change rather than block the caller. The next
+		// change for the same parent, or the instance's periodic sync, catches up.
 	}
 }
 

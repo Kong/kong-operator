@@ -20,10 +20,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
@@ -41,7 +44,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
-	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -63,7 +65,11 @@ type Reconciler struct {
 	// OnPremAIGateway resource.
 	InstancesManager *multiinstanceai.Manager
 
-	ChangeNotifier *changenotifier.ChangeNotifier
+	// RestConfig, Scheme and CacheSyncTimeout are passed down to each instance so it can build
+	// and run its own controller-runtime manager hosting the configuration-entity controllers.
+	RestConfig       *rest.Config
+	Scheme           *runtime.Scheme
+	CacheSyncTimeout time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -221,7 +227,14 @@ func (r *Reconciler) configFromSpec(
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
 func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg multiinstanceai.Config) error {
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
-	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(mgrID, logger, r.Client, cfg, r.ChangeNotifier)); err != nil {
+	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(
+		mgrID, logger, cfg,
+		multiinstanceai.Env{
+			RestConfig:       r.RestConfig,
+			Scheme:           r.Scheme,
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		},
+	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)
 	}
 	return nil
