@@ -1,6 +1,7 @@
 package dataplane
 
 import (
+	"cmp"
 	"context"
 	"testing"
 
@@ -57,12 +58,22 @@ func Test_resolveControlPlane(t *testing.T) {
 		name string
 		// nil = not in cluster
 		aigwcp            *konnectv1alpha1.KonnectAIGateway
-		getErr            error // non-nil injects a GET error via interceptor
+		getErr            error
+		refKind           string
 		wantCP            bool
 		wantErr           bool
+		wantErrContains   string
+		wantNoCondition   bool
 		wantConditionTrue bool
 		wantReason        string
 	}{
+		{
+			name:            "unsupported control plane kind: errors and sets no condition",
+			refKind:         "UnSupportedAIGateway",
+			wantErr:         true,
+			wantErrContains: `unsupported control plane kind "UnSupportedAIGateway"`,
+			wantNoCondition: true,
+		},
 		{
 			name:              "aigwcp not found: sets NotFound condition and returns error",
 			aigwcp:            nil,
@@ -118,12 +129,21 @@ func Test_resolveControlPlane(t *testing.T) {
 
 			aigwdp := newAIGWDP()
 			gotCP, err := r.resolveControlPlane(context.Background(), logger, aigwdp, ControlPlaneRef{
-				Kind: testControlPlaneKind.Kind,
+				Kind: cmp.Or(tc.refKind, testControlPlaneKind.Kind),
 				Name: aigwcpNM,
 			})
 
 			if tc.wantErr {
 				require.Error(t, err)
+				if tc.wantErrContains != "" {
+					require.ErrorContains(t, err, tc.wantErrContains)
+				}
+				if tc.wantNoCondition {
+					assert.Nil(t, gotCP.Object)
+					assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)),
+						"no resolution condition must be set")
+					return
+				}
 				// Condition is only set for domain errors (not-found / not-programmed), not API errors.
 				if tc.wantReason != "" {
 					cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType))
