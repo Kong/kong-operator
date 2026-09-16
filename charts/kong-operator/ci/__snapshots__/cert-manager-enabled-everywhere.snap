@@ -21746,9 +21746,9 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: konnectNamespacedRef must be set when type is konnectNamespacedRef
-                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef) : true'
+                  rule: self.type != 'konnectNamespacedRef' || has(self.konnectNamespacedRef)
                 - message: onpremNamespacedRef must be set when type is onpremNamespacedRef
-                  rule: 'self.type == ''onpremNamespacedRef'' ? has(self.onpremNamespacedRef) : true'
+                  rule: self.type != 'onpremNamespacedRef' || has(self.onpremNamespacedRef)
                 - message: only one of konnectNamespacedRef or onpremNamespacedRef can be set
                   rule: '!(has(self.konnectNamespacedRef) && has(self.onpremNamespacedRef))'
               deployment:

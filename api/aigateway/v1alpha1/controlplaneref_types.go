@@ -20,8 +20,8 @@ package v1alpha1
 // The Type field determines which sub-field is active.
 //
 // +kubebuilder:object:generate=true
-// +kubebuilder:validation:XValidation:rule="self.type == 'konnectNamespacedRef' ? has(self.konnectNamespacedRef) : true",message="konnectNamespacedRef must be set when type is konnectNamespacedRef"
-// +kubebuilder:validation:XValidation:rule="self.type == 'onpremNamespacedRef' ? has(self.onpremNamespacedRef) : true",message="onpremNamespacedRef must be set when type is onpremNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="self.type != 'konnectNamespacedRef' || has(self.konnectNamespacedRef)",message="konnectNamespacedRef must be set when type is konnectNamespacedRef"
+// +kubebuilder:validation:XValidation:rule="self.type != 'onpremNamespacedRef' || has(self.onpremNamespacedRef)",message="onpremNamespacedRef must be set when type is onpremNamespacedRef"
 // +kubebuilder:validation:XValidation:rule="!(has(self.konnectNamespacedRef) && has(self.onpremNamespacedRef))",message="only one of konnectNamespacedRef or onpremNamespacedRef can be set"
 type ControlPlaneRef struct {
 	// Type indicates the type of the control plane being referenced.

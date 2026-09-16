@@ -120,6 +120,11 @@ var config = shareddataplane.Config[
 				Name: ref.OnPremNamespacedRef.Name,
 			}
 		default:
+			// This is in reality an error case: the ControlPlaneRef CRD schema
+			// doesn't allow unsupported ref types, so it shouldn't happen.
+			// To avoid adding an error to the return values here we just
+			// return an empty ref, which makes the DataPlane reconcile as if
+			// it had no control plane reference configured.
 			return shareddataplane.ControlPlaneRef{}
 		}
 	},
