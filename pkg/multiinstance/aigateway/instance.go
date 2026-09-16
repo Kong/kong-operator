@@ -163,10 +163,10 @@ func (i *Instance) sendConfig(
 
 }
 
-// syncPending pushes the configuration for every gateway with pending changes and removes
-// the synced ones from the set. Failed syncs stay in the set so that the timer retries
+// syncPending re-renders the configuration for every gateway with pending changes and removes
+// the rendered ones from the set. Failed renders stay in the set so that the timer retries
 // them. lastSyncTS is updated on every attempt so that bursts of changes debounce even
-// when syncs fail.
+// when renders fail. Nothing is pushed yet: sendConfig only renders the payload.
 func (i *Instance) syncPending(
 	ctx context.Context,
 	pending map[types.NamespacedName]struct{},
