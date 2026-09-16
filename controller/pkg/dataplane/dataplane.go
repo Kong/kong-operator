@@ -60,13 +60,6 @@ type Object interface {
 	k8sutils.ConditionsAware
 }
 
-// ControlPlaneObject is the constraint for the Konnect control plane types
-// referenced by the DataPlane (e.g. KonnectAIGateway, KonnectEventGateway).
-type ControlPlaneObject interface {
-	client.Object
-	GetConditions() []metav1.Condition
-}
-
 // CertificateObject is the constraint for the Konnect certificate types
 // provisioned for the DataPlane (e.g. AIGatewayDataPlaneCertificate,
 // EventGatewayDataPlaneCertificate).
@@ -115,21 +108,6 @@ type Conditions struct {
 	// CertificateProvisionedReason is the reason used when the certificate Secret has been provisioned.
 	CertificateProvisionedReason string
 
-	// ControlPlaneResolvedType is the type of the control plane resolution condition.
-	ControlPlaneResolvedType string
-	// ControlPlaneResolvedReason is the reason used when the control plane has been resolved.
-	ControlPlaneResolvedReason string
-	// ControlPlaneResolvedMessage is the message used when the control plane has been resolved.
-	ControlPlaneResolvedMessage string
-	// ControlPlaneNotFoundReason is the reason used when the control plane was not found.
-	ControlPlaneNotFoundReason string
-	// ControlPlaneNotFoundMessage is the message used when the control plane was not found.
-	ControlPlaneNotFoundMessage string
-	// ControlPlaneNotProgrammedReason is the reason used when the control plane is not yet Programmed.
-	ControlPlaneNotProgrammedReason string
-	// ControlPlaneNotProgrammedMessage is the message used when the control plane is not yet Programmed.
-	ControlPlaneNotProgrammedMessage string
-
 	// KonnectCertificateRegisteredType is the type of the Konnect certificate registration condition.
 	KonnectCertificateRegisteredType string
 	// KonnectCertificateRegisteredReason is the reason used when the certificate is ensured and programmed.
@@ -152,7 +130,7 @@ type Conditions struct {
 }
 
 // DeploymentConfig carries the type specific bits of the owned Deployment.
-type DeploymentConfig[T Object, CP ControlPlaneObject] struct {
+type DeploymentConfig[T Object] struct {
 	// ContainerName is the name of the DataPlane container (e.g. "aigw", "keg").
 	ContainerName string
 	// RelatedImageEnvVar is the environment variable used to override the container image.
@@ -175,8 +153,9 @@ type DeploymentConfig[T Object, CP ControlPlaneObject] struct {
 	// BuildContainer builds the DataPlane container and the additional volumes
 	// it requires. The Konnect certificate volume itself is managed by the
 	// shared machinery and appended separately when certSecretName is not empty.
-	// cp is nil when the DataPlane has no control plane reference configured.
-	BuildContainer func(dp T, cp CP, image, certSecretName string) (corev1.Container, []corev1.Volume, error)
+	// cp.Object is nil when the DataPlane has no control plane reference
+	// configured.
+	BuildContainer func(dp T, cp ResolvedControlPlane, image, certSecretName string) (corev1.Container, []corev1.Volume, error)
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
@@ -202,7 +181,7 @@ type ServiceConfig[T Object] struct {
 
 // Config wires the type specific behavior of a specialized DataPlane
 // reconciler into the shared generic Reconciler.
-type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
+type Config[T Object, Cert CertificateObject] struct {
 	// ControllerName is the name used for logging and event recording.
 	ControllerName string
 	// Kind is the human-readable DataPlane kind used in logs, errors and
@@ -211,23 +190,22 @@ type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
 
 	// NewObject returns a new empty DataPlane object.
 	NewObject func() T
-	// NewControlPlaneObject returns a new empty control plane object.
-	NewControlPlaneObject func() CP
 	// NewCertificateObject returns a new empty certificate object.
 	NewCertificateObject func() Cert
 	// NewObjectList returns a new empty DataPlane list object, used by the
-	// control plane watch to list the DataPlanes referencing it.
+	// control plane watches to list the DataPlanes referencing them.
 	NewObjectList func() client.ObjectList
 
-	// ControlPlaneRefName returns the name of the referenced control plane,
-	// or "" when the DataPlane has no control plane reference configured.
-	ControlPlaneRefName func(T) string
-	// ControlPlaneKind is the human-readable control plane kind used in logs
-	// and errors (e.g. "KonnectAIGateway", "KonnectEventGateway").
-	ControlPlaneKind string
-	// ControlPlaneRefIndexField is the field index used to list DataPlanes by
-	// their control plane reference.
-	ControlPlaneRefIndexField string
+	// ControlPlaneRef returns the kind and name of the control plane referenced
+	// by the DataPlane. Name is empty when the DataPlane has no control plane
+	// reference configured; in that case control plane resolution and Konnect
+	// certificate automation are skipped.
+	// The returned Kind must match the Kind of one of the ControlPlanes entries.
+	ControlPlaneRef func(T) ControlPlaneRef
+	// ControlPlanes lists the supported control plane kinds for this DataPlane
+	// kind (e.g. KonnectAIGateway and OnPremAIGateway for AIGatewayDataPlane).
+	// One watch and one index field are registered per entry.
+	ControlPlanes []ControlPlaneKindConfig
 
 	// Conditions carries the condition types, reasons and messages.
 	Conditions Conditions
@@ -243,7 +221,8 @@ type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
 	// the certificate entity after the content should derive both the object
 	// name and the Konnect title from it so a rotation registers a new entity
 	// instead of mutating the previous one in place.
-	BuildCertificate func(dp T, cp CP, certSecretName, certChecksum string) Cert
+	// Only called for Konnect-backed control planes (cp.IsKonnect).
+	BuildCertificate func(dp T, cp ResolvedControlPlane, certSecretName, certChecksum string) Cert
 	// EnsureCertificate provisions the mTLS client certificate Secret.
 	EnsureCertificate EnsureCertificateFunc[T]
 	// ResolveCertificateSecret, when non-nil, resolves the certificate Secret
@@ -258,7 +237,7 @@ type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
 		ctx context.Context,
 		cl client.Client,
 		dp T,
-		cp CP,
+		cp ResolvedControlPlane,
 		resolveAutomatic func(ctx context.Context, dp T) (op.Result, *corev1.Secret, error),
 	) (op.Result, *corev1.Secret, error)
 	// CertificateRequested, when non-nil, reports whether the DataPlane spec
@@ -279,14 +258,20 @@ type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
 	// CleanupStaleCertificates, when non-nil, removes stale Konnect
 	// certificate entities and operator-provisioned Secrets once the rollout
 	// onto the current certificate completed.
-	CleanupStaleCertificates func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp CP, certChecksum string) error
+	// Unlike Konnect certificate registration, this hook is intentionally not
+	// gated on cp.IsKonnect: stale Konnect certificate entities still need
+	// cleanup after a DataPlane switches to a non-Konnect control plane.
+	// TODO(issue-5666): implementations must tolerate (kind-switch on) a
+	// resolved control plane of any configured kind once a DataPlane supports
+	// more than one; today they may assume cp is empty or Konnect-backed.
+	CleanupStaleCertificates func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
 	// ExtraWatches, when non-nil, registers additional watches on the
 	// controller builder (e.g. a watch on user-referenced certificate
 	// Secrets). It receives the in-progress builder and must return it.
 	ExtraWatches func(blder *builder.Builder, mgr ctrl.Manager) *builder.Builder
 
 	// Deployment configures the owned Deployment.
-	Deployment DeploymentConfig[T, CP]
+	Deployment DeploymentConfig[T]
 	// Service configures the owned Service.
 	Service ServiceConfig[T]
 
@@ -299,9 +284,19 @@ type Config[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
 	SetStatusAddresses func(dp T, addrs []operatorv1beta1.Address)
 }
 
+// ControlPlaneKindConfig returns the ControlPlaneKindConfig for the given kind.
+func (c Config[T, Cert]) ControlPlaneKindConfig(kind string) (ControlPlaneKindConfig, bool) {
+	for _, cpKindCfg := range c.ControlPlanes {
+		if cpKindCfg.Kind == kind {
+			return cpKindCfg, true
+		}
+	}
+	return ControlPlaneKindConfig{}, false
+}
+
 // Reconciler reconciles a specialized DataPlane object (e.g.
 // AIGatewayDataPlane, KegDataPlane) using the behavior provided by Config.
-type Reconciler[T Object, CP ControlPlaneObject, Cert CertificateObject] struct {
+type Reconciler[T Object, Cert CertificateObject] struct {
 	client.Client
 
 	// LoggingMode controls the format of log output.
@@ -321,28 +316,32 @@ type Reconciler[T Object, CP ControlPlaneObject, Cert CertificateObject] struct 
 	EventRecorder events.EventRecorder
 
 	// Config wires the type specific behavior.
-	Config Config[T, CP, Cert]
+	Config Config[T, Cert]
 }
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *Reconciler[T, CP, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		For(r.Config.NewObject()).
 		Owns(&appsv1.Deployment{}).
 		Owns(&autoscalingv2.HorizontalPodAutoscaler{}).
 		Owns(&corev1.Service{}).
 		Owns(&corev1.Secret{}).
-		Owns(r.Config.NewCertificateObject()).
-		Watches(
-			r.Config.NewControlPlaneObject(),
+		Owns(r.Config.NewCertificateObject())
+	// One watch per supported control plane kind: a change to a control plane
+	// object re-triggers reconciliation of every DataPlane referencing it.
+	for _, cpKind := range r.Config.ControlPlanes {
+		blder = blder.Watches(
+			cpKind.NewObject(),
 			handler.EnqueueRequestsFromMapFunc(EnqueueDataPlanesForControlPlane(
 				mgr.GetClient(),
 				r.Config.NewObjectList,
-				r.Config.ControlPlaneRefIndexField,
+				cpKind.ControlPlaneRefIndexField,
 				r.Config.Kind,
-				r.Config.ControlPlaneKind,
+				cpKind.Kind,
 			)),
 		)
+	}
 	if r.Config.ExtraWatches != nil {
 		blder = r.Config.ExtraWatches(blder, mgr)
 	}
@@ -350,7 +349,7 @@ func (r *Reconciler[T, CP, Cert]) SetupWithManager(ctx context.Context, mgr ctrl
 }
 
 // Reconcile moves the current state of a DataPlane toward the desired state.
-func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Result, err error) {
+func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Result, err error) {
 	logger := log.GetLogger(ctx, r.Config.ControllerName, r.LoggingMode)
 
 	log.Trace(logger, "reconciling "+r.Config.Kind+" resource")
@@ -361,13 +360,13 @@ func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl
 	}()
 
 	// Resolve the referenced control plane and set the resolution condition.
-	// cpName is empty when the DataPlane has no control plane reference
+	// ref.Name is empty when the DataPlane has no control plane reference
 	// configured; in that case resolution and Konnect certificate automation
 	// are skipped.
-	var cp CP
-	cpName := r.Config.ControlPlaneRefName(dp)
-	if cpName != "" {
-		cp, err = r.resolveControlPlane(ctx, logger, dp, cpName)
+	var cp ResolvedControlPlane
+	ref := r.Config.ControlPlaneRef(dp)
+	if ref.Name != "" {
+		cp, err = r.resolveControlPlane(ctx, logger, dp, ref)
 		if err != nil {
 			// A missing or not yet Programmed control plane is an expected,
 			// user-fixable state: resolveControlPlane has set the resolution
@@ -426,8 +425,9 @@ func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl
 	// Ensure the certificate is registered with Konnect.
 	// Return early if not yet programmed; the Owns() watch retriggers once
 	// the Konnect controller flips Programmed to True.
+	// Certificate automation only applies to Konnect-backed control planes.
 	certProgrammed := true
-	if cpName != "" && certSecret != nil {
+	if cp.IsConfigured() && cp.IsKonnect && certSecret != nil {
 		certProgrammed, err = r.ensureKonnectCertificate(ctx, logger, dp, cp, certSecret, certChecksum)
 		if err != nil {
 			return ctrl.Result{}, err
@@ -485,7 +485,7 @@ func (r *Reconciler[T, CP, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl
 
 // ensureServiceReadyCondition sets the ServiceReady condition and populates
 // the status addresses based on the live Service.
-func (r *Reconciler[T, CP, Cert]) ensureServiceReadyCondition(
+func (r *Reconciler[T, Cert]) ensureServiceReadyCondition(
 	dp T,
 	svc *corev1.Service,
 ) error {

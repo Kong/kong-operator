@@ -63,15 +63,31 @@ const (
 // testReconciler is the generic Reconciler instantiated with the test types.
 type testReconciler = Reconciler[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]
+
+// testControlPlaneKind mirrors the KonnectAIGateway control plane kind
+// configuration of the AIGatewayDataPlane controller.
+var testControlPlaneKind = ControlPlaneKindConfig{
+	Kind:                      "KonnectAIGateway",
+	NewObject:                 func() ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	IsKonnect:                 true,
+	Conditions: ControlPlaneConditions{
+		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+	},
+}
 
 // testConfig mirrors the AIGatewayDataPlane controller configuration with a
 // stubbed container builder.
 var testConfig = Config[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]{
 	ControllerName: "aigw-dataplane",
@@ -80,9 +96,6 @@ var testConfig = Config[
 	NewObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{}
 	},
-	NewControlPlaneObject: func() *konnectv1alpha1.KonnectAIGateway {
-		return &konnectv1alpha1.KonnectAIGateway{}
-	},
 	NewCertificateObject: func() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 		return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	},
@@ -90,14 +103,16 @@ var testConfig = Config[
 		return &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 	},
 
-	ControlPlaneRefName: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
+	ControlPlaneRef: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) ControlPlaneRef {
 		if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
-			return ""
+			return ControlPlaneRef{}
 		}
-		return aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name
+		return ControlPlaneRef{
+			Kind: testControlPlaneKind.Kind,
+			Name: aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+		}
 	},
-	ControlPlaneKind:          "KonnectAIGateway",
-	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	ControlPlanes: []ControlPlaneKindConfig{testControlPlaneKind},
 
 	Conditions: Conditions{
 		ReadyType:                    string(aigatewayv1alpha1.ReadyType),
@@ -109,14 +124,6 @@ var testConfig = Config[
 		UnableToProvisionReason:      string(aigatewayv1alpha1.UnableToProvisionReason),
 		CertificateProvisionedType:   string(aigatewayv1alpha1.CertificateProvisionedType),
 		CertificateProvisionedReason: string(aigatewayv1alpha1.CertificateProvisionedReason),
-
-		ControlPlaneResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
-		ControlPlaneResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
-		ControlPlaneNotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		ControlPlaneNotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		ControlPlaneNotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
 
 		KonnectCertificateRegisteredType:           string(aigatewayv1alpha1.KonnectCertificateRegisteredType),
 		KonnectCertificateRegisteredReason:         string(aigatewayv1alpha1.KonnectCertificateRegisteredReason),
@@ -135,10 +142,7 @@ var testConfig = Config[
 	BuildCertificate:    buildTestCertificate,
 	EnsureCertificate:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
 
-	Deployment: DeploymentConfig[
-		*aigatewayv1alpha1.AIGatewayDataPlane,
-		*konnectv1alpha1.KonnectAIGateway,
-	]{
+	Deployment: DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:       consts.AIGatewayDataPlaneContainerName,
 		RelatedImageEnvVar:  consts.RelatedImageAIGatewayDataPlaneEnvVar,
 		DefaultImage:        consts.DefaultAIGatewayDataPlaneImage,
@@ -271,10 +275,11 @@ func testServiceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *ServiceOp
 // builder's contract of failing when the control plane has no endpoints.
 func buildTestContainer(
 	_ *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName
 ) (corev1.Container, []corev1.Volume, error) {
+	aigatewaycp, _ := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
 	if aigatewaycp != nil && aigatewaycp.Status.Endpoints == nil {
 		return corev1.Container{}, nil, fmt.Errorf("KonnectAIGateway %q has no endpoints in status", aigatewaycp.Name)
 	}
@@ -323,10 +328,14 @@ func certificateChecksum(secret *corev1.Secret) string {
 // the given AIGatewayDataPlane.
 func buildTestCertificate(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp ResolvedControlPlane,
 	certSecretName string,
 	certChecksum string,
 ) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	aigatewaycp, ok := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
+	if !ok {
+		panic("buildTestCertificate expects a resolved KonnectAIGateway control plane")
+	}
 	name := certEntityName(aigwdp, certChecksum)
 	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
@@ -466,7 +475,7 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *test
 // with the default image overridden.
 func deploymentConfigWithDefaultImage(
 	image string,
-) DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane, *konnectv1alpha1.KonnectAIGateway] {
+) DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
 	cfg := testConfig.Deployment
 	cfg.DefaultImage = image
 	return cfg

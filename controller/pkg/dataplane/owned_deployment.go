@@ -40,11 +40,11 @@ import (
 )
 
 // ensureDeployment reconciles the DataPlane Deployment for the given DataPlane.
-func (r *Reconciler[T, CP, Cert]) ensureDeployment(
+func (r *Reconciler[T, Cert]) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	certSecretName string,
 	certChecksum string,
 ) error {
@@ -82,7 +82,7 @@ func (r *Reconciler[T, CP, Cert]) ensureDeployment(
 // annotation. A missing Deployment reports not-complete; the caller retries
 // on the next reconcile. When no checksum annotation is configured the gate
 // reduces to the plain rollout-complete check.
-func (r *Reconciler[T, CP, Cert]) rolloutOntoCertificateComplete(
+func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 	ctx context.Context,
 	dp T,
 	certChecksum string,
@@ -107,7 +107,7 @@ func (r *Reconciler[T, CP, Cert]) rolloutOntoCertificateComplete(
 //  1. User-specified image in the pod template overlay (the DataPlane container)
 //  2. The related-image environment variable
 //  3. The configured default image
-func ResolveImage[T Object, CP ControlPlaneObject](dp T, cfg DeploymentConfig[T, CP]) string {
+func ResolveImage[T Object](dp T, cfg DeploymentConfig[T]) string {
 	if pts := cfg.PodTemplateSpec(dp); pts != nil {
 		if c := k8sutils.GetPodContainerByName(&pts.Spec, cfg.ContainerName); c != nil && c.Image != "" {
 			return c.Image
@@ -124,15 +124,15 @@ func ResolveImage[T Object, CP ControlPlaneObject](dp T, cfg DeploymentConfig[T,
 // overlay, it is merged with the operator base via SMD. The result always has
 // spec.strategy removed so that SSA does not claim ownership of it, leaving
 // the API server (or admission webhooks) free to apply their own default.
-func BuildDeployment[T Object, CP ControlPlaneObject, Cert CertificateObject](
+func BuildDeployment[T Object, Cert CertificateObject](
 	logger logr.Logger,
 	tc managedfields.TypeConverter,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
 	certChecksum string,
-	cfg Config[T, CP, Cert],
+	cfg Config[T, Cert],
 ) (*unstructured.Unstructured, error) {
 	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, certChecksum, cfg)
 	if err != nil {
@@ -197,14 +197,14 @@ func SelectorLabels[T Object](dp T, managedByLabelValue string) map[string]strin
 
 // GenerateBaseDeployment creates the operator-managed DataPlane Deployment
 // without user overlays.
-func GenerateBaseDeployment[T Object, CP ControlPlaneObject, Cert CertificateObject](
+func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
 	certChecksum string,
-	cfg Config[T, CP, Cert],
+	cfg Config[T, Cert],
 ) (*appsv1.Deployment, error) {
 	labels := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
 	labels["app.kubernetes.io/name"] = cfg.Deployment.ContainerName
