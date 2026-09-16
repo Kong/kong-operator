@@ -13,6 +13,7 @@ type ChangeNotifier struct {
 	ch       chan Change
 	closedCh chan struct{}
 	once     sync.Once
+	mu       sync.RWMutex
 }
 
 // Change is a single notification about a configuration entity change, addressed to the
@@ -47,6 +48,9 @@ func (c *ChangeNotifier) NotifyChange(
 	parent *types.NamespacedName,
 	obj client.Object,
 ) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+
 	select {
 	case <-ctx.Done():
 	// TODO: consider adding debouncing.
@@ -66,6 +70,9 @@ func (c *ChangeNotifier) NotifyChange(
 // It is safe to call multiple times. It only closes the channel once.
 func (c *ChangeNotifier) Close() {
 	c.once.Do(func() {
+		c.mu.Lock()
+		defer c.mu.Unlock()
+
 		// Close and set the channel to nil to make receiving from it block indefinitely.
 		close(c.ch)
 		c.ch = nil
