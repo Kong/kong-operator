@@ -27,7 +27,6 @@ import (
 {{- if .ConfigStatusNotificationsEnabled }}
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 {{- end}}
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 {{- if .ConfigStatusNotificationsEnabled }}
 	"sigs.k8s.io/controller-runtime/pkg/source"

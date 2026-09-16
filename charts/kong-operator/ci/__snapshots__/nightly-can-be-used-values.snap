@@ -107701,7 +107701,6 @@ rules:
   - aigatewaymodelproviders/finalizers
   - aigatewaymodelproviders/status
   - aigatewaymodels/finalizers
-  - aigatewaymodels/status
   - aigatewaypolicies/finalizers
   - aigatewaypolicies/status
   - aigatewaysnis/finalizers
@@ -107721,6 +107720,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewaymodels/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - aigateway.konghq.com
   resources:
