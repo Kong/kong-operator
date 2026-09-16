@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
@@ -19,8 +20,8 @@ import (
 // newSecret returns the Secret "default/s" holding the given key/value pairs.
 func newSecret(data map[string]string) *corev1.Secret {
 	secret := &corev1.Secret{
-		Name: "s", Namespace: "default",
-		Data: map[string][]byte{},
+		ObjectMeta: metav1.ObjectMeta{Name: "s", Namespace: "default"},
+		Data:       map[string][]byte{},
 	}
 	for k, v := range data {
 		secret.Data[k] = []byte(v)
@@ -50,22 +51,22 @@ func TestResolveConfig(t *testing.T) {
 		{
 			name: "plain config is returned untouched",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
-				Config: apiextensionsv1.JSON{Raw: []byte(`{"minute":10}`)},
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
+				Config:     apiextensionsv1.JSON{Raw: []byte(`{"minute":10}`)},
 			},
 			expected: `{"minute":10}`,
 		},
 		{
 			name: "empty config stays nil when there is nothing to resolve",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
 			},
 			expectedNil: true,
 		},
 		{
 			name: "configFrom is resolved from the secret",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{Secret: "s", Key: "config"},
 				},
@@ -76,7 +77,7 @@ func TestResolveConfig(t *testing.T) {
 		{
 			name: "configFrom error is wrapped with the plugin identity",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
 				ConfigFrom: &configurationv1.ConfigSource{
 					SecretValue: configurationv1.SecretValueFromSource{Secret: "missing", Key: "config"},
 				},
@@ -86,8 +87,8 @@ func TestResolveConfig(t *testing.T) {
 		{
 			name: "configPatches are applied on top of config",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
-				Config: apiextensionsv1.JSON{Raw: []byte(`{"client_id":["cid"],"client_secret":[]}`)},
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
+				Config:     apiextensionsv1.JSON{Raw: []byte(`{"client_id":["cid"],"client_secret":[]}`)},
 				ConfigPatches: []configurationv1.ConfigPatch{{
 					Path: "/client_secret/0",
 					ValueFrom: configurationv1.ConfigSource{
@@ -101,8 +102,8 @@ func TestResolveConfig(t *testing.T) {
 		{
 			name: "configPatches error is wrapped with the plugin identity",
 			plugin: &configurationv1.KongPlugin{
-				Name: "p", Namespace: "default",
-				Config: apiextensionsv1.JSON{Raw: []byte(`{}`)},
+				ObjectMeta: metav1.ObjectMeta{Name: "p", Namespace: "default"},
+				Config:     apiextensionsv1.JSON{Raw: []byte(`{}`)},
 				ConfigPatches: []configurationv1.ConfigPatch{{
 					Path: "/client_secret",
 					ValueFrom: configurationv1.ConfigSource{

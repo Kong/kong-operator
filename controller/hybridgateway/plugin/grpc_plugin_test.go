@@ -354,10 +354,12 @@ func TestGRPCPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
 	ctx := context.Background()
 
 	grpcRoute := &gwtypes.GRPCRoute{
-		TypeMeta:  grpcRouteTypeMeta,
-		Name:      "test-route",
-		Namespace: "test-namespace",
-		UID:       "test-uid",
+		TypeMeta: grpcRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+		},
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",

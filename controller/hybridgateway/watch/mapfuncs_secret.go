@@ -163,7 +163,7 @@ func mapRoutesForPluginConfigSecret[
 func requestsForRouteList(list client.ObjectList) []reconcile.Request {
 	var requests []reconcile.Request
 	appendRoute := func(namespace, name string) {
-		requests = append(requests, reconcile.Request{Namespace: namespace, Name: name})
+		requests = append(requests, reconcile.Request{NamespacedName: client.ObjectKey{Namespace: namespace, Name: name}})
 	}
 	switch l := list.(type) {
 	case *gwtypes.HTTPRouteList:

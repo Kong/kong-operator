@@ -542,8 +542,7 @@ func (c resolvedConfigCase) objects() []client.Object {
 func resolvedConfigCases() []resolvedConfigCase {
 	referencedPlugin := func(mutate func(*configurationv1.KongPlugin)) *configurationv1.KongPlugin {
 		plugin := &configurationv1.KongPlugin{
-			Name:       "referenced-plugin",
-			Namespace:  "test-namespace",
+			ObjectMeta: metav1.ObjectMeta{Name: "referenced-plugin", Namespace: "test-namespace"},
 			PluginName: "rate-limiting",
 		}
 		mutate(plugin)
@@ -551,8 +550,8 @@ func resolvedConfigCases() []resolvedConfigCase {
 	}
 	configSecret := func(data map[string][]byte) *corev1.Secret {
 		return &corev1.Secret{
-			Name: "plugin-config", Namespace: "test-namespace",
-			Data: data,
+			ObjectMeta: metav1.ObjectMeta{Name: "plugin-config", Namespace: "test-namespace"},
+			Data:       data,
 		}
 	}
 
@@ -605,10 +604,12 @@ func TestPluginsForRule_ExtensionRef_ResolvedConfig(t *testing.T) {
 	ctx := context.Background()
 
 	httpRoute := &gwtypes.HTTPRoute{
-		TypeMeta:  httpRouteTypeMeta,
-		Name:      "test-route",
-		Namespace: "test-namespace",
-		UID:       "test-uid",
+		TypeMeta: httpRouteTypeMeta,
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "test-route",
+			Namespace: "test-namespace",
+			UID:       "test-uid",
+		},
 	}
 	parentRef := &gwtypes.ParentReference{
 		Name: "test-gateway",
