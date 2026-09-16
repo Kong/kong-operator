@@ -609,6 +609,25 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 					logger.Info("rate limited by Konnect API during delete, requeueing", "retry_after", retryAfter.String())
 					return ctrl.Result{RequeueAfter: retryAfter}, nil
 				}
+
+				// If Konnect refused to delete the entity because it still holds
+				// entries (e.g. a config store with secrets), report a dedicated
+				// DeletionBlocked condition naming the blocking entries and retry
+				// with backoff. The finalizer stays in place until the entries
+				// are removed and the delete succeeds.
+				if errNotEmpty, ok := errors.AsType[ops.KonnectConfigStoreNotEmptyError](err); ok {
+					if res, errStatus := patch.StatusWithCondition(
+						ctx, r.Client, ent,
+						konnectv1alpha1.KonnectEntityProgrammedConditionType,
+						metav1.ConditionFalse,
+						konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked,
+						errNotEmpty.DeletionBlockedMessage(),
+					); errStatus != nil || !res.IsZero() {
+						return res, errStatus
+					}
+					return ctrl.Result{}, err
+				}
+
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,

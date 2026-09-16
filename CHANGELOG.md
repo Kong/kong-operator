@@ -123,6 +123,16 @@
 
 ### Breaking changes
 
+- `KonnectConfigStore`: deleting a `KonnectConfigStore` no longer force-deletes
+  the Konnect config store together with all the secret entries it holds
+  (previously the delete op passed `Force: true`, so one accidental CR deletion
+  instantly removed every stored certificate/key and broke the SNIs referencing
+  them). Konnect rejects deleting a non-empty config store, so the operator now
+  keeps the CR's cleanup finalizer, sets the `Programmed` condition to `False`
+  with reason `DeletionBlocked` listing the blocking entry keys, and retries with
+  backoff. Deletion proceeds automatically once the entries are removed from the
+  store in Konnect.
+  [#5708](https://github.com/Kong/kong-operator/issues/5708)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
   This corrects a bug where a certificate was previously always auto-provisioned

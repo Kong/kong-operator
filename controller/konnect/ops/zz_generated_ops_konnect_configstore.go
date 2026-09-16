@@ -78,7 +78,6 @@ func deleteKonnectConfigStore(
 	_, err := sdk.DeleteConfigStore(ctx, sdkkonnectops.DeleteConfigStoreRequest{
 		ControlPlaneID: parentID,
 		ConfigStoreID:  id,
-		Force:          sdkkonnectops.ForceTrue.ToPointer(),
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, DeleteOp, obj); errWrap != nil {
 		return handleDeleteError(ctx, errWrap, obj)
