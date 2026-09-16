@@ -132,7 +132,7 @@
   abandon the store in Konnect instead, remove the
   `gateway.konghq.com/konnect-cleanup` finalizer from the CR manually, which
   leaves the config store and its entries orphaned in Konnect.
-  [#5708](https://github.com/Kong/kong-operator/issues/5708)
+  [#5723](https://github.com/Kong/kong-operator/pull/5723)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
   This corrects a bug where a certificate was previously always auto-provisioned
