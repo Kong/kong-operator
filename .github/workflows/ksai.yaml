@@ -57,7 +57,7 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
-    uses: Kong/ksai-public/.github/workflows/ksai.yml@dd0e1e273639d62042501430047bda9c40429ab0 # v3.80.0
+    uses: Kong/ksai-public/.github/workflows/ksai.yml@09d5f1ef715925d749ec434620cc477f462e3002 # v3.83.11
     permissions:
       contents: write      # checked out by every command, and pushed by one that changes code
       issues: write        # every command answers with a comment, and reacts to the one that asked
@@ -107,7 +107,7 @@ jobs:
       (github.event_name == 'pull_request_review' &&
       github.event.sender.type != 'Bot' &&
       github.event.review.state != 'commented'))
-    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@dd0e1e273639d62042501430047bda9c40429ab0 # v3.80.0
+    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@09d5f1ef715925d749ec434620cc477f462e3002 # v3.83.11
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request
