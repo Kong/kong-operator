@@ -34,6 +34,14 @@ func PortalPageReconciliationWatchOptions(
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
+				&konnectv1alpha1.PortalPage{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueuePortalPageForPortalPage(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[konnectv1alpha1.PortalPageList](cl),
@@ -54,6 +62,24 @@ func enqueuePortalPageForPortal(
 		var l konnectv1alpha1.PortalPageList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldPortalPageOnPortalRef: client.ObjectKeyFromObject(parent).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueuePortalPageForPortalPage(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*konnectv1alpha1.PortalPage)
+		if !ok {
+			return nil
+		}
+		var l konnectv1alpha1.PortalPageList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldPortalPageOnPortalPageRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

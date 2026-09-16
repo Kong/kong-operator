@@ -3,10 +3,16 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 )
 
 func (s *PortalPageAPISpec) marshalSDKOpsPayload() ([]byte, error) {
@@ -29,14 +35,100 @@ func (s *PortalPageAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	return data, nil
 }
 
-// ToCreatePortalPageRequest converts the PortalPageAPISpec to the SDK type
-// sdkkonnectcomp.CreatePortalPageRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *PortalPageAPISpec) ToCreatePortalPageRequest() (*sdkkonnectcomp.CreatePortalPageRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
+// resolvePortalPageParentPageIDRef resolves the ObjectRef at spec.apiSpec.parentPageIDRef
+// to a Konnect ID.
+func resolvePortalPageParentPageIDRef(ctx context.Context, cl client.Client, obj *PortalPage) ([]string, error) {
+	ref := obj.Spec.APISpec.ParentPageIDRef
+	if ref == nil {
+		return nil, nil
+	}
+	switch ref.Type {
+	case commonv1alpha1.ObjectRefTypeKonnectID:
+		if ref.KonnectID == nil {
+			return nil, fmt.Errorf("reference at spec.apiSpec.parentPageIDRef has type konnectID but no konnectID set")
+		}
+		return []string{*ref.KonnectID}, nil
+	case commonv1alpha1.ObjectRefTypeNamespacedRef:
+		if ref.NamespacedRef == nil {
+			return nil, fmt.Errorf("reference at spec.apiSpec.parentPageIDRef has type namespacedRef but no namespacedRef set")
+		}
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		name := ref.NamespacedRef.Name
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: "PortalPage", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+		var referenced PortalPage
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, ReferenceNotFoundError{Kind: "PortalPage", Namespace: ns, Name: name, Err: err}
+			}
+			return nil, fmt.Errorf("failed to get referenced PortalPage %s/%s: %w", ns, name, err)
+		}
+		// Same-type references embed the referenced object's Konnect ID in a
+		// request scoped to the referrer's parent, so both objects must belong
+		// to the same parent.
+		if commonv1alpha1.ObjectRefsDiffer(obj.Spec.PortalRef, referenced.Spec.PortalRef, obj.GetNamespace(), ns) {
+			return nil, ReferenceDifferentParentError{Kind: "PortalPage", Namespace: ns, Name: name, ParentKind: "Portal"}
+		}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "PortalPage", Namespace: ns, Name: name}
+		}
+		return []string{id}, nil
+	default:
+		return nil, fmt.Errorf("unsupported reference type %q at spec.apiSpec.parentPageIDRef", ref.Type)
+	}
+}
+
+// ResolveKonnectReferences resolves every CR reference declared on the spec and
+// returns the joined resolution errors, or nil when all references resolve.
+func (obj *PortalPage) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
+	var errs []error
+	if _, err := resolvePortalPageParentPageIDRef(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	return errors.Join(errs...)
+}
+
+// CrossNamespaceSiblingReferences returns every cross-namespace sibling
+// reference declared on obj's spec whose SupportCrossNamespaceReference is
+// enabled, for callers to authorize against KongReferenceGrant before
+// calling ResolveKonnectReferences.
+func (obj *PortalPage) CrossNamespaceSiblingReferences() []CrossNamespaceReferenceCheck {
+	var checks []CrossNamespaceReferenceCheck
+	return checks
+}
+
+// ToCreatePortalPageRequest converts the PortalPage to the SDK type
+// sdkkonnectcomp.CreatePortalPageRequest, resolving referenced CRs to Konnect IDs via the provided client.
+func (obj *PortalPage) ToCreatePortalPageRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreatePortalPageRequest, error) {
+	spec := &obj.Spec.APISpec
+	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode PortalPage SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedParentPageIDRef, err := resolvePortalPageParentPageIDRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPageIDRef reference: %w", err)
+	}
+	// A single ObjectRef resolves to at most one value; inject it as a plain
+	// string. An unset reference leaves the payload key absent.
+	if len(resolvedParentPageIDRef) > 0 {
+		payload["parent_page_id"] = resolvedParentPageIDRef[0]
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal PortalPage SDK payload with references: %w", err)
 	}
 	var target sdkkonnectcomp.CreatePortalPageRequest
 	if err := json.Unmarshal(data, &target); err != nil {
@@ -45,14 +137,33 @@ func (s *PortalPageAPISpec) ToCreatePortalPageRequest() (*sdkkonnectcomp.CreateP
 	return &target, nil
 }
 
-// ToUpdatePortalPageRequest converts the PortalPageAPISpec to the SDK type
-// sdkkonnectcomp.UpdatePortalPageRequest using JSON marshal/unmarshal.
-// Fields that exist in the CRD spec but not in the SDK type (e.g., Kubernetes
-// object references) are naturally excluded because they have different JSON names.
-func (s *PortalPageAPISpec) ToUpdatePortalPageRequest() (*sdkkonnectcomp.UpdatePortalPageRequest, error) {
-	data, err := s.marshalSDKOpsPayload()
+// ToUpdatePortalPageRequest converts the PortalPage to the SDK type
+// sdkkonnectcomp.UpdatePortalPageRequest, resolving referenced CRs to Konnect IDs via the provided client.
+func (obj *PortalPage) ToUpdatePortalPageRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdatePortalPageRequest, error) {
+	spec := &obj.Spec.APISpec
+	data, err := spec.marshalSDKOpsPayload()
 	if err != nil {
 		return nil, err
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(data, &payload); err != nil {
+		return nil, fmt.Errorf("failed to decode PortalPage SDK payload: %w", err)
+	}
+	if payload == nil {
+		payload = map[string]any{}
+	}
+	resolvedParentPageIDRef, err := resolvePortalPageParentPageIDRef(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving spec.apiSpec.parentPageIDRef reference: %w", err)
+	}
+	// A single ObjectRef resolves to at most one value; inject it as a plain
+	// string. An unset reference leaves the payload key absent.
+	if len(resolvedParentPageIDRef) > 0 {
+		payload["parent_page_id"] = resolvedParentPageIDRef[0]
+	}
+	data, err = json.Marshal(payload)
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal PortalPage SDK payload with references: %w", err)
 	}
 	var target sdkkonnectcomp.UpdatePortalPageRequest
 	if err := json.Unmarshal(data, &target); err != nil {

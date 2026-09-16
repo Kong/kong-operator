@@ -20,6 +20,7 @@ import (
 // +apireference:kgo:include
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="!has(self.spec.portalRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.portalRef == self.spec.portalRef", message="spec.portalRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.apiSpec.parentPageIDRef) || !has(self.spec.apiSpec.parentPageIDRef.namespacedRef) || self.spec.apiSpec.parentPageIDRef.namespacedRef.name != self.metadata.name", message="parentPageIDRef must not reference the PortalPage itself"
 type PortalPage struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -75,7 +76,6 @@ type PortalPageAPISpec struct {
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:XValidation:rule="self == null",message="cannot set parentPageIDRef"
 	ParentPageIDRef *commonv1alpha1.ObjectRef `json:"parentPageIDRef,omitempty"`
 
 	// The slug of a page in a portal, used to compute its full URL path within the

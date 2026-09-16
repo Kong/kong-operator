@@ -108,3 +108,49 @@ type ReferenceDifferentGatewayError struct {
 func (e ReferenceDifferentGatewayError) Error() string {
 	return fmt.Sprintf("%s %s/%s belongs to Gateway %q, not referrer Gateway %q", e.Kind, e.Namespace, e.Name, e.ReferencedGatewayID, e.ReferrerGatewayID)
 }
+
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+//
+// +kubebuilder:object:generate=false
+type ReferenceDifferentParentError struct {
+	Kind       string
+	Namespace  string
+	Name       string
+	ParentKind string
+}
+
+func (e ReferenceDifferentParentError) Error() string {
+	return fmt.Sprintf("%s %s/%s belongs to a different %s than the referrer", e.Kind, e.Namespace, e.Name, e.ParentKind)
+}
+
+// ObjectRefsDiffer reports whether a and b are known to point at different
+// objects. It returns false when no conclusion can be drawn: the refs use
+// different types, or either ref is incomplete. An empty or nil namespacedRef
+// namespace resolves to the ref owner's own namespace.
+func ObjectRefsDiffer(a, b ObjectRef, aDefaultNamespace, bDefaultNamespace string) bool {
+	if a.Type != b.Type {
+		return false
+	}
+	switch a.Type {
+	case ObjectRefTypeKonnectID:
+		return a.KonnectID != nil && b.KonnectID != nil && *a.KonnectID != *b.KonnectID
+	case ObjectRefTypeNamespacedRef:
+		if a.NamespacedRef == nil || b.NamespacedRef == nil {
+			return false
+		}
+		aNS := aDefaultNamespace
+		if a.NamespacedRef.Namespace != nil && *a.NamespacedRef.Namespace != "" {
+			aNS = *a.NamespacedRef.Namespace
+		}
+		bNS := bDefaultNamespace
+		if b.NamespacedRef.Namespace != nil && *b.NamespacedRef.Namespace != "" {
+			bNS = *b.NamespacedRef.Namespace
+		}
+		return aNS != bNS || a.NamespacedRef.Name != b.NamespacedRef.Name
+	default:
+		return false
+	}
+}

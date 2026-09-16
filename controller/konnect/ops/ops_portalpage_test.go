@@ -9,17 +9,20 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func TestCreatePortalPage(t *testing.T) {
 	ctx := t.Context()
 	sdk := sdkmocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	page := testPortalPage()
 
-	expectedRequest, err := page.Spec.APISpec.ToCreatePortalPageRequest()
+	expectedRequest, err := page.ToCreatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -31,17 +34,18 @@ func TestCreatePortalPage(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createPortalPage(ctx, sdk, page))
+	require.NoError(t, createPortalPage(ctx, cl, sdk, page))
 	assert.Equal(t, "page-1", page.GetKonnectID())
 }
 
 func TestUpdatePortalPage(t *testing.T) {
 	ctx := t.Context()
 	sdk := sdkmocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	page := testPortalPage()
 	page.SetKonnectID("page-1")
 
-	expectedRequest, err := page.Spec.APISpec.ToUpdatePortalPageRequest()
+	expectedRequest, err := page.ToUpdatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -53,7 +57,7 @@ func TestUpdatePortalPage(t *testing.T) {
 		Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).
 		Once()
 
-	require.NoError(t, updatePortalPage(ctx, sdk, page))
+	require.NoError(t, updatePortalPage(ctx, cl, sdk, page))
 }
 
 func TestDeletePortalPage(t *testing.T) {

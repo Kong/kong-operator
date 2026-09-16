@@ -62,25 +62,3 @@ type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayEr
 // from the referrer's. Konnect scopes child entities under their parent, so
 // such a reference can never resolve to a usable ID.
 type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
-
-// EventGatewaySchemaRegistryRef references an EventGatewaySchemaRegistry in the cluster. The referenced
-// object's Konnect name is used where the Konnect API accepts it.
-type EventGatewaySchemaRegistryRef struct {
-	// Kind is the kind of the referenced object.
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=EventGatewaySchemaRegistry
-	// +kubebuilder:default=EventGatewaySchemaRegistry
-	Kind string `json:"kind,omitempty"`
-
-	// Name is the name of the referenced object.
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	Name string `json:"name"`
-
-	// Namespace is reserved for future cross-namespace support.
-	//
-	// +optional
-	Namespace string `json:"namespace,omitempty"`
-}
