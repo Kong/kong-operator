@@ -156,7 +156,6 @@ func (r *AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		logger.Info("Resource is being deleted, its configuration will be removed")
-		delete(r.Cache, req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 	// if status updates are enabled report the status for the object

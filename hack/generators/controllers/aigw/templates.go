@@ -164,7 +164,6 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	// clean the object up if it's being deleted
 	if !obj.DeletionTimestamp.IsZero() && time.Now().After(obj.DeletionTimestamp.Time) {
 		logger.Info("Resource is being deleted, its configuration will be removed")
-		delete(r.Cache, req.NamespacedName)
 		return ctrl.Result{}, nil
 	}
 
