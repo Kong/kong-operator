@@ -19,7 +19,7 @@ jobs:
   e2e-tests-chainsaw:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1} - {2}', matrix.suite, matrix.ip_family, inputs.node_image_version) }}
+    name: ${{ matrix.suite }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }} - ${{ inputs.node_image_version }}
     env:
       IMG: kong-operator
       TAG: e2e-${{ github.sha }}
@@ -210,7 +210,7 @@ jobs:
       if: always() && steps.chainsaw-tests.outcome != 'success'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ matrix.ip_family }}-${{ github.run_id }}
+        name: chainsaw-debug-snapshots-${{ matrix.suite }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-${{ github.run_id }}
         path: /tmp/chainsaw/
         if-no-files-found: ignore
         retention-days: 3
