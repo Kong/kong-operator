@@ -34,7 +34,7 @@ type GenerationChangedPredicate struct{}
 // UpdateFunc determines whether an update event should trigger reconciliation.
 // It calls predicate.GenerationChangedPredicate.
 func (p GenerationChangedPredicate) Update(e event.UpdateEvent) bool {
-	return predicate.GenerationChangedPredicate{}.UpdateFunc(e)
+	return predicate.GenerationChangedPredicate{}.Update(e)
 }
 
 // CreateFunc determines whether a create event should trigger reconciliation.
