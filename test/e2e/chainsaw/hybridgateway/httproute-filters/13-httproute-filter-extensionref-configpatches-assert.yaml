@@ -1,0 +1,36 @@
+---
+# Assert the HTTPRoute with the configPatches-backed ExtensionRef filter is accepted and programmed.
+#
+# Required bindings:
+#   - test_name: The test name label to match (used for labels)
+#   - http_route_config_patches_name: Name of the HTTPRoute resource
+#   - http_route_config_patches_namespace: Namespace of the HTTPRoute resource
+#   - gateway_name: Name of the Gateway parent resource
+
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  (labels."chainsaw/test" == ($test_name)): true
+  name: ($http_route_config_patches_name)
+  namespace: ($http_route_config_patches_namespace)
+status:
+  parents:
+    - parentRef:
+        group: gateway.networking.k8s.io
+        kind: Gateway
+        name: ($gateway_name)
+      (conditions[?type == 'Accepted']):
+        - status: "True"
+          reason: Accepted
+      (conditions[?type == 'ResolvedRefs']):
+        - status: "True"
+          reason: ResolvedRefs
+      (conditions[?type == 'KongRouteProgrammed']):
+        - status: "True"
+          reason: KongRouteProgrammed
+      (conditions[?type == 'KongServiceProgrammed']):
+        - status: "True"
+          reason: KongServiceProgrammed
+      (conditions[?type == 'KongPluginBindingProgrammed']):
+        - status: "True"
+          reason: KongPluginBindingProgrammed
