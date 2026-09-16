@@ -22,6 +22,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -278,19 +279,19 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 	)
 
 	// Drive Reconcile like a real controller would across several watch-triggered
-	// passes, re-reading the object each time. The blocked delete must return an
-	// error on every pass so the reconcile is retried with backoff.
+	// passes, re-reading the object each time. The blocked delete must not return
+	// an error (to avoid error-backoff degradation and failure metric spam) but
+	// requeue on a fixed period until the store is empty.
 	var cur konnectv1alpha1.KonnectConfigStore
 	blocked := false
 	for range 6 {
 		require.NoError(t, cl.Get(t.Context(), key, &cur))
-		_, err := reconciler.Reconcile(t.Context(), &cur)
-		if err == nil {
-			continue
+		res, err := reconciler.Reconcile(t.Context(), &cur)
+		require.NoError(t, err)
+		if res.RequeueAfter == ctrlconsts.RequeueWithBackoff {
+			blocked = true
+			break
 		}
-		require.ErrorContains(t, err, "deletion blocked")
-		blocked = true
-		break
 	}
 	require.True(t, blocked, "delete must be blocked while the config store holds entries")
 
