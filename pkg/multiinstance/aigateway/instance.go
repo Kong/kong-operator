@@ -279,7 +279,10 @@ forLoop:
 			}
 
 		// A crashed instance manager (e.g. unreachable API server) tears the instance down:
-		// the multi-instance manager removes it and the OnPremAIGateway reconciler reschedules it.
+		// the multi-instance manager removes it. Nothing reschedules the instance here: the
+		// OnPremAIGateway reconciler recreates it only on the next AIGatewayModel or
+		// OnPremAIGateway event (or informer resync), and the gateway stays Ready meanwhile.
+		// TODO: signal the reconciler so a dead instance is rescheduled promptly.
 		case err, ok := <-mgrErrCh:
 			if !ok {
 				break forLoop
