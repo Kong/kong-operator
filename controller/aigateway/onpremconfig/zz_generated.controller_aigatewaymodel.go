@@ -60,7 +60,7 @@ type aiconfigurationv1alpha1AIGatewayModelReconciler struct {
 	CacheSyncTimeout time.Duration
 	StatusQueue      *status.Queue
 	ChangeNotifier   *changenotifier.ChangeNotifier
-	Cache            map[types.NamespacedName]struct{}
+	Cache            map[types.NamespacedName]types.NamespacedName
 }
 
 var _ controllers.Reconciler = &aiconfigurationv1alpha1AIGatewayModelReconciler{}
@@ -110,7 +110,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetLogger(l logr.Logge
 // Reconcile processes the watched objects
 func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.Cache == nil {
-		r.Cache = make(map[types.NamespacedName]struct{})
+		r.Cache = make(map[types.NamespacedName]types.NamespacedName)
 	}
 	obj := new(aiconfigurationv1alpha1.AIGatewayModel)
 	logger := r.Log.
@@ -122,12 +122,15 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
-			if _, ok := r.Cache[req.NamespacedName]; ok {
+			// The parent was stored on the previous reconcile, so that the deletion
+			// notification still carries the gateway to re-render, even though the
+			// object (and its parent reference) is already gone from the API server.
+			if parent, ok := r.Cache[req.NamespacedName]; ok {
 				obj.Namespace = req.Namespace
 				obj.Name = req.Name
 				obj.Kind = "AIGatewayModel"
 				if r.ChangeNotifier != nil {
-					r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+					r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
 				}
 				delete(r.Cache, req.NamespacedName)
 			}
@@ -136,7 +139,6 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 		return ctrl.Result{}, err
 	}
 
-	r.Cache[req.NamespacedName] = struct{}{}
 	parent := types.NamespacedName{}
 	if parentRef := obj.GetParentRef(); parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef {
 		parent.Namespace = obj.Namespace
@@ -145,6 +147,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.
 		}
 		parent.Name = parentRef.NamespacedRef.Name
 	}
+	r.Cache[req.NamespacedName] = parent
 
 	if r.ChangeNotifier != nil {
 		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)

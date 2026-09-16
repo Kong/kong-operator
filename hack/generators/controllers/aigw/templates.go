@@ -63,7 +63,7 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	StatusQueue      *status.Queue
 {{- end}}
 	ChangeNotifier   *changenotifier.ChangeNotifier
-	Cache            map[types.NamespacedName]struct{}
+	Cache            map[types.NamespacedName]types.NamespacedName
 }
 
 var _ controllers.Reconciler = &{{.PackageAlias}}{{.Kind}}Reconciler{}
@@ -118,7 +118,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 // Reconcile processes the watched objects
 func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.Cache == nil {
-		r.Cache = make(map[types.NamespacedName]struct{})
+		r.Cache = make(map[types.NamespacedName]types.NamespacedName)
 	}
 	obj := new({{.PackageImportAlias}}.{{.Kind}})
 	logger := r.Log.
@@ -130,12 +130,15 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 
 	if err := r.Get(ctx, req.NamespacedName, obj); err != nil {
 		if apierrors.IsNotFound(err) {
-			if _, ok := r.Cache[req.NamespacedName]; ok {
+			// The parent was stored on the previous reconcile, so that the deletion
+			// notification still carries the gateway to re-render, even though the
+			// object (and its parent reference) is already gone from the API server.
+			if parent, ok := r.Cache[req.NamespacedName]; ok {
 				obj.Namespace = req.Namespace
 				obj.Name = req.Name
 				obj.Kind = "{{.Kind}}"
 				if r.ChangeNotifier != nil {
-					r.ChangeNotifier.NotifyChange(ctx, nil, obj)
+					r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
 				}
 				delete(r.Cache, req.NamespacedName)
 			}
@@ -144,7 +147,6 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		return ctrl.Result{}, err
 	}
 
-	r.Cache[req.NamespacedName] = struct{}{}
 	parent := types.NamespacedName{}
 	if parentRef := obj.GetParentRef(); parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef {
 		parent.Namespace = obj.Namespace
@@ -153,6 +155,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, re
 		}
 		parent.Name = parentRef.NamespacedRef.Name
 	}
+	r.Cache[req.NamespacedName] = parent
 
 	if r.ChangeNotifier != nil {
 		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)

@@ -280,9 +280,15 @@ forLoop:
 
 		// A crashed instance manager (e.g. unreachable API server) tears the instance down:
 		// the multi-instance manager removes it and the OnPremAIGateway reconciler reschedules it.
-		case err := <-mgrErrCh:
-			i.logger.Error(err, "Instance controller manager failed")
-			return fmt.Errorf("instance controller manager failed: %w", err)
+		case err, ok := <-mgrErrCh:
+			if !ok {
+				break forLoop
+			}
+
+			if err != nil {
+				i.logger.Error(err, "Instance controller manager failed")
+				return fmt.Errorf("instance controller manager failed: %w", err)
+			}
 
 		case <-ctx.Done():
 			break forLoop
