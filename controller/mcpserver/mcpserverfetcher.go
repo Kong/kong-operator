@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -121,7 +122,14 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 				}
 				servers, err := f.fetchAll(ctx)
 				if err != nil {
-					log.Error(logger, err, "failed to fetch MCP servers", "controlPlaneID", cpID)
+					if ctx.Err() != nil {
+						return
+					}
+					// Requeue: a failed fetch yields an incomplete list, and
+					// syncing one would delete in-cluster MCPServers whose
+					// Konnect counterparts simply were not listed.
+					log.Error(logger, err, "failed to fetch MCP servers, retrying", "controlPlaneID", cpID)
+					time.AfterFunc(b.Duration(), f.wake)
 					continue
 				}
 				log.Debug(logger, "fetched MCP servers", "controlPlaneID", cpID, "count", len(servers))
@@ -221,6 +229,9 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	var (
 		servers   []sdkkonnectcomp.MCPServerCPInfo
 		pageAfter *string
+		// Cursors already requested, to detect a next-page cursor that does
+		// not advance (directly or through a longer cycle).
+		seenCursors = map[string]struct{}{}
 	)
 
 	for {
@@ -247,20 +258,58 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 
 		b.Reset()
 
-		if resp.StatusCode != http.StatusOK || resp.ListMCPServersCPInfoResponse == nil {
-			break
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status listing MCP servers for control plane %s: %d",
+				cpID, resp.StatusCode)
+		}
+		if resp.ListMCPServersCPInfoResponse == nil {
+			return nil, fmt.Errorf("empty response body listing MCP servers for control plane %s", cpID)
 		}
 
 		servers = append(servers, resp.ListMCPServersCPInfoResponse.Data...)
 
 		next := resp.ListMCPServersCPInfoResponse.Meta.Page.GetNext()
-		if next == nil {
+		if next == nil || *next == "" {
+			// Last page.
 			break
 		}
-		pageAfter = next
+
+		cursor, err := pageAfterCursorFromNextPageURL(*next)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seenCursors[cursor]; ok {
+			// The cursor does not advance: stop instead of fetching the same
+			// pages forever.
+			return nil, fmt.Errorf("next page cursor %q repeated while listing MCP servers for control plane %s",
+				cursor, cpID)
+		}
+		seenCursors[cursor] = struct{}{}
+		pageAfter = &cursor
 	}
 
 	return servers, nil
+}
+
+// pageAfterCursorFromNextPageURL extracts the page[after] item cursor from a
+// next-page URI as returned in Konnect list responses' meta.page.next. The SDK
+// models Next as a full URI while the list requests' PageAfter parameter
+// expects only the item cursor, so the URI must be parsed.
+//
+// next must be non-empty: callers treat an absent or empty meta.page.next as
+// the last page. A next-page URI carrying no cursor is reported as an error
+// rather than as the last page, so that an unfollowable page never passes for
+// a complete listing.
+func pageAfterCursorFromNextPageURL(next string) (string, error) {
+	u, err := url.Parse(next)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse next page URI %q: %w", next, err)
+	}
+	cursor := u.Query().Get("page[after]")
+	if cursor == "" {
+		return "", fmt.Errorf("next page URI %q carries no page[after] cursor", next)
+	}
+	return cursor, nil
 }
 
 // syncMCPServer syncs a single Konnect MCP server to Kubernetes: if a
