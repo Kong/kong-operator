@@ -313,6 +313,9 @@ func isExpectedKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
 		return true
 	}
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceSelfError](err); ok {
+		return true
+	}
 	if crossnamespace.IsReferenceNotGranted(err) {
 		return true
 	}
@@ -326,7 +329,10 @@ func hasInvalidKonnectReferenceResolutionError(err error) bool {
 	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentGatewayError](err); ok {
 		return true
 	}
-	_, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err)
+	if _, ok := errors.AsType[commonv1alpha1.ReferenceDifferentParentError](err); ok {
+		return true
+	}
+	_, ok := errors.AsType[commonv1alpha1.ReferenceSelfError](err)
 	return ok
 }
 

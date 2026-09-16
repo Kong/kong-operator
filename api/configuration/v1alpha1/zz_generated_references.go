@@ -63,6 +63,11 @@ type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayEr
 // such a reference can never resolve to a usable ID.
 type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
 
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
+
 // EventGatewaySchemaRegistryRef references an EventGatewaySchemaRegistry in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type EventGatewaySchemaRegistryRef struct {

@@ -62,3 +62,8 @@ type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayEr
 // from the referrer's. Konnect scopes child entities under their parent, so
 // such a reference can never resolve to a usable ID.
 type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
