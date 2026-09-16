@@ -43,7 +43,7 @@ type Controllers struct {
 
 // SetupWithManager sets up the configuration-entity controllers with the Manager.
 func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	r := &aiconfigurationv1alpha1AIGatewayModelReconciler{
+	r := &AIGatewayModelReconciler{
 		Client:           cs.Client,
 		Log:              cs.Log,
 		Scheme:           cs.Scheme,

@@ -51,8 +51,8 @@ import (
 // {{.PackageAlias}} {{.Kind}} - Reconciler
 // -----------------------------------------------------------------------------
 
-// {{.PackageAlias}}{{.Kind}}Reconciler reconciles {{.Kind}} resources
-type {{.PackageAlias}}{{.Kind}}Reconciler struct {
+// {{.Kind}}Reconciler reconciles {{.Kind}} resources
+type {{.Kind}}Reconciler struct {
 	client.Client
 
 	Log              logr.Logger
@@ -66,10 +66,10 @@ type {{.PackageAlias}}{{.Kind}}Reconciler struct {
 	Cache            map[types.NamespacedName]types.NamespacedName
 }
 
-var _ controllers.Reconciler = &{{.PackageAlias}}{{.Kind}}Reconciler{}
+var _ controllers.Reconciler = &{{.Kind}}Reconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named("{{.PackageAlias}}{{.Kind}}").
@@ -106,7 +106,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetupWithManager(mgr ctrl.Manager
 }
 
 // SetLogger sets the logger.
-func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
+func (r *{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
@@ -116,7 +116,7 @@ func (r *{{.PackageAlias}}{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 {{- end}}
 
 // Reconcile processes the watched objects
-func (r *{{.PackageAlias}}{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.Cache == nil {
 		r.Cache = make(map[types.NamespacedName]types.NamespacedName)
 	}

@@ -50,8 +50,8 @@ import (
 // aiconfigurationv1alpha1 AIGatewayModel - Reconciler
 // -----------------------------------------------------------------------------
 
-// aiconfigurationv1alpha1AIGatewayModelReconciler reconciles AIGatewayModel resources
-type aiconfigurationv1alpha1AIGatewayModelReconciler struct {
+// AIGatewayModelReconciler reconciles AIGatewayModel resources
+type AIGatewayModelReconciler struct {
 	client.Client
 
 	Log              logr.Logger
@@ -63,10 +63,10 @@ type aiconfigurationv1alpha1AIGatewayModelReconciler struct {
 	Cache            map[types.NamespacedName]types.NamespacedName
 }
 
-var _ controllers.Reconciler = &aiconfigurationv1alpha1AIGatewayModelReconciler{}
+var _ controllers.Reconciler = &AIGatewayModelReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
 		Named("aiconfigurationv1alpha1AIGatewayModel").
@@ -100,7 +100,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetupWithManager(mgr c
 }
 
 // SetLogger sets the logger.
-func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetLogger(l logr.Logger) {
+func (r *AIGatewayModelReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
@@ -108,7 +108,7 @@ func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) SetLogger(l logr.Logge
 //+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymodels/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
-func (r *aiconfigurationv1alpha1AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.Cache == nil {
 		r.Cache = make(map[types.NamespacedName]types.NamespacedName)
 	}
