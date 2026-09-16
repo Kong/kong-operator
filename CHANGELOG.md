@@ -185,6 +185,7 @@
   and is retried with a backoff instead of returning a truncated list, which
   was treated as authoritative and deleted the in-cluster `MCPServer`s missing
   from it.
+  [#5727](https://github.com/Kong/kong-operator/pull/5727)
 
 ## [v2.3.1]
 
