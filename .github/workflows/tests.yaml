@@ -222,7 +222,7 @@ jobs:
         # TODO: remove this hardcode when helm/kind-action defaults to kind v0.32.0
         # Setting this prevents:
         # ERROR: unknown containerd config version: 4 (supported versions: 2 and 3)
-        version: v0.32.0
+        version: v0.33.0
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
 
     - uses: ./.github/actions/setup-mise
@@ -280,7 +280,7 @@ jobs:
         # TODO: remove this hardcode when helm/kind-action defaults to kind v0.32.0
         # Setting this prevents:
         # ERROR: unknown containerd config version: 4 (supported versions: 2 and 3)
-        version: v0.32.0
+        version: v0.33.0
         cluster_name: ${{ env.CLUSTER_NAME }}
         ignore_failed_clean: true
         node_image: kindest/node:${{ needs.matrix_k8s_node_versions.outputs.latest }}
