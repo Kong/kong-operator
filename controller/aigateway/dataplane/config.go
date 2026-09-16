@@ -343,7 +343,8 @@ func buildContainer(
 
 // konnectAIGatewayFromResolved returns the KonnectAIGateway carried by the
 // resolved control plane. It returns nil when the AIGatewayDataPlane has no
-// control plane reference configured.
+// control plane reference configured or the resolved control plane is not
+// Konnect-backed (e.g. an OnPremAIGateway).
 // It panics on a resolved control plane that claims to be Konnect-backed
 // but carries an unexpected object: that is a programming error.
 func konnectAIGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *konnectv1alpha1.KonnectAIGateway {

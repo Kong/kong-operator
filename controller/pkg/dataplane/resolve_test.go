@@ -76,34 +76,27 @@ func Test_resolveControlPlane_OnPremReadiness(t *testing.T) {
 		name string
 		// nil = not in cluster
 		onprem            *aigatewayv1alpha1.OnPremAIGateway
-		wantCP            bool
 		wantErr           bool
-		wantTransientErr  bool // error is one of the expected transient (non-retried) errors
 		wantConditionTrue bool
 		wantReason        string
 	}{
 		{
 			name:              "onprem not found: sets NotFound condition and returns error",
 			onprem:            nil,
-			wantCP:            false,
 			wantErr:           true,
-			wantTransientErr:  true,
 			wantConditionTrue: false,
 			wantReason:        string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
 			name:              "onprem not yet Ready: sets NotReady condition and returns transient error",
 			onprem:            newOnPremAIGW(metav1.ConditionFalse),
-			wantCP:            false,
 			wantErr:           true,
-			wantTransientErr:  true,
 			wantConditionTrue: false,
 			wantReason:        string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
 		},
 		{
 			name:              "onprem Ready: returns onprem and sets Resolved condition",
 			onprem:            newOnPremAIGW(metav1.ConditionTrue),
-			wantCP:            true,
 			wantErr:           false,
 			wantConditionTrue: true,
 			wantReason:        string(aigatewayv1alpha1.ControlPlaneResolvedReason),
