@@ -20,6 +20,10 @@ const (
 	// KonnectEntityProgrammedReasonConditionWithStatusFalseExists is the reason for the Programmed condition.
 	// It is set when there's at least one status condition (not Programmed) with status false.
 	KonnectEntityProgrammedReasonConditionWithStatusFalseExists = "ConditionWithStatusFalseExists"
+	// KonnectEntityProgrammedReasonDeletionBlocked is the reason for the Programmed condition.
+	// It is set when the entity's deletion is blocked by Konnect, e.g. when a
+	// KonnectConfigStore still holds secret entries that must be removed first.
+	KonnectEntityProgrammedReasonDeletionBlocked = "DeletionBlocked"
 
 	// KonnectGatewayControlPlaneProgrammedReasonFailedToSetControlPlaneGroupMembers is the reason for the Programmed
 	// condition. It is set when the control plane

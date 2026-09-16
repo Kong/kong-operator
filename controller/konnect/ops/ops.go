@@ -355,6 +355,8 @@ func Delete[
 		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), e, sdk.GetServer().Region())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), e)
+	case *konnectv1alpha1.KonnectConfigStore:
+		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -926,6 +928,12 @@ func getMatchingEntryFromListResponseData[
 func ClearInstanceFromError(err error) error {
 	if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
 		errBadRequest.Instance = ""
+		// Keep richer wrappers intact (e.g. KonnectConfigStoreNotEmptyError
+		// carrying the blocking entry keys) so reconcilers can act on them;
+		// the instance field is cleared in place either way.
+		if _, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err); ok {
+			return err
+		}
 		return errBadRequest
 	}
 
