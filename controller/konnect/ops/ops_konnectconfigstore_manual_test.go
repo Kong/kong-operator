@@ -391,6 +391,22 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 		assert.False(t, truncated)
 	})
 
+	t.Run("returns a non-nil empty slice when the listing succeeds with no entries", func(t *testing.T) {
+		t.Parallel()
+
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
+			Return(newListResponse(nil), nil).
+			Once()
+
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		require.NoError(t, err)
+		assert.NotNil(t, keys)
+		assert.Empty(t, keys)
+		assert.False(t, truncated)
+	})
+
 	t.Run("stops and deduplicates when the cursor does not advance", func(t *testing.T) {
 		t.Parallel()
 
