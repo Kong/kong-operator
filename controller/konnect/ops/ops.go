@@ -412,6 +412,8 @@ func Delete[
 	if err != nil {
 		if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 			statusCode = errSDK.StatusCode
+		} else if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
+			statusCode = int(errBadRequest.Status)
 		}
 		metricRecorder.RecordKonnectEntityOperationFailure(
 			sdk.GetServerURL(),
