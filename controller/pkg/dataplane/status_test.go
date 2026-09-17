@@ -153,7 +153,7 @@ func Test_ensureReadyStatus(t *testing.T) {
 				{
 					Type:               string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
 					Status:             metav1.ConditionTrue,
-					Reason:             string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+					Reason:             string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 					LastTransitionTime: metav1.Now(),
 				},
 			},

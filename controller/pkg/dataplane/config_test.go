@@ -75,12 +75,32 @@ var testControlPlaneKind = ControlPlaneKindConfig{
 	IsKonnect:                 true,
 	Conditions: ControlPlaneConditions{
 		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
+		ResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
 		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		NotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+		NotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
 		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
 		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+	},
+}
+
+// testOnPremControlPlaneKind mirrors the OnPremAIGateway control plane kind
+// configuration of the AIGatewayDataPlane controller: not Konnect-backed, with
+// a readiness condition gate.
+var testOnPremControlPlaneKind = ControlPlaneKindConfig{
+	Kind:                      "OnPremAIGateway",
+	NewObject:                 func() ControlPlaneObject { return &aigatewayv1alpha1.OnPremAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnOnPremAIGateway,
+	IsKonnect:                 false,
+	ReadinessConditionType:    string(aigatewayv1alpha1.ReadyType),
+	Conditions: ControlPlaneConditions{
+		ResolvedType:    string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
+		ResolvedReason:  string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage: aigatewayv1alpha1.OnPremAIGatewayResolvedMessage,
+		NotFoundReason:  string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage: aigatewayv1alpha1.OnPremAIGatewayNotFoundMessage,
+		NotReadyReason:  string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
+		NotReadyMessage: aigatewayv1alpha1.OnPremAIGatewayNotReadyMessage,
 	},
 }
 
@@ -104,15 +124,32 @@ var testConfig = Config[
 	},
 
 	ControlPlaneRef: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) ControlPlaneRef {
-		if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
+		ref := aigwdp.Spec.ControlPlaneRef
+		if ref == nil {
 			return ControlPlaneRef{}
 		}
-		return ControlPlaneRef{
-			Kind: testControlPlaneKind.Kind,
-			Name: aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+		switch ref.Type {
+		case aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef:
+			if ref.KonnectNamespacedRef == nil {
+				return ControlPlaneRef{}
+			}
+			return ControlPlaneRef{
+				Kind: testControlPlaneKind.Kind,
+				Name: ref.KonnectNamespacedRef.Name,
+			}
+		case aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef:
+			if ref.OnPremNamespacedRef == nil {
+				return ControlPlaneRef{}
+			}
+			return ControlPlaneRef{
+				Kind: testOnPremControlPlaneKind.Kind,
+				Name: ref.OnPremNamespacedRef.Name,
+			}
+		default:
+			return ControlPlaneRef{}
 		}
 	},
-	ControlPlanes: []ControlPlaneKindConfig{testControlPlaneKind},
+	ControlPlanes: []ControlPlaneKindConfig{testControlPlaneKind, testOnPremControlPlaneKind},
 
 	Conditions: Conditions{
 		ReadyType:                    string(aigatewayv1alpha1.ReadyType),
@@ -431,7 +468,7 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: reconcileTestAIGWCPName,
 				},
 			},

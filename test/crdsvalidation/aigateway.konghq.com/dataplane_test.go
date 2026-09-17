@@ -20,7 +20,7 @@ func validDataPlane(ns string) *aigatewayv1alpha1.AIGatewayDataPlane {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: "my-ai-gateway",
 				},
 			},
@@ -60,6 +60,81 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec:       aigatewayv1alpha1.AIGatewayDataPlaneSpec{},
 				},
 			},
+			{
+				Name: "onpremNamespacedRef type with ref set - valid",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+							Type: aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+							OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+								Name: "my-onprem-ai-gateway",
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "onpremNamespacedRef type without ref - invalid",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+							Type: aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+						},
+					},
+				},
+				ExpectedErrorMessage: new("onpremNamespacedRef must be set when type is onpremNamespacedRef"),
+			},
+			{
+				Name: "onpremNamespacedRef type with empty name - invalid",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+							Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+							OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("spec.controlPlaneRef.onpremNamespacedRef.name: Required value"),
+			},
+			{
+				Name: "onpremNamespacedRef type with konnectNamespacedRef set - invalid",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+							Type: aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+							OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+								Name: "my-onprem-ai-gateway",
+							},
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+								Name: "my-ai-gateway",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("only one of konnectNamespacedRef or onpremNamespacedRef can be set"),
+			},
+			{
+				Name: "konnectNamespacedRef type with onpremNamespacedRef set - invalid",
+				TestObject: &aigatewayv1alpha1.AIGatewayDataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+								Name: "my-ai-gateway",
+							},
+							OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
+								Name: "my-onprem-ai-gateway",
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("only one of konnectNamespacedRef or onpremNamespacedRef can be set"),
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 
@@ -67,7 +142,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 		konnectNamespacedRef := func(name string) *aigatewayv1alpha1.ControlPlaneRef {
 			return &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: name,
 				},
 			}
@@ -126,7 +201,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -147,7 +222,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -171,7 +246,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -195,7 +270,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -225,7 +300,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -242,7 +317,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -263,7 +338,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},
@@ -358,7 +433,7 @@ func TestAIGatewayDataPlane(t *testing.T) {
 					Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 						ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 							Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-							KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+							KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 								Name: "my-ai-gateway",
 							},
 						},

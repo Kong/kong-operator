@@ -41,6 +41,14 @@ func setStatusCondition(dp k8sutils.ConditionsAware, condition metav1.Condition)
 	dp.SetConditions(conditions)
 }
 
+// removeStatusCondition removes the condition with the given type from the
+// DataPlane, if present.
+func removeStatusCondition(dp k8sutils.ConditionsAware, condType string) {
+	conditions := dp.GetConditions()
+	apimeta.RemoveStatusCondition(&conditions, condType)
+	dp.SetConditions(conditions)
+}
+
 // ensureReadyStatus computes the Ready condition for a DataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets
 // Ready=False immediately without fetching the Deployment. Otherwise it reads

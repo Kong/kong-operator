@@ -38,16 +38,21 @@ import (
 // error backoff.
 var errControlPlaneNotProgrammed = errors.New("control plane is not yet Programmed")
 
+// errControlPlaneNotReady is returned by resolveControlPlane when the
+// referenced non-Konnect control plane exists but is not yet Ready. Like
+// errControlPlaneNotProgrammed it is an expected transient state.
+var errControlPlaneNotReady = errors.New("control plane is not yet Ready")
+
 // resolveControlPlane resolves the control plane referenced by the DataPlane.
 // It sets the kind-specific control plane resolved condition on the DataPlane
 // and returns the resolved control plane if successful.
 //
-// TODO(issue-5666): when a DataPlane switches its control plane reference
-// from one kind to another (e.g. KonnectAIGateway -> OnPremAIGateway), the
-// previous kind's resolution condition is never cleared from status: each
-// kind reports under its own condition type and SSA keeps untouched entries.
-// Clear the resolution conditions of all other configured kinds here (or
-// switch to a single shared condition type) when a second kind is wired.
+// Resolution also removes the resolution conditions of all other configured
+// control plane kinds: should a DataPlane kind with a mutable control plane
+// reference ever switch kinds (AIGatewayDataPlane's is immutable), the
+// previous kind's stale resolution condition would otherwise never be cleared
+// from status, since each kind reports under its own condition type and SSA
+// keeps untouched entries.
 func (r *Reconciler[T, Cert]) resolveControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
@@ -59,6 +64,15 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		return ResolvedControlPlane{}, fmt.Errorf(
 			"%s %s/%s references unsupported control plane kind %q in controlPlaneRef",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), ref.Kind)
+	}
+
+	// Drop the resolution conditions of all other configured control plane
+	// kinds: only the kind currently referenced may report on resolution.
+	for _, other := range r.Config.ControlPlanes {
+		if other.Kind == cpKindCfg.Kind {
+			continue
+		}
+		removeStatusCondition(dp, other.Conditions.ResolvedType)
 	}
 
 	cp := cpKindCfg.NewObject()
@@ -91,8 +105,8 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 		Object:    cp,
 	}
 
-	// Only Konnect-backed control planes are checked for the Konnect
-	// Programmed condition (i.e. that they exist on Konnect).
+	// Konnect-backed control planes must be Programmed (i.e. exist on Konnect);
+	// non-Konnect ones must satisfy their configured readiness condition.
 	if cpKindCfg.IsKonnect &&
 		!apimeta.IsStatusConditionTrue(cp.GetConditions(), konnectv1alpha1.KonnectEntityProgrammedConditionType) {
 		log.Debug(logger, "referenced "+cpKindCfg.Kind+" is not yet Programmed",
@@ -108,6 +122,22 @@ func (r *Reconciler[T, Cert]) resolveControlPlane(
 
 		return resolved, fmt.Errorf("referenced %s %q: %w",
 			cpKindCfg.Kind, ref.Name, errControlPlaneNotProgrammed)
+	}
+	if !cpKindCfg.IsKonnect && cpKindCfg.ReadinessConditionType != "" &&
+		!apimeta.IsStatusConditionTrue(cp.GetConditions(), cpKindCfg.ReadinessConditionType) {
+		log.Debug(logger, "referenced "+cpKindCfg.Kind+" is not yet Ready",
+			"ref", ref.Name)
+
+		setStatusCondition(dp, metav1.Condition{
+			Type:               cpKindCfg.Conditions.ResolvedType,
+			Status:             metav1.ConditionFalse,
+			Reason:             cpKindCfg.Conditions.NotReadyReason,
+			Message:            cpKindCfg.Conditions.NotReadyMessage,
+			ObservedGeneration: dp.GetGeneration(),
+		})
+
+		return resolved, fmt.Errorf("referenced %s %q: %w",
+			cpKindCfg.Kind, ref.Name, errControlPlaneNotReady)
 	}
 
 	setStatusCondition(dp, metav1.Condition{

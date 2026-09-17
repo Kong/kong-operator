@@ -66,6 +66,10 @@
 
 ### Added
 
+- `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
+  `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
+  control plane in the same namespace.
+  [#5666](https://github.com/Kong/kong-operator/issues/5666)
 - `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
   via `spec.deployment.scaling.horizontal`.
   [#5556](https://github.com/Kong/kong-operator/pull/5556)

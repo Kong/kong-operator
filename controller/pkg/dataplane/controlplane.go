@@ -82,6 +82,12 @@ type ControlPlaneConditions struct {
 	NotProgrammedReason string
 	// NotProgrammedMessage is the message used when the control plane is not yet Programmed.
 	NotProgrammedMessage string
+	// NotReadyReason is the reason used when a non-Konnect control plane is not yet Ready.
+	// Only used when the kind config sets ReadinessConditionType.
+	NotReadyReason string
+	// NotReadyMessage is the message used when a non-Konnect control plane is not yet Ready.
+	// Only used when the kind config sets ReadinessConditionType.
+	NotReadyMessage string
 }
 
 // ControlPlaneKindConfig describes one kind of control plane that a DataPlane
@@ -100,6 +106,11 @@ type ControlPlaneKindConfig struct {
 	// Konnect-backed control planes are checked for the Konnect Programmed
 	// condition during resolution and trigger Konnect certificate automation.
 	IsKonnect bool
+	// ReadinessConditionType is the condition type on a non-Konnect control
+	// plane (e.g. "Ready" for OnPremAIGateway) that must be True for the
+	// control plane to be considered resolved. When empty, a non-Konnect
+	// control plane is considered resolved as soon as it exists.
+	ReadinessConditionType string
 	// Conditions carries the control plane resolution condition types, reasons
 	// and messages for this kind.
 	Conditions ControlPlaneConditions
