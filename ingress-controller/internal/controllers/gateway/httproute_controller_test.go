@@ -20,6 +20,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
 	"github.com/kong/kong-operator/v2/pkg/clientset/scheme"
 	"github.com/kong/kong-operator/v2/pkg/metadata"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func init() {
@@ -292,15 +293,13 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 
 	tests := []struct {
 		name               string
-		enableRefGrant     bool
 		objects            []client.Object
 		route              gatewayapi.HTTPRoute
 		wantReason         gatewayapi.RouteConditionReason
 		wantMessageContain string
 	}{
 		{
-			name:           "extensionRef resolves",
-			enableRefGrant: true,
+			name: "extensionRef resolves",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 				&kongPlugin,
@@ -320,8 +319,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
 		{
-			name:           "extensionRef missing",
-			enableRefGrant: true,
+			name: "extensionRef missing",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 			},
@@ -341,8 +339,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "extensionRef default/missing-plugin does not exist",
 		},
 		{
-			name:           "extensionRef invalid kind",
-			enableRefGrant: true,
+			name: "extensionRef invalid kind",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 			},
@@ -362,8 +359,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "unsupported type configuration.konghq.com/KongClusterPlugin",
 		},
 		{
-			name:           "annotation plugin missing",
-			enableRefGrant: true,
+			name: "annotation plugin missing",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 			},
@@ -378,8 +374,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "referenced KongPlugin default/missing-plugin does not exist",
 		},
 		{
-			name:           "annotation plugin cross-namespace without grant",
-			enableRefGrant: true,
+			name: "annotation plugin cross-namespace without grant",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 				&configurationv1.KongPlugin{
@@ -398,8 +393,7 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			wantMessageContain: "and no ReferenceGrant allowing reference is configured",
 		},
 		{
-			name:           "annotation plugin cross-namespace with grant",
-			enableRefGrant: true,
+			name: "annotation plugin cross-namespace with grant",
 			objects: []client.Object{
 				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
 				&configurationv1.KongPlugin{
@@ -430,45 +424,29 @@ func TestHTTPRouteRuleReasonPluginReferences(t *testing.T) {
 			}(),
 			wantReason: gatewayapi.RouteReasonResolvedRefs,
 		},
-		{
-			name:           "annotation plugin cross-namespace without ReferenceGrant CRD",
-			enableRefGrant: false,
-			objects: []client.Object{
-				&corev1.Service{ObjectMeta: metav1.ObjectMeta{Name: "svc", Namespace: "default"}},
-				&configurationv1.KongPlugin{
-					ObjectMeta: metav1.ObjectMeta{Name: "rate-limit", Namespace: "plugins"},
-					PluginName: "rate-limiting",
-				},
-			},
-			route: func() gatewayapi.HTTPRoute {
-				r := baseRoute.DeepCopy()
-				r.Annotations = map[string]string{
-					metadata.AnnotationKeyPlugins: "plugins:rate-limit",
-				}
-				return *r
-			}(),
-			wantReason:         gatewayapi.RouteReasonRefNotPermitted,
-			wantMessageContain: "install ReferenceGrant CRD and configure a proper grant",
-		},
 	}
 
-	for _, tc := range tests {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fakeclient.NewClientBuilder().
-				WithScheme(scheme.Scheme).
-				WithObjects(tc.objects...).
-				Build()
-			reconciler := &HTTPRouteReconciler{
-				Client:               cl,
-				Log:                  logger,
-				enableReferenceGrant: tc.enableRefGrant,
-			}
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range tests {
+				t.Run(tc.name, func(t *testing.T) {
+					cl := fakeclient.NewClientBuilder().
+						WithScheme(scheme.Scheme).
+						WithObjects(referencegranthelpers.AsVersion(gv, tc.objects)...).
+						Build()
+					reconciler := &HTTPRouteReconciler{
+						Client:                cl,
+						Log:                   logger,
+						ReferenceGrantVersion: gv,
+					}
 
-			reason, msg, err := reconciler.getHTTPRouteRuleReason(ctx, tc.route)
-			require.NoError(t, err)
-			assert.Equal(t, tc.wantReason, reason)
-			if tc.wantMessageContain != "" {
-				assert.Contains(t, msg, tc.wantMessageContain)
+					reason, msg, err := reconciler.getHTTPRouteRuleReason(ctx, tc.route)
+					require.NoError(t, err)
+					assert.Equal(t, tc.wantReason, reason)
+					if tc.wantMessageContain != "" {
+						assert.Contains(t, msg, tc.wantMessageContain)
+					}
+				})
 			}
 		})
 	}

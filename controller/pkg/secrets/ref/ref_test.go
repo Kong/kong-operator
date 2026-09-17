@@ -11,9 +11,11 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
 	operatorv1alpha1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1alpha1"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
+	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
 )
 
 func TestCheckReferenceGrantForSecret(t *testing.T) {
@@ -194,22 +196,35 @@ func TestCheckReferenceGrantForSecret(t *testing.T) {
 		},
 	}
 
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			cl := fake.NewFakeClient(lo.Map(tc.referenceGrants, func(rg gwtypes.ReferenceGrant, _ int) runtime.Object {
-				return &rg
-			})...)
-			require.NoError(t, gatewayv1.Install(cl.Scheme()))
-			_, granted, err := CheckReferenceGrantForSecret(
-				t.Context(), cl,
-				tc.forObj,
-				gatewayv1.SecretObjectReference{
-					Namespace: new(gatewayv1.Namespace("default")),
-					Name:      "good-secret",
-				},
-			)
-			require.NoError(t, err)
-			assert.Equal(t, tc.isGranted, granted)
+	for _, gv := range referencegranthelpers.Versions() {
+		t.Run(gv.Version, func(t *testing.T) {
+			for _, tc := range testCases {
+				t.Run(tc.name, func(t *testing.T) {
+					s := runtime.NewScheme()
+					require.NoError(t, gatewayv1.Install(s))
+					require.NoError(t, gatewayv1beta1.Install(s))
+					require.NoError(t, operatorv1alpha1.AddToScheme(s))
+
+					cl := fake.NewClientBuilder().
+						WithScheme(s).
+						WithObjects(referencegranthelpers.AsVersion(gv, lo.Map(tc.referenceGrants,
+							func(rg gwtypes.ReferenceGrant, _ int) client.Object { return &rg },
+						))...).
+						Build()
+
+					_, granted, err := CheckReferenceGrantForSecret(
+						t.Context(), cl,
+						gv,
+						tc.forObj,
+						gatewayv1.SecretObjectReference{
+							Namespace: new(gatewayv1.Namespace("default")),
+							Name:      "good-secret",
+						},
+					)
+					require.NoError(t, err)
+					assert.Equal(t, tc.isGranted, granted)
+				})
+			}
 		})
 	}
 }

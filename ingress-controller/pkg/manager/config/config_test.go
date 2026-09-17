@@ -6,6 +6,9 @@ import (
 	"testing"
 	"time"
 
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
+
 	"github.com/stretchr/testify/require"
 	"k8s.io/client-go/rest"
 
@@ -86,6 +89,7 @@ func TestNewConfig(t *testing.T) {
 			KongVaultEnabled:                       true,
 			KongLicenseEnabled:                     true,
 			KongCustomEntityEnabled:                true,
+			ReferenceGrantVersion:                  schema.GroupVersion(gatewayv1.GroupVersion),
 			GatewayAPIGatewayController:            true,
 			GatewayAPIHTTPRouteController:          true,
 			GatewayAPIReferenceGrantController:     true,

@@ -27,6 +27,7 @@ import (
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	"github.com/kong/kong-operator/v2/internal/utils/gatewayclass"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/pkg/vars"
 )
 
@@ -226,12 +227,12 @@ func (r *Reconciler) listGatewaysForGatewayConfig(ctx context.Context, obj clien
 func (r *Reconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
 	logger := ctrllog.FromContext(ctx)
 
-	grant, ok := obj.(*gwtypes.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		logger.Error(
 			fmt.Errorf("unexpected object type"),
 			"Referencegrant watch predicate received unexpected object type",
-			"expected", "*gatewayapi.ReferenceGrant", "found", reflect.TypeOf(obj),
+			"expected", "*gwtypes.ReferenceGrant", "found", reflect.TypeOf(obj),
 		)
 		return nil
 	}

@@ -40,8 +40,9 @@ func TestHTTPRouteReconcilerProperlyReactsToReferenceGrant(t *testing.T) {
 	client := NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
-		Client:          client,
-		DataplaneClient: mocks.Dataplane{},
+		Client:                client,
+		DataplaneClient:       mocks.Dataplane{},
+		ReferenceGrantVersion: ReferenceGrantVersion,
 	}
 
 	ns := CreateNamespace(ctx, t, client)
@@ -275,8 +276,9 @@ func TestHTTPRouteReconciler_RemovesOutdatedParentStatuses(t *testing.T) {
 	client := NewControllerClient(t, scheme, cfg)
 
 	reconciler := &gateway.HTTPRouteReconciler{
-		Client:          client,
-		DataplaneClient: mocks.Dataplane{},
+		Client:                client,
+		DataplaneClient:       mocks.Dataplane{},
+		ReferenceGrantVersion: ReferenceGrantVersion,
 	}
 
 	ns := CreateNamespace(ctx, t, client)

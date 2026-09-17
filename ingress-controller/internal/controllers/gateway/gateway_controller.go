@@ -32,10 +32,10 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	ctrlref "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/reference"
-	ctrlutils "github.com/kong/kong-operator/v2/ingress-controller/internal/controllers/utils"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
 // -----------------------------------------------------------------------------
@@ -62,10 +62,9 @@ type GatewayReconciler struct {
 	// AddressOverridesUDP are addresses to use in Gateway status instead of the PublishServiceUDPRef addresses.
 	AddressOverridesUDP []string
 
-	// If enableReferenceGrant is true, controller will watch ReferenceGrants
-	// to invalidate or allow cross-namespace TLSConfigs in gateways.
-	// It's resolved on SetupWithManager call.
-	enableReferenceGrant bool
+	// ReferenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster. It's done this way to be able to support GWAPI < v1.5.
+	ReferenceGrantVersion schema.GroupVersion
 
 	// If GatewayNN is set,
 	// only resources managed by the specified Gateway are reconciled.
@@ -78,17 +77,6 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	if r.PublishServiceRef.Name == "" || r.PublishServiceRef.Namespace == "" {
 		return fmt.Errorf("publish service must be configured")
 	}
-
-	// We're verifying whether ReferenceGrant CRD is installed at setup of the GatewayReconciler
-	// to decide whether we should run additional ReferenceGrant watch and handle ReferenceGrants
-	// when reconciling Gateways.
-	// Once the GatewayReconciler is set up without ReferenceGrant, there's no possibility to enable
-	// ReferenceGrant handling again in this reconciler at runtime.
-	r.enableReferenceGrant = ctrlutils.CRDExists(mgr.GetRESTMapper(), schema.GroupVersionResource{
-		Group:    gatewayv1beta1.GroupVersion.Group,
-		Version:  gatewayv1beta1.GroupVersion.Version,
-		Resource: "referencegrants",
-	})
 
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
@@ -125,12 +113,10 @@ func (r *GatewayReconciler) SetupWithManager(mgr ctrl.Manager) error {
 		)
 
 	// watch ReferenceGrants, which may invalidate or allow cross-namespace TLSConfigs
-	if r.enableReferenceGrant {
-		blder.Watches(&gatewayapi.ReferenceGrant{},
-			handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
-			builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
-		)
-	}
+	blder.Watches(k8sutils.NewReferenceGrant(r.ReferenceGrantVersion),
+		handler.EnqueueRequestsFromMapFunc(r.listReferenceGrantsForGateway),
+		builder.WithPredicates(predicate.NewPredicateFuncs(referenceGrantHasGatewayFrom)),
+	)
 
 	// Watch Secrets to immediately reconcile Gateways when referenced certificate Secrets change.
 	blder.WatchesRawSource(
@@ -236,7 +222,7 @@ func (r *GatewayReconciler) listGatewaysForGatewayClass(ctx context.Context, gat
 // listReferenceGrantsForGateway is a watch predicate which finds all Gateways mentioned in a From clause for a
 // ReferenceGrant.
 func (r *GatewayReconciler) listReferenceGrantsForGateway(ctx context.Context, obj client.Object) []reconcile.Request {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		r.Log.Error(
 			fmt.Errorf("unexpected object type"),
@@ -380,7 +366,7 @@ func (r *GatewayReconciler) isGatewayService(obj client.Object) bool {
 }
 
 func referenceGrantHasGatewayFrom(obj client.Object) bool {
-	grant, ok := obj.(*gatewayapi.ReferenceGrant)
+	grant, ok := k8sutils.AsReferenceGrant(obj)
 	if !ok {
 		return false
 	}
@@ -647,14 +633,12 @@ func (r *GatewayReconciler) reconcileUnmanagedGateway(ctx context.Context, log l
 
 	// the ReferenceGrants need to be retrieved to ensure that all gateway listeners reference
 	// TLS secrets they are granted for
-	referenceGrantList := &gatewayapi.ReferenceGrantList{}
-	if r.enableReferenceGrant {
-		if err := r.List(ctx, referenceGrantList); err != nil {
-			return ctrl.Result{}, err
-		}
+	referenceGrantList := k8sutils.NewReferenceGrantList(r.ReferenceGrantVersion)
+	if err := r.List(ctx, referenceGrantList); err != nil {
+		return ctrl.Result{}, err
 	}
 
-	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, referenceGrantList.Items, r.Client)
+	listenerStatuses, err := getListenerStatus(ctx, gateway, combinedListeners, k8sutils.ReferenceGrantItems(referenceGrantList), r.Client)
 	if err != nil {
 		return ctrl.Result{}, err
 	}

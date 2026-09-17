@@ -48,16 +48,28 @@ type httpRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
 // NewHTTPRouteConverter returns a new instance of httpRouteConverter.
-func newHTTPRouteConverter(httpRoute *gwtypes.HTTPRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.HTTPRoute] {
+func newHTTPRouteConverter(
+	httpRoute *gwtypes.HTTPRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.HTTPRoute] {
 	return &httpRouteConverter{
 		Client:        cl,
 		outputStore:   []client.Object{},
 		route:         httpRoute,
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 		// IMPORTANT: The order of this slice is significant during resource cleanup operations.
 		// While resources deletion order should take into account dependencies their main goal is to ensure safe cleanup preventing
 		// security issues (e.g., scenarios where routes remain active while security plugins are deleted first).
@@ -214,7 +226,7 @@ func (c *httpRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger 
 
 	// First, build the resolvedRefs conditons for the HTTPRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for HTTPRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsConditionForHTTPRoute(ctx, logger, c.Client, c.route)
+	resolvedRefsCond, err := route.BuildResolvedRefsConditionForHTTPRoute(ctx, logger, c.Client, c.referenceGrantVersion, c.route)
 	if err != nil {
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for HTTPRoute %s: %w", c.route.Name, err)
 	}
@@ -501,6 +513,7 @@ func (c *httpRouteConverter) translate(ctx context.Context, logger logr.Logger) 
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

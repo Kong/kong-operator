@@ -12,6 +12,7 @@ import (
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/labels"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/selection"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -41,6 +42,8 @@ type validBackendRef[T gwtypes.SupportedBackendRef] struct {
 
 // TargetsForBackendRefs creates KongTargets for all BackendRefs in a rule.
 // This function processes all BackendRefs together, enabling better weight distribution and optimization.
+// referenceGrantVersion is the ReferenceGrant API version served by the cluster,
+// resolved once at controller setup.
 func TargetsForBackendRefs[
 	T gwtypes.SupportedRoute,
 	TPtr gwtypes.SupportedRoutePtr[T],
@@ -49,6 +52,7 @@ func TargetsForBackendRefs[
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
 	parentRoute TPtr,
 	backendRefs []R,
 	pRef *gwtypes.ParentReference,
@@ -75,7 +79,9 @@ func TargetsForBackendRefs[
 	}
 
 	// Step 1: Filter and validate all BackendRefs, extracting endpoints.
-	validBackendRefs, err := filterValidBackendRefs(ctx, logger, cl, parentRoute, backendRefs, fqdn, clusterDomain)
+	validBackendRefs, err := filterValidBackendRefs(
+		ctx, logger, cl, referenceGrantVersion, parentRoute, backendRefs, fqdn, clusterDomain,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to filter valid BackendRefs: %w", err)
 	}
@@ -304,6 +310,7 @@ func filterValidBackendRefs[
 	ctx context.Context,
 	logger logr.Logger,
 	cl client.Client,
+	referenceGrantVersion schema.GroupVersion,
 	parentRoute TPtr,
 	backendRefs []R,
 	fqdn bool,
@@ -344,7 +351,7 @@ func filterValidBackendRefs[
 
 		// Check ReferenceGrant permission for cross-namespace access.
 		if bRefNamespace != parentRoute.GetNamespace() {
-			permitted, found, err := route.CheckReferenceGrant(ctx, cl, &bRef, parentRoute.GetObjectKind().GroupVersionKind().Kind, parentRoute.GetNamespace())
+			permitted, found, err := route.CheckReferenceGrant(ctx, cl, referenceGrantVersion, &bRef, parentRoute.GetObjectKind().GroupVersionKind().Kind, parentRoute.GetNamespace())
 			if err != nil {
 				return nil, fmt.Errorf("error checking ReferenceGrant for BackendRef %s: %w", bRef.Name, err)
 			}

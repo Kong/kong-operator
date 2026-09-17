@@ -37,9 +37,19 @@ type tlsRouteConverter struct {
 	expectedGVKs  []schema.GroupVersionKind
 	fqdnMode      bool
 	clusterDomain string
+
+	// referenceGrantVersion is the ReferenceGrant API GroupVersion (v1 or v1beta1)
+	// served by the cluster, resolved once at controller setup.
+	referenceGrantVersion schema.GroupVersion
 }
 
-func newTLSRouteConverter(tlsRoute *gwtypes.TLSRoute, cl client.Client, fqdnMode bool, clusterDomain string) APIConverter[gwtypes.TLSRoute] {
+func newTLSRouteConverter(
+	tlsRoute *gwtypes.TLSRoute,
+	cl client.Client,
+	fqdnMode bool,
+	clusterDomain string,
+	referenceGrantVersion schema.GroupVersion,
+) APIConverter[gwtypes.TLSRoute] {
 	return &tlsRouteConverter{
 		Client:      cl,
 		route:       tlsRoute,
@@ -54,6 +64,8 @@ func newTLSRouteConverter(tlsRoute *gwtypes.TLSRoute, cl client.Client, fqdnMode
 		},
 		fqdnMode:      fqdnMode,
 		clusterDomain: clusterDomain,
+
+		referenceGrantVersion: referenceGrantVersion,
 	}
 }
 
@@ -83,7 +95,7 @@ func (c *tlsRouteConverter) UpdateRootObjectStatus(ctx context.Context, logger l
 
 	// First, build the resolvedRefs conditons for the TLSRoute since it is the same for all ParentRefs.
 	log.Debug(logger, "Building ResolvedRefs condition for TLSRoute")
-	resolvedRefsCond, err := route.BuildResolvedRefsConditionForTLSRoute(ctx, logger, c.Client, c.route)
+	resolvedRefsCond, err := route.BuildResolvedRefsConditionForTLSRoute(ctx, logger, c.Client, c.referenceGrantVersion, c.route)
 	if err != nil {
 		return false, stop, fmt.Errorf("failed to build resolvedRefs condition for TLSRoute %s: %w", c.route.Name, err)
 	}
@@ -354,6 +366,7 @@ func (c *tlsRouteConverter) translate(ctx context.Context, logger logr.Logger) e
 				ctx,
 				logger.WithValues("upstream", upstreamName),
 				c.Client,
+				c.referenceGrantVersion,
 				c.route,
 				rule.BackendRefs,
 				&pRef,

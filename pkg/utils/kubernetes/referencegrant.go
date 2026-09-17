@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/samber/lo"
+	"k8s.io/apimachinery/pkg/runtime/schema"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
@@ -11,10 +12,13 @@ import (
 )
 
 // AllowedByReferenceGrants checks if the reference from the input `from` to the object(s)
-// in namespace `targetNamespace` with group, kind, name given in the input `to` is allowed by any ReferenceGrant.
+// in namespace `targetNamespace` with group, kind, name given in the input `to` is allowed
+// by any ReferenceGrant. referenceGrantGV selects which ReferenceGrant API version to list,
+// the zero value resolves to v1.
 func AllowedByReferenceGrants(
 	ctx context.Context,
 	cl client.Client,
+	referenceGrantGV schema.GroupVersion,
 	from gwtypes.ReferenceGrantFrom,
 	targetNamespace string,
 	to gwtypes.ReferenceGrantTo,
@@ -23,17 +27,17 @@ func AllowedByReferenceGrants(
 	if from.Namespace == gatewayv1.Namespace(targetNamespace) {
 		return true, nil
 	}
-	referenceGrantList := gwtypes.ReferenceGrantList{}
+	referenceGrantList := NewReferenceGrantList(referenceGrantGV)
 	err := cl.List(
 		ctx,
-		&referenceGrantList,
+		referenceGrantList,
 		client.InNamespace(targetNamespace),
 		// TODO: Add field selector to filter ReferenceGrants having given `from` to limit the listing scope here.
 	)
 	if err != nil {
 		return false, err
 	}
-	for _, referenceGrant := range referenceGrantList.Items {
+	for _, referenceGrant := range ReferenceGrantItems(referenceGrantList) {
 		// If the `spec.from` does not contain the input `from`, we skip the ReferenceGrant
 		// because it is impossible to grant the reference to the input `from`.
 		if !lo.ContainsBy(referenceGrant.Spec.From, func(refGrantFrom gwtypes.ReferenceGrantFrom) bool {
