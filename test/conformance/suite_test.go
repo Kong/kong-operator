@@ -302,27 +302,16 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 	for {
 		select {
 		case <-ctx.Done():
-			// The wait context is expired. Use a fresh one to collect diagnostics
-			// about what pins the namespaces in Terminating.
-			diagCtx, diagCancel := context.WithTimeout(context.Background(), time.Minute)
-			defer diagCancel()
-			logRemainingFinalizerBearingObjects(diagCtx, env.Cluster().Config(), remaining, logf)
-			dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
-			defer dumpCancel()
-			if output, err := env.Cluster().DumpDiagnostics(dumpCtx, "conformance_cleanup_timeout"); err != nil {
-				logf("ERROR: failed to dump diagnostics after cleanup timeout: %v", err)
-			} else {
-				logf("INFO: dumped diagnostics after cleanup timeout to %s", output)
-			}
-			return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctx.Err())
+			return reportConformanceCleanupTimeout(remaining, ctx.Err(), logf)
 		case <-ticker.C:
 			var nsList corev1.NamespaceList
 			if err := cl.List(ctx, &nsList); err != nil {
 				// When the timeout expires, the in-flight List can fail on the expired
 				// context (e.g. "client rate limiter Wait returned an error: context
-				// deadline exceeded"). Surface the timeout cause instead.
+				// deadline exceeded"). Surface the timeout cause (and collect the
+				// diagnostics) instead of the List failure.
 				if ctxErr := ctx.Err(); ctxErr != nil {
-					return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctxErr)
+					return reportConformanceCleanupTimeout(remaining, ctxErr, logf)
 				}
 				return fmt.Errorf("failed to list namespaces during cleanup: %w", err)
 			}
@@ -339,6 +328,26 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 			logf("waiting for conformance namespaces to finish terminating (operator still cleaning up owned entities): %v", remaining)
 		}
 	}
+}
+
+// reportConformanceCleanupTimeout collects diagnostics about what pins the
+// namespaces in Terminating and returns the timeout error. It runs on every
+// timeout path: both the expired wait context and an in-flight List failing on
+// that expired context.
+func reportConformanceCleanupTimeout(remaining []string, ctxErr error, logf func(string, ...any)) error {
+	// The wait context is expired. Use fresh contexts for the diagnostics, each
+	// with its own time budget so a hanging listing cannot consume the dump's.
+	diagCtx, diagCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer diagCancel()
+	logRemainingFinalizerBearingObjects(diagCtx, env.Cluster().Config(), remaining, logf)
+	dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer dumpCancel()
+	if output, err := env.Cluster().DumpDiagnostics(dumpCtx, "conformance_cleanup_timeout"); err != nil {
+		logf("ERROR: failed to dump diagnostics after cleanup timeout: %v", err)
+	} else {
+		logf("INFO: dumped diagnostics after cleanup timeout to %s", output)
+	}
+	return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctxErr)
 }
 
 // logRemainingFinalizerBearingObjects lists all namespaced resources in the given
