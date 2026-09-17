@@ -665,6 +665,29 @@ func TestFetchAllPagination(t *testing.T) {
 		assert.Equal(t, []string{""}, cursors())
 	})
 
+	// The SDK returns every non-200 response as an error rather than as a
+	// response, so a failed page is retried with a backoff. What matters is
+	// that the pages fetched before it are never returned as an authoritative
+	// list in the meantime.
+	t.Run("non-200 page retries instead of returning a truncated list", func(t *testing.T) {
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			if cursor == "" {
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
+			}
+			return http.StatusForbidden, `{"error":"forbidden"}`
+		})
+
+		// The retry backoff starts at 1s, so the context expires first and ends
+		// the loop.
+		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
+		defer cancel()
+
+		servers, err := f.fetchAll(ctx)
+		require.ErrorIs(t, err, context.DeadlineExceeded)
+		assert.Nil(t, servers, "the first page must not be returned as a complete list")
+		assert.GreaterOrEqual(t, len(cursors()), 2)
+	})
+
 	t.Run("next URI without a cursor fails instead of truncating the list", func(t *testing.T) {
 		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
 			if cursor != "" {

@@ -259,6 +259,12 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 
 		b.Reset()
 
+		// The SDK maps every non-200 response - and every body it cannot
+		// decode - to a non-nil error, so a non-nil resp implies a 200 with a
+		// populated body and the two checks below are defensive. They are kept
+		// so that the fetch keeps failing closed, rather than returning a
+		// truncated list, if a future SDK version hands such responses back to
+		// the caller instead.
 		if resp.StatusCode != http.StatusOK {
 			return nil, fmt.Errorf("unexpected status listing MCP servers for control plane %s: %d",
 				cpID, resp.StatusCode)
