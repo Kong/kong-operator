@@ -96,6 +96,14 @@
   indexers (including the `(storeID, storeKey)` conflict index), and a
   semantics-accurate fake of the Konnect `ConfigStoreSecrets` SDK for tests.
   [#5710](https://github.com/Kong/kong-operator/issues/5710)
+- `AIGatewayMCPServer`: reference fields now carry the referenced CR's
+  `metadata.name` and the operator resolves them to the referenced entity's
+  Konnect name at reconcile time: `spec.apiSpec.listener.sources` now references
+  `AIGatewayMCPServer` CRs, `access.{consumer,oauthAccessToken}.authStrategies`
+  reference `AIGatewayAuthStrategy` CRs, and
+  `access.{consumer,oauthAccessToken}.{acls,defaultToolAcls}.{allow,deny}` as
+  well as `tools[].access.acls.{allow,deny}` reference `AIGatewayConsumerGroup`
+  CRs.
 - `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
   `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
   control plane in the same namespace.

@@ -4352,6 +4352,11 @@ type GoPathSegment struct {
 	// UnionWrapper is true when this hop is a discriminated-union wrapper field
 	// (a property-level oneOf/anyOf, or the synthesized root-union config).
 	UnionWrapper bool
+	// Discriminated is true when a UnionWrapper hop's union declares a
+	// discriminator. Only discriminated unions are provably flattened by the
+	// generated flattenSDKUnions helper, so SDK payload injections may pass
+	// through them but not through non-discriminated anyOf wrappers.
+	Discriminated bool
 	// UnionTypeName is the generated Go type name for this discriminated-union
 	// wrapper. It is set when UnionWrapper is true.
 	UnionTypeName string
@@ -4373,6 +4378,11 @@ type GoPathSegment struct {
 	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object. Such
 	// a leaf is ref-ified as a single *<RefType>, not a slice.
 	ObjectRefLeaf bool
+	// LeafArray is true when the final segment's OAS type is itself an array,
+	// i.e. the ref list lives inside each element of an enclosing non-leaf
+	// array (e.g. "tools.access.acls.allow": each tool carries its own allow
+	// list) rather than being one scalar ref per element.
+	LeafArray bool
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4455,8 +4465,14 @@ type TemplateReferenceConfig struct {
 	// NestedArrayScalar is true when the reference path resolves to a scalar
 	// leaf inside a single non-leaf array of objects (e.g. "api.targets.provider").
 	// Such references need a ranging RefsAt accessor instead of the linear one
-	// (see ArrayGuardExprs/ArrayPath/ArrayLeafName/ArrayLeafPointer below).
+	// (see ArrayGuardExprs/ArrayPath/ArrayLeafPath/ArrayLeafPointer below).
 	NestedArrayScalar bool
+	// NestedArrayList is true when NestedArrayScalar is and the leaf's OAS
+	// type is itself an array, i.e. each element carries its own list of
+	// references (e.g. "tools.access.acls.allow"). The RefsAt accessor then
+	// returns one []<RefType> per element and the resolver one []string per
+	// element, and the injection writes each element's resolved list wholesale.
+	NestedArrayList bool
 	// ArrayGuardExprs are the Go expressions to nil-guard, in order, before
 	// ranging ArrayPath (one per pointer segment preceding and including the
 	// array). Only set when NestedArrayScalar is true.
@@ -4465,9 +4481,16 @@ type TemplateReferenceConfig struct {
 	// "obj.Spec.APISpec.AIGatewayModelConfig.API.Targets". Only set when
 	// NestedArrayScalar is true.
 	ArrayPath string
-	// ArrayLeafName is the Go field name of the scalar leaf on the array's
-	// element type, e.g. "Provider". Only set when NestedArrayScalar is true.
-	ArrayLeafName string
+	// ElementGuardExprs are the element-relative Go expressions to nil-guard
+	// (with a `continue`) inside the ArrayPath range loop, one per pointer
+	// hop between the array and the leaf, e.g. ["Access", "Access.Acls"] for
+	// "tools.access.acls.allow". Empty when the leaf sits directly on the
+	// element. Only set when NestedArrayScalar is true.
+	ElementGuardExprs []string
+	// ArrayLeafPath is the dot-joined Go field path of the scalar leaf
+	// relative to the array's element, e.g. "Provider" or "Access.Acls.Allow".
+	// Only set when NestedArrayScalar is true.
+	ArrayLeafPath string
 	// ArrayLeafPointer is true when the leaf field on the element type is a
 	// pointer (the leaf is optional). Only set when NestedArrayScalar is true.
 	ArrayLeafPointer bool
@@ -4540,13 +4563,15 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			}
 		}
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
-		var arrayGuardExprs []string
-		var arrayPath, arrayLeafName string
+		var nestedArrayList bool
+		var arrayGuardExprs, elementGuardExprs []string
+		var arrayPath, arrayLeafPath string
 		var arrayLeafPointer bool
 		if nestedArrayScalar {
+			arrayIdx := arraySegmentIndex(goPathSegments)
 			var pathBuilder strings.Builder
 			pathBuilder.WriteString("obj.Spec.APISpec")
-			for _, seg := range goPathSegments[:len(goPathSegments)-1] {
+			for _, seg := range goPathSegments[:arrayIdx+1] {
 				pathBuilder.WriteByte('.')
 				pathBuilder.WriteString(seg.Name)
 				if seg.Pointer {
@@ -4554,9 +4579,20 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				}
 			}
 			arrayPath = pathBuilder.String()
-			leaf := goPathSegments[len(goPathSegments)-1]
-			arrayLeafName = leaf.Name
-			arrayLeafPointer = leaf.Pointer
+			leafSegs := goPathSegments[arrayIdx+1:]
+			var leafBuilder strings.Builder
+			for j, seg := range leafSegs {
+				if j > 0 {
+					leafBuilder.WriteByte('.')
+				}
+				leafBuilder.WriteString(seg.Name)
+				if seg.Pointer && j < len(leafSegs)-1 {
+					elementGuardExprs = append(elementGuardExprs, leafBuilder.String())
+				}
+			}
+			arrayLeafPath = leafBuilder.String()
+			arrayLeafPointer = leafSegs[len(leafSegs)-1].Pointer
+			nestedArrayList = leafSegs[len(leafSegs)-1].LeafArray
 		}
 		var singleValueObjectRef bool
 		var objectWrapKey string
@@ -4577,9 +4613,11 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			MultiKind:            len(ref.Kinds) > 1,
 			ResolvesToName:       ref.ResolvesTo == "name",
 			NestedArrayScalar:    nestedArrayScalar,
+			NestedArrayList:      nestedArrayList,
 			ArrayGuardExprs:      arrayGuardExprs,
 			ArrayPath:            arrayPath,
-			ArrayLeafName:        arrayLeafName,
+			ElementGuardExprs:    elementGuardExprs,
+			ArrayLeafPath:        arrayLeafPath,
 			ArrayLeafPointer:     arrayLeafPointer,
 			SingleValueObjectRef: singleValueObjectRef,
 			ObjectWrapKey:        objectWrapKey,
@@ -4690,6 +4728,14 @@ type TemplateRefInjection struct {
 	// overwrites each element's own LeafSDKKey in place, rather than
 	// overwriting TargetVar's own key wholesale.
 	ArrayKey string
+	// ElementNavs are the navigation hops applied to each array element
+	// (after ranging ArrayKey) down to the parent map of the leaf key, for
+	// leaves reached through plain-object hops after the array (e.g.
+	// "tools.access.acls.allow": elements navigate "access" then "acls").
+	// Empty when the leaf sits directly on the element. Unlike ParentNavs,
+	// a missing key skips the element (no map is created), because a tool
+	// without its own ACL config must not be populated.
+	ElementNavs []TemplateRefParentNav
 	// ObjectWrap is true when the reference resolves to a single object-typed
 	// leaf (e.g. "schemaValidation.config.json.schemaRegistry"). The write
 	// wraps the single resolved value as {"<ObjectWrapKey>": value} instead of
@@ -4738,6 +4784,8 @@ func newRefInjectionUsedVars() map[string]bool {
 	return map[string]bool{
 		"payload": true, "data": true, "err": true,
 		"obj": true, "ctx": true, "cl": true, "spec": true,
+		// Locals emitted by the array-element injection template itself.
+		"arr": true, "e": true, "el": true, "ri": true, "ok": true,
 	}
 }
 
@@ -4787,19 +4835,21 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			}
 		}
 	case isArrayElement:
-		writeIdx = len(segs) - 2
+		writeIdx = arraySegmentIndex(segs)
 	default:
 		writeIdx = len(segs) - 1
 	}
 	if !isACL && !isObjectRefLeaf {
-		// A property-level union (a JSON key of its own, e.g.
-		// "access.acls") is unwrapped nowhere else in the SDK payload
-		// builder, so a non-ACL reference passing through one would
-		// leave its CRD-side "type" wrapper and variant-key nesting
-		// untouched.
+		// A non-discriminated property-level union (a JSON key of its own)
+		// is not unwrapped by flattenSDKUnions, so a non-ACL reference
+		// passing through one would leave its CRD-side "type" wrapper and
+		// variant-key nesting untouched. Discriminated property-level unions
+		// (e.g. the MCP server access union) are safe: injections run on the
+		// pre-flatten payload where the union wrapper and variant keys still
+		// exist, and flattenSDKUnions collapses the union afterward.
 		for _, seg := range segs[:writeIdx] {
-			if seg.UnionWrapper && seg.JSONKey != "" {
-				return nil, fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+			if seg.UnionWrapper && seg.JSONKey != "" && !seg.Discriminated {
+				return nil, fmt.Errorf("reference path %q: nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef", ref.Path)
 			}
 		}
 	}
@@ -4888,6 +4938,23 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		reversed = append(reversed, v)
 	}
 
+	// Element navs for array-element references whose leaf sits behind
+	// plain-object hops on the element (e.g. tools[].access.acls.allow
+	// navigates "access" then "acls" within each element).
+	var elementNavs []TemplateRefParentNav
+	if isArrayElement && writeIdx < len(segs)-2 {
+		elParent := "el"
+		for _, seg := range segs[writeIdx+1 : len(segs)-1] {
+			navVar := uniqueLocalVar(goLocalVarFromKey(seg.JSONKey), usedVars)
+			elementNavs = append(elementNavs, TemplateRefParentNav{
+				Var:    navVar,
+				Key:    sdkJSONKey(seg.JSONKey),
+				Parent: elParent,
+			})
+			elParent = navVar
+		}
+	}
+
 	injection := TemplateRefInjection{
 		Path:               ref.Path,
 		Cond:               strings.Join(conds, " && "),
@@ -4896,6 +4963,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		ParentNavsReversed: reversed,
 		Variants:           []TemplateRefVariant{variant},
 		ArrayKey:           arrayKey,
+		ElementNavs:        elementNavs,
 	}
 	if isACL {
 		pathParts := strings.Split(ref.Path, ".")
@@ -4919,21 +4987,31 @@ func isSupportedAIGatewayACLRefPath(path string) bool {
 }
 
 // isNestedArrayScalar reports whether goPath resolves a scalar leaf sitting
-// directly inside exactly one non-leaf array of objects (e.g.
-// "api.targets.provider": ..., Array(targets), leaf(provider)). Any prefix of
-// object/union hops before the array is fine — they are already handled
-// generically by the pointer nil-guards in the generated accessor.
+// inside exactly one non-leaf array of objects (e.g. "api.targets.provider":
+// ..., Array(targets), leaf(provider)), either directly on the element or
+// through plain-object hops after it (e.g. "tools.access.acls.allow": ...,
+// Array(tools), access, acls, leaf(allow)). Any prefix of object/union hops
+// before the array is fine — they are already handled generically by the
+// pointer nil-guards in the generated accessor. validateReferences rejects
+// union hops between the array and the leaf.
 func isNestedArrayScalar(goPath []GoPathSegment) bool {
-	if len(goPath) < 2 {
-		return false
-	}
-	arrayCount := 0
-	for _, seg := range goPath {
+	arrayIdx := arraySegmentIndex(goPath)
+	return arrayIdx >= 0 && arrayIdx < len(goPath)-1
+}
+
+// arraySegmentIndex returns the index of the single descended non-leaf array
+// segment in goPath, or -1 if there is none or more than one.
+func arraySegmentIndex(goPath []GoPathSegment) int {
+	arrayIdx := -1
+	for i, seg := range goPath {
 		if seg.Array {
-			arrayCount++
+			if arrayIdx >= 0 {
+				return -1
+			}
+			arrayIdx = i
 		}
 	}
-	return arrayCount == 1 && goPath[len(goPath)-2].Array
+	return arrayIdx
 }
 
 // goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
@@ -5063,14 +5141,33 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				// (see zz_generated_common_types.go) already collapses any number of
 				// ancestor type/value union wrappers generically, so no reconstruction
 				// is needed regardless of how many unions the path passes through.
+				// A DISCRIMINATED property-level union (e.g. the MCP server access
+				// union's consumer/oauthAccessToken arms) is exempt for the same
+				// reason: reference injections run on the pre-flatten payload where
+				// the union wrapper and variant keys still exist, and flattenSDKUnions
+				// collapses the union afterward. Non-discriminated anyOf wrappers are
+				// not flattened by that helper, so they stay rejected.
 				if ref.TypeName() == "AIGatewayACLRef" {
 					if !isSupportedAIGatewayACLRefPath(ref.Path) {
 						return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
 					}
 				} else if !goPath[len(goPath)-1].ObjectRefLeaf {
 					for _, seg := range goPath[:len(goPath)-1] {
-						if seg.UnionWrapper && seg.JSONKey != "" {
-							return fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						if seg.UnionWrapper && seg.JSONKey != "" && !seg.Discriminated {
+							return fmt.Errorf("reference path %q: nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						}
+					}
+				}
+				// A nested array-scalar reference (scalar leaf reached through a
+				// non-leaf array of objects) only supports plain-object hops
+				// between the array and the leaf: a union hop inside the array
+				// elements is neither navigable in the SDK payload (which arm is
+				// selected varies per element) nor needed by any entity today.
+				if isNestedArrayScalar(goPath) {
+					arrayIdx := arraySegmentIndex(goPath)
+					for _, seg := range goPath[arrayIdx+1 : len(goPath)-1] {
+						if seg.UnionWrapper || seg.UnionVariant {
+							return fmt.Errorf("reference path %q: nested array references only support plain-object hops between the array and the leaf", ref.Path)
 						}
 					}
 				}
@@ -5299,7 +5396,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// object-ref leaf, is a pointer when the leaf field itself is
 			// optional (an array-typed leaf is never a pointer).
 			leafPointer := prop.Type != "array" && (!prop.Required || prop.Nullable)
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name), ObjectRefLeaf: objectRefLeaf})
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name), ObjectRefLeaf: objectRefLeaf, LeafArray: prop.Type == "array"})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -5312,6 +5409,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 				Pointer:       true,
 				JSONKey:       jsonName(prop.Name),
 				UnionWrapper:  true,
+				Discriminated: prop.Discriminator != "",
 				UnionTypeName: generatedUnionTypeName(prop, typeName),
 			})
 			union = prop
@@ -5333,6 +5431,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 				Pointer:       true,
 				JSONKey:       jsonName(prop.Name),
 				UnionWrapper:  true,
+				Discriminated: u.Discriminator != "",
 				UnionTypeName: u.Name,
 			})
 			union = u
