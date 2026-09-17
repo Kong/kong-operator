@@ -13559,20 +13559,21 @@ _Appears in:_
 
 - [DBBackedHybridControlPlaneStatus](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanestatus)
 
-#### DBBackedHybridControlPlaneDatabaseConnectionInfo
+#### DBBackedHybridControlPlaneDatabaseConnectionOptions
 
 
-DBBackedHybridControlPlaneDatabaseConnectionInfo represents the database connection information for the DBBackedHybridControlPlane.
+DBBackedHybridControlPlaneDatabaseConnectionOptions represents the database connection options for the DBBackedHybridControlPlane.
 
 
 
 | Field | Description |
 | --- | --- |
-| `databaseHost` _string_ | DatabaseHost represents the host of the database for the DBBackedHybridControlPlane. |
-| `databasePort` _int32_ | DatabasePort represents the port of the database for the DBBackedHybridControlPlane. |
-| `databaseUser` _string_ | DatabaseUser represents the user of the database for the DBBackedHybridControlPlane. |
-| `databasePassword` _[DBBackedHybridControlPlaneDatabasePassword](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepassword)_ | DatabasePassword represents the password of the database for the DBBackedHybridControlPlane. |
-| `databaseName` _string_ | DatabaseName represents the name of the database for the DBBackedHybridControlPlane. |
+| `host` _string_ | Host represents the host of the database for the DBBackedHybridControlPlane. Filled to `KONG_PG_HOST` environment variable. |
+| `port` _int32_ | Port represents the port of the database for the DBBackedHybridControlPlane. Filled to `KONG_PG_PORT` environment variable. |
+| `username` _string_ | DatabaseUser represents the username of the database for the DBBackedHybridControlPlane. Filled to `KONG_PG_USER` environment variable. |
+| `password` _[DBBackedHybridControlPlaneDatabasePassword](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasepassword)_ | Password represents the password of the database for the DBBackedHybridControlPlane. Filled to `KONG_PG_PASSWORD` environment variable as a Kubernetes Secret reference. |
+| `databaseName` _string_ | DatabaseName represents the name of the database for the DBBackedHybridControlPlane. Filled to `KONG_DATABASE` environment variable. |
+| `tls` _[DBBackedHybridControlPlaneDatabaseTLS](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasetls)_ | TLS represents the TLS configuration for the database connection of the DBBackedHybridControlPlane. |
 
 _Appears in:_
 
@@ -13593,7 +13594,7 @@ It is typically sourced from a Kubernetes Secret.
 
 _Appears in:_
 
-- [DBBackedHybridControlPlaneDatabaseConnectionInfo](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectioninfo)
+- [DBBackedHybridControlPlaneDatabaseConnectionOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectionoptions)
 
 #### DBBackedHybridControlPlaneDatabasePasswordSecretRef
 
@@ -13630,6 +13631,26 @@ Allowed values:
 | --- | --- |
 | `secretRef` | DBBackedHybridControlPlaneDatabasePasswordTypeSecretRef indicates that the database password is sourced from a Kubernetes Secret.<br /> |
 
+#### DBBackedHybridControlPlaneDatabaseTLS
+
+
+DBBackedHybridControlPlaneDatabaseTLS represents the TLS configuration for the database connection of the DBBackedHybridControlPlane.
+
+
+
+| Field | Description |
+| --- | --- |
+| `required` _[DatabaseTLSRequiredState](#gateway-operator-konghq-com-v1beta1-types-databasetlsrequiredstate)_ | Required indicates whether TLS is required for the database connection. If set to "required", Kong gateway fails to connect to the database if TLS is not available. Filled to `KONG_PG_SSL_REQUIRED` environment variable. |
+| `verify` _[DatabaseTLSVerifyState](#gateway-operator-konghq-com-v1beta1-types-databasetlsverifystate)_ | Verify indicates whether the TLS certificate should be verified. Filled to `KONG_PG_SSL_VERIFY` environment variable. |
+| `version` _[DatabaseTLSVersion](#gateway-operator-konghq-com-v1beta1-types-databasetlsversion)_ | Version represents the TLS version to be used for the database connection. Filled to `KONG_PG_SSL_VERSION` environment variable. |
+| `trustedCertificates` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core) array_ | TrustedCertificates represents the list of trusted TLS certificates for the database connection. The secrets referenced here should contain the trusted TLS certificates for the database connection. These secrets are mounted to the pod and the mounting path is filled in `KONG_LUA_SSL_TRUSTED_CERTIFICATES` environment variable. |
+| `verifyDepth` _int_ | VerifyDepth represents the maximum depth for verifying the TLS certificate chain to prevent DoS attack on tracking the signing chain in certificate verification. Filled to `KONG_LUA_SSL_VERIFY_DEPTH` environment variable. |
+| `clientCertificate` _[SecretReference](https://kubernetes.io/docs/reference/generated/kubernetes-api/v1.33/#secretreference-v1-core)_ | ClientCertificate represents the reference to the Kubernetes Secret containing the client TLS certificate for the database connection. These secrets are mounted to the pod and the mounting path is filled in `KONG_PG_SSL_CERT` and `KONG_PG_SSL_KEY` environment variables. |
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabaseConnectionOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectionoptions)
+
 #### DBBackedHybridControlPlaneDeploymentOptions
 
 
@@ -13645,7 +13666,7 @@ DBBackedHybridControlPlaneDeploymentOptions represents the deployment options fo
 | `annotations` _map[string]string_ | Annotations are custom annotations that are propagated to the DataPlane Deployment metadata by the operator. |
 | `labels` _map[string]string_ | Labels are custom labels that are propagated to the DataPlane Deployment metadata by the operator. |
 | `license` _[DBBackedHybridControlPlaneLicense](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanelicense)_ | License represents the license information for the DBBackedHybridControlPlane. |
-| `database` _[DBBackedHybridControlPlaneDatabaseConnectionInfo](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectioninfo)_ | Database represents the database connection information for the DBBackedHybridControlPlane. |
+| `database` _[DBBackedHybridControlPlaneDatabaseConnectionOptions](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabaseconnectionoptions)_ | Database represents the database connection options for the DBBackedHybridControlPlane. |
 | `hardened` _[HardeningState](#common-konghq-com-v1alpha1-types-hardeningstate)_ | Hardened indicates whether the operator should apply a hardened security context (non-root user, read-only root filesystem, dropped capabilities) and the related volumes and environment variables to the DataPlane's proxy container.<br /><br />Enabling this on an existing DataPlane causes a rolling restart of its Pods. |
 
 _Appears in:_
@@ -14016,6 +14037,68 @@ DataPlaneStatus defines the observed state of DataPlane.
 _Appears in:_
 
 - [DataPlane](#gateway-operator-konghq-com-v1beta1-dataplane)
+
+#### DatabaseTLSRequiredState
+
+_Underlying type:_ `string`
+
+DatabaseTLSRequiredState represents the required state of TLS for the database connection.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabaseTLS](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasetls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `required` | DatabaseTLSRequiredStateRequired indicates that TLS is required for the database connection.<br />Kong will fail to connect to the database if TLS is not available.<br /> |
+| `notRequired` | DatabaseTLSRequiredStateNotRequired indicates that TLS is not required for the database connection.<br />Kong will fallback to non-TLS connection if TLS is not available.<br /> |
+
+#### DatabaseTLSVerifyState
+
+_Underlying type:_ `string`
+
+DatabaseTLSVerifyState represents the verification state of TLS for the database connection.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabaseTLS](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasetls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `enabled` | DatabaseTLSVerifyEnabled indicates that TLS certificate verification is enabled.<br /> |
+| `disabled` | DatabaseTLSVerifyDisabled indicates that TLS certificate verification is disabled.<br /> |
+
+#### DatabaseTLSVersion
+
+_Underlying type:_ `string`
+
+DatabaseTLSVersion represents the TLS version to be used for the database connection.
+
+
+
+
+_Appears in:_
+
+- [DBBackedHybridControlPlaneDatabaseTLS](#gateway-operator-konghq-com-v1beta1-types-dbbackedhybridcontrolplanedatabasetls)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `tlsv1_1` | DatabaseTLSVersionTLSv1_1 indicates that TLS version 1.1 should be used for the database connection.<br /> |
+| `tlsv1_2` | DatabaseTLSVersionTLSv1_2 indicates that TLS version 1.2 should be used for the database connection.<br /> |
+| `tlsv1_3` | DatabaseTLSVersionTLSv1_3 indicates that TLS version 1.3 should be used for the database connection.<br /> |
+| `any` | DatabaseTLSVersionAny indicates that client would negotiate the highest TLS version with the server which cannot be lower than TLS v1.1.<br /> |
 
 #### DeploymentOptions
 

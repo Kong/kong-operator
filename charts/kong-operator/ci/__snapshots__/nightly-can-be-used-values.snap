@@ -37165,14 +37165,13 @@ spec:
                     type: object
                   database:
                     properties:
-                      databaseHost:
-                        type: string
                       databaseName:
                         default: kong
-                        maxLength: 253
+                        type: string
+                      host:
                         minLength: 1
                         type: string
-                      databasePassword:
+                      password:
                         properties:
                           secretRef:
                             properties:
@@ -37191,20 +37190,68 @@ spec:
                         required:
                         - type
                         type: object
-                      databasePort:
+                      port:
                         default: 5432
                         format: int32
                         maximum: 65535
                         minimum: 1
                         type: integer
-                      databaseUser:
+                      tls:
+                        properties:
+                          clientCertificate:
+                            properties:
+                              name:
+                                type: string
+                              namespace:
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          required:
+                            enum:
+                            - required
+                            - notRequired
+                            type: string
+                          trustedCertificates:
+                            items:
+                              properties:
+                                name:
+                                  type: string
+                                namespace:
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            maxItems: 10
+                            type: array
+                          verify:
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          verifyDepth:
+                            default: 5
+                            maximum: 10
+                            minimum: 0
+                            type: integer
+                          version:
+                            default: tlsv1_2
+                            enum:
+                            - tlsv1_1
+                            - tlsv1_2
+                            - tlsv1_3
+                            - any
+                            type: string
+                        required:
+                        - required
+                        - verify
+                        type: object
+                      username:
                         type: string
                     required:
-                    - databaseHost
                     - databaseName
-                    - databasePassword
-                    - databasePort
-                    - databaseUser
+                    - host
+                    - password
+                    - port
+                    - username
                     type: object
                   hardened:
                     default: disabled
@@ -41506,11 +41553,9 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               readyReplicas:
-                default: 0
                 format: int32
                 type: integer
               replicas:
-                default: 0
                 format: int32
                 type: integer
               selector:
