@@ -33,7 +33,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
@@ -76,12 +75,10 @@ type Reconciler struct {
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aigatewayv1alpha1.OnPremAIGateway{}).
-		// Watching AIGatewayModel only. A rename of a referenced
-		// AIGatewayModelProvider/Policy/AuthStrategy/ConsumerGroup changes the rendered payload
-		// but does not re-trigger. Add those watches when those kinds join translator.BuildDocument.
+		// Watching AIGatewayDataPlane resources to requeue the OnPremAIGateway when relevant changes occur.
 		Watches(
-			&aiconfigurationv1alpha1.AIGatewayModel{},
-			handler.EnqueueRequestsFromMapFunc(mapAIGatewayModelToOnPremAIGateway),
+			&aigatewayv1alpha1.AIGatewayDataPlane{},
+			handler.EnqueueRequestsFromMapFunc(mapAIGatewayDataPlaneToOnPremAIGateway),
 		).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
@@ -127,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
-		return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	cfg, err := r.configFromSpec(ctx, logger, onprem)
@@ -222,6 +219,9 @@ func (r *Reconciler) configFromSpec(
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
 func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg multiinstanceai.Config) error {
+	// TODO: When https://github.com/Kong/kong-operator/pull/5734 is done we should
+	// handle multiple data plane Admin API services which can be associated with
+	// a single control plane - OnPremAIGateway - instance.
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
 	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(
 		mgrID, logger, cfg,

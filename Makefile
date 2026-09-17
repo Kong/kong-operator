@@ -1080,6 +1080,7 @@ _run:
 		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
+		-enable-controller-onpremaigateway \
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-aigatewaydataplane \
