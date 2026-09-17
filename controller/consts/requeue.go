@@ -10,4 +10,8 @@ const (
 	// This is useful to avoid requeuing the request too frequently in case of
 	// e.g. external system errors.
 	RequeueWithBackoff = time.Second * 3
+
+	// KonnectConfigStoreDeletionBlockedRequeuePeriod is the interval between
+	// deletion attempts while a Konnect config store still holds secret entries.
+	KonnectConfigStoreDeletionBlockedRequeuePeriod = time.Minute
 )

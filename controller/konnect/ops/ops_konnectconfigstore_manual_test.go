@@ -2,6 +2,7 @@ package ops
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -302,6 +303,16 @@ func TestKonnectConfigStoreNotEmptyError_DeletionBlockedMessage(t *testing.T) {
 			contains:    []string{"12 secret entries", "first 10 keys", "a", "j"},
 			notContains: []string{"[k", "l]"},
 		},
+		{
+			name: "truncated keys report a lower bound",
+			err: KonnectConfigStoreNotEmptyError{
+				ConfigStoreID: "store-id",
+				Keys:          manyKeys,
+				KeysTruncated: true,
+			},
+			contains:    []string{"at least 12 secret entries", "first 10 listed keys", "a", "j"},
+			notContains: []string{"[k", "l]"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -374,9 +385,10 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 			Return(newListResponse(nil, "cert-a"), nil).
 			Once()
 
-		keys, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
 		require.NoError(t, err)
 		assert.Equal(t, []string{"cert-a", "cert-b"}, keys)
+		assert.False(t, truncated)
 	})
 
 	t.Run("stops and deduplicates when the cursor does not advance", func(t *testing.T) {
@@ -397,9 +409,10 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 			Return(newListResponse(&next, "cert-a"), nil).
 			Once()
 
-		keys, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
 		require.NoError(t, err)
 		assert.Equal(t, []string{"cert-a"}, keys)
+		assert.True(t, truncated)
 	})
 
 	t.Run("returns the keys collected so far when the next page URI is unparseable", func(t *testing.T) {
@@ -412,9 +425,32 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 			Return(newListResponse(&unparseable, "cert-a"), nil).
 			Once()
 
-		keys, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
 		require.NoError(t, err)
 		assert.Equal(t, []string{"cert-a"}, keys)
+		assert.True(t, truncated)
+	})
+
+	t.Run("marks the key list truncated when the page limit is reached", func(t *testing.T) {
+		t.Parallel()
+
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		var pageAfter *string
+		for page := range configStoreSecretsListMaxPages {
+			nextCursor := fmt.Sprintf("cursor-%d", page+1)
+			next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
+				"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=" + nextCursor
+			secretsSDK.EXPECT().
+				ListConfigStoreSecrets(mock.Anything, newListRequest(pageAfter)).
+				Return(newListResponse(&next, fmt.Sprintf("cert-%02d", page)), nil).
+				Once()
+			pageAfter = new(nextCursor)
+		}
+
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		require.NoError(t, err)
+		assert.Len(t, keys, configStoreSecretsListMaxPages)
+		assert.True(t, truncated)
 	})
 }
 

@@ -626,12 +626,12 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 					); errStatus != nil || !res.IsZero() {
 						return res, errStatus
 					}
-					// Do not return the error: the blockage is resolved out of
-					// band in Konnect, which produces no watch event, so the
-					// default error backoff would degrade to ~16min between
-					// retries while logging an error and recording a failed
-					// operation metric on every attempt.
-					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
+					// The blockage is resolved out of band in Konnect, which
+					// produces no watch event. Poll on a human-scale interval
+					// to bound API calls, failure metrics, and error logs.
+					return ctrl.Result{
+						RequeueAfter: ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod,
+					}, nil
 				}
 
 				if res, errStatus := patch.StatusWithCondition(
