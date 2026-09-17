@@ -60,9 +60,9 @@ type DBBackedHybridControlPlaneDeploymentOptions struct {
 	// +required
 	License DBBackedHybridControlPlaneLicense `json:"license"`
 
-	// Database represents the database connection information for the DBBackedHybridControlPlane.
+	// Database represents the database connection options for the DBBackedHybridControlPlane.
 	// +required
-	Database DBBackedHybridControlPlaneDatabaseConnectionInfo `json:"database"`
+	Database DBBackedHybridControlPlaneDatabaseConnectionOptions `json:"database"`
 
 	// Hardened indicates whether the operator should apply a hardened
 	// security context (non-root user, read-only root filesystem, dropped
@@ -108,29 +108,110 @@ type DBBackedHybridControlPlaneLicenseSecretRef struct {
 	Key string `json:"key"`
 }
 
-// DBBackedHybridControlPlaneDatabaseConnectionInfo represents the database connection information for the DBBackedHybridControlPlane.
-type DBBackedHybridControlPlaneDatabaseConnectionInfo struct {
-	// DatabaseHost represents the host of the database for the DBBackedHybridControlPlane.
+// DBBackedHybridControlPlaneDatabaseConnectionOptions represents the database connection options for the DBBackedHybridControlPlane.
+type DBBackedHybridControlPlaneDatabaseConnectionOptions struct {
+	// Host represents the host of the database for the DBBackedHybridControlPlane.
+	// Filled to `KONG_PG_HOST` environment variable.
+	// +kubebuilder:validation:MinLength=1
 	// +required
-	DatabaseHost string `json:"databaseHost"`
-	// DatabasePort represents the port of the database for the DBBackedHybridControlPlane.
+	Host string `json:"host"`
+	// Port represents the port of the database for the DBBackedHybridControlPlane.
+	// Filled to `KONG_PG_PORT` environment variable.
 	// +required
 	// +kubebuilder:validation:Minimum=1
 	// +kubebuilder:validation:Maximum=65535
 	// +kubebuilder:default=5432
-	DatabasePort int32 `json:"databasePort"`
-	// DatabaseUser represents the user of the database for the DBBackedHybridControlPlane.
+	Port int32 `json:"port"`
+	// DatabaseUser represents the username of the database for the DBBackedHybridControlPlane.
+	// Filled to `KONG_PG_USER` environment variable.
 	// +required
-	DatabaseUser string `json:"databaseUser"`
-	// DatabasePassword represents the password of the database for the DBBackedHybridControlPlane.
+	Username string `json:"username"`
+	// Password represents the password of the database for the DBBackedHybridControlPlane.
+	// Filled to `KONG_PG_PASSWORD` environment variable as a Kubernetes Secret reference.
 	// +required
-	DatabasePassword DBBackedHybridControlPlaneDatabasePassword `json:"databasePassword"`
+	Password DBBackedHybridControlPlaneDatabasePassword `json:"password"`
 	// DatabaseName represents the name of the database for the DBBackedHybridControlPlane.
+	// Filled to `KONG_DATABASE` environment variable.
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:default="kong"
 	DatabaseName string `json:"databaseName"`
+	// TLS represents the TLS configuration for the database connection of the DBBackedHybridControlPlane.
+	// +optional
+	TLS *DBBackedHybridControlPlaneDatabaseTLS `json:"tls,omitempty"`
+}
+
+// DatabaseTLSRequiredState represents the required state of TLS for the database connection.
+type DatabaseTLSRequiredState string
+
+const (
+	// DatabaseTLSRequiredStateRequired indicates that TLS is required for the database connection.
+	// Kong will fail to connect to the database if TLS is not available.
+	DatabaseTLSRequiredStateRequired DatabaseTLSRequiredState = "required"
+	// DatabaseTLSRequiredStateNotRequired indicates that TLS is not required for the database connection.
+	// Kong will fallback to non-TLS connection if TLS is not available.
+	DatabaseTLSRequiredStateNotRequired DatabaseTLSRequiredState = "notRequired"
+)
+
+// DatabaseTLSVerifyState represents the verification state of TLS for the database connection.
+type DatabaseTLSVerifyState string
+
+const (
+	// DatabaseTLSVerifyEnabled indicates that TLS certificate verification is enabled.
+	DatabaseTLSVerifyEnabled DatabaseTLSVerifyState = "enabled"
+	// DatabaseTLSVerifyDisabled indicates that TLS certificate verification is disabled.
+	DatabaseTLSVerifyDisabled DatabaseTLSVerifyState = "disabled"
+)
+
+// DatabaseTLSVersion represents the TLS version to be used for the database connection.
+type DatabaseTLSVersion string
+
+const (
+	// DatabaseTLSVersionTLSv1_1 indicates that TLS version 1.1 should be used for the database connection.
+	DatabaseTLSVersionTLSv1_1 DatabaseTLSVersion = "tlsv1_1"
+	// DatabaseTLSVersionTLSv1_2 indicates that TLS version 1.2 should be used for the database connection.
+	DatabaseTLSVersionTLSv1_2 DatabaseTLSVersion = "tlsv1_2"
+	// DatabaseTLSVersionTLSv1_3 indicates that TLS version 1.3 should be used for the database connection.
+	DatabaseTLSVersionTLSv1_3 DatabaseTLSVersion = "tlsv1_3"
+	// DatabaseTLSVersionAny indicates that client would negotiate the highest TLS version with the server which cannot be lower than TLS v1.1.
+	DatabaseTLSVersionAny DatabaseTLSVersion = "any"
+)
+
+// DBBackedHybridControlPlaneDatabaseTLS represents the TLS configuration for the database connection of the DBBackedHybridControlPlane.
+type DBBackedHybridControlPlaneDatabaseTLS struct {
+	// Required indicates whether TLS is required for the database connection.
+	// If set to "required", Kong gateway fails to connect to the database if TLS is not available.
+	// Filled to `KONG_PG_SSL_REQUIRED` environment variable.
+	// +required
+	// +kubebuilder:validation:Enum=required;notRequired
+	Required DatabaseTLSRequiredState `json:"required"`
+	// Verify indicates whether the TLS certificate should be verified.
+	// Filled to `KONG_PG_SSL_VERIFY` environment variable.
+	// +required
+	// +kubebuilder:validation:Enum=enabled;disabled
+	Verify DatabaseTLSVerifyState `json:"verify"`
+	// Version represents the TLS version to be used for the database connection.
+	// Filled to `KONG_PG_SSL_VERSION` environment variable.
+	// +optional
+	// +kubebuilder:default="tlsv1_2"
+	// +kubebuilder:validation:Enum=tlsv1_1;tlsv1_2;tlsv1_3;any
+	Version DatabaseTLSVersion `json:"version"`
+	// TrustedCertificates represents the list of trusted TLS certificates for the database connection.
+	// The secrets referenced here should contain the trusted TLS certificates for the database connection.
+	// These secrets are mounted to the pod and the mounting path is filled in `KONG_LUA_SSL_TRUSTED_CERTIFICATES` environment variable.
+	// +optional
+	// +kubebuilder:validation:MaxItems=10
+	TrustedCertificates []corev1.SecretReference `json:"trustedCertificates,omitempty"`
+	// VerifyDepth represents the maximum depth for verifying the TLS certificate chain
+	// to prevent DoS attack on tracking the signing chain in certificate verification.
+	// Filled to `KONG_LUA_SSL_VERIFY_DEPTH` environment variable.
+	// +optional
+	// +kubebuilder:default=5
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=10
+	VerifyDepth int `json:"verifyDepth"`
+	// ClientCertificate represents the reference to the Kubernetes Secret containing the client TLS certificate for the database connection.
+	// These secrets are mounted to the pod and the mounting path is filled in `KONG_PG_SSL_CERT` and `KONG_PG_SSL_KEY` environment variables.
+	ClientCertificate *corev1.SecretReference `json:"clientCertificate,omitempty"`
 }
 
 // DBBackedHybridControlPlaneDatabasePassword represents the password for the database of the DBBackedHybridControlPlane.
@@ -231,13 +312,9 @@ type DBBackedHybridControlPlaneStatus struct {
 	Selector string `json:"selector,omitempty"`
 
 	// ReadyReplicas indicates how many replicas have reported to be ready.
-	//
-	// +kubebuilder:default=0
 	ReadyReplicas int32 `json:"readyReplicas"`
 
 	// Replicas indicates how many replicas have been set for the DataPlane.
-	//
-	// +kubebuilder:default=0
 	Replicas int32 `json:"replicas"`
 
 	// AdminGUIServiceStatus indicates the status of the Admin GUI (Kong Manager) service for the DBBackedHybridControlPlane.

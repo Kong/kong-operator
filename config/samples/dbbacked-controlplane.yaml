@@ -34,15 +34,23 @@ spec:
         name: example-license-secret
         key: license
     database:
-      databaseHost: example-database-host
-      databasePort: 5432
-      databaseUser: example-database-user
-      databasePassword:
+      host: example-database-host
+      port: 5432
+      username: example-database-user
+      password:
         type: secretRef
         secretRef:
           name: example-database-password-secret
           key: password
       databaseName: kong
+      tls:
+        required: required
+        verify: enabled
+        version: tlsv1_3
+        trustedCertificates: []
+        verifyDepth: 5
+        clientCertificate: 
+          name: example-client-certificate-secret
   network:
     services:
       adminGUI:
