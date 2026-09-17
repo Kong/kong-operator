@@ -117,6 +117,9 @@
 - `KonnectEventGateway` now supports `spec.source: Mirror`, referencing an
   existing Konnect Event Gateway by ID (`spec.mirror.konnect.id`) instead of
   creating one. `Origin` (the default) is unchanged.
+- Konnect entities: Added `spec.id` in `KongCACertificate` to specify the ID of
+  the created CA certificate in Konnect.
+  [#5738](https://github.com/Kong/kong-operator/pull/5738)
 
 ### Breaking changes
 
