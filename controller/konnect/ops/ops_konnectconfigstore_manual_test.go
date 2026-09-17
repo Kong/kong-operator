@@ -225,6 +225,32 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		assert.Contains(t, err.Error(), "listing them failed")
 	})
 
+	t.Run("blocked delete with nil keys list response still reports blocked", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		obj := newObject()
+
+		configStoresSDK.EXPECT().
+			DeleteConfigStore(mock.Anything, mock.Anything).
+			Return(nil, notEmptyErr).
+			Once()
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
+			Return(nil, nil).
+			Once()
+
+		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
+		require.Error(t, err)
+
+		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
+		require.True(t, ok, "expected KonnectConfigStoreNotEmptyError, got %T (%v)", err, err)
+		require.ErrorIs(t, errNotEmpty.ListErr, ErrNilResponse)
+		assert.Nil(t, errNotEmpty.Keys)
+	})
+
 	t.Run("unrelated 400 error passes through untouched", func(t *testing.T) {
 		t.Parallel()
 
