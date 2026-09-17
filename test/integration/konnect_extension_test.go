@@ -159,6 +159,8 @@ func TestKonnectExtensionControlPlaneRotation(t *testing.T) {
 	deleteObjectAndWaitForDeletionFn(t, konnectExtension.DeepCopy())()
 }
 
+// Keep observing this test's stability.
+// TODO: https://github.com/Kong/kong-operator/issues/4807
 func TestKonnectExtension(t *testing.T) {
 	ns, _ := helpers.SetupTestEnv(t, GetCtx(), GetEnv())
 
@@ -204,6 +206,7 @@ func TestKonnectExtension(t *testing.T) {
 			require.NoError(t, err)
 			conditions.KonnectEntityIsProgrammed(t, cp)
 		}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+		t.Logf("KonnectGatewayControlPlane received Konnect ID (%s) for resource %s/%s", cp.GetKonnectID(), cp.Namespace, cp.Name)
 
 		t.Run("Origin ControlPlane", func(t *testing.T) {
 			// Create entities to check proper working on Konnect.
@@ -239,6 +242,7 @@ func TestKonnectExtension(t *testing.T) {
 				require.NoError(t, err)
 				conditions.KonnectEntityIsProgrammed(t, mirrorCP)
 			}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
+			t.Logf("KonnectGatewayControlPlane received Konnect ID (%s) for resource %s/%s", mirrorCP.GetKonnectID(), mirrorCP.Namespace, mirrorCP.Name)
 
 			require.Eventually(t,
 				testutils.ObjectPredicates(t, clients.MgrClient,
@@ -328,6 +332,11 @@ type KonnectExtensionTestCaseParams struct {
 
 func konnectExtensionTestCases(t *testing.T, params KonnectExtensionTestCaseParams) {
 	cert, key := certificate.MustGenerateCertPEMFormat()
+
+	t.Logf("Running KonnectExtension test cases with KonnectGatewayControlPlane %s (Konnect ID: %s)",
+		client.ObjectKeyFromObject(params.konnectControlPlane),
+		params.konnectControlPlane.GetKonnectID(),
+	)
 
 	t.Run("KonnectExtension with KonnectNamespacedRef control plane ref", func(t *testing.T) {
 		t.Run("manual secret provisioning", func(t *testing.T) {
@@ -441,6 +450,9 @@ func deployKonnectEntitiesForKonnectExtensionTest(
 // The logic herein defined is shared between all the dataplane KonnectExtension tests.
 func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 	t.Logf("Waiting for KonnectExtension %s/%s to have expected conditions set to True", p.konnectExtension.Namespace, p.konnectExtension.Name)
+
+	nnKonnectExt := client.ObjectKeyFromObject(p.konnectExtension)
+
 	require.EventuallyWithT(t, func(t *assert.CollectT) {
 		ok, msg := checkKonnectExtensionConditions(t,
 			p.konnectExtension,
@@ -451,12 +463,16 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 		assert.Truef(t, ok, "condition check failed: %s, conditions: %+v", msg, p.konnectExtension.Status.Conditions)
 	}, testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	t.Logf("waiting for status.konnect and status.dataPlaneClientAuth to be set for KonnectExtension %s", nnKonnectExt)
 	require.EventuallyWithT(t,
 		checkKonnectExtensionStatus(p.konnectExtension, p.konnectControlPlane.GetKonnectID(), ""),
 		testutils.ObjectUpdateTimeout, testutils.ObjectUpdateTick)
 
-	t.Logf("Creating a DataPlane using the KonnectExtension %s/%s", p.konnectExtension.Namespace, p.konnectExtension.Name)
+	var kExt konnectv1alpha2.KonnectExtension
+	require.NoError(t, GetClients().MgrClient.Get(ctx, nnKonnectExt, &kExt))
+	t.Logf("KonnectExtension got the ControlPlane ID: %s", kExt.Status.Konnect.ControlPlaneID)
+
+	t.Logf("Creating a DataPlane using the KonnectExtension %s", nnKonnectExt)
 	dataPlane := builder.NewDataPlaneBuilder().
 		WithObjectMeta(metav1.ObjectMeta{
 			Namespace: p.namespace,
@@ -502,7 +518,11 @@ func konnectExtensionTestBody(t *testing.T, p KonnectExtensionTestBodyParams) {
 	}
 
 	t.Log("verifying dataplane gets marked provisioned")
-	require.Eventually(t, testutils.DataPlaneIsReady(t, GetCtx(), dpName, GetClients().OperatorClient), waitTime, tickTime)
+	// NOTE: Wait longer for DataPlane to get ready as hitting Konnect with
+	// data plane certificate which has not yet been fully processed by Konnect can
+	// hit a path which will require an mtls plugin ttl to hit in order for the
+	// certificate to work.
+	require.Eventually(t, testutils.DataPlaneIsReady(t, ctx, dpName, GetClients().OperatorClient), 2*time.Minute, tickTime)
 
 	t.Logf("verifying dataplane %s has ingress service", dpName)
 	var dpIngressService corev1.Service
