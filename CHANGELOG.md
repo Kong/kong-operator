@@ -114,6 +114,9 @@
   aren't translated yet, so the rendered payload isn't a complete, pushable
   configuration on its own; pushing it to data planes is also not wired yet.
   [#5661](https://github.com/Kong/kong-operator/pull/5661)
+- Konnect entities: Added `spec.id` in `KongCACertificate` to specify the ID of
+  the created CA certificate in Konnect.
+  [#5738](https://github.com/Kong/kong-operator/pull/5738)
 
 ### Breaking changes
 
