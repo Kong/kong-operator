@@ -162,11 +162,13 @@ func TestMergeCerts(t *testing.T) {
 			},
 			mergedCerts: []kongstate.Certificate{
 				{
-					ID:   new("certificate-1"),
-					Cert: new(string(crt1)),
-					Key:  new(string(key1)),
-					Tags: kong.StringSlice("tag-1"),
-					SNIs: kong.StringSlice("baz.com", "foo.com"),
+					Certificate: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+						SNIs: kong.StringSlice("baz.com", "foo.com"),
+					},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
@@ -202,11 +204,13 @@ func TestMergeCerts(t *testing.T) {
 			},
 			mergedCerts: []kongstate.Certificate{
 				{
-					ID:   new("certificate-1"),
-					Cert: new(string(crt1)),
-					Key:  new(string(key1)),
-					Tags: kong.StringSlice("tag-1"),
-					SNIs: kong.StringSlice("baz.com", "foo.com"),
+					Certificate: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+						SNIs: kong.StringSlice("baz.com", "foo.com"),
+					},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
@@ -242,11 +246,13 @@ func TestMergeCerts(t *testing.T) {
 			},
 			mergedCerts: []kongstate.Certificate{
 				{
-					ID:   new("certificate-1"),
-					Cert: new(string(crt1)),
-					Key:  new(string(key1)),
-					Tags: kong.StringSlice("tag-1"),
-					SNIs: kong.StringSlice("baz.com", "foo.com"),
+					Certificate: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+						SNIs: kong.StringSlice("baz.com", "foo.com"),
+					},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
@@ -293,11 +299,13 @@ func TestMergeCerts(t *testing.T) {
 			},
 			mergedCerts: []kongstate.Certificate{
 				{
-					ID:   new("certificate-1"),
-					Cert: new(string(crt1)),
-					Key:  new(string(key1)),
-					Tags: kong.StringSlice("tag-1"),
-					SNIs: kong.StringSlice("baz.com", "foo.com", "qux.com"),
+					Certificate: kong.Certificate{
+						ID:   new("certificate-1"),
+						Cert: new(string(crt1)),
+						Key:  new(string(key1)),
+						Tags: kong.StringSlice("tag-1"),
+						SNIs: kong.StringSlice("baz.com", "foo.com", "qux.com"),
+					},
 				},
 			},
 			idToMergedID: certIDToMergedCertID{
