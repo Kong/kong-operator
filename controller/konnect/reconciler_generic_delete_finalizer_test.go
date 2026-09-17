@@ -280,15 +280,14 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 
 	// Drive Reconcile like a real controller would across several watch-triggered
 	// passes, re-reading the object each time. The blocked delete must not return
-	// an error (to avoid error-backoff degradation and failure metric spam) but
-	// requeue on a fixed period until the store is empty.
+	// an error but requeue on a longer fixed period until the store is empty.
 	var cur konnectv1alpha1.KonnectConfigStore
 	blocked := false
 	for range 6 {
 		require.NoError(t, cl.Get(t.Context(), key, &cur))
 		res, err := reconciler.Reconcile(t.Context(), &cur)
 		require.NoError(t, err)
-		if res.RequeueAfter == ctrlconsts.RequeueWithBackoff {
+		if res.RequeueAfter == ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod {
 			blocked = true
 			break
 		}

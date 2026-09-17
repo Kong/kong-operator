@@ -46,6 +46,9 @@ type KonnectConfigStoreNotEmptyError struct {
 	// (e.g. they were removed between the rejected delete and the listing).
 	// Nil when listing the entries failed; see ListErr.
 	Keys []string
+	// KeysTruncated indicates that Keys is only a partial list because the
+	// listing reached its page limit or could not continue pagination.
+	KeysTruncated bool
 	// ListErr, when non-nil, is the error that prevented listing the blocking
 	// entry keys.
 	ListErr error
@@ -65,6 +68,11 @@ func (e KonnectConfigStoreNotEmptyError) Error() string {
 		return fmt.Sprintf(
 			"config store %s was reported as not empty but no secret entries were listed, deletion blocked: %v",
 			e.ConfigStoreID, e.Err,
+		)
+	case e.KeysTruncated:
+		return fmt.Sprintf(
+			"config store %s still holds at least %d secret entries, deletion blocked: %v",
+			e.ConfigStoreID, len(e.Keys), e.Err,
 		)
 	}
 	return fmt.Sprintf(
@@ -94,6 +102,14 @@ func (e KonnectConfigStoreNotEmptyError) DeletionBlockedMessage() string {
 		return "deletion blocked: Konnect rejected the deletion because the config store still holds " +
 			"secret entries, but no entries were listed (they may have just been removed); " +
 			"the deletion will be retried automatically"
+	}
+	if e.KeysTruncated {
+		keysToReport := min(len(e.Keys), maxKeysInDeletionBlockedMessage)
+		return fmt.Sprintf(
+			"deletion blocked: the config store still holds at least %d secret entries; "+
+				"remove the entries (first %d listed keys: %v) and the deletion will proceed automatically",
+			len(e.Keys), keysToReport, e.Keys[:keysToReport],
+		)
 	}
 	if len(e.Keys) <= maxKeysInDeletionBlockedMessage {
 		return fmt.Sprintf(
@@ -141,7 +157,7 @@ func deleteKonnectConfigStoreGuarded(
 		return err
 	}
 
-	keys, listErr := listConfigStoreSecretKeys(ctx, configStoreSecretsSDK, obj)
+	keys, keysTruncated, listErr := listConfigStoreSecretKeys(ctx, configStoreSecretsSDK, obj)
 	if listErr != nil {
 		ctrllog.FromContext(ctx).
 			Info("failed to list config store secret entries blocking deletion",
@@ -153,6 +169,7 @@ func deleteKonnectConfigStoreGuarded(
 	return KonnectConfigStoreNotEmptyError{
 		ConfigStoreID: obj.GetKonnectStatus().GetKonnectID(),
 		Keys:          keys,
+		KeysTruncated: keysTruncated,
 		ListErr:       listErr,
 		Err:           err,
 	}
@@ -180,12 +197,13 @@ func listConfigStoreSecretKeys(
 	ctx context.Context,
 	configStoreSecretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
 	obj *konnectv1alpha1.KonnectConfigStore,
-) ([]string, error) {
+) ([]string, bool, error) {
 	var (
 		keys      []string
 		pageAfter *string
+		truncated bool
 	)
-	for range configStoreSecretsListMaxPages {
+	for page := range configStoreSecretsListMaxPages {
 		resp, err := configStoreSecretsSDK.ListConfigStoreSecrets(ctx, sdkkonnectops.ListConfigStoreSecretsRequest{
 			ControlPlaneID: obj.GetControlPlaneID(),
 			ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
@@ -193,10 +211,10 @@ func listConfigStoreSecretKeys(
 			PageAfter:      pageAfter,
 		})
 		if err != nil {
-			return nil, err
+			return nil, false, err
 		}
 		if resp == nil || resp.ListConfigStoreSecretsResponse == nil {
-			return nil, ErrNilResponse
+			return nil, false, ErrNilResponse
 		}
 
 		for _, secret := range resp.ListConfigStoreSecretsResponse.Data {
@@ -215,16 +233,25 @@ func listConfigStoreSecretKeys(
 					"id", obj.GetKonnectStatus().GetKonnectID(),
 					"error", err.Error(),
 				)
+			truncated = true
 			break
 		}
-		if next == "" || (pageAfter != nil && next == *pageAfter) {
-			// No further page, or the cursor did not advance: stop to avoid
-			// collecting the same page repeatedly.
+		if next == "" {
+			break
+		}
+		if pageAfter != nil && next == *pageAfter {
+			// The cursor did not advance: stop to avoid collecting the same
+			// page repeatedly, and report that the result is partial.
+			truncated = true
+			break
+		}
+		if page == configStoreSecretsListMaxPages-1 {
+			truncated = true
 			break
 		}
 		pageAfter = &next
 	}
 
 	slices.Sort(keys)
-	return slices.Compact(keys), nil
+	return slices.Compact(keys), truncated, nil
 }
