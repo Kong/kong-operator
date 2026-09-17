@@ -3,6 +3,7 @@ package konnect
 import (
 	"context"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -23,11 +24,31 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	"github.com/kong/kong-operator/v2/internal/metrics"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
+
+type deleteMetricRecorder struct {
+	failureStatusCodes []int
+}
+
+func (*deleteMetricRecorder) RecordKonnectEntityOperationSuccess(
+	string, metrics.KonnectEntityOperation, string, time.Duration,
+) {
+}
+
+func (r *deleteMetricRecorder) RecordKonnectEntityOperationFailure(
+	_ string,
+	_ metrics.KonnectEntityOperation,
+	_ string,
+	_ time.Duration,
+	statusCode int,
+) {
+	r.failureStatusCodes = append(r.failureStatusCodes, statusCode)
+}
 
 // TestReconcileDeleteDoesNotDoubleDeleteOnConflict is a regression test for a CI
 // flake in TestKonnectConfigStore: the manager's cached copy of an entity being
@@ -273,9 +294,10 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 			},
 		}, nil)
 
+	metricRecorder := &deleteMetricRecorder{}
 	reconciler := NewKonnectEntityReconciler[konnectv1alpha1.KonnectConfigStore](
 		factory, logging.DevelopmentMode, cl,
-		WithMetricRecorder[konnectv1alpha1.KonnectConfigStore](&metricsmocks.MockRecorder{}),
+		WithMetricRecorder[konnectv1alpha1.KonnectConfigStore](metricRecorder),
 	)
 
 	// Drive Reconcile like a real controller would across several watch-triggered
@@ -293,6 +315,7 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 		}
 	}
 	require.True(t, blocked, "delete must be blocked while the config store holds entries")
+	require.Equal(t, []int{400}, metricRecorder.failureStatusCodes)
 
 	// The CR must still exist with its finalizer, and report the blockage with
 	// the blocking entry keys.

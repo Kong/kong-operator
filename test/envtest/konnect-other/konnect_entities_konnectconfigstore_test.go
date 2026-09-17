@@ -244,6 +244,21 @@ func TestKonnectConfigStore(t *testing.T) {
 
 		t.Log("Simulating the user removing the entries: the delete now succeeds and the CR is cleaned up")
 		blocked.Store(false)
+
+		// Removing entries in Konnect does not produce a Kubernetes watch event.
+		// Trigger a reconcile explicitly instead of making this test depend on
+		// the one-minute polling interval or a queued status update.
+		var configStoreCurrent konnectv1alpha1.KonnectConfigStore
+		require.NoError(t, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(configStore), &configStoreCurrent))
+		configStoreBeforeUpdate := configStoreCurrent.DeepCopy()
+		annotations := configStoreCurrent.GetAnnotations()
+		if annotations == nil {
+			annotations = make(map[string]string)
+		}
+		annotations["test.konghq.com/config-store-entries-removed"] = "true"
+		configStoreCurrent.SetAnnotations(annotations)
+		require.NoError(t, clientNamespaced.Patch(ctx, &configStoreCurrent, client.MergeFrom(configStoreBeforeUpdate)))
+
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, configStore, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoreSecretsSDK, consts.WaitTime, consts.TickTime)
