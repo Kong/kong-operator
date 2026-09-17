@@ -307,7 +307,9 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 			diagCtx, diagCancel := context.WithTimeout(context.Background(), time.Minute)
 			defer diagCancel()
 			logRemainingFinalizerBearingObjects(diagCtx, env.Cluster().Config(), remaining, logf)
-			if output, err := env.Cluster().DumpDiagnostics(diagCtx, "conformance_cleanup_timeout"); err != nil {
+			dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
+			defer dumpCancel()
+			if output, err := env.Cluster().DumpDiagnostics(dumpCtx, "conformance_cleanup_timeout"); err != nil {
 				logf("ERROR: failed to dump diagnostics after cleanup timeout: %v", err)
 			} else {
 				logf("INFO: dumped diagnostics after cleanup timeout to %s", output)
