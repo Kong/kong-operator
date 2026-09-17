@@ -308,6 +308,82 @@ const (
 )
 
 const (
+	// KonnectConfigStoreSyncPairValidConditionType is the type of the condition that
+	// indicates whether the certificate/key pair referenced by a KonnectConfigStoreSync
+	// in Combined mode forms a valid x509 pair. In Split mode it reports True with
+	// reason NotApplicable.
+	KonnectConfigStoreSyncPairValidConditionType = "PairValid"
+
+	// KonnectConfigStoreSyncSyncedConditionType is the type of the condition that
+	// indicates whether all Config Store entries owned by a KonnectConfigStoreSync
+	// are in sync with the referenced Secret.
+	KonnectConfigStoreSyncSyncedConditionType = "Synced"
+)
+
+const (
+	// KonnectConfigStoreSyncSecretRefReasonNotFound is the reason used with the
+	// SecretRefValid condition type indicating that the referenced Secret does
+	// not exist.
+	KonnectConfigStoreSyncSecretRefReasonNotFound = "NotFound"
+	// KonnectConfigStoreSyncSecretRefReasonNotAllowed is the reason used with the
+	// SecretRefValid condition type indicating that the cross-namespace Secret
+	// reference is not permitted by a KongReferenceGrant.
+	KonnectConfigStoreSyncSecretRefReasonNotAllowed = "NotAllowed"
+)
+
+const (
+	// KonnectConfigStoreSyncPairValidReasonPairMismatch is the reason used with the
+	// PairValid condition type indicating that the certificate and private key do
+	// not form a valid x509 pair.
+	KonnectConfigStoreSyncPairValidReasonPairMismatch = "PairMismatch"
+	// KonnectConfigStoreSyncPairValidReasonNotApplicable is the reason used with the
+	// PairValid condition type (reported as True) in Split mode, where no pair
+	// validation applies.
+	KonnectConfigStoreSyncPairValidReasonNotApplicable = "NotApplicable"
+)
+
+const (
+	// KonnectConfigStoreSyncSyncedReasonAllEntriesUpToDate is the reason used with the
+	// Synced condition type indicating that all entries are in sync with the Secret.
+	KonnectConfigStoreSyncSyncedReasonAllEntriesUpToDate = "AllEntriesUpToDate"
+	// KonnectConfigStoreSyncSyncedReasonWaitingForConfigStore is the reason used with
+	// the Synced condition type indicating that the referenced KonnectConfigStore is
+	// missing or not yet programmed, so no push can be attempted.
+	KonnectConfigStoreSyncSyncedReasonWaitingForConfigStore = "WaitingForConfigStore"
+	// KonnectConfigStoreSyncSyncedReasonSecretRefInvalid is the reason used with the
+	// Synced condition type indicating that the referenced Secret is missing or its
+	// reference is not permitted.
+	KonnectConfigStoreSyncSyncedReasonSecretRefInvalid = "SecretRefInvalid"
+	// KonnectConfigStoreSyncSyncedReasonPairMismatch is the reason used with the
+	// Synced condition type indicating that the certificate/key pair is invalid and
+	// nothing was pushed.
+	KonnectConfigStoreSyncSyncedReasonPairMismatch = "PairMismatch"
+	// KonnectConfigStoreSyncSyncedReasonValueTooLarge is the reason used with the
+	// Synced condition type indicating that the entry value exceeds the 5120-byte
+	// Config Store cap.
+	KonnectConfigStoreSyncSyncedReasonValueTooLarge = "ValueTooLarge"
+	// KonnectConfigStoreSyncSyncedReasonKeyTooLong is the reason used with the
+	// Synced condition type indicating that a resolved store key exceeds the
+	// 512-byte Config Store cap.
+	KonnectConfigStoreSyncSyncedReasonKeyTooLong = "KeyTooLong"
+	// KonnectConfigStoreSyncSyncedReasonKeyConflict is the reason used with the
+	// Synced condition type indicating that another sync owns the resolved
+	// (storeID, storeKey) pair.
+	KonnectConfigStoreSyncSyncedReasonKeyConflict = "KeyConflict"
+	// KonnectConfigStoreSyncSyncedReasonPushFailed is the reason used with the
+	// Synced condition type indicating that the Konnect write failed.
+	KonnectConfigStoreSyncSyncedReasonPushFailed = "PushFailed"
+	// KonnectConfigStoreSyncSyncedReasonEntryInUse is the reason used with the
+	// Synced condition type indicating that deletion is blocked because an entry
+	// is still referenced by Konnect configuration.
+	KonnectConfigStoreSyncSyncedReasonEntryInUse = "EntryInUse"
+	// KonnectConfigStoreSyncSyncedReasonConfigStoreDeletionBlocked is the reason used
+	// with the Synced condition type indicating that the referenced KonnectConfigStore
+	// is being deleted while still holding this sync's entries.
+	KonnectConfigStoreSyncSyncedReasonConfigStoreDeletionBlocked = "ConfigStoreDeletionBlocked"
+)
+
+const (
 	// ConfigStoreRefValidConditionType is the type of the condition that indicates
 	// whether the KonnectConfigStore reference is valid and points to an existing,
 	// programmed KonnectConfigStore.
