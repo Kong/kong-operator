@@ -421,6 +421,10 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 	if statusFeeding != 1 {
 		return fmt.Errorf("exactly one Services entry must set SetStatusAddresses, got %d", statusFeeding)
 	}
+	if r.Config.AdminCertificate != nil &&
+		r.Config.AdminCertificate.LabelKey == r.Config.CertificateLabelKey {
+		return fmt.Errorf("AdminCertificate.LabelKey must be distinct from CertificateLabelKey")
+	}
 	return nil
 }
 

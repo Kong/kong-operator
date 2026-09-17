@@ -151,7 +151,10 @@ func (r *Reconciler[T, Cert]) deleteServiceIfOwned(
 	if !metav1.IsControlledBy(svc, dp) {
 		return nil
 	}
-	if err := r.Delete(ctx, svc); err != nil && !apierrors.IsNotFound(err) {
+	if err := r.Delete(ctx, svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeWarning, "ServiceFailed", "DeleteService",
 			"Failed to delete %s Service: %v", cfg.Description, err)
 		return fmt.Errorf("failed to delete %s Service for %s %s/%s: %w",
