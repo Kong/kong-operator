@@ -156,23 +156,28 @@ var config = shareddataplane.Config[
 		AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
 	},
 
-	CertificateLabelKey:      consts.SecretAIGatewayDataPlaneCertificateLabel,
-	CertificateKind:          "AIGatewayDataPlaneCertificate",
-	BuildCertificate:         buildAIGatewayDataPlaneCertificate,
-	EnsureCertificate:        secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
-	ResolveCertificateSecret: resolveCertificateSecret,
-	CertificateRequested: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
-		// Certificate automation only applies to Konnect-backed control planes.
-		// An on-prem control plane pushes configuration to the DataPlane and
-		// has no consumer for a provisioned mTLS client certificate, so a
-		// configured certificateSecret is ignored there and must not block the
-		// Deployment.
-		return aigwdp.Spec.CertificateSecret != nil && !isOnPremControlPlaneRef(aigwdp)
+	Certificate: shareddataplane.CertificateConfig[
+		*aigatewayv1alpha1.AIGatewayDataPlane,
+		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
+	]{
+		LabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
+		Kind:     "AIGatewayDataPlaneCertificate",
+		Build:    buildAIGatewayDataPlaneCertificate,
+		Ensure:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
+		Resolve:  resolveCertificateSecret,
+		Requested: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
+			// Certificate automation only applies to Konnect-backed control planes.
+			// An on-prem control plane pushes configuration to the DataPlane and
+			// has no consumer for a provisioned mTLS client certificate, so a
+			// configured certificateSecret is ignored there and must not block the
+			// Deployment.
+			return aigwdp.Spec.CertificateSecret != nil && !isOnPremControlPlaneRef(aigwdp)
+		},
+		Checksum:           certificateChecksum,
+		ChecksumAnnotation: consts.AIGatewayDataPlaneCertificateChecksumAnnotation,
+		CleanupStale:       cleanupStaleCertificates,
 	},
-	CertificateChecksum:           certificateChecksum,
-	CertificateChecksumAnnotation: consts.AIGatewayDataPlaneCertificateChecksumAnnotation,
-	CleanupStaleCertificates:      cleanupStaleCertificates,
-	ExtraWatches:                  extraWatches,
+	ExtraWatches: extraWatches,
 
 	Deployment: shareddataplane.DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:         consts.AIGatewayDataPlaneContainerName,
@@ -187,37 +192,29 @@ var config = shareddataplane.Config[
 		LabelManaged:          k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
 
-	// The primary (ingress) Service always exists; the Admin API Service is
-	// only exposed for on-prem control planes, which push configuration to
-	// the DataPlane's Admin API over it. With any other control plane kind
-	// (or none) it must not exist.
-	Services: []shareddataplane.ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
-		{
-			Description:         "Ingress",
-			NameSuffix:          "-ingress",
-			DefaultPortName:     "ingress",
-			DefaultPort:         DefaultIngressPort,
-			ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
-			Options:             serviceOptions,
+	// The primary (ingress) Service always exists. The Admin API Service and
+	// its TLS server certificate are configured through AdminAPI below: they
+	// are only exposed for on-prem control planes, which push configuration
+	// to the DataPlane's Admin API over them. With any other control plane
+	// kind (or none) they must not exist.
+	Service: shareddataplane.ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Description:         "Ingress",
+		NameSuffix:          "-ingress",
+		DefaultPortName:     "ingress",
+		DefaultPort:         DefaultIngressPort,
+		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+		Options:             serviceOptions,
 
-			SetStatusAddresses: setStatusAddresses,
-		},
-		{
-			Description:         "Admin",
-			NameSuffix:          AdminServiceNameSuffix,
-			DefaultPortName:     "admin",
-			DefaultPort:         DefaultAdminPort,
-			ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
-			Enabled:             isAdminListenerEnabled,
-		},
+		SetStatusAddresses: setStatusAddresses,
 	},
 
-	// Likewise for the Admin API TLS server certificate the on-prem control
-	// plane verifies when pushing configuration.
-	AdminCertificate: &shareddataplane.AdminCertificateConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
-		Enabled:  isAdminListenerEnabled,
-		Subject:  adminCertificateSubject,
-		LabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
+	AdminAPI: &shareddataplane.AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             isAdminListenerEnabled,
+		ServiceNameSuffix:   AdminServiceNameSuffix,
+		ServicePortName:     "admin",
+		ServicePort:         DefaultAdminPort,
+		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
 	},
 
 	HPAScalingSpec:    hpaScalingSpec,
@@ -421,13 +418,6 @@ func onPremControlPlane(cp shareddataplane.ResolvedControlPlane) bool {
 // reference configured.
 func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane) bool {
 	return onPremControlPlane(cp)
-}
-
-// adminCertificateSubject returns the subject of the Admin API TLS server
-// certificate: the in-cluster DNS name of the admin Service, which is also the
-// name the on-prem control plane uses to reach the Admin API.
-func adminCertificateSubject(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
-	return fmt.Sprintf("%s%s.%s.svc", aigwdp.Name, AdminServiceNameSuffix, aigwdp.Namespace)
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables for the

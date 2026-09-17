@@ -74,7 +74,7 @@ func (r *Reconciler[T, Cert]) ensureCertificateSecretFor(
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}
-	res, secret, err := r.Config.EnsureCertificate(
+	res, secret, err := r.Config.Certificate.Ensure(
 		ctx,
 		dp,
 		params.Subject,
@@ -114,7 +114,7 @@ func (r *Reconciler[T, Cert]) ensureCertificateSecret(
 	dp T,
 ) (op.Result, *corev1.Secret, error) {
 	return r.ensureCertificateSecretFor(ctx, dp, certificateSecretParams{
-		LabelKey:        r.Config.CertificateLabelKey,
+		LabelKey:        r.Config.Certificate.LabelKey,
 		Subject:         fmt.Sprintf("%s.%s", dp.GetName(), dp.GetNamespace()),
 		Usages:          []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageClientAuth},
 		ConditionType:   r.Config.Conditions.CertificateProvisionedType,
@@ -125,14 +125,15 @@ func (r *Reconciler[T, Cert]) ensureCertificateSecret(
 
 // ensureAdminCertificateSecret provisions (or finds) the Admin API TLS server
 // certificate Secret for the given DataPlane, signed by the cluster CA and
-// labeled with AdminCertificate.LabelKey.
+// labeled with AdminAPI.CertificateLabelKey.
 func (r *Reconciler[T, Cert]) ensureAdminCertificateSecret(
 	ctx context.Context,
 	dp T,
+	adminAPI *AdminAPIConfig[T],
 ) (op.Result, *corev1.Secret, error) {
 	return r.ensureCertificateSecretFor(ctx, dp, certificateSecretParams{
-		LabelKey:        r.Config.AdminCertificate.LabelKey,
-		Subject:         r.Config.AdminCertificate.Subject(dp),
+		LabelKey:        adminAPI.CertificateLabelKey,
+		Subject:         adminAPI.certificateSubject(dp),
 		Usages:          []certificatesv1.KeyUsage{certificatesv1.UsageKeyEncipherment, certificatesv1.UsageDigitalSignature, certificatesv1.UsageServerAuth},
 		ConditionType:   r.Config.Conditions.AdminCertificateProvisionedType,
 		ConditionReason: r.Config.Conditions.AdminCertificateProvisionedReason,
@@ -142,7 +143,7 @@ func (r *Reconciler[T, Cert]) ensureAdminCertificateSecret(
 
 // deleteAdminCertificateSecretsIfOwned removes the Admin API certificate
 // Secret(s) owned by the given DataPlane, i.e. leftovers from an earlier
-// reconcile in which AdminCertificate.Enabled was true (e.g. the control
+// reconcile in which AdminAPI.Enabled was true (e.g. the control
 // plane reference changed to a kind that doesn't consume the Admin API, or
 // was removed). The AdminCertificateProvisioned condition is removed as well,
 // since it no longer applies. Must only be called after the Deployment has
@@ -152,10 +153,11 @@ func (r *Reconciler[T, Cert]) deleteAdminCertificateSecretsIfOwned(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
+	adminAPI *AdminAPIConfig[T],
 ) error {
 	matchingLabels := k8sresources.GetManagedLabelForOwner(dp)
 	matchingLabels[consts.SecretProvisioningLabelKey] = consts.SecretProvisioningAutomaticLabelValue
-	matchingLabels[r.Config.AdminCertificate.LabelKey] = "true"
+	matchingLabels[adminAPI.CertificateLabelKey] = "true"
 	if r.SecretLabelSelector != "" {
 		matchingLabels[r.SecretLabelSelector] = "true"
 	}

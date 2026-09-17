@@ -98,10 +98,10 @@ func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 	if !k8sutils.DeploymentRolloutComplete(deployment) {
 		return false, nil
 	}
-	if r.Config.CertificateChecksumAnnotation == "" {
+	if r.Config.Certificate.ChecksumAnnotation == "" {
 		return true, nil
 	}
-	return deployment.Spec.Template.Annotations[r.Config.CertificateChecksumAnnotation] == certChecksum, nil
+	return deployment.Spec.Template.Annotations[r.Config.Certificate.ChecksumAnnotation] == certChecksum, nil
 }
 
 // ResolveImage determines the DataPlane container image using the following priority:
@@ -171,10 +171,10 @@ func BuildDeployment[T Object, Cert CertificateObject](
 		// The user overlay wins on annotation conflicts, so a user-supplied
 		// value for the checksum key would otherwise silently pin the checksum
 		// and stop rollouts from being triggered on certificate rotation.
-		if certChecksum != "" && cfg.CertificateChecksumAnnotation != "" {
+		if certChecksum != "" && cfg.Certificate.ChecksumAnnotation != "" {
 			if err := unstructured.SetNestedField(u.Object, certChecksum,
 				"spec", "template", "metadata", "annotations",
-				cfg.CertificateChecksumAnnotation); err != nil {
+				cfg.Certificate.ChecksumAnnotation); err != nil {
 				return nil, fmt.Errorf("failed to re-assert certificate checksum annotation: %w", err)
 			}
 		}
@@ -257,7 +257,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: certChecksumAnnotation(certChecksum, cfg.CertificateChecksumAnnotation),
+					Annotations: certChecksumAnnotation(certChecksum, cfg.Certificate.ChecksumAnnotation),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{container},

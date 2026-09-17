@@ -68,8 +68,10 @@ type CertificateObject interface {
 	GetConditions() []metav1.Condition
 }
 
-// EnsureCertificateFunc provisions (or finds) the mTLS client certificate
-// Secret for a DataPlane, signed by the cluster CA. It mirrors
+// EnsureCertificateFunc provisions (or finds) a TLS certificate Secret for a
+// DataPlane, signed by the cluster CA: the mTLS client certificate used for
+// the outbound connection to a Konnect-backed control plane, and the Admin
+// API TLS server certificate when AdminAPI is configured. It mirrors
 // secrets.EnsureCertificate, which cannot be called from generic code because
 // of its union type constraint; pass an explicitly instantiated
 // secrets.EnsureCertificate[*YourDataPlane] here.
@@ -129,7 +131,7 @@ type Conditions struct {
 	WaitingForAddressMessage string
 
 	// AdminCertificateProvisionedType is the type of the Admin API server
-	// certificate condition. Only used when AdminCertificate is configured.
+	// certificate condition. Only used when AdminAPI is configured.
 	AdminCertificateProvisionedType string
 	// AdminCertificateProvisionedReason is the reason used when the Admin
 	// API certificate Secret has been provisioned.
@@ -188,36 +190,138 @@ type ServiceConfig[T Object] struct {
 	// Enabled, when non-nil, reports whether this Service should be reconciled
 	// for the DataPlane given its resolved control plane. A disabled Service
 	// is not created, and a Service left over from an earlier reconcile in
-	// which the predicate was true is removed. Must not be combined with
-	// SetStatusAddresses: the status-feeding Service is always reconciled.
+	// which the predicate was true is removed. Only used on Services whose
+	// existence is conditional (e.g. the Admin API Service derived from
+	// AdminAPI): the primary Service always exists, so Config.Service.Enabled
+	// must be left nil.
 	Enabled func(dp T, cp ResolvedControlPlane) bool
-	// SetStatusAddresses, when non-nil, marks this Service as the one feeding
-	// the DataPlane status: its addresses are copied into the status through
-	// this function, and its readiness feeds the ServiceReady condition
-	// (see Conditions). Exactly one Services entry must set it, and it cannot
-	// be combined with Enabled: a Service the status depends on must never
-	// become deletable. SetupWithManager rejects configurations violating
-	// either rule.
+	// SetStatusAddresses copies the Service's addresses into the DataPlane
+	// status through this function; the Service's readiness feeds the
+	// ServiceReady condition (see Conditions). Must be set on the primary
+	// Service (Config.Service), which the status depends on; Services whose
+	// existence is conditional (e.g. the Admin API Service derived from
+	// AdminAPI) never set it.
 	SetStatusAddresses func(dp T, addrs []operatorv1beta1.Address)
 }
 
-// AdminCertificateConfig carries the configuration of the Admin API TLS
-// server certificate provisioned for the DataPlane. Control plane kinds that
-// push configuration to the DataPlane's Admin API (e.g. OnPremAIGateway)
-// require the DataPlane to serve its Admin API over TLS with a certificate
-// the control plane trusts.
-type AdminCertificateConfig[T Object] struct {
-	// Enabled reports whether the Admin API certificate should be provisioned
-	// for the DataPlane given its resolved control plane.
+// AdminAPIConfig carries the configuration of the DataPlane's Admin API
+// exposure: a dedicated admin Service and a TLS server certificate for it,
+// both gated on the same Enabled predicate. Control plane kinds that push
+// configuration to the DataPlane over its Admin API (e.g. OnPremAIGateway)
+// enable it. The certificate's subject is derived from the Service name: the
+// in-cluster DNS name the control plane uses to reach the Admin API.
+type AdminAPIConfig[T Object] struct {
+	// Enabled reports whether the Admin API should be exposed for the
+	// DataPlane given its resolved control plane. cp is the zero
+	// ResolvedControlPlane when the DataPlane has no control plane reference
+	// configured. Must not be nil.
 	Enabled func(dp T, cp ResolvedControlPlane) bool
-	// Subject returns the certificate subject, used as the Common Name and
-	// the sole DNS SAN (e.g. the in-cluster DNS name of the admin Service).
-	Subject func(dp T) string
-	// LabelKey marks the provisioned Admin API certificate Secret. It must
-	// be distinct from Config.CertificateLabelKey so the two Secrets never
+	// ServiceNameSuffix is appended to the DataPlane name to form the admin
+	// Service name (e.g. "-admin"). Must not be empty.
+	ServiceNameSuffix string
+	// ServicePortName is the name of the admin Service port (e.g. "admin").
+	ServicePortName string
+	// ServicePort is the port the admin Service exposes. Must be positive.
+	ServicePort int32
+	// ManagedByLabelValue is the value of the managed-by label used in the
+	// admin Service selector.
+	ManagedByLabelValue string
+	// CertificateLabelKey marks the provisioned Admin API TLS server
+	// certificate Secret. It must be distinct from Certificate.LabelKey so
+	// the two Secrets never collide in the owner-scoped Secret listings
+	// performed during provisioning. Must not be empty.
+	CertificateLabelKey string
+}
+
+// serviceConfig derives the admin Service's ServiceConfig. Enabled is shared
+// with the certificate: the Service and the certificate it serves are
+// provisioned and removed together.
+func (a AdminAPIConfig[T]) serviceConfig() ServiceConfig[T] {
+	return ServiceConfig[T]{
+		Description:         "Admin",
+		NameSuffix:          a.ServiceNameSuffix,
+		DefaultPortName:     a.ServicePortName,
+		DefaultPort:         a.ServicePort,
+		ManagedByLabelValue: a.ManagedByLabelValue,
+		Enabled:             a.Enabled,
+	}
+}
+
+// certificateSubject returns the subject of the Admin API TLS server
+// certificate: the in-cluster DNS name of the admin Service, which is also
+// the name the control plane uses to reach the Admin API.
+func (a AdminAPIConfig[T]) certificateSubject(dp T) string {
+	return fmt.Sprintf("%s%s.%s.svc", dp.GetName(), a.ServiceNameSuffix, dp.GetNamespace())
+}
+
+// CertificateConfig groups the configuration of the DataPlane's TLS
+// certificates: the mTLS client certificate used for the outbound connection
+// to a Konnect-backed control plane (provisioning, optional manual resolution,
+// Konnect registration and stale cleanup) and — when AdminAPI is
+// configured — the Admin API TLS server certificate provisioned for on-prem
+// control planes. Both Secrets are provisioned through the same Ensure hook.
+type CertificateConfig[T Object, Cert CertificateObject] struct {
+	// LabelKey marks the provisioned mTLS client certificate Secret. It must
+	// be distinct from AdminAPI.CertificateLabelKey so the two Secrets never
 	// collide in the owner-scoped Secret listings performed during
 	// provisioning.
 	LabelKey string
+	// Kind is the certificate resource kind used in logs, errors and events
+	// (e.g. "AIGatewayDataPlaneCertificate").
+	Kind string
+	// Build builds the desired certificate object for the DataPlane.
+	// certChecksum identifies the certificate Secret's content ("" when
+	// checksum tracking is not configured): controllers that name the
+	// certificate entity after the content should derive both the object name
+	// and the Konnect title from it so a rotation registers a new entity
+	// instead of mutating the previous one in place.
+	// Only called for Konnect-backed control planes (cp.IsKonnect).
+	Build func(dp T, cp ResolvedControlPlane, certSecretName, certChecksum string) Cert
+	// Ensure provisions (or finds) the DataPlane's TLS certificate Secrets,
+	// signed by the cluster CA: the mTLS client certificate Secret, and the
+	// Admin API TLS server certificate Secret when AdminAPI is
+	// configured. It is invoked on both provisioning paths, so overriding it
+	// affects both.
+	Ensure EnsureCertificateFunc[T]
+	// Resolve, when non-nil, resolves the mTLS client certificate Secret
+	// before the default Ensure-based provisioning runs. It may:
+	//   - return a non-nil Secret to use it as-is (e.g. a manually
+	//     provisioned, user-referenced Secret);
+	//   - return (op.Result, nil, nil) to wire no certificate at all (a
+	//     condition explaining why is expected to be set on dp);
+	//   - call resolveAutomatic to fall back to the default operator-managed
+	//     provisioning.
+	Resolve func(
+		ctx context.Context,
+		cl client.Client,
+		dp T,
+		cp ResolvedControlPlane,
+		resolveAutomatic func(ctx context.Context, dp T) (op.Result, *corev1.Secret, error),
+	) (op.Result, *corev1.Secret, error)
+	// Requested, when non-nil, reports whether the DataPlane spec asks for
+	// the mTLS client certificate at all. When resolution produced no
+	// Secret, the reconcile only stops early if a certificate was requested
+	// but could not be resolved (a condition explaining why is expected to
+	// be set on dp); a DataPlane that requests no certificate proceeds to
+	// reconcile its Deployment without any certificate wiring. When nil, a
+	// nil resolved Secret always stops the reconcile early.
+	Requested func(dp T) bool
+	// Checksum, when non-nil, returns a stable checksum of the certificate
+	// Secret content, recorded as a Pod-template annotation so that an
+	// in-place Secret edit rolls the Deployment.
+	Checksum func(secret *corev1.Secret) string
+	// ChecksumAnnotation is the Pod-template annotation key used with
+	// Checksum. Required when Checksum is set.
+	ChecksumAnnotation string
+	// CleanupStale, when non-nil, removes stale Konnect certificate entities
+	// and operator-provisioned Secrets once the rollout onto the current
+	// certificate completed.
+	// Unlike Konnect certificate registration, this hook is intentionally
+	// not gated on cp.IsKonnect: stale Konnect certificate entities still
+	// need cleanup after a DataPlane switches to a non-Konnect control
+	// plane. Implementations must tolerate a resolved control plane of any
+	// configured kind (or an unconfigured one).
+	CleanupStale func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
 }
 
 // Config wires the type specific behavior of a specialized DataPlane
@@ -251,60 +355,8 @@ type Config[T Object, Cert CertificateObject] struct {
 	// Conditions carries the condition types, reasons and messages.
 	Conditions Conditions
 
-	// CertificateLabelKey marks the provisioned mTLS certificate Secret.
-	CertificateLabelKey string
-	// CertificateKind is the certificate resource kind used in logs, errors
-	// and events (e.g. "AIGatewayDataPlaneCertificate").
-	CertificateKind string
-	// BuildCertificate builds the desired certificate object for the
-	// DataPlane. certChecksum identifies the certificate Secret's content
-	// ("" when checksum tracking is not configured): controllers that name
-	// the certificate entity after the content should derive both the object
-	// name and the Konnect title from it so a rotation registers a new entity
-	// instead of mutating the previous one in place.
-	// Only called for Konnect-backed control planes (cp.IsKonnect).
-	BuildCertificate func(dp T, cp ResolvedControlPlane, certSecretName, certChecksum string) Cert
-	// EnsureCertificate provisions the mTLS client certificate Secret.
-	EnsureCertificate EnsureCertificateFunc[T]
-	// ResolveCertificateSecret, when non-nil, resolves the certificate Secret
-	// before the default EnsureCertificate-based provisioning runs. It may:
-	//   - return a non-nil Secret to use it as-is (e.g. a manually
-	//     provisioned, user-referenced Secret);
-	//   - return (op.Result, nil, nil) to wire no certificate at all (a
-	//     condition explaining why is expected to be set on dp);
-	//   - call resolveAutomatic to fall back to the default operator-managed
-	//     provisioning.
-	ResolveCertificateSecret func(
-		ctx context.Context,
-		cl client.Client,
-		dp T,
-		cp ResolvedControlPlane,
-		resolveAutomatic func(ctx context.Context, dp T) (op.Result, *corev1.Secret, error),
-	) (op.Result, *corev1.Secret, error)
-	// CertificateRequested, when non-nil, reports whether the DataPlane spec
-	// asks for a certificate at all. When resolution produced no Secret, the
-	// reconcile only stops early if a certificate was requested but could not
-	// be resolved (a condition explaining why is expected to be set on dp);
-	// a DataPlane that requests no certificate proceeds to reconcile its
-	// Deployment without any certificate wiring. When nil, a nil resolved
-	// Secret always stops the reconcile early.
-	CertificateRequested func(dp T) bool
-	// CertificateChecksum, when non-nil, returns a stable checksum of the
-	// certificate Secret content, recorded as a Pod-template annotation so
-	// that an in-place Secret edit rolls the Deployment.
-	CertificateChecksum func(secret *corev1.Secret) string
-	// CertificateChecksumAnnotation is the Pod-template annotation key used
-	// with CertificateChecksum. Required when CertificateChecksum is set.
-	CertificateChecksumAnnotation string
-	// CleanupStaleCertificates, when non-nil, removes stale Konnect
-	// certificate entities and operator-provisioned Secrets once the rollout
-	// onto the current certificate completed.
-	// Unlike Konnect certificate registration, this hook is intentionally not
-	// gated on cp.IsKonnect: stale Konnect certificate entities still need
-	// cleanup after a DataPlane switches to a non-Konnect control plane.
-	// Implementations must tolerate a resolved control plane of any configured
-	// kind (or an unconfigured one).
-	CleanupStaleCertificates func(ctx context.Context, cl client.Client, logger logr.Logger, dp T, cp ResolvedControlPlane, certChecksum string) error
+	// Certificate configures the DataPlane's TLS certificates.
+	Certificate CertificateConfig[T, Cert]
 	// ExtraWatches, when non-nil, registers additional watches on the
 	// controller builder (e.g. a watch on user-referenced certificate
 	// Secrets). It receives the in-progress builder and must return it.
@@ -313,19 +365,19 @@ type Config[T Object, Cert CertificateObject] struct {
 	// Deployment configures the owned Deployment.
 	Deployment DeploymentConfig[T]
 
-	// Services configures the owned Services. Exactly one entry must feed
-	// the DataPlane status (SetStatusAddresses, e.g. the ingress Service);
-	// the rest are reconciled only while their Enabled predicate (nil means
-	// always enabled) passes, and a gated-off entry is removed instead.
-	Services []ServiceConfig[T]
+	// Service configures the primary Service: the one feeding the DataPlane
+	// status (SetStatusAddresses) and driving the ServiceReady condition.
+	// It is always reconciled and never removed, so Enabled does not apply
+	// to it and must be left nil.
+	Service ServiceConfig[T]
 
-	// AdminCertificate, when non-nil, enables provisioning of the Admin API
-	// TLS server certificate Secret for the DataPlane, gated on
-	// AdminCertificate.Enabled. The Secret is signed by the cluster CA
-	// using Config.EnsureCertificate and its name is passed to
-	// Deployment.BuildContainer so the container can wire the admin
-	// listener to it.
-	AdminCertificate *AdminCertificateConfig[T]
+	// AdminAPI, when non-nil, enables the exposure of the DataPlane's Admin
+	// API: a dedicated admin Service and a TLS server certificate for it,
+	// both gated on AdminAPI.Enabled. The certificate Secret is provisioned
+	// through Certificate.Ensure, which has it signed by the cluster CA, and
+	// its name is passed to Deployment.BuildContainer so the container can
+	// wire the admin listener to it.
+	AdminAPI *AdminAPIConfig[T]
 
 	// HPAScalingSpec returns the HPA scaling spec, or nil when horizontal
 	// scaling is not configured.
@@ -402,28 +454,34 @@ func (r *Reconciler[T, Cert]) SetupWithManager(ctx context.Context, mgr ctrl.Man
 	return blder.Complete(reconcile.AsReconciler(r.Client, r))
 }
 
-// validateConfig checks the invariants of the Services configuration:
-// exactly one entry must feed the DataPlane status (SetStatusAddresses, which
-// also drives the ServiceReady condition), and a status-feeding entry must not
-// be gated by Enabled (a Service the status depends on must never become
-// deletable).
+// validateConfig checks the invariants of the Service and AdminAPI
+// configuration: the primary Service must feed the DataPlane status
+// (SetStatusAddresses, which also drives the ServiceReady condition) and
+// must not be gated by Enabled (a Service the status depends on must never
+// become deletable), and an AdminAPI block, when present, must be fully
+// populated with a CertificateLabelKey distinct from Certificate.LabelKey
+// (so the two Secrets never collide in the owner-scoped Secret listings
+// performed during provisioning).
 func (r *Reconciler[T, Cert]) validateConfig() error {
-	statusFeeding := 0
-	for _, svcCfg := range r.Config.Services {
-		if svcCfg.SetStatusAddresses == nil {
-			continue
-		}
-		statusFeeding++
-		if svcCfg.Enabled != nil {
-			return fmt.Errorf("Services entry %q: SetStatusAddresses and Enabled are mutually exclusive", svcCfg.Description)
-		}
+	if r.Config.Service.SetStatusAddresses == nil {
+		return fmt.Errorf("Service: SetStatusAddresses must be set: the primary Service feeds the DataPlane status")
 	}
-	if statusFeeding != 1 {
-		return fmt.Errorf("exactly one Services entry must set SetStatusAddresses, got %d", statusFeeding)
+	if r.Config.Service.Enabled != nil {
+		return fmt.Errorf("Service: Enabled must be nil: the primary Service always exists and must never become deletable")
 	}
-	if r.Config.AdminCertificate != nil &&
-		r.Config.AdminCertificate.LabelKey == r.Config.CertificateLabelKey {
-		return fmt.Errorf("AdminCertificate.LabelKey must be distinct from CertificateLabelKey")
+	if adminAPI := r.Config.AdminAPI; adminAPI != nil {
+		switch {
+		case adminAPI.Enabled == nil:
+			return fmt.Errorf("AdminAPI: Enabled must not be nil")
+		case adminAPI.ServiceNameSuffix == "":
+			return fmt.Errorf("AdminAPI: ServiceNameSuffix must not be empty")
+		case adminAPI.ServicePort <= 0:
+			return fmt.Errorf("AdminAPI: ServicePort must be positive")
+		case adminAPI.CertificateLabelKey == "":
+			return fmt.Errorf("AdminAPI: CertificateLabelKey must not be empty")
+		case adminAPI.CertificateLabelKey == r.Config.Certificate.LabelKey:
+			return fmt.Errorf("AdminAPI: CertificateLabelKey must be distinct from Certificate.LabelKey")
+		}
 	}
 	return nil
 }
@@ -466,8 +524,8 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// condition.
 	var certResult op.Result
 	var certSecret *corev1.Secret
-	if r.Config.ResolveCertificateSecret != nil {
-		certResult, certSecret, err = r.Config.ResolveCertificateSecret(ctx, r.Client, dp, cp, r.ensureCertificateSecret)
+	if r.Config.Certificate.Resolve != nil {
+		certResult, certSecret, err = r.Config.Certificate.Resolve(ctx, r.Client, dp, cp, r.ensureCertificateSecret)
 	} else {
 		certResult, certSecret, err = r.ensureCertificateSecret(ctx, dp)
 	}
@@ -482,14 +540,14 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		return ctrl.Result{}, nil
 	}
 
-	// A nil certSecret with a custom ResolveCertificateSecret means the
+	// A nil certSecret with a custom Certificate.Resolve means the
 	// controller decided no certificate should be wired at all. That blocks
 	// the reconcile only when the DataPlane actually requested a certificate
 	// (e.g. an invalid manual reference, where a condition is already set and
 	// there is nothing more to do until the user fixes it); a DataPlane that
 	// requests no certificate proceeds below without any cert wiring.
-	if certSecret == nil && r.Config.ResolveCertificateSecret != nil &&
-		(r.Config.CertificateRequested == nil || r.Config.CertificateRequested(dp)) {
+	if certSecret == nil && r.Config.Certificate.Resolve != nil &&
+		(r.Config.Certificate.Requested == nil || r.Config.Certificate.Requested(dp)) {
 		return ctrl.Result{}, nil
 	}
 
@@ -499,8 +557,8 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	var certSecretName, certChecksum string
 	if certSecret != nil {
 		certSecretName = certSecret.Name
-		if r.Config.CertificateChecksum != nil {
-			certChecksum = r.Config.CertificateChecksum(certSecret)
+		if r.Config.Certificate.Checksum != nil {
+			certChecksum = r.Config.Certificate.Checksum(certSecret)
 		}
 	}
 
@@ -531,9 +589,9 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	var adminCertSecretName string
 	var removeAdminCertificate bool
 	switch {
-	case r.Config.AdminCertificate == nil:
-	case r.Config.AdminCertificate.Enabled(dp, cp):
-		adminCertResult, adminCertSecret, err := r.ensureAdminCertificateSecret(ctx, dp)
+	case r.Config.AdminAPI == nil:
+	case r.Config.AdminAPI.Enabled(dp, cp):
+		adminCertResult, adminCertSecret, err := r.ensureAdminCertificateSecret(ctx, dp, r.Config.AdminAPI)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
@@ -557,11 +615,11 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 
 	// Only once the Deployment no longer mounts the admin certificate is it
 	// safe to remove the leftover Admin API certificate Secret(s) from an
-	// earlier reconcile in which AdminCertificate.Enabled was true: deleting
+	// earlier reconcile in which AdminAPI.Enabled was true: deleting
 	// before the rebuild would leave the Deployment referencing a Secret that
 	// no longer exists, so new pods could not start.
 	if removeAdminCertificate {
-		if err := r.deleteAdminCertificateSecretsIfOwned(ctx, logger, dp); err != nil {
+		if err := r.deleteAdminCertificateSecretsIfOwned(ctx, logger, dp, r.Config.AdminAPI); err != nil {
 			return ctrl.Result{}, err
 		}
 	}
@@ -571,13 +629,13 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// stale certificate resources left over from an earlier rotation or
 	// provisioning-mode switch. Until then they're deliberately left in place
 	// so replicas still running the old certificate keep working.
-	if r.Config.CleanupStaleCertificates != nil {
+	if r.Config.Certificate.CleanupStale != nil {
 		complete, err := r.rolloutOntoCertificateComplete(ctx, dp, certChecksum)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
 		if complete {
-			if err := r.Config.CleanupStaleCertificates(ctx, r.Client, logger, dp, cp, certChecksum); err != nil {
+			if err := r.Config.Certificate.CleanupStale(ctx, r.Client, logger, dp, cp, certChecksum); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -588,12 +646,17 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 		return ctrl.Result{}, err
 	}
 
-	// Ensure the Services. The entry feeding the DataPlane status
-	// (SetStatusAddresses) is always reconciled and drives the ServiceReady
-	// condition; the remaining entries are gated by their Enabled
-	// predicates: a gated-off Service (e.g. an admin Service that only
-	// applies to a subset of control plane kinds) is removed instead.
-	for _, svcCfg := range r.Config.Services {
+	// Ensure the Services: the primary one plus the admin Service derived
+	// from AdminAPI, when configured. The primary Service feeds the
+	// DataPlane status (SetStatusAddresses) and drives the ServiceReady
+	// condition; the admin Service is gated by AdminAPI.Enabled: a gated-off
+	// admin Service is removed instead.
+	services := make([]ServiceConfig[T], 0, 2)
+	services = append(services, r.Config.Service)
+	if r.Config.AdminAPI != nil {
+		services = append(services, r.Config.AdminAPI.serviceConfig())
+	}
+	for _, svcCfg := range services {
 		if svcCfg.SetStatusAddresses == nil && svcCfg.Enabled != nil && !svcCfg.Enabled(dp, cp) {
 			if err := r.deleteServiceIfOwned(ctx, logger, dp, svcCfg); err != nil {
 				return ctrl.Result{}, err

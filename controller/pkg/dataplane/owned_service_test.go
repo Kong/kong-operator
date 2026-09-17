@@ -46,7 +46,7 @@ func Test_GenerateBaseService(t *testing.T) {
 	)
 
 	aigwdp := minimalAIGWDP(ns, name)
-	svc := GenerateBaseService(aigwdp, testConfig.Services[0])
+	svc := GenerateBaseService(aigwdp, testConfig.Service)
 
 	assert.Equal(t, "v1", svc.APIVersion)
 	assert.Equal(t, "Service", svc.Kind)
@@ -206,7 +206,7 @@ func Test_GenerateServiceOverlay(t *testing.T) {
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			svc := GenerateServiceOverlay(tc.aigwdp, testConfig.Services[0], testServiceOptions(tc.aigwdp))
+			svc := GenerateServiceOverlay(tc.aigwdp, testConfig.Service, testServiceOptions(tc.aigwdp))
 			require.NotNil(t, svc)
 			tc.check(t, svc)
 		})
@@ -303,7 +303,7 @@ func Test_BuildService(t *testing.T) {
 
 	for _, testcase := range tests {
 		t.Run(testcase.name, func(t *testing.T) {
-			obj, err := BuildService(tc, testcase.aigwdp, testConfig.Services[0])
+			obj, err := BuildService(tc, testcase.aigwdp, testConfig.Service)
 			if testcase.wantErr {
 				require.Error(t, err)
 				return
@@ -350,7 +350,7 @@ func Test_ensureService(t *testing.T) {
 			name:        "second call after content change records ServiceUpdated event",
 			buildClient: func(base client.WithWatch) client.Client { return base },
 			prepareRecorder: func(r *testReconciler, rec *events.FakeRecorder) {
-				_, _ = r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Services[0])
+				_, _ = r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Service)
 				<-rec.Events
 			},
 			wantErr:   false,
@@ -398,7 +398,7 @@ func Test_ensureService(t *testing.T) {
 				testcase.prepareRecorder(r, recorder)
 			}
 
-			svc, err := r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Services[0])
+			svc, err := r.ensureService(context.Background(), logr.Discard(), aigwdp, testConfig.Service)
 
 			if testcase.wantErr {
 				require.Error(t, err)

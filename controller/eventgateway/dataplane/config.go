@@ -105,10 +105,15 @@ var config = shareddataplane.Config[
 		WaitingForAddressMessage: eventgatewayv1alpha1.WaitingForAddressMessage,
 	},
 
-	CertificateLabelKey: consts.SecretKEGDataPlaneCertificateLabel,
-	CertificateKind:     "EventGatewayDataPlaneCertificate",
-	BuildCertificate:    buildEventGatewayDataPlaneCertificate,
-	EnsureCertificate:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+	Certificate: shareddataplane.CertificateConfig[
+		*eventgatewayv1alpha1.KegDataPlane,
+		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
+	]{
+		LabelKey: consts.SecretKEGDataPlaneCertificateLabel,
+		Kind:     "EventGatewayDataPlaneCertificate",
+		Build:    buildEventGatewayDataPlaneCertificate,
+		Ensure:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+	},
 
 	Deployment: shareddataplane.DeploymentConfig[*eventgatewayv1alpha1.KegDataPlane]{
 		ContainerName:       consts.KEGContainerName,
@@ -137,17 +142,15 @@ var config = shareddataplane.Config[
 		BuildContainer: buildContainer,
 	},
 
-	Services: []shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
-		{
-			Description:         "Kafka",
-			NameSuffix:          "-kafka",
-			DefaultPortName:     "kafka",
-			DefaultPort:         DefaultKafkaPort,
-			ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
-			Options:             serviceOptions,
+	Service: shareddataplane.ServiceConfig[*eventgatewayv1alpha1.KegDataPlane]{
+		Description:         "Kafka",
+		NameSuffix:          "-kafka",
+		DefaultPortName:     "kafka",
+		DefaultPort:         DefaultKafkaPort,
+		ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
+		Options:             serviceOptions,
 
-			SetStatusAddresses: setStatusAddresses,
-		},
+		SetStatusAddresses: setStatusAddresses,
 	},
 
 	HPAScalingSpec:    hpaScalingSpec,
