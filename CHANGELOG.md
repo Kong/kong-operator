@@ -61,6 +61,13 @@
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
   [#5683](https://github.com/Kong/kong-operator/pull/5683)
+- On-prem gateway: keep tags of translated Kong certificate stable when multiple
+  `Secret`s have the same certificate content. The tags generated from the `Secret`
+  with the earliest creation timestamp are chosen, and the one with the lowest
+  UID when a tie happens.
+  This aligns with choosing ID of the translated certificate.
+  [#5657](https://github.com/Kong/kong-operator/pull/5657)
+  [#5735](https://github.com/Kong/kong-operator/pull/5735)
 
 ## [v2.2.5]
 
