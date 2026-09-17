@@ -199,7 +199,7 @@ func listConfigStoreSecretKeys(
 	obj *konnectv1alpha1.KonnectConfigStore,
 ) ([]string, bool, error) {
 	var (
-		keys      []string
+		keys      = make([]string, 0)
 		pageAfter *string
 		truncated bool
 	)
