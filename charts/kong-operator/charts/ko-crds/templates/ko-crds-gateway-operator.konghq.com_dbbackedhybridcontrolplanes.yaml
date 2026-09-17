@@ -80,23 +80,25 @@ spec:
                     maxProperties: 64
                     type: object
                   database:
-                    description: Database represents the database connection information
+                    description: Database represents the database connection options
                       for the DBBackedHybridControlPlane.
                     properties:
-                      databaseHost:
-                        description: DatabaseHost represents the host of the database
-                          for the DBBackedHybridControlPlane.
-                        type: string
                       databaseName:
                         default: kong
-                        description: DatabaseName represents the name of the database
-                          for the DBBackedHybridControlPlane.
-                        maxLength: 253
+                        description: |-
+                          DatabaseName represents the name of the database for the DBBackedHybridControlPlane.
+                          Filled to `KONG_DATABASE` environment variable.
+                        type: string
+                      host:
+                        description: |-
+                          Host represents the host of the database for the DBBackedHybridControlPlane.
+                          Filled to `KONG_PG_HOST` environment variable.
                         minLength: 1
                         type: string
-                      databasePassword:
-                        description: DatabasePassword represents the password of the
-                          database for the DBBackedHybridControlPlane.
+                      password:
+                        description: |-
+                          Password represents the password of the database for the DBBackedHybridControlPlane.
+                          Filled to `KONG_PG_PASSWORD` environment variable as a Kubernetes Secret reference.
                         properties:
                           secretRef:
                             description: |-
@@ -124,24 +126,108 @@ spec:
                         required:
                         - type
                         type: object
-                      databasePort:
+                      port:
                         default: 5432
-                        description: DatabasePort represents the port of the database
-                          for the DBBackedHybridControlPlane.
+                        description: |-
+                          Port represents the port of the database for the DBBackedHybridControlPlane.
+                          Filled to `KONG_PG_PORT` environment variable.
                         format: int32
                         maximum: 65535
                         minimum: 1
                         type: integer
-                      databaseUser:
-                        description: DatabaseUser represents the user of the database
-                          for the DBBackedHybridControlPlane.
+                      tls:
+                        description: TLS represents the TLS configuration for the
+                          database connection of the DBBackedHybridControlPlane.
+                        properties:
+                          clientCertificate:
+                            description: |-
+                              ClientCertificate represents the reference to the Kubernetes Secret containing the client TLS certificate for the database connection.
+                              These secrets are mounted to the pod and the mounting path is filled in `KONG_PG_SSL_CERT` and `KONG_PG_SSL_KEY` environment variables.
+                            properties:
+                              name:
+                                description: name is unique within a namespace to
+                                  reference a secret resource.
+                                type: string
+                              namespace:
+                                description: namespace defines the space within which
+                                  the secret name must be unique.
+                                type: string
+                            type: object
+                            x-kubernetes-map-type: atomic
+                          required:
+                            description: |-
+                              Required indicates whether TLS is required for the database connection.
+                              If set to "required", Kong gateway fails to connect to the database if TLS is not available.
+                              Filled to `KONG_PG_SSL_REQUIRED` environment variable.
+                            enum:
+                            - required
+                            - notRequired
+                            type: string
+                          trustedCertificates:
+                            description: |-
+                              TrustedCertificates represents the list of trusted TLS certificates for the database connection.
+                              The secrets referenced here should contain the trusted TLS certificates for the database connection.
+                              These secrets are mounted to the pod and the mounting path is filled in `KONG_LUA_SSL_TRUSTED_CERTIFICATES` environment variable.
+                            items:
+                              description: |-
+                                SecretReference represents a Secret Reference. It has enough information to retrieve secret
+                                in any namespace
+                              properties:
+                                name:
+                                  description: name is unique within a namespace to
+                                    reference a secret resource.
+                                  type: string
+                                namespace:
+                                  description: namespace defines the space within
+                                    which the secret name must be unique.
+                                  type: string
+                              type: object
+                              x-kubernetes-map-type: atomic
+                            maxItems: 10
+                            type: array
+                          verify:
+                            description: |-
+                              Verify indicates whether the TLS certificate should be verified.
+                              Filled to `KONG_PG_SSL_VERIFY` environment variable.
+                            enum:
+                            - enabled
+                            - disabled
+                            type: string
+                          verifyDepth:
+                            default: 5
+                            description: |-
+                              VerifyDepth represents the maximum depth for verifying the TLS certificate chain
+                              to prevent DoS attack on tracking the signing chain in certificate verification.
+                              Filled to `KONG_LUA_SSL_VERIFY_DEPTH` environment variable.
+                            maximum: 10
+                            minimum: 0
+                            type: integer
+                          version:
+                            default: tlsv1_2
+                            description: |-
+                              Version represents the TLS version to be used for the database connection.
+                              Filled to `KONG_PG_SSL_VERSION` environment variable.
+                            enum:
+                            - tlsv1_1
+                            - tlsv1_2
+                            - tlsv1_3
+                            - any
+                            type: string
+                        required:
+                        - required
+                        - verify
+                        type: object
+                      username:
+                        description: |-
+                          DatabaseUser represents the username of the database for the DBBackedHybridControlPlane.
+                          Filled to `KONG_PG_USER` environment variable.
                         type: string
                     required:
-                    - databaseHost
                     - databaseName
-                    - databasePassword
-                    - databasePort
-                    - databaseUser
+                    - host
+                    - password
+                    - port
+                    - username
                     type: object
                   hardened:
                     default: disabled
@@ -9597,13 +9683,11 @@ spec:
                 - type
                 x-kubernetes-list-type: map
               readyReplicas:
-                default: 0
                 description: ReadyReplicas indicates how many replicas have reported
                   to be ready.
                 format: int32
                 type: integer
               replicas:
-                default: 0
                 description: Replicas indicates how many replicas have been set for
                   the DataPlane.
                 format: int32
