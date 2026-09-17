@@ -161,7 +161,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		log.Debug(logger, "Adding finalizer", "finalizer", finalizerName)
 		old := obj.DeepCopyObject().(tPtr)
 		controllerutil.AddFinalizer(obj, finalizerName)
-		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+		// Optimistic lock ensures a patch computed from a stale cached copy fails with
+		// a conflict instead of re-adding finalizers removed by other controllers.
+		if err := r.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			log.Error(logger, err, "Failed to add finalizer", "finalizer", finalizerName)
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
@@ -403,7 +405,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) handleDeletion(ctx context.Context, l
 	old := obj.DeepCopyObject().(tPtr)
 	if controllerutil.RemoveFinalizer(obj, finalizerName) {
 		log.Debug(logger, "Removing finalizer", "finalizer", finalizerName)
-		if err := r.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+		// Optimistic lock ensures a patch computed from a stale cached copy fails with
+		// a conflict instead of re-adding finalizers removed by other controllers.
+		if err := r.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
 	}

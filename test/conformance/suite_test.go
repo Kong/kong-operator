@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,10 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
@@ -297,10 +302,26 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 	for {
 		select {
 		case <-ctx.Done():
+			// The wait context is expired. Use a fresh one to collect diagnostics
+			// about what pins the namespaces in Terminating.
+			diagCtx, diagCancel := context.WithTimeout(context.Background(), time.Minute)
+			defer diagCancel()
+			logRemainingFinalizerBearingObjects(diagCtx, env.Cluster().Config(), remaining, logf)
+			if output, err := env.Cluster().DumpDiagnostics(diagCtx, "conformance_cleanup_timeout"); err != nil {
+				logf("ERROR: failed to dump diagnostics after cleanup timeout: %v", err)
+			} else {
+				logf("INFO: dumped diagnostics after cleanup timeout to %s", output)
+			}
 			return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctx.Err())
 		case <-ticker.C:
 			var nsList corev1.NamespaceList
 			if err := cl.List(ctx, &nsList); err != nil {
+				// When the timeout expires, the in-flight List can fail on the expired
+				// context (e.g. "client rate limiter Wait returned an error: context
+				// deadline exceeded"). Surface the timeout cause instead.
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctxErr)
+				}
 				return fmt.Errorf("failed to list namespaces during cleanup: %w", err)
 			}
 
@@ -314,6 +335,71 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 				return nil
 			}
 			logf("waiting for conformance namespaces to finish terminating (operator still cleaning up owned entities): %v", remaining)
+		}
+	}
+}
+
+// logRemainingFinalizerBearingObjects lists all namespaced resources in the given
+// namespaces and logs every object that still carries finalizers. Finalizer-bearing
+// objects are what keep a namespace in Terminating, so this identifies the exact
+// objects (and their finalizers) that blocked conformance cleanup.
+func logRemainingFinalizerBearingObjects(
+	ctx context.Context,
+	cfg *rest.Config,
+	namespaces []string,
+	logf func(string, ...any),
+) {
+	if len(namespaces) == 0 {
+		return
+	}
+	logf("INFO: listing objects with finalizers remaining in namespaces %v", namespaces)
+
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		logf("ERROR: failed to create dynamic client for cleanup diagnostics: %v", err)
+		return
+	}
+	disco, err := discovery.NewDiscoveryClientForConfig(cfg)
+	if err != nil {
+		logf("ERROR: failed to create discovery client for cleanup diagnostics: %v", err)
+		return
+	}
+	resources, err := disco.ServerPreferredNamespacedResources()
+	if err != nil {
+		logf("ERROR: failed to discover namespaced resources for cleanup diagnostics: %v", err)
+		return
+	}
+
+	for _, resourceList := range resources {
+		for _, resource := range resourceList.APIResources {
+			if !slices.Contains(resource.Verbs, "list") {
+				continue
+			}
+			gvr := schema.GroupVersionResource{
+				Group:    strings.SplitN(resourceList.GroupVersion, "/", 2)[0],
+				Version:  strings.SplitN(resourceList.GroupVersion, "/", 2)[1],
+				Resource: resource.Name,
+			}
+			// Skip subresources (e.g. pods/status) - they cannot hold namespace-pinning finalizers.
+			if strings.Contains(resource.Name, "/") {
+				continue
+			}
+			for _, ns := range namespaces {
+				list, err := dyn.Resource(gvr).Namespace(ns).List(ctx, metav1.ListOptions{})
+				if err != nil {
+					// Resource types that went away with the terminating namespace are expected.
+					if !apierrors.IsNotFound(err) {
+						logf("ERROR: failed to list %s in namespace %s: %v", gvr.String(), ns, err)
+					}
+					continue
+				}
+				for i := range list.Items {
+					item := &list.Items[i]
+					if finalizers := item.GetFinalizers(); len(finalizers) > 0 {
+						logf("REMAINING: %s %s/%s has finalizers %v", list.GetKind(), ns, item.GetName(), finalizers)
+					}
+				}
+			}
 		}
 	}
 }
