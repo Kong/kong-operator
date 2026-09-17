@@ -460,3 +460,26 @@ jobs:
           status: failure
           fields: repo,message,commit,author,action,eventName,ref,workflow
           text: ":red_circle: Docker build failed. cc: <!subteam^${{ secrets.slack-team-id }}>"
+
+  sbom-source:
+    name: Source SBOM
+    runs-on: ubuntu-latest
+    if: ${{ inputs.push }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        # An upstream Grype DB outage must never fail the build.
+        continue-on-error: true
+        with:
+          dir: '.'
+          asset_prefix: source
+          fail_build: false
+          codeql_upload: false
