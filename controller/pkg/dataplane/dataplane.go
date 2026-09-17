@@ -477,6 +477,10 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 			return fmt.Errorf("AdminAPI: ServiceNameSuffix must not be empty")
 		case adminAPI.ServicePort <= 0:
 			return fmt.Errorf("AdminAPI: ServicePort must be positive")
+		case adminAPI.ServicePortName == "":
+			return fmt.Errorf("AdminAPI: ServicePortName must not be empty")
+		case adminAPI.ManagedByLabelValue == "":
+			return fmt.Errorf("AdminAPI: ManagedByLabelValue must not be empty")
 		case adminAPI.CertificateLabelKey == "":
 			return fmt.Errorf("AdminAPI: CertificateLabelKey must not be empty")
 		case adminAPI.CertificateLabelKey == r.Config.Certificate.LabelKey:

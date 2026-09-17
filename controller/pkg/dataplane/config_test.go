@@ -628,6 +628,22 @@ func Test_validateConfig(t *testing.T) {
 			wantErr: true,
 		},
 		{
+			name:    "AdminAPI with empty ServicePortName: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServicePortName = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ManagedByLabelValue: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ManagedByLabelValue = ""
+			}),
+			wantErr: true,
+		},
+		{
 			name:    "AdminAPI with empty CertificateLabelKey: invalid",
 			service: validService(),
 			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {

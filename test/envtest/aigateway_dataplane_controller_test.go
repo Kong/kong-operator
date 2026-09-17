@@ -851,8 +851,9 @@ func updateOnPremAIGatewayStatusWithReady(
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
 ) {
 	t.Helper()
+	nn := client.ObjectKeyFromObject(onprem)
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
+		if !assert.NoError(ct, cl.Get(ctx, nn, onprem)) {
 			return
 		}
 		onprem.Status.Conditions = []metav1.Condition{
@@ -879,8 +880,9 @@ func updateAIGatewayDataPlaneCertificateStatusWithProgrammed(
 	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) {
 	t.Helper()
+	nn := client.ObjectKeyFromObject(obj)
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+		if !assert.NoError(ct, cl.Get(ctx, nn, obj)) {
 			return
 		}
 		obj.Status.Conditions = []metav1.Condition{
