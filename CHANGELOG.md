@@ -67,6 +67,7 @@
   UID when a tie happens.
   This aligns with choosing ID of the translated certificate.
   [#5657](https://github.com/Kong/kong-operator/pull/5657)
+  [#5735](https://github.com/Kong/kong-operator/pull/5735)
 
 ## [v2.2.5]
 
