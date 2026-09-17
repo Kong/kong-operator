@@ -370,7 +370,12 @@ func logRemainingFinalizerBearingObjects(
 		logf("ERROR: failed to create dynamic client for cleanup diagnostics: %v", err)
 		return
 	}
-	disco, err := discovery.NewDiscoveryClientForConfig(cfg)
+	// Discovery requests carry no context, so diagCtx cannot bound them.
+	// Give the discovery client its own timeout so a hanging API server cannot
+	// block TestMain forever.
+	discoveryCfg := rest.CopyConfig(cfg)
+	discoveryCfg.Timeout = 30 * time.Second
+	disco, err := discovery.NewDiscoveryClientForConfig(discoveryCfg)
 	if err != nil {
 		logf("ERROR: failed to create discovery client for cleanup diagnostics: %v", err)
 		return
