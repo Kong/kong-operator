@@ -175,6 +175,17 @@
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
   [#5683](https://github.com/Kong/kong-operator/pull/5683)
+- MCP server: fixed listing MCP servers of a control plane across multiple
+  pages. The full `meta.page.next` URI was passed as the `page[after]` request
+  parameter instead of only the item cursor it contains, malforming every
+  page 2+ request: the fetch loop either retried the rejected request forever,
+  never returning any MCP server, or, if Konnect ignored the invalid cursor,
+  re-fetched the first page indefinitely. The item cursor is now extracted from
+  the next-page URI, and a fetch that cannot follow pagination to the end fails
+  and is retried with a backoff instead of returning a truncated list, which
+  was treated as authoritative and deleted the in-cluster `MCPServer`s missing
+  from it.
+  [#5727](https://github.com/Kong/kong-operator/pull/5727)
 
 ## [v2.3.1]
 
