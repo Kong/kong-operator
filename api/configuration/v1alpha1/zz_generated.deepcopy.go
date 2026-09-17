@@ -3177,6 +3177,11 @@ func (in *KongCACertificateSpec) DeepCopyInto(out *KongCACertificateSpec) {
 		*out = new(KongCACertificateSourceType)
 		**out = **in
 	}
+	if in.ID != nil {
+		in, out := &in.ID, &out.ID
+		*out = new(string)
+		**out = **in
+	}
 	if in.ControlPlaneRef != nil {
 		in, out := &in.ControlPlaneRef, &out.ControlPlaneRef
 		*out = new(commonv1alpha1.ControlPlaneRef)
