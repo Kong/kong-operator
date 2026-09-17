@@ -23,10 +23,10 @@ import (
 	"slices"
 
 	"github.com/Kong/ai-deck-converter/aigw"
+	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
-	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 )
 
@@ -46,12 +46,12 @@ import (
 //
 // NOTE: This will either stay here or be moved to a separate package where translation
 // (building the document) will happen asynchronously as it's done for ingress-controller.
-func BuildDocument(ctx context.Context, cl client.Client, gw *aigatewayv1alpha1.OnPremAIGateway) (*aigw.Document, error) {
+func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedName) (*aigw.Document, error) {
 	var list aiconfigurationv1alpha1.AIGatewayModelList
 	if err := cl.List(ctx, &list, client.MatchingFields{
-		index.IndexFieldAIGatewayModelOnKonnectAIGatewayRef: client.ObjectKeyFromObject(gw).String(),
+		index.IndexFieldAIGatewayModelOnKonnectAIGatewayRef: gw.String(),
 	}); err != nil {
-		return nil, fmt.Errorf("listing AIGatewayModels for %s: %w", client.ObjectKeyFromObject(gw), err)
+		return nil, fmt.Errorf("listing AIGatewayModels for %s: %w", gw, err)
 	}
 
 	items := list.Items
