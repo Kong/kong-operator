@@ -34,9 +34,7 @@ func WithFinalizer[
 
 	// Optimistic lock ensures the patch is applied only if the object hasn't changed
 	// since it was read. Without it, a merge patch computed from a stale cached copy
-	// would re-add finalizers that other controllers removed in the meantime, which
-	// the API server rejects with
-	// "no new finalizers can be added if the object is being deleted".
+	// would silently re-add finalizers that other controllers removed in the meantime.
 	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFromWithOptions(ent, client.MergeFromWithOptimisticLock{})); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
