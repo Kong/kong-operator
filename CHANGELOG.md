@@ -75,6 +75,13 @@
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
   [#5600](https://github.com/Kong/kong-operator/pull/5600)
+- On-prem gateway: keep tags of translated Kong certificate stable when multiple
+  `Secret`s have the same certificate content. The tags generated from the `Secret`
+  with the earliest creation timestamp are chosen, and the one with the lowest
+  UID when a tie happens.
+  This aligns with choosing ID of the translated certificate.
+  [#5657](https://github.com/Kong/kong-operator/pull/5657)
+  [#5733](https://github.com/Kong/kong-operator/pull/5733)
 
 ## [v2.3.1]
 
