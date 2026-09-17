@@ -23,6 +23,7 @@ import (
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/stretchr/testify/require"
 	"k8s.io/apimachinery/pkg/runtime"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -77,7 +78,7 @@ func TestBuildDocument(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := BuildDocument(t.Context(), cl, gw)
+	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 	require.Len(t, doc.Models, 2)
 	require.Equal(t, "model-a", doc.Models[0].Name)
@@ -110,7 +111,7 @@ func TestBuildDocument_NoModels(t *testing.T) {
 	}
 	cl := builder.Build()
 
-	doc, err := BuildDocument(t.Context(), cl, gw)
+	doc, err := BuildDocument(t.Context(), cl, client.ObjectKeyFromObject(gw))
 	require.NoError(t, err)
 	require.Empty(t, doc.Models)
 }

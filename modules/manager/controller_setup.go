@@ -217,14 +217,6 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 		)
 	}
 
-	// The AIGatewayModel index is also registered above under KonnectControllersEnabled; guard
-	// against indexing the same field twice.
-	if cfg.OnPremAIGatewayControllerEnabled && !cfg.KonnectControllersEnabled {
-		indexOptions = slices.Concat(indexOptions,
-			index.OptionsForAIGatewayModel(),
-		)
-	}
-
 	if cfg.FeatureGates.Enabled(FeatureGateMCPServer) {
 		cl := mgr.GetClient()
 		indexOptions = slices.Concat(indexOptions,
@@ -428,6 +420,13 @@ func requiredCRDChecks(c *Config) []requiredCRDCheck {
 					Group:    aigatewayv1alpha1.SchemeGroupVersion.Group,
 					Version:  aigatewayv1alpha1.SchemeGroupVersion.Version,
 					Resource: "onpremaigateways",
+				},
+				{
+					// Watched by the configuration-entity controllers that each instance's
+					// own manager registers; without it they would crash-loop per instance.
+					Group:    aiconfigurationv1alpha1.SchemeGroupVersion.Group,
+					Version:  aiconfigurationv1alpha1.SchemeGroupVersion.Version,
+					Resource: "aigatewaymodels",
 				},
 			},
 		},
@@ -680,7 +679,8 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 
 	// aiGatewayInstancesMgr runs the in-process on-prem AI Gateway control plane instances, one per
-	// OnPremAIGateway resource.
+	// OnPremAIGateway resource. Each instance runs its own controller-runtime manager hosting the
+	// configuration-entity controllers (AIGatewayModel, ...) and its own ChangeNotifier.
 	// NOTE: no diagnostics exposer is configured yet. When the AI Gateway control plane grows a config
 	// dump, add one mirroring diagnostics.NewControlPlaneDiagnosticsExposer (see run.go, where it's passed
 	// to the ControlPlane's multi-instance manager) and pass it here via instances.WithDiagnosticsExposer.
@@ -888,7 +888,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				TypeConverter:            ssaProvider,
 			},
 		},
-		// On-prem AIGateway (control plane) controller
+		// On-prem AIGateway (control plane) controller. It schedules one in-process instance
+		// per OnPremAIGateway resource; the configuration-entity controllers (AIGatewayModel, ...)
+		// are spawned on the instance's own manager, together with the instance.
 		{
 			Enabled: c.OnPremAIGatewayControllerEnabled,
 			Controller: &aigwonprem.Reconciler{
@@ -896,6 +898,9 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				LoggingMode:      c.LoggingMode,
 				TypeConverter:    ssaProvider,
 				InstancesManager: aiGatewayInstancesMgr,
+				RestConfig:       mgr.GetConfig(),
+				Scheme:           mgr.GetScheme(),
+				CacheSyncTimeout: c.CacheSyncTimeout,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when
