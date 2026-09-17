@@ -1,0 +1,127 @@
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayConsumerGroup
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: mcp-dev-users
+    displayName: MCP Dev Users Group
+---
+# The conversion-only MCP Server whose tools the listener below exposes.
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-conversion-only
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: conversion-only
+    conversion-only:
+      name: flights-mcp-server-conversion-only
+      displayName: KongAir Flights MCP Server (conversion-only)
+      enabled: Enabled
+      config:
+        url: https://flights-api.kongair.example/openapi.json
+        route:
+          paths: /mcp/flights
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights
+---
+# The upstream MCP Server whose tools the listener below exposes.
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-upstream-server
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: upstream-server
+    upstream-server:
+      name: flights-mcp-server-upstream-server
+      displayName: KongAir Flights MCP Server (upstream-server)
+      enabled: Enabled
+      config:
+        url: https://flights-mcp.kongair.example
+        route:
+          paths: /mcp/flights
+        # Refresh the cached tools list every 5 minutes; set to 0 to refresh
+        # on every client call.
+        toolsCacheTtlSeconds: 300
+      labels:
+        domain: flights
+---
+# The listener exposes the tools of the MCP Servers above. Each sources entry
+# references an AIGatewayMCPServer CR by metadata.name; the operator resolves
+# each reference to the referenced CR's Konnect name (its immutable arm name)
+# at reconcile time.
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-listener
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: listener
+    listener:
+      name: flights-mcp-server-listener
+      displayName: KongAir Flights MCP Server (listener)
+      enabled: Enabled
+      sources:
+        - kind: AIGatewayMCPServer
+          name: flights-mcp-server-conversion-only
+        - kind: AIGatewayMCPServer
+          name: flights-mcp-server-upstream-server
+      access:
+        aclAttributeType: consumer
+        consumer:
+          acls:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-mcp-consumer-group
+      config:
+        route:
+          paths: /mcp/flights
+        logging:
+          payloads: Disabled
+      labels:
+        domain: flights

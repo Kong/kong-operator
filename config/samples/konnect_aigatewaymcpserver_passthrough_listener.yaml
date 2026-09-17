@@ -1,0 +1,83 @@
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayAuthStrategy
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-auth-strategy
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: mcp-key-auth
+      displayName: MCP Key Auth
+      config:
+        hideCredentials: Enabled
+---
+kind: AIGatewayConsumerGroup
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: mcp-dev-users
+    displayName: MCP Dev Users Group
+---
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-passthrough-listener
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: passthrough-listener
+    passthrough-listener:
+      name: flights-mcp-server-passthrough-listener
+      displayName: KongAir Flights MCP Server (passthrough-listener)
+      enabled: Enabled
+      # The oauthAccessToken arm evaluates ACLs against the claim configured
+      # below. References to AIGatewayAuthStrategy and AIGatewayConsumerGroup
+      # CRs (by metadata.name); the operator resolves each reference to the
+      # referenced CR's Konnect name at reconcile time.
+      access:
+        aclAttributeType: oauthAccessToken
+        oauthAccessToken:
+          accessTokenClaimField: .user.email
+          authStrategies:
+            - name: ai-gw-mcp-auth-strategy
+          acls:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-mcp-consumer-group
+      config:
+        # Upstream MCP server that requests are passed through to unmodified.
+        url: https://flights-mcp.kongair.example
+        route:
+          paths: /mcp/flights
+      labels:
+        domain: flights
