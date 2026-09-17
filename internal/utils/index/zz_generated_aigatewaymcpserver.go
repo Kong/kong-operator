@@ -534,5 +534,29 @@ func aiGatewayMCPServerOnAIGatewayConsumerGroupRef(object client.Object) []strin
 			out = append(out, ns+"/"+ref.Name)
 		}
 	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
+	for _, refs := range aiconfigurationv1alpha1.RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ent) {
+		for _, ref := range refs {
+			if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+				continue
+			}
+			ns := ref.Namespace
+			if ns == "" {
+				ns = ent.GetNamespace()
+			}
+			out = append(out, ns+"/"+ref.Name)
+		}
+	}
 	return out
 }
