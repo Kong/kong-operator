@@ -441,6 +441,31 @@ jobs:
             ${{ steps.meta.outputs.tags }}-amd64
             ${{ steps.meta.outputs.tags }}-arm64
 
+      - uses: ./.github/actions/setup-mise
+
+      - name: Generate image SBOM
+        env:
+          TAGS: ${{ steps.meta.outputs.tags }}
+        run: |
+          set -euo pipefail
+          TAG="$(printf '%s\n' "${TAGS}" | head -n1)"
+          syft "registry:${TAG}" \
+            --platform linux/amd64 \
+            -o spdx-json=image-linux-amd64-sbom.spdx.json \
+            -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
+
+      # One artifact per file, name = filename — matches how sca uploads (artifact contract)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-linux-amd64-sbom.spdx.json
+          path: image-linux-amd64-sbom.spdx.json
+          retention-days: 90
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-linux-amd64-sbom.cyclonedx.json
+          path: image-linux-amd64-sbom.cyclonedx.json
+          retention-days: 90
+
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
         id: tag
