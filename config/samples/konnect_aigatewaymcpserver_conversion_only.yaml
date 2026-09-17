@@ -1,0 +1,70 @@
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayConsumerGroup
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: mcp-dev-users
+    displayName: MCP Dev Users Group
+---
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-conversion-only
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: conversion-only
+    conversion-only:
+      name: flights-mcp-server-conversion-only
+      displayName: KongAir Flights MCP Server (conversion-only)
+      enabled: Enabled
+      # Helper field to set protocol, host, port and path of the upstream
+      # service to convert into MCP tool calls.
+      config:
+        url: https://flights-api.kongair.example/openapi.json
+        route:
+          paths: /mcp/flights
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+          # Per-tool consumer group ACLs. Each entry references an
+          # AIGatewayConsumerGroup CR by metadata.name; the operator resolves
+          # each reference to the referenced CR's Konnect name at reconcile
+          # time. Overrides the server-level defaultToolAcls.
+          access:
+            acls:
+              allow:
+                - kind: AIGatewayConsumerGroup
+                  name: ai-gw-mcp-consumer-group
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights
