@@ -101,7 +101,8 @@ func (f *MCPServersFetcher) wake() {
 // run starts the background goroutine that waits for wakeup signals and fetches
 // all MCP servers for the configured control plane.
 // It returns when ctx is cancelled or the wakeup channel is closed.
-// On a sync failure the wakeup is requeued after an exponential backoff delay.
+// On a fetch or sync failure the wakeup is requeued after an exponential
+// backoff delay.
 func (f *MCPServersFetcher) run(ctx context.Context) {
 	go func() {
 		logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
