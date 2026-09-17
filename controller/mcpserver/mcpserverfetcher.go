@@ -111,6 +111,17 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 			Max:    time.Minute,
 			Factor: 2,
 		}
+		waitForBackoff := func() bool {
+			timer := time.NewTimer(b.Duration())
+			defer timer.Stop()
+
+			select {
+			case <-timer.C:
+				return true
+			case <-ctx.Done():
+				return false
+			}
+		}
 
 		cpID := f.controlPlane.GetKonnectID()
 		for {
@@ -130,14 +141,20 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 					// syncing one would delete in-cluster MCPServers whose
 					// Konnect counterparts simply were not listed.
 					log.Error(logger, err, "failed to fetch MCP servers, retrying", "controlPlaneID", cpID)
-					time.AfterFunc(b.Duration(), f.wake)
+					if !waitForBackoff() {
+						return
+					}
+					f.wake()
 					continue
 				}
 				log.Debug(logger, "fetched MCP servers", "controlPlaneID", cpID, "count", len(servers))
 				sig := f.lastSignal.Load()
 				if err := f.syncMCPServers(ctx, servers, sig); err != nil {
 					log.Error(logger, err, "failed to sync MCP servers", "controlPlaneID", cpID)
-					time.AfterFunc(b.Duration(), f.wake)
+					if !waitForBackoff() {
+						return
+					}
+					f.wake()
 				} else {
 					b.Reset()
 				}
