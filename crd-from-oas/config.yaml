@@ -485,6 +485,16 @@ apiGroupVersions:
             resolvesTo: name
             refTypeName: AIGatewayMCPACLRef
             supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.tools.access.acls.allow
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayMCPACLRef
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.upstream-server.tools.access.acls.deny
+            kinds: [AIGatewayConsumerGroup]
+            resolvesTo: name
+            refTypeName: AIGatewayMCPACLRef
+            supportCrossNamespaceReference: true
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayMCPServersSDK

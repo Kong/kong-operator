@@ -3803,6 +3803,140 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(ctx context
 	return resolved, nil
 }
 
+// RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow returns the references at spec.apiSpec.upstream-server.tools.access.acls.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayMCPACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Allow) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Allow)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow resolves the CR references in spec.apiSpec.upstream-server.tools.access.acls.allow
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny returns the references at spec.apiSpec.upstream-server.tools.access.acls.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj *AIGatewayMCPServer) [][]AIGatewayMCPACLRef {
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer == nil {
+		return nil
+	}
+	var refs [][]AIGatewayMCPACLRef
+	for i := range obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools {
+		if len(obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Deny) == 0 {
+			continue
+		}
+		refs = append(refs, obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer.Tools[i].Access.Acls.Deny)
+	}
+	return refs
+}
+
+// resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny resolves the CR references in spec.apiSpec.upstream-server.tools.access.acls.deny
+// to Konnect names.
+func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx context.Context, cl client.Client, obj *AIGatewayMCPServer) ([][]string, error) {
+	groups := RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj)
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			if ref.Name == "" {
+				errs = append(errs, fmt.Errorf("%s reference has no name set", kind))
+				continue
+			}
+			var referenced AIGatewayConsumerGroup
+			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+				if apierrors.IsNotFound(err) {
+					errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+					continue
+				}
+				errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+				continue
+			}
+			if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+				errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+				continue
+			}
+			if referenced.GetKonnectID() == "" {
+				errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+				continue
+			}
+			group = append(group, referenced.GetKonnectName())
+		}
+		resolved = append(resolved, group)
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
 // returns the joined resolution errors, or nil when all references resolve.
 func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl client.Client) error {
@@ -3931,6 +4065,12 @@ func (obj *AIGatewayMCPServer) ResolveKonnectReferences(ctx context.Context, cl 
 		errs = append(errs, err)
 	}
 	if _, err := resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
 	return errors.Join(errs...)
@@ -4533,6 +4673,50 @@ func (obj *AIGatewayMCPServer) CrossNamespaceSiblingReferences() []CrossNamespac
 		}
 	}
 	for _, refs := range RefsAtAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(obj) {
+		for _, ref := range refs {
+			ns := ref.Namespace
+			if ns == "" {
+				ns = obj.GetNamespace()
+			}
+			if ns == obj.GetNamespace() {
+				continue
+			}
+			kind := ref.Kind
+			if kind == "" {
+				kind = "AIGatewayConsumerGroup"
+			}
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayMCPServer"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.Name,
+			})
+		}
+	}
+	for _, refs := range RefsAtAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(obj) {
 		for _, ref := range refs {
 			ns := ref.Namespace
 			if ns == "" {
@@ -5762,6 +5946,73 @@ func (obj *AIGatewayMCPServer) ToCreateAIGatewayMCPServerRequest(ctx context.Con
 		}
 		payload["passthrough-listener"] = passthroughListener12
 	}
+	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "tools" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer2, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer2 == nil {
+			upstreamServer2 = map[string]any{}
+		}
+		resolvedUpstreamServerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.tools.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer2["tools"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access34, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls16, ok := access34["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls16["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerToolsAccessAclsAllow) {
+					acls16["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerToolsAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.tools.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer2["tools"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access34, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls16, ok := access34["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls16["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerToolsAccessAclsDeny) {
+					acls16["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer2
+	}
 	return spec.toCreateAIGatewayMCPServerRequestFromPayload(payload)
 }
 
@@ -6969,6 +7220,73 @@ func (obj *AIGatewayMCPServer) ToUpdateAIGatewayMCPServerRequest(ctx context.Con
 			}
 		}
 		payload["passthrough-listener"] = passthroughListener12
+	}
+	// spec.apiSpec.upstream-server.tools.access.acls.allow carries a CR reference: inject the resolved Konnect values into
+	// each element of the "tools" array in the SDK payload, preserving
+	// sibling keys of its ancestors. A nil CRD ancestor pointer means that part
+	// of the config wasn't set, so the payload is left untouched.
+	if obj.Spec.APISpec.AIGatewayMCPServerConfig != nil && obj.Spec.APISpec.AIGatewayMCPServerConfig.UpstreamServer != nil {
+		upstreamServer2, _ := payload["upstream-server"].(map[string]any)
+		if upstreamServer2 == nil {
+			upstreamServer2 = map[string]any{}
+		}
+		resolvedUpstreamServerToolsAccessAclsAllow, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.tools.access.acls.allow references: %w", err)
+		}
+		if arr, ok := upstreamServer2["tools"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access34, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls16, ok := access34["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls16["allow"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerToolsAccessAclsAllow) {
+					acls16["allow"] = resolvedUpstreamServerToolsAccessAclsAllow[ri]
+					ri++
+				}
+			}
+		}
+		resolvedUpstreamServerToolsAccessAclsDeny, err := resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx, cl, obj)
+		if err != nil {
+			return nil, fmt.Errorf("resolving spec.apiSpec.upstream-server.tools.access.acls.deny references: %w", err)
+		}
+		if arr, ok := upstreamServer2["tools"].([]any); ok {
+			ri := 0
+			for _, e := range arr {
+				el, ok := e.(map[string]any)
+				if !ok {
+					continue
+				}
+				access34, ok := el["access"].(map[string]any)
+				if !ok {
+					continue
+				}
+				acls16, ok := access34["acls"].(map[string]any)
+				if !ok {
+					continue
+				}
+				if _, has := acls16["deny"]; !has {
+					continue
+				}
+				if ri < len(resolvedUpstreamServerToolsAccessAclsDeny) {
+					acls16["deny"] = resolvedUpstreamServerToolsAccessAclsDeny[ri]
+					ri++
+				}
+			}
+		}
+		payload["upstream-server"] = upstreamServer2
 	}
 	return spec.toUpdateAIGatewayMCPServerRequestFromPayload(payload)
 }
