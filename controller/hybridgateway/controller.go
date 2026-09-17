@@ -343,6 +343,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 	// being managed by us, the finalizer remains.
 	removed, err := removeFinalizerIfNotManaged[t](ctx, r.Client, obj, logger)
 	if err != nil {
+		if result, ok := requeueOnConflict(err, logger, "Finalizer removal conflicted, requeueing"); ok {
+			return result, nil
+		}
 		return ctrl.Result{}, err
 	}
 

@@ -365,9 +365,13 @@ func logRemainingFinalizerBearingObjects(
 		return
 	}
 	resources, err := disco.ServerPreferredNamespacedResources()
-	if err != nil {
+	if err != nil && len(resources) == 0 {
 		logf("ERROR: failed to discover namespaced resources for cleanup diagnostics: %v", err)
 		return
+	}
+	if err != nil {
+		// Discovery can fail partially (ErrGroupDiscoveryFailed): keep the groups that succeeded.
+		logf("WARNING: partial discovery failure, some resource types may be missed: %v", err)
 	}
 
 	for _, resourceList := range resources {
@@ -375,9 +379,14 @@ func logRemainingFinalizerBearingObjects(
 			if !slices.Contains(resource.Verbs, "list") {
 				continue
 			}
+			gv, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+			if err != nil {
+				logf("ERROR: failed to parse GroupVersion %q: %v", resourceList.GroupVersion, err)
+				continue
+			}
 			gvr := schema.GroupVersionResource{
-				Group:    strings.SplitN(resourceList.GroupVersion, "/", 2)[0],
-				Version:  strings.SplitN(resourceList.GroupVersion, "/", 2)[1],
+				Group:    gv.Group,
+				Version:  gv.Version,
 				Resource: resource.Name,
 			}
 			// Skip subresources (e.g. pods/status) - they cannot hold namespace-pinning finalizers.
@@ -396,7 +405,7 @@ func logRemainingFinalizerBearingObjects(
 				for i := range list.Items {
 					item := &list.Items[i]
 					if finalizers := item.GetFinalizers(); len(finalizers) > 0 {
-						logf("REMAINING: %s %s/%s has finalizers %v", list.GetKind(), ns, item.GetName(), finalizers)
+						logf("REMAINING: %s %s/%s has finalizers %v", gvr.Resource, ns, item.GetName(), finalizers)
 					}
 				}
 			}
