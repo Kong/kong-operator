@@ -1139,6 +1139,7 @@ their hashes and sizes.
 
 | Field | Description |
 | --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the KonnectConfigStoreSync. All four condition types (ConfigStoreRefValid, SecretRefValid, PairValid, Synced) are always present so that kubectl wait never hangs. |
 | `storeID` _string_ | StoreID is the Konnect ID of the referenced Config Store, observed from the store's status. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the Control Plane the referenced Config Store belongs to, observed from the store's status. A sync never resolves a Control Plane itself. |
 | `observedSecretResourceVersion` _string_ | ObservedSecretResourceVersion is the resourceVersion of the Secret at the last successful sync. It is an observation aid only and is never an input to a push decision. |
@@ -1146,7 +1147,6 @@ their hashes and sizes.
 | `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References publishes the reference suffixes consumers need to build vault reference strings. A full reference is {vault://<KongVault prefix>/<suffix>}. |
 | `entriesSynced` _int32_ | EntriesSynced is the number of entries currently synced to the Config Store. |
 | `entriesTotal` _int32_ | EntriesTotal is the total number of entries this sync manages. |
-| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the KonnectConfigStoreSync. All four condition types (ConfigStoreRefValid, SecretRefValid, PairValid, Synced) are always present so that kubectl wait never hangs. |
 
 _Appears in:_
 

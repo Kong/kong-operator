@@ -36,7 +36,7 @@ type KonnectConfigStoreSync struct {
 	// Spec is the specification of the KonnectConfigStoreSync resource.
 	//
 	// +required
-	Spec KonnectConfigStoreSyncSpec `json:"spec"`
+	Spec KonnectConfigStoreSyncSpec `json:"spec,omitzero"`
 
 	// Status is the status of the KonnectConfigStoreSync resource.
 	//
@@ -231,6 +231,20 @@ type KonnectConfigStoreSyncSplitEntry struct {
 // The status never contains Secret plaintext: values are represented only by
 // their hashes and sizes.
 type KonnectConfigStoreSyncStatus struct {
+	// Conditions describe the status of the KonnectConfigStoreSync.
+	// All four condition types (ConfigStoreRefValid, SecretRefValid, PairValid,
+	// Synced) are always present so that kubectl wait never hangs.
+	//
+	// +listType=map
+	// +listMapKey=type
+	// +kubebuilder:validation:MinItems=4
+	// +kubebuilder:validation:MaxItems=8
+	// +kubebuilder:default={{type: "ConfigStoreRefValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "SecretRefValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "PairValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "Synced", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
+	// +optional
+	// +patchStrategy=merge
+	// +patchMergeKey=type
+	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
+
 	// StoreID is the Konnect ID of the referenced Config Store, observed from
 	// the store's status.
 	//
@@ -282,20 +296,6 @@ type KonnectConfigStoreSyncStatus struct {
 	//
 	// +optional
 	EntriesTotal int32 `json:"entriesTotal,omitempty"`
-
-	// Conditions describe the status of the KonnectConfigStoreSync.
-	// All four condition types (ConfigStoreRefValid, SecretRefValid, PairValid,
-	// Synced) are always present so that kubectl wait never hangs.
-	//
-	// +listType=map
-	// +listMapKey=type
-	// +kubebuilder:validation:MinItems=4
-	// +kubebuilder:validation:MaxItems=8
-	// +kubebuilder:default={{type: "ConfigStoreRefValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "SecretRefValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "PairValid", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"},{type: "Synced", status: "Unknown", reason:"Pending", message:"Waiting for controller", lastTransitionTime: "1970-01-01T00:00:00Z"}}
-	// +optional
-	// +patchStrategy=merge
-	// +patchMergeKey=type
-	Conditions []metav1.Condition `json:"conditions,omitempty" patchStrategy:"merge" patchMergeKey:"type" protobuf:"bytes,1,rep,name=conditions"`
 }
 
 // KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
