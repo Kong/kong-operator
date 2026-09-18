@@ -668,6 +668,10 @@ func Test_validateConfig(t *testing.T) {
 					cfg := testConfig
 					cfg.Service = tc.service
 					cfg.AdminAPI = tc.adminAPI
+					cfg.Conditions = Conditions{
+						AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+						AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
+					}
 					return cfg
 				}(),
 			}
