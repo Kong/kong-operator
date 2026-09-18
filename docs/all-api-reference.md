@@ -658,22 +658,11 @@ object's Konnect name is used where the Konnect API accepts it.
 _Appears in:_
 
 - [AIGatewayAgentAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentaccess)
-- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
-
-#### AIGatewayAuthStrategyReference
-
-_Underlying type:_ `string`
-
-AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-name.
-
-
-
-
-_Appears in:_
-
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
+- [AIGatewayModelAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelaccess)
+
+
 
 
 
@@ -1349,6 +1338,24 @@ _Appears in:_
 - [AIGatewayModelAPIConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapiconfig)
 - [AIGatewayModelModelConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelmodelconfig)
 
+#### AIGatewayMCPACLRef
+
+
+AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace, if set to a namespace other than the referrer's, must be permitted by a KongReferenceGrant in that namespace. |
+
+_Appears in:_
+
+- [AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)
+
 #### AIGatewayMCPACLs
 
 
@@ -1359,8 +1366,8 @@ Configure `allow`, `deny`, or both.
 
 | Field | Description |
 | --- | --- |
-| `allow` _[]string_ | List of consumer groups that are permitted access. |
-| `deny` _[]string_ | List of consumer groups that are denied access. |
+| `allow` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are permitted access. |
+| `deny` _[][AIGatewayMCPACLRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpaclref)_ | List of consumer groups that are denied access. |
 
 _Appears in:_
 
@@ -1570,7 +1577,7 @@ AIGatewayMCPServerListener is a type alias.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this MCP server, used as a stable human-readable reference. This value is immutable after creation. |
 | `policies` _[][AIGatewayPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyref)_ | List of policy references. |
-| `sources` _[][AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
+| `sources` _[][AIGatewayMCPServerRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverref)_ | The explicit list of source MCP Servers whose tools this listener exposes. Each entry is the immutable `name` of a `conversion-only` (toolset) or `upstream-server` (third-party MCP server) MCP Server in the same AI Gateway. All of the referenced source's tools are exposed. |
 
 _Appears in:_
 
@@ -1626,7 +1633,7 @@ for granting access to an MCP server.
 | Field | Description |
 | --- | --- |
 | `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying consumer groups. This is the top-level gate: a caller's consumer group must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
-| `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying consumer groups access to tools. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
@@ -1650,7 +1657,7 @@ for granting access to an MCP server.
 | --- | --- |
 | `accessTokenClaimField` _string_ | The claim in the OAuth2 access token to use as the subject for ACL evaluation when `acl_attribute_type` is set to `oauth_access_token`. Nested claim can be fetched by using a jq filter starts with dot, e.g., “.user.email”: https://jqlang.org/manual/#object-identifier-index |
 | `acls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Server-level access control rules for allowing or denying callers, evaluated against the value of the configured `access_token_claim_field`. This is the top-level gate: a caller must pass this check before any MCP protocol operation (`initialize`, `tools/list`, `tools/call`) is allowed, and before any tool-level `default_tool_acls` or per-tool `access.acls` check is evaluated. |
-| `authStrategies` _[][AIGatewayAuthStrategyReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyreference)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
+| `authStrategies` _[][AIGatewayAuthStrategyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyref)_ | List of auth strategies for granting access to the MCP server. At most 1 auth strategy of each auth strategy type can be referenced. |
 | `defaultToolAcls` _[AIGatewayMCPACLs](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpacls)_ | Default per-tool access control rules for allowing or denying callers access to tools, evaluated against the value of the configured `access_token_claim_field`. Evaluated only for callers that already passed the server-level `acls` check above. Applies to every tool exposed by this MCP Server unless a specific tool overrides it via that tool's own `access.acls`. |
 | `identityProviders` _[][AIGatewayIdentityProviderReference](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayidentityproviderreference)_ | List of identity providers for granting access to the MCP server. At most 1 identity provider of each identity provider type can be referenced.<br /><br />Deprecated: use `auth_strategies` instead. The two are mutually exclusive. |
 | `metadata` _[AIGatewayMCPServerProtectedResourceMetadata](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverprotectedresourcemetadata)_ | Refer to Kubernetes API documentation for fields of `metadata`. |
@@ -1781,9 +1788,26 @@ _Appears in:_
 - [AIGatewayMCPServerListenerConsumer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconsumer)
 - [AIGatewayMCPServerListenerOauth](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneroauth)
 
+#### AIGatewayMCPServerRef
+
+
+AIGatewayMCPServerRef references an AIGatewayMCPServer in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+
 #### AIGatewayMCPServerRouteWithMatcher
 
-_Underlying type:_ `object`
 
 AIGatewayMCPServerRouteWithMatcher Route configuration for an MCP Server that
 terminates its own listener.
@@ -1794,6 +1818,20 @@ incoming requests.
 
 
 
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | One or more lists of values indexed by header name that will cause this route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
+| `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this route. |
+| `paths` _[]string_ | A list of paths that match this route. |
+| `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
+| `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
+| `regexPriority` _int_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `requestBuffering` _string_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `responseBuffering` _string_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `stripPath` _string_ | When matching a route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[]string_ | An optional set of strings associated with the route for grouping and filtering. |
 
 _Appears in:_
 

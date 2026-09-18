@@ -31,14 +31,14 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 					Listener: &aiconfigurationv1alpha1.AIGatewayMCPServerListener{
 						Name:        "test-mcp-server",
 						DisplayName: "Test MCP Server",
-						Sources:     []aiconfigurationv1alpha1.AIGatewayEntityIdentifier{"test-source"},
+						Sources:     []aiconfigurationv1alpha1.AIGatewayMCPServerRef{{Name: "test-source"}},
 						Access: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerAccess{
 							AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerListenerAccessTypeConsumer,
 							Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 						},
 						Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
 							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
-								"paths": "/mcp",
+								Paths: []string{"/mcp"},
 							},
 						},
 					},
