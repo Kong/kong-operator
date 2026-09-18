@@ -42,6 +42,42 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-listener.config.route.preserve_host",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"route",
+			"preserve_host",
+		},
+	},
+	{
+		Label: "conversion-listener.config.route.request_buffering",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"route",
+			"request_buffering",
+		},
+	},
+	{
+		Label: "conversion-listener.config.route.response_buffering",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"route",
+			"response_buffering",
+		},
+	},
+	{
+		Label: "conversion-listener.config.route.strip_path",
+		Path: []string{
+			"conversion-listener",
+			"config",
+			"route",
+			"strip_path",
+		},
+	},
+	{
 		Label: "conversion-listener.config.server.forward_client_headers",
 		Path: []string{
 			"conversion-listener",
@@ -170,6 +206,42 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-only.config.route.preserve_host",
+		Path: []string{
+			"conversion-only",
+			"config",
+			"route",
+			"preserve_host",
+		},
+	},
+	{
+		Label: "conversion-only.config.route.request_buffering",
+		Path: []string{
+			"conversion-only",
+			"config",
+			"route",
+			"request_buffering",
+		},
+	},
+	{
+		Label: "conversion-only.config.route.response_buffering",
+		Path: []string{
+			"conversion-only",
+			"config",
+			"route",
+			"response_buffering",
+		},
+	},
+	{
+		Label: "conversion-only.config.route.strip_path",
+		Path: []string{
+			"conversion-only",
+			"config",
+			"route",
+			"strip_path",
+		},
+	},
+	{
 		Label: "conversion-only.enabled",
 		Path: []string{
 			"conversion-only",
@@ -243,6 +315,42 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
+		},
+	},
+	{
+		Label: "listener.config.route.preserve_host",
+		Path: []string{
+			"listener",
+			"config",
+			"route",
+			"preserve_host",
+		},
+	},
+	{
+		Label: "listener.config.route.request_buffering",
+		Path: []string{
+			"listener",
+			"config",
+			"route",
+			"request_buffering",
+		},
+	},
+	{
+		Label: "listener.config.route.response_buffering",
+		Path: []string{
+			"listener",
+			"config",
+			"route",
+			"response_buffering",
+		},
+	},
+	{
+		Label: "listener.config.route.strip_path",
+		Path: []string{
+			"listener",
+			"config",
+			"route",
+			"strip_path",
 		},
 	},
 	{
@@ -323,6 +431,42 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "passthrough-listener.config.route.preserve_host",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"route",
+			"preserve_host",
+		},
+	},
+	{
+		Label: "passthrough-listener.config.route.request_buffering",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"route",
+			"request_buffering",
+		},
+	},
+	{
+		Label: "passthrough-listener.config.route.response_buffering",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"route",
+			"response_buffering",
+		},
+	},
+	{
+		Label: "passthrough-listener.config.route.strip_path",
+		Path: []string{
+			"passthrough-listener",
+			"config",
+			"route",
+			"strip_path",
+		},
+	},
+	{
 		Label: "passthrough-listener.config.server.forward_client_headers",
 		Path: []string{
 			"passthrough-listener",
@@ -397,6 +541,42 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"config",
 			"logging",
 			"payloads",
+		},
+	},
+	{
+		Label: "upstream-server.config.route.preserve_host",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"route",
+			"preserve_host",
+		},
+	},
+	{
+		Label: "upstream-server.config.route.request_buffering",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"route",
+			"request_buffering",
+		},
+	},
+	{
+		Label: "upstream-server.config.route.response_buffering",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"route",
+			"response_buffering",
+		},
+	},
+	{
+		Label: "upstream-server.config.route.strip_path",
+		Path: []string{
+			"upstream-server",
+			"config",
+			"route",
+			"strip_path",
 		},
 	},
 	{
@@ -598,6 +778,7 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"conversion-listener",
 			"config",
 			"route",
+			"headers",
 		},
 	},
 	{
@@ -659,6 +840,7 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"conversion-only",
 			"config",
 			"route",
+			"headers",
 		},
 	},
 	{
@@ -720,6 +902,7 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"listener",
 			"config",
 			"route",
+			"headers",
 		},
 	},
 	{
@@ -739,6 +922,7 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"passthrough-listener",
 			"config",
 			"route",
+			"headers",
 		},
 	},
 	{
@@ -758,6 +942,7 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"upstream-server",
 			"config",
 			"route",
+			"headers",
 		},
 	},
 	{

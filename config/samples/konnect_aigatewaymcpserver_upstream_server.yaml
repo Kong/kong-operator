@@ -45,7 +45,8 @@ spec:
       config:
         url: https://flights-mcp.kongair.example
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
         # Refresh the cached tools list every 5 minutes; set to 0 to refresh
         # on every client call.
         toolsCacheTtlSeconds: 300

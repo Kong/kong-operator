@@ -78,6 +78,7 @@ spec:
         # Upstream MCP server that requests are passed through to unmodified.
         url: https://flights-mcp.kongair.example
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
       labels:
         domain: flights

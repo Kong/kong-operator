@@ -1796,7 +1796,6 @@ _Appears in:_
 
 #### AIGatewayMCPServerRouteWithMatcher
 
-_Underlying type:_ `object`
 
 AIGatewayMCPServerRouteWithMatcher Route configuration for an MCP Server that
 terminates its own listener.
@@ -1807,6 +1806,20 @@ incoming requests.
 
 
 
+| Field | Description |
+| --- | --- |
+| `headers` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ | One or more lists of values indexed by header name that will cause this route to match if present in the request. The `Host` header cannot be used with this attribute: hosts should be specified using the `hosts` attribute. When `headers` contains only one value and that value starts with the special prefix `~*`, the value is interpreted as a regular expression. |
+| `hosts` _[]string_ | A list of domain names that match this route. Note that the hosts value is case sensitive. |
+| `httpsRedirectStatusCode` _int_ | The status code Kong responds with when all properties of a route match except the protocol i.e. if the protocol of the request is `HTTP` instead of `HTTPS`. `Location` header is injected by Kong if the field is set to 301, 302, 307 or 308. Note: This config applies only if the route is configured to only accept the `https` protocol. |
+| `methods` _[]string_ | A list of HTTP methods that match this route. |
+| `paths` _[]string_ | A list of paths that match this route. |
+| `preserveHost` _string_ | When matching a route via one of the `hosts` domain names, use the request `Host` header in the upstream request headers. If set to `false`, the upstream `Host` header will be that of the service's `host`. |
+| `protocols` _[]string_ | An array of the protocols this route should allow. See the [route Object](#route-object) section for a list of accepted protocols. When set to only `https`, HTTP requests are answered with an upgrade error. When set to only `http`, HTTPS requests are answered with an error. |
+| `regexPriority` _int_ | A number used to choose which route resolves a given request when several routes match it using regexes simultaneously. When two routes match the path and have the same `regex_priority`, the older one (lowest `created_at`) is used. Note that the priority for non-regex routes is different (longer non-regex routes are matched before shorter ones). |
+| `requestBuffering` _string_ | Whether to enable request body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that receive data with chunked transfer encoding. |
+| `responseBuffering` _string_ | Whether to enable response body buffering or not. With HTTP 1.1, it may make sense to turn this off on services that send data with chunked transfer encoding. |
+| `stripPath` _string_ | When matching a route via one of the `paths`, strip the matching prefix from the upstream request URL. |
+| `tags` _[]string_ | An optional set of strings associated with the route for grouping and filtering. |
 
 _Appears in:_
 

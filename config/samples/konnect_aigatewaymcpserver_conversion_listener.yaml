@@ -81,7 +81,8 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date
