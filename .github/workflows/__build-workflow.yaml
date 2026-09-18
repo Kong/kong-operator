@@ -89,6 +89,8 @@ on:
         value: ${{ jobs.build.outputs.tags }}
       version:
         value: ${{ jobs.build.outputs.version }}
+      index_digest:
+        value: ${{ jobs.build-multi-arch.outputs.index_digest }}
 
 permissions:
   contents: read
@@ -333,6 +335,7 @@ jobs:
 
     outputs:
       full_tag: ${{ steps.tag.outputs.tag }}
+      index_digest: ${{ steps.index.outputs.digest }}
 
     needs:
       - semver
@@ -412,6 +415,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-tag
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -424,6 +428,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-nightly
         if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -434,12 +439,34 @@ jobs:
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-push
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
             ${{ steps.meta.outputs.tags }}-amd64
             ${{ steps.meta.outputs.tags }}-arm64
+
+      # Exactly one of the manifest-create steps above runs per event, so the
+      # index digest comes from whichever one did. Both cosign and the SLSA
+      # provenance generator need it, and it is a stabler SBOM subject than a
+      # tag that can later be moved.
+      - name: Resolve the multi-arch index digest
+        id: index
+        env:
+          DIGEST_TAG: ${{ steps.manifest-tag.outputs.digest }}
+          DIGEST_NIGHTLY: ${{ steps.manifest-nightly.outputs.digest }}
+          DIGEST_PUSH: ${{ steps.manifest-push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          DIGEST="${DIGEST_TAG:-}"
+          DIGEST="${DIGEST:-${DIGEST_NIGHTLY:-}}"
+          DIGEST="${DIGEST:-${DIGEST_PUSH:-}}"
+          if [ -z "${DIGEST}" ]; then
+            echo "::error::none of the manifest-create steps produced an index digest"
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - uses: ./.github/actions/setup-mise
 
