@@ -200,10 +200,6 @@ rows:
     type: '`string`'
     description: "IP family of the cluster, used e.g. to decide which IP family (or families) DataPlanes' Kong listens bind to. Possible values: auto, ipv4, ipv6, dual. When 'auto' (default), the operator detects the cluster's IP family at startup and exits with an error if detection fails."
     default: '`"auto"`'
-  - flag: '`--konnect-controller-max-concurrent-reconciles`'
-    type: '`uint`'
-    description: "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead."
-    default: '`8`'
   - flag: '`--konnect-request-timeout`'
     type: '`duration`'
     description: "Timeout for Konnect API requests."
