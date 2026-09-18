@@ -339,6 +339,22 @@ func TestKonnectConfigStoreNotEmptyError_DeletionBlockedMessage(t *testing.T) {
 			contains:    []string{"at least 12 secret entries", "first 10 listed keys", "a", "j"},
 			notContains: []string{"[k", "l]"},
 		},
+		{
+			name: "partial keys from a failed later page are reported",
+			err: KonnectConfigStoreNotEmptyError{
+				ConfigStoreID: "store-id",
+				Keys:          []string{"cert-a", "cert-b"},
+				KeysTruncated: true,
+				ListErr:       errors.New("list boom"),
+			},
+			contains: []string{
+				"at least 2 secret entries",
+				"listing stopped before all keys could be retrieved",
+				"cert-a",
+				"cert-b",
+			},
+			notContains: []string{"could not list their keys"},
+		},
 	}
 
 	for _, tc := range testCases {
@@ -353,6 +369,22 @@ func TestKonnectConfigStoreNotEmptyError_DeletionBlockedMessage(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestKonnectConfigStoreNotEmptyError_ErrorReportsPartialKeys(t *testing.T) {
+	t.Parallel()
+
+	err := KonnectConfigStoreNotEmptyError{
+		ConfigStoreID: "store-id",
+		Keys:          []string{"cert-a"},
+		KeysTruncated: true,
+		ListErr:       errors.New("list boom"),
+		Err:           errors.New("delete rejected"),
+	}
+
+	assert.Contains(t, err.Error(), "at least 1 secret entries")
+	assert.Contains(t, err.Error(), "listing incomplete")
+	assert.NotContains(t, err.Error(), "listing them failed")
 }
 
 func TestListConfigStoreSecretKeysPagination(t *testing.T) {
@@ -431,6 +463,49 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 		assert.NotNil(t, keys)
 		assert.Empty(t, keys)
 		assert.False(t, truncated)
+	})
+
+	t.Run("returns keys collected before a later page fails", func(t *testing.T) {
+		t.Parallel()
+
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		page1Next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
+			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1"
+		listErr := errors.New("list boom")
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
+			Return(newListResponse(&page1Next, "cert-b", "cert-a"), nil).
+			Once()
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
+			Return(nil, listErr).
+			Once()
+
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		require.ErrorIs(t, err, listErr)
+		assert.Equal(t, []string{"cert-a", "cert-b"}, keys)
+		assert.True(t, truncated)
+	})
+
+	t.Run("returns keys collected before a later page has a nil response", func(t *testing.T) {
+		t.Parallel()
+
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		page1Next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
+			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1"
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
+			Return(newListResponse(&page1Next, "cert-a"), nil).
+			Once()
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
+			Return(nil, nil).
+			Once()
+
+		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		require.ErrorIs(t, err, ErrNilResponse)
+		assert.Equal(t, []string{"cert-a"}, keys)
+		assert.True(t, truncated)
 	})
 
 	t.Run("stops and deduplicates when the cursor does not advance", func(t *testing.T) {
