@@ -472,11 +472,12 @@ jobs:
 
       - name: Generate image SBOM
         env:
-          TAGS: ${{ steps.meta.outputs.tags }}
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          DIGEST: ${{ steps.index.outputs.digest }}
         run: |
           set -euo pipefail
-          TAG="$(printf '%s\n' "${TAGS}" | head -n1)"
-          syft "registry:${TAG}" \
+          syft "registry:${REGISTRY}/${IMAGE_NAME}@${DIGEST}" \
             --platform linux/amd64 \
             -o spdx-json=image-linux-amd64-sbom.spdx.json \
             -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
