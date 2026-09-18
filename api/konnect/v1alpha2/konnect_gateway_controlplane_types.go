@@ -88,7 +88,7 @@ type KonnectGatewayControlPlaneSpec struct {
 
 // MirrorSpec contains the Konnect Mirror configuration.
 type MirrorSpec struct {
-	// Konnect contains the KonnectID of the KonnectGatewayControlPlane that
+	// Konnect contains the KonnectID of the existing Konnect entity that
 	// is mirrored.
 	//
 	// +required
@@ -97,8 +97,8 @@ type MirrorSpec struct {
 
 // MirrorKonnect contains the Konnect Mirror configuration.
 type MirrorKonnect struct {
-	// ID is the ID of the Konnect entity. It can be set only in case
-	// the ControlPlane type is Mirror.
+	// ID is the ID of the existing Konnect entity to mirror. It can be set
+	// only when source is Mirror.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1

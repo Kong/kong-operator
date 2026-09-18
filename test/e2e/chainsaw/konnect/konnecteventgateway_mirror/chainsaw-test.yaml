@@ -1,0 +1,95 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: konnecteventgateway-mirror
+spec:
+  description: |
+    Creates an Origin KonnectEventGateway (which provisions the Konnect Event Gateway),
+    grabs its Konnect ID, then creates a second KonnectEventGateway with spec.source=Mirror
+    referencing that ID. Asserts the mirror becomes Programmed + Mirrored and reports the
+    same Konnect ID as the origin, proving a mirror Event Gateway is fully usable as a
+    reference to an existing Konnect entity.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    # Origin: owns the Konnect Event Gateway and yields the ID to mirror.
+    - name: keg_origin_name
+      value: (join('-', [($test_name), 'keg-origin']))
+    # Mirror: references the origin's Konnect ID.
+    - name: keg_mirror_name
+      value: (join('-', [($test_name), 'keg-mirror']))
+  steps:
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration.yaml
+    - name: Create-origin-konnect-eventgateway
+      bindings:
+        - name: keg_cp_name
+          value: ($keg_origin_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectEventGateway.yaml
+    - name: Create-mirror-konnect-eventgateway
+      try:
+        # Grab the origin's Konnect ID (populated in status once Programmed).
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: ORIGIN_KEG
+                value: ($keg_origin_name)
+            content: |
+              kubectl get konnecteventgateway "$ORIGIN_KEG" -n "$NAMESPACE" -o jsonpath='{.status.id}'
+            outputs:
+              - name: origin_keg_id
+                value: ($stdout)
+        # Create the mirror referencing that ID. No apiSpec is allowed for a Mirror.
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($keg_mirror_name)
+                namespace: ($namespace)
+                labels:
+                  test: ($test_name)
+              spec:
+                source: Mirror
+                mirror:
+                  konnect:
+                    id: ($origin_keg_id)
+                konnect:
+                  authRef:
+                    name: ($konnect_auth_name)
+        # The mirror must be Programmed + Mirrored and report the SAME id as the origin.
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectEventGateway
+              metadata:
+                name: ($keg_mirror_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (conditions[?type == 'Mirrored']):
+                  - status: 'True'
+                    reason: Mirrored
+                (id == ($origin_keg_id)): true
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: konnecteventgateway-mirror
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
