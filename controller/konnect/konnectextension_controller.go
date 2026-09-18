@@ -46,6 +46,8 @@ import (
 type KonnectExtensionReconciler struct {
 	client.Client
 
+	apiReader client.Reader
+
 	ControllerOptions        controller.Options
 	LoggingMode              logging.Mode
 	SyncPeriod               time.Duration
@@ -57,6 +59,7 @@ type KonnectExtensionReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	r.apiReader = mgr.GetAPIReader()
 	ls := metav1.LabelSelector{
 		// A secret must have `konghq.com/konnect-dp-cert` label to be watched by the controller.
 		// This constraint is added to prevent from watching all secrets which may cause high resource consumption.
@@ -214,17 +217,14 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		}
 
 		certExists := !apierrors.IsNotFound(err)
-		// if the certificate exists and the cleanup in Konnect has been performed, we can remove the secret-in-use finalizer from the secret.
+		// The Secret's cleanup has completed, but other extensions may still need
+		// its secret-in-use finalizer.
 		if certExists && !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
-			// remove the secret-in-use finalizer from the secret.
-			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
-				return res, err
-			}
+			return r.finishCertificateSecretCleanup(ctx, ext, certificateSecret)
 		}
 
-		// If the certificate does not exist, or the cleanup in Konnect has been performed,
-		// we can remove the konnect-cleanup finalizer from the KonnectExtension.
-		if !certExists || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+		// A missing Secret no longer blocks the extension's cleanup finalizer.
+		if !certExists {
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer)
 			if updated {
@@ -273,7 +273,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 		Message: "DataPlane client certificate is provisioning",
 	}
 	// get the Kubernetes secret holding the certificate.
-	opRes, certificateSecret, err := r.getCertificateSecret(ctx, *ext, false)
+	opRes, certificateSecret, err := r.getCertificateSecret(ctx, *ext, cleanup)
 	if client.IgnoreNotFound(err) != nil {
 		return ctrl.Result{}, err
 	}
@@ -366,24 +366,23 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 
-			// Removed the secret in use finalizer from Secret as the ControlPlane so any
-			// certificate using this Secret has been already removed from Konnect along with the ControlPlane.
-			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
-				return res, err
-			}
 			if cleanup {
-				if updated, res, err := patch.WithoutFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer); err != nil || !res.IsZero() || updated {
+				return r.finishCertificateSecretCleanup(ctx, ext, certificateSecret)
+			}
+
+			// A missing ControlPlane only releases this extension's use of the
+			// certificate. Other extensions may still use it in their ControlPlanes.
+			inUse, pendingCleanup, err := r.certificateSecretUsage(ctx, ext, certificateSecret)
+			if err != nil {
+				return ctrl.Result{}, err
+			}
+			if !inUse && !pendingCleanup {
+				if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
 					return res, err
 				}
 			}
-
-			if !cleanup {
-				// ControlPlane not found and we're not in cleanup mode.
-				// The controlPlaneRefValid condition has already been set to false in getGatewayKonnectControlPlane.
-				// We've done the necessary cleanup above, now wait for the CP to be created or the reference to be corrected.
-				log.Debug(logger, "ControlPlane not found, waiting for it to be available")
-				return res, nil
-			}
+			log.Debug(logger, "ControlPlane not found, waiting for it to be available")
+			return res, nil
 
 		default:
 			log.Debug(logger, "ControlPlane not ready yet")
@@ -646,23 +645,18 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			return ctrl.Result{Requeue: true}, err
 		}
 
-		// in case no IDs are mapped to the secret, we can remove the finalizer from the secret.
+		// All certificates for this extension must disappear before releasing
+		// its cleanup finalizer, including certificates not yet assigned an ID.
 		if len(mappedIDs) == 0 {
-			updated = controllerutil.RemoveFinalizer(certificateSecret, KonnectCleanupFinalizer)
-			if updated {
-				if err := r.Update(ctx, certificateSecret); err != nil {
-					if apierrors.IsConflict(err) {
-						return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-					}
-					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if apierrors.IsNotFound(err) {
-						return ctrl.Result{}, nil
-					}
+			for i := range dpCertificates.Items {
+				if err := r.Delete(ctx, &dpCertificates.Items[i]); client.IgnoreNotFound(err) != nil {
 					return ctrl.Result{}, err
 				}
-				log.Info(logger, "Secret finalizer removed")
 			}
-			return ctrl.Result{Requeue: true}, nil
+			if len(dpCertificates.Items) > 0 {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+			}
+			return r.finishCertificateSecretCleanup(ctx, ext, certificateSecret)
 		}
 	}
 
