@@ -483,7 +483,7 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 			cl := clientBuilder.Build()
 
 			// Call the function under test
-			patched, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, cl, tt.apiAuth)
+			patched, result, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, cl, tt.apiAuth)
 
 			if tt.expectError {
 				require.Error(t, err)
@@ -491,6 +491,8 @@ func TestEnsureFinalizerOnKonnectAPIAuthConfiguration(t *testing.T) {
 			}
 
 			require.NoError(t, err)
+			// Success paths must never ask the caller to requeue.
+			require.Zero(t, result)
 			assert.Equal(t, tt.expectedPatched, patched, "patched return value mismatch")
 
 			// Verify the finalizer state

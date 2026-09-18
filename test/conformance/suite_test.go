@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime/debug"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -16,6 +17,11 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
+	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/client-go/discovery"
+	"k8s.io/client-go/dynamic"
+	"k8s.io/client-go/rest"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	gwapiv1 "sigs.k8s.io/gateway-api/pkg/client/clientset/versioned/typed/apis/v1"
 
@@ -288,10 +294,17 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 	for {
 		select {
 		case <-ctx.Done():
-			return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctx.Err())
+			return reportConformanceCleanupTimeout(remaining, ctx.Err(), logf)
 		case <-ticker.C:
 			var nsList corev1.NamespaceList
 			if err := cl.List(ctx, &nsList); err != nil {
+				// When the timeout expires, the in-flight List can fail on the expired
+				// context (e.g. "client rate limiter Wait returned an error: context
+				// deadline exceeded"). Surface the timeout cause (and collect the
+				// diagnostics) instead of the List failure.
+				if ctxErr := ctx.Err(); ctxErr != nil {
+					return reportConformanceCleanupTimeout(remaining, ctxErr, logf)
+				}
 				return fmt.Errorf("failed to list namespaces during cleanup: %w", err)
 			}
 
@@ -305,6 +318,125 @@ func waitForConformanceNamespacesToCleanup(ctx context.Context, cl client.Client
 				return nil
 			}
 			logf("waiting for conformance namespaces to finish terminating (operator still cleaning up owned entities): %v", remaining)
+		}
+	}
+}
+
+// reportConformanceCleanupTimeout collects diagnostics about what pins the
+// namespaces in Terminating and returns the timeout error. It runs on every
+// timeout path: both the expired wait context and an in-flight List failing on
+// that expired context.
+func reportConformanceCleanupTimeout(remaining []string, ctxErr error, logf func(string, ...any)) error {
+	// The wait context is expired. Use fresh contexts for the diagnostics, each
+	// with its own time budget so a hanging listing cannot consume the dump's.
+	diagCtx, diagCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer diagCancel()
+	logRemainingFinalizerBearingObjects(diagCtx, env.Cluster().Config(), remaining, logf)
+	dumpCtx, dumpCancel := context.WithTimeout(context.Background(), time.Minute)
+	defer dumpCancel()
+	if output, err := env.Cluster().DumpDiagnostics(dumpCtx, "conformance_cleanup_timeout"); err != nil {
+		logf("ERROR: failed to dump diagnostics after cleanup timeout: %v", err)
+	} else {
+		logf("INFO: dumped diagnostics after cleanup timeout to %s", output)
+	}
+	return fmt.Errorf("conformance cleanup failed (namespaces still terminating: %v): %w", remaining, ctxErr)
+}
+
+// logRemainingFinalizerBearingObjects lists all namespaced resources in the given
+// namespaces and logs every object that still carries finalizers. Such objects are
+// the common cause of a namespace stuck in Terminating, but not the only one: the
+// namespaces' own finalizers are reported too.
+func logRemainingFinalizerBearingObjects(
+	ctx context.Context,
+	cfg *rest.Config,
+	namespaces []string,
+	logf func(string, ...any),
+) {
+	if len(namespaces) == 0 {
+		return
+	}
+	logf("INFO: listing objects with finalizers remaining in namespaces %v", namespaces)
+
+	dyn, err := dynamic.NewForConfig(cfg)
+	if err != nil {
+		logf("ERROR: failed to create dynamic client for cleanup diagnostics: %v", err)
+		return
+	}
+
+	// A namespace also stays in Terminating while it carries its own finalizers
+	// (metadata.finalizers / spec.finalizers). Report those too.
+	nsList, err := dyn.Resource(corev1.SchemeGroupVersion.WithResource("namespaces")).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		logf("ERROR: failed to list namespaces for cleanup diagnostics: %v", err)
+	} else {
+		for i := range nsList.Items {
+			ns := &nsList.Items[i]
+			specFinalizers, _, _ := unstructured.NestedStringSlice(ns.Object, "spec", "finalizers")
+			finalizers := slices.Concat(ns.GetFinalizers(), specFinalizers)
+			if !slices.Contains(namespaces, ns.GetName()) || len(finalizers) == 0 {
+				continue
+			}
+			logf("REMAINING: namespace %s has finalizers %v", ns.GetName(), finalizers)
+		}
+	}
+	// Discovery requests carry no context, so diagCtx cannot bound them.
+	// Give the discovery client its own timeout so a hanging API server cannot
+	// block TestMain forever.
+	discoveryCfg := rest.CopyConfig(cfg)
+	discoveryCfg.Timeout = 30 * time.Second
+	disco, err := discovery.NewDiscoveryClientForConfig(discoveryCfg)
+	if err != nil {
+		logf("ERROR: failed to create discovery client for cleanup diagnostics: %v", err)
+		return
+	}
+	resources, err := disco.ServerPreferredNamespacedResources()
+	if err != nil && len(resources) == 0 {
+		logf("ERROR: failed to discover namespaced resources for cleanup diagnostics: %v", err)
+		return
+	}
+	if err != nil {
+		// Discovery can fail partially (ErrGroupDiscoveryFailed): keep the groups that succeeded.
+		logf("WARNING: partial discovery failure, some resource types may be missed: %v", err)
+	}
+
+	for _, resourceList := range resources {
+		for _, resource := range resourceList.APIResources {
+			if !slices.Contains(resource.Verbs, "list") {
+				continue
+			}
+			gv, err := schema.ParseGroupVersion(resourceList.GroupVersion)
+			if err != nil {
+				logf("ERROR: failed to parse GroupVersion %q: %v", resourceList.GroupVersion, err)
+				continue
+			}
+			gvr := schema.GroupVersionResource{
+				Group:    gv.Group,
+				Version:  gv.Version,
+				Resource: resource.Name,
+			}
+			// Skip subresources (e.g. pods/status) - they cannot hold namespace-pinning finalizers.
+			if strings.Contains(resource.Name, "/") {
+				continue
+			}
+			for _, ns := range namespaces {
+				if ctx.Err() != nil {
+					return
+				}
+				list, err := dyn.Resource(gvr).Namespace(ns).List(ctx, metav1.ListOptions{})
+				if err != nil {
+					// Resource types no longer served (e.g. removed CRDs) are expected to fail listing.
+					if !apierrors.IsNotFound(err) {
+						logf("ERROR: failed to list %s in namespace %s: %v", gvr.String(), ns, err)
+					}
+					continue
+				}
+				for i := range list.Items {
+					item := &list.Items[i]
+					if finalizers := item.GetFinalizers(); len(finalizers) > 0 {
+						logf("REMAINING: %s %s/%s has finalizers %v", gvr.Resource, ns, item.GetName(), finalizers)
+					}
+				}
+			}
 		}
 	}
 }
