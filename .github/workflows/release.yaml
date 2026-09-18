@@ -32,6 +32,8 @@ jobs:
     permissions:
       contents: write
       actions: read
+      id-token: write
+      packages: write
     uses: ./.github/workflows/__release-workflow.yaml
     secrets:
       dockerhub-push-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
@@ -49,3 +51,4 @@ jobs:
       release-type: ${{ inputs.release_type }}
       regenerate-manifests: true
       release-issue-number: ${{ inputs.release_issue_number }}
+      notary-repository: ${{ vars.DOCKERHUB_NOTARY_REPOSITORY }}
