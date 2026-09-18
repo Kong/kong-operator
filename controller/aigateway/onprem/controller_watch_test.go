@@ -21,19 +21,23 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 )
 
 func TestMapAIGatewayDataPlaneToOnPremAIGateway(t *testing.T) {
-	dpWithRef := func(refType aigatewayv1alpha1.ControlPlaneRefType,
-		ref *aigatewayv1alpha1.NamespacedRef) *aigatewayv1alpha1.AIGatewayDataPlane {
+	dpWithRef := func(
+		refType aigatewayv1alpha1.ControlPlaneRefType,
+		ref *aigatewayv1alpha1.NamespacedRef,
+	) *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{
-			ObjectMeta: metav1.ObjectMeta{Namespace: "default"},
+			Namespace: "default",
 			Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
-				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{Type: refType, OnPremNamespacedRef: ref},
+				ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
+					Type:                refType,
+					OnPremNamespacedRef: ref,
+				},
 			},
 		}
 	}
