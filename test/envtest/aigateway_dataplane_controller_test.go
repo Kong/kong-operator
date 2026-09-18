@@ -431,7 +431,7 @@ func setupProgrammedAIGWDP(
 
 	spec.ControlPlaneRef = &aigatewayv1alpha1.ControlPlaneRef{
 		Type:                 aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-		KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpName},
+		KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpName},
 	}
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
 		Name: aigwdpName, Namespace: ns,

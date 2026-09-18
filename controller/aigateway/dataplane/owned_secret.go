@@ -32,7 +32,7 @@ import (
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
@@ -53,23 +53,23 @@ func certificateChecksum(secret *corev1.Secret) string {
 // resolveCertificateSecret resolves the mTLS client certificate Secret for
 // the given AIGatewayDataPlane, honoring spec.certificateSecret.provisioning:
 // Manual fetches the user-referenced Secret as-is, Automatic falls back to
-// the shared operator-managed provisioning. Both only apply when aigatewaycp
-// is non-nil (a KonnectAIGateway was resolved): with no control plane to ever
-// use the certificate against, provisioning (or even just validating) one
-// would be pure waste. If aigatewaycp is nil, (op.Noop, nil, nil) is returned
-// and, if the user did configure spec.certificateSecret anyway, the mismatch
-// is surfaced via the CertificateProvisioned condition rather than silently
-// ignored; the AIGatewayDataPlane is otherwise fully manual, wired entirely
-// via spec.deployment.podTemplateSpec.
+// the shared operator-managed provisioning. Both only apply when a
+// Konnect-backed control plane is configured and resolved: the certificate is
+// the DataPlane's client identity for the outbound connection to Konnect.
+// If no control plane is configured at all, (op.Noop, nil, nil) is returned
+// and, if the user did configure spec.certificateSecret anyway, the mismatch is
+// surfaced via the CertificateProvisioned condition rather than silently ignored;
+// the AIGatewayDataPlane is otherwise fully manual, wired entirely via
+// spec.deployment.podTemplateSpec.
 func resolveCertificateSecret(
 	ctx context.Context,
 	cl client.Client,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	resolveAutomatic func(ctx context.Context, dp *aigatewayv1alpha1.AIGatewayDataPlane) (op.Result, *corev1.Secret, error),
 ) (op.Result, *corev1.Secret, error) {
 	cs := aigwdp.Spec.CertificateSecret
-	if aigatewaycp == nil {
+	if cp.Object == nil {
 		if cs != nil {
 			apimeta.SetStatusCondition(&aigwdp.Status.Conditions, metav1.Condition{
 				Type:               string(aigatewayv1alpha1.CertificateProvisionedType),
@@ -85,6 +85,10 @@ func resolveCertificateSecret(
 			// while aigatewaycp stays nil.
 			apimeta.RemoveStatusCondition(&aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType))
 		}
+		return op.Noop, nil, nil
+	}
+	if !cp.IsKonnect {
+		// On-prem control plane: no certificate is provisioned or validated.
 		return op.Noop, nil, nil
 	}
 	if isManualProvisioning(aigwdp) {

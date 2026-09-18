@@ -21755,7 +21755,20 @@ spec:
                       Must be set when type is konnectNamespacedRef; validated by CEL rules on this struct.
                     properties:
                       name:
-                        description: Name is the name of the KonnectAIGateway (controlplane) resource.
+                        description: Name is the name of the referenced resource.
+                        maxLength: 253
+                        minLength: 1
+                        type: string
+                    required:
+                    - name
+                    type: object
+                  onpremNamespacedRef:
+                    description: |-
+                      OnPremNamespacedRef references an OnPremAIGateway (controlplane) resource in the same namespace.
+                      Must be set when type is onpremNamespacedRef; validated by CEL rules on this struct.
+                    properties:
+                      name:
+                        description: Name is the name of the referenced resource.
                         maxLength: 253
                         minLength: 1
                         type: string
@@ -21763,18 +21776,21 @@ spec:
                     - name
                     type: object
                   type:
-                    description: |-
-                      Type indicates the type of the control plane being referenced.
-                      Currently only konnectNamespacedRef is supported.
+                    description: Type indicates the type of the control plane being referenced.
                     enum:
                     - konnectNamespacedRef
+                    - onpremNamespacedRef
                     type: string
                 required:
                 - type
                 type: object
                 x-kubernetes-validations:
                 - message: konnectNamespacedRef must be set when type is konnectNamespacedRef
-                  rule: 'self.type == ''konnectNamespacedRef'' ? has(self.konnectNamespacedRef) : true'
+                  rule: self.type != 'konnectNamespacedRef' || has(self.konnectNamespacedRef)
+                - message: onpremNamespacedRef must be set when type is onpremNamespacedRef
+                  rule: self.type != 'onpremNamespacedRef' || has(self.onpremNamespacedRef)
+                - message: only one of konnectNamespacedRef or onpremNamespacedRef can be set
+                  rule: '!(has(self.konnectNamespacedRef) && has(self.onpremNamespacedRef))'
               deployment:
                 description: |-
                   Deployment configures the AI Gateway Deployment: image, replicas, resources,
@@ -81089,7 +81105,6 @@ rules:
   - aigatewaymodelproviders/finalizers
   - aigatewaymodelproviders/status
   - aigatewaymodels/finalizers
-  - aigatewaymodels/status
   - aigatewaypolicies/finalizers
   - aigatewaypolicies/status
   - aigatewaysnis/finalizers
@@ -81109,6 +81124,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewaymodels/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - aigateway.konghq.com
   resources:
