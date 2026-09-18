@@ -164,6 +164,9 @@ func (r *HybridGatewayReconciler[t, tPtr]) Reconcile(ctx context.Context, obj tP
 		// Optimistic lock ensures a patch computed from a stale cached copy fails with
 		// a conflict instead of re-adding finalizers removed by other controllers.
 		if err := r.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
+			if result, ok := requeueOnConflict(err, logger, "Adding finalizer conflicted, requeueing"); ok {
+				return result, nil
+			}
 			log.Error(logger, err, "Failed to add finalizer", "finalizer", finalizerName)
 			return finalizer.HandlePatchOrUpdateError(err, logger)
 		}
