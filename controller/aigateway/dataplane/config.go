@@ -417,7 +417,7 @@ func onPremControlPlane(cp shareddataplane.ResolvedControlPlane) bool {
 // ResolvedControlPlane when the AIGatewayDataPlane has no control plane
 // reference configured.
 func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane) bool {
-	return onPremControlPlane(cp)
+	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
 }
 
 // buildAIGatewayEnvVars builds the AI Gateway environment variables for the

@@ -475,6 +475,8 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 			return fmt.Errorf("AdminAPI: Enabled must not be nil")
 		case adminAPI.ServiceNameSuffix == "":
 			return fmt.Errorf("AdminAPI: ServiceNameSuffix must not be empty")
+		case adminAPI.ServiceNameSuffix == r.Config.Service.NameSuffix:
+			return fmt.Errorf("AdminAPI: ServiceNameSuffix must be distinct from Service.NameSuffix")
 		case adminAPI.ServicePort <= 0:
 			return fmt.Errorf("AdminAPI: ServicePort must be positive")
 		case adminAPI.ServicePortName == "":
@@ -485,6 +487,10 @@ func (r *Reconciler[T, Cert]) validateConfig() error {
 			return fmt.Errorf("AdminAPI: CertificateLabelKey must not be empty")
 		case adminAPI.CertificateLabelKey == r.Config.Certificate.LabelKey:
 			return fmt.Errorf("AdminAPI: CertificateLabelKey must be distinct from Certificate.LabelKey")
+		case r.Config.Conditions.AdminCertificateProvisionedType == "":
+			return fmt.Errorf("Conditions: AdminCertificateProvisionedType must be set when AdminAPI is configured")
+		case r.Config.Conditions.AdminCertificateProvisionedReason == "":
+			return fmt.Errorf("Conditions: AdminCertificateProvisionedReason must be set when AdminAPI is configured")
 		}
 	}
 	return nil
