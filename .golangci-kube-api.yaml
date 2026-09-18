@@ -149,9 +149,13 @@ linters:
         text: 'requiredfields: field HorizontalScaling.MaxReplicas has a valid zero value'
 
       # TODO: remove this.
+      # NOTE: konnectconfigstoresync_types.go is also excluded because its Spec's required
+      #       refs are commonv1alpha1.NamespacedRef structs (whose fields use omitempty), so
+      #       the linter considers the zero value valid. The omitzero tag ensures an empty
+      #       spec is omitted and rejected by the apiserver's required check instead.
       - linters:
           - kubeapilinter
-        path: api/konnect/v1alpha1/(konnect_extension_types|konnect_cloudgateway_network_types).go
+        path: api/konnect/v1alpha1/(konnect_extension_types|konnect_cloudgateway_network_types|konnectconfigstoresync_types).go
         text: 'requiredfields: field .* has a valid zero value (.*) and should be a pointer.'
 
       # NOTE: AIGatewayDataPlaneSpec is intentionally all-optional: with no

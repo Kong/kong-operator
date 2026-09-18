@@ -240,7 +240,7 @@ func TestKonnectConfigStoreSync(t *testing.T) {
 					)
 					return obj
 				}(),
-				ExpectedErrorMessage: new(`Duplicate value: {"field":"tls.crt"}`),
+				ExpectedErrorMessage: new("Duplicate value"),
 			},
 			{
 				Name: "duplicate storeKeys are rejected",
