@@ -945,17 +945,14 @@ apiGroupVersions:
             path: github.com/Kong/sdk-konnect-go/models/operations.UpdateConfigStoreRequest
           delete:
             path: github.com/Kong/sdk-konnect-go/models/operations.DeleteConfigStoreRequest
-            requestFields:
-              # Delete the config store even when it still holds secret entries.
-              # The operator never manages those entries, so they are always
-              # written out of band and are present in the common case. With
-              # force unset Konnect rejects the delete with a 400, which would
-              # leave the CR's cleanup finalizer in place forever.
-              # NOTE: this means deleting a KonnectConfigStore deletes every
-              # secret in that store on the Konnect side. This must be called
-              # out in the user-facing docs.
-              - name: Force
-                value: sdkkonnectops.ForceTrue.ToPointer()
+            # NOTE: Force is deliberately unset: Konnect rejects deleting a
+            # config store that still holds secret entries with a 400
+            # ("can not delete config store with secrets"), and the controller
+            # reports that as a DeletionBlocked condition, keeping the CR's
+            # finalizer until the user removes the entries. This prevents an
+            # accidental store deletion from silently cascade-deleting every
+            # secret in the store (which would break every SNI referencing
+            # them). See https://github.com/Kong/kong-operator/issues/5708.
         reconciler:
           parentEntityGVK:
             kind: KonnectGatewayControlPlane

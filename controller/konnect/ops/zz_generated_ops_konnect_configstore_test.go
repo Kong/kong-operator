@@ -157,7 +157,6 @@ func TestDeleteKonnectConfigStore_UsesGeneratedSDKOps(t *testing.T) {
 			sdkkonnectops.DeleteConfigStoreRequest{
 				ControlPlaneID: parentID,
 				ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
-				Force:          sdkkonnectops.ForceTrue.ToPointer(),
 			},
 		).
 		Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil).
@@ -183,7 +182,6 @@ func TestDeleteKonnectConfigStore_PropagatesSDKError(t *testing.T) {
 			sdkkonnectops.DeleteConfigStoreRequest{
 				ControlPlaneID: parentID,
 				ConfigStoreID:  obj.GetKonnectStatus().GetKonnectID(),
-				Force:          sdkkonnectops.ForceTrue.ToPointer(),
 			},
 		).
 		Return(nil, sdkErr).
