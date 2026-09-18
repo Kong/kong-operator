@@ -184,6 +184,12 @@ combine_output() {
 }
 
 PROXY_IP="${PROXY_IP:-}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 GRPC_HOST="${GRPC_HOST:-}"
 PROXY_PORT="${PROXY_PORT:-443}"
 REQUEST_MESSAGE="${REQUEST_MESSAGE:-kong}"
@@ -201,7 +207,7 @@ elif [[ "$CALL_TIMEOUT" =~ ^[0-9]+$ ]] && (( CALL_TIMEOUT < 3 )); then
 else
   CONNECT_TIMEOUT="3"
 fi
-ADDRESS="${PROXY_IP}:${PROXY_PORT}"
+ADDRESS="${PROXY_HOST}:${PROXY_PORT}"
 
 if [[ -z "$PROXY_IP" ]]; then
   fail_with_json "PROXY_IP is required"

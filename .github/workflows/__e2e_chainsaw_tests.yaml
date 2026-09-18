@@ -19,7 +19,7 @@ jobs:
   e2e-tests-chainsaw:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 30) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} - {1}', matrix.suite, inputs.node_image_version) }}
+    name: ${{ matrix.suite }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }} - ${{ inputs.node_image_version }}
     env:
       IMG: kong-operator
       TAG: e2e-${{ github.sha }}
@@ -29,13 +29,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - suite: gateway
-            ip_family: ipv4 # placeholder for dual-stack tests coming soon
-          - suite: hybridgateway
-            ip_family: ipv4 # placeholder for dual-stack tests coming soon
-          - suite: konnect
-          - suite: aigateway
-          - suite: eventgateway
+        - suite: gateway
+        - suite: gateway
+          ip_family: ipv6
+        - suite: hybridgateway
+        - suite: hybridgateway
+          ip_family: ipv6
+        - suite: konnect
+        - suite: aigateway
+        - suite: eventgateway
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -70,12 +72,18 @@ jobs:
         # https://github.com/Kong/kubernetes-testing-framework/blob/f233236e89ebcaf79575c5084053e4196c037165/pkg/utils/github/release.go#L46
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         NODE_IMAGE_VERSION: ${{ inputs.node_image_version }}
+        IP_FAMILY: ${{ matrix.ip_family }}
       run: |
+        IPV6_FLAG=()
+        if [ "$IP_FAMILY" = "ipv6" ]; then
+          IPV6_FLAG=(--ipv6-only)
+        fi
         ktf environments create \
           --name "$CLUSTER_NAME" \
           --addon metallb \
           --addon cert-manager \
-          --kubernetes-version "$NODE_IMAGE_VERSION"
+          --kubernetes-version "$NODE_IMAGE_VERSION" \
+          "${IPV6_FLAG[@]}"
 
     # IPv6-only kind clusters on IPv4-only GitHub runners have no route to IPv4-only/legacy external
     # services (e.g. Konnect's API): the pod network can't reach the real internet on its own.
@@ -179,9 +187,6 @@ jobs:
           --set env.enable_controller_aigatewaydataplane=true \
           --wait
 
-    - name: DNS lookup for us.control-plane.konghq.tech
-      run: dig us.control-plane.konghq.tech
-
     - name: Apply chainsaw suite prerequisites
       env:
         SUITE: ${{ matrix.suite }}
@@ -196,6 +201,7 @@ jobs:
         TEST_ID: ${{ env.TEST_ID }}
         CHAINSAW_TEST_DIR: test/e2e/chainsaw/${{ matrix.suite }}
         CHAINSAW_CONFIG: test/e2e/chainsaw/.chainsaw.yaml
+        EXPECTED_DEFAULT_STREAM_LISTEN: ${{ matrix.ip_family == 'ipv6' && '[::]:8899 ssl reuseport' || '0.0.0.0:8899 ssl reuseport' }}
       run: |
         # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
@@ -204,7 +210,7 @@ jobs:
       if: always() && steps.chainsaw-tests.outcome != 'success'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: chainsaw-debug-snapshots-${{ matrix.suite }}-${{ github.run_id }}
+        name: chainsaw-debug-snapshots-${{ matrix.suite }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-${{ github.run_id }}
         path: /tmp/chainsaw/
         if-no-files-found: ignore
         retention-days: 3
