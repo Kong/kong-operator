@@ -428,6 +428,9 @@ func logRemainingFinalizerBearingObjects(
 				continue
 			}
 			for _, ns := range namespaces {
+				if ctx.Err() != nil {
+					return
+				}
 				list, err := dyn.Resource(gvr).Namespace(ns).List(ctx, metav1.ListOptions{})
 				if err != nil {
 					// Resource types no longer served (e.g. removed CRDs) are expected to fail listing.
