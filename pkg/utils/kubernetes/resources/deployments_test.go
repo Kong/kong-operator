@@ -482,6 +482,15 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 			},
 			expectedEnvAppended: nil,
 		},
+		{
+			name:   "MCP Server container gets no additional volumes, volume mounts nor env vars",
+			dpType: DataPlaneTypeMcpServer,
+			expectedVolumeMounts: []corev1.VolumeMount{
+				{Name: "existing", MountPath: "/existing"},
+			},
+			expectedVolumes:     nil,
+			expectedEnvAppended: nil,
+		},
 	}
 
 	for _, tt := range tests {
