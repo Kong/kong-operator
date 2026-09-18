@@ -60,7 +60,7 @@ func TestWithoutFinalizerStaleCopyDoesNotReAddOtherFinalizers(t *testing.T) {
 		require.NotZero(t, res)
 
 		require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(current), current))
-		require.Equal(t, []string{siblingFinalizer}, current.Finalizers)
+		require.Equal(t, []string{ownFinalizer}, current.Finalizers)
 	})
 
 	t.Run("fresh copy removes only own finalizer", func(t *testing.T) {
