@@ -900,7 +900,17 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .NestedRef}}
+{{- if .ObjectRefField}}
+	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving {{.Path}} reference: %w", err)
+	}
+	// A single ObjectRef resolves to at most one value; inject it as a plain
+	// string. An unset reference leaves the payload key absent.
+	if len(resolved{{.GoResolverName}}) > 0 {
+		payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+	}
+{{- else if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
@@ -982,6 +992,81 @@ const sdkOpsReferenceSharedDefines = `
 {{- define "sdkOpsReferenceResolvers"}}
 {{- range .References}}
 {{- $ref := .}}
+{{- if .ObjectRefField}}
+// resolve{{$.EntityName}}{{.GoResolverName}} resolves the ObjectRef at {{.Path}}
+// to a Konnect {{if .ResolvesToName}}name{{else}}ID{{end}}.
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+	ref := obj.Spec.APISpec.{{.GoFieldName}}
+	if ref == nil {
+		return nil, nil
+	}
+	switch ref.Type {
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeKonnectID:
+		if ref.KonnectID == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type konnectID but no konnectID set")
+		}
+{{- if .SameTypeRef}}
+		// A same-type reference must not point at the object itself. The
+		// object's own Konnect ID is only known after it is programmed, so
+		// this cannot be rejected at admission time: guard here instead.
+		if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: obj.GetNamespace(), Name: obj.GetName()}
+		}
+{{- end}}
+		return []string{*ref.KonnectID}, nil
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef:
+		if ref.NamespacedRef == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type namespacedRef but no namespacedRef set")
+		}
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		name := ref.NamespacedRef.Name
+{{- if not .SupportCrossNamespaceReference}}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+{{- end}}
+{{- if .SameTypeRef}}
+		// Rejected at admission time by a CEL rule on the CRD; guard here as
+		// well so the resolver stays correct when validation is bypassed.
+		if ns == obj.GetNamespace() && name == obj.GetName() {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
+		var referenced {{.DefaultKind}}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, Err: err}
+			}
+			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
+		}
+{{- if .SameParentRefField}}
+		// Same-type references embed the referenced object's Konnect ID in a
+		// request scoped to the referrer's parent, so both objects must belong
+		// to the same parent.
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			return nil, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ParentKind: "{{.SameParentRefKind}}"}
+		}
+{{- end}}
+{{- if .ResolvesToName}}
+		if referenced.GetKonnectID() == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{referenced.GetKonnectName()}, nil
+{{- else}}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{id}, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported reference type %q at {{.Path}}", ref.Type)
+	}
+}
+{{- else}}
 {{- if .NestedRef}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
@@ -1123,6 +1208,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	return resolved, nil
 }
 {{- end}}
+{{- end}}
 {{- if $.References}}
 
 // ResolveKonnectReferences resolves every CR reference declared on the spec and
@@ -1145,6 +1231,23 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	var checks []CrossNamespaceReferenceCheck
 	{{- range $.References}}
 	{{- if .SupportCrossNamespaceReference}}
+	{{- if .ObjectRefField}}
+	if ref := {{.RefsExpr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		if ns != obj.GetNamespace() {
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{$.EntityName}}"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{.DefaultKind}}"},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.NamespacedRef.Name,
+			})
+		}
+	}
+	{{- else}}
 	for _, ref := range {{.RefsExpr}} {
 		ns := ref.Namespace
 		if ns == "" {
@@ -1165,6 +1268,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			ToName:        ref.Name,
 		})
 	}
+	{{- end}}
 	{{- end}}
 	{{- end}}
 	return checks
@@ -3571,6 +3675,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
+
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 {{range .RefTypes}}
 // {{.TypeName}} references {{.KindsSentence}} in the cluster. The referenced
 // object's Konnect {{.ResolvesTo}} is used where the Konnect API accepts it.

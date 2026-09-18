@@ -10,9 +10,11 @@ import (
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 )
 
 func testGeneratedPortalPageForSDKOps() *konnectv1alpha1.PortalPage {
@@ -45,10 +47,11 @@ func TestCreatePortalPage_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalPageForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalPageRequest()
+	expectedRequest, err := obj.ToCreatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 	expectedID := "portalpage-id"
 
@@ -65,7 +68,7 @@ func TestCreatePortalPage_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createPortalPage(ctx, sdk, obj))
+	require.NoError(t, createPortalPage(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -74,10 +77,11 @@ func TestCreatePortalPage_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalPageForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreatePortalPageRequest()
+	expectedRequest, err := obj.ToCreatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -90,7 +94,7 @@ func TestCreatePortalPage_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createPortalPage(ctx, sdk, obj)
+	err = createPortalPage(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -99,11 +103,12 @@ func TestUpdatePortalPage_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalPageForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
 	obj.SetKonnectID("portalpage-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalPageRequest()
+	expectedRequest, err := obj.ToUpdatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 
 	sdk.EXPECT().
@@ -118,7 +123,7 @@ func TestUpdatePortalPage_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdatePortalPageResponse{}, nil).
 		Once()
 
-	require.NoError(t, updatePortalPage(ctx, sdk, obj))
+	require.NoError(t, updatePortalPage(ctx, cl, sdk, obj))
 }
 
 func TestUpdatePortalPage_PropagatesSDKError(t *testing.T) {
@@ -126,11 +131,12 @@ func TestUpdatePortalPage_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockPortalPagesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedPortalPageForSDKOps()
 	parentID := "parentID-1"
 	obj.SetPortalID(parentID)
 	obj.SetKonnectID("portalpage-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdatePortalPageRequest()
+	expectedRequest, err := obj.ToUpdatePortalPageRequest(ctx, cl)
 	require.NoError(t, err)
 	sdkErr := errors.New("sdk error")
 
@@ -146,7 +152,7 @@ func TestUpdatePortalPage_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updatePortalPage(ctx, sdk, obj)
+	err = updatePortalPage(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
