@@ -371,7 +371,7 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
 				return res, err
 			}
-			if cleanup && metav1.IsControlledBy(certificateSecret, ext) {
+			if cleanup {
 				if updated, res, err := patch.WithoutFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer); err != nil || !res.IsZero() || updated {
 					return res, err
 				}
