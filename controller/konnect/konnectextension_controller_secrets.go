@@ -42,7 +42,7 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 	if err := reader.List(ctx, &extensions, client.InNamespace(secret.Namespace)); err != nil {
 		return false, false, err
 	}
-	deletingOwners := make(map[k8stypes.UID]struct{})
+	pendingOwners := make(map[k8stypes.UID]struct{})
 	for _, other := range extensions.Items {
 		if other.Name == ext.Name {
 			continue
@@ -58,32 +58,32 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 			continue
 		}
 		if other.DeletionTimestamp.IsZero() || controllerutil.ContainsFinalizer(&other, consts.ExtensionInUseFinalizer) {
-			if specReferences || ownsSecret {
+			if specReferences {
 				return true, false, nil
 			}
-			// A status-only reference is transient after the peer switches
-			// Secrets. Keep this extension around to finish cleanup once the
-			// peer status catches up: the Secret mapper only indexes spec
-			// references, so the peer cannot take over cleanup of the old Secret.
-			return false, true, nil
 		}
-		deletingOwners[other.UID] = struct{}{}
+		pendingOwners[other.UID] = struct{}{}
 	}
-	if len(deletingOwners) == 0 {
+	if len(pendingOwners) == 0 {
 		return false, false, nil
 	}
 
-	// Deleting references cannot simply hand cleanup to one another: concurrent
-	// reconciles could all leave before the shared finalizers have been removed.
-	// Wait only for their certificates, so each extension can make progress by
-	// deleting its own certificates before reaching this check.
+	// Status-only references, stale owner references, and deleting references
+	// keep the Secret protected only while their certificate still uses its
+	// contents. This lets an old Secret go after a peer switches certificates,
+	// even if the peer cannot advance its status or the automatic Secret keeps
+	// a stale owner reference.
 	var certificates configurationv1alpha1.KongDataPlaneClientCertificateList
 	if err := reader.List(ctx, &certificates, client.InNamespace(secret.Namespace)); err != nil {
 		return false, false, err
 	}
+	certData := sanitizeCert(string(secret.Data[consts.TLSCRT]))
 	for _, certificate := range certificates.Items {
+		if sanitizeCert(certificate.Spec.Cert) != certData {
+			continue
+		}
 		for _, owner := range certificate.OwnerReferences {
-			if _, found := deletingOwners[owner.UID]; found {
+			if _, found := pendingOwners[owner.UID]; found {
 				return false, true, nil
 			}
 		}
