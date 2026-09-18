@@ -98,6 +98,16 @@ apiGroupVersions:
             refTypeName: AIGatewayACLRef
             resolvesTo: name
             supportCrossNamespaceReference: true
+          - path: spec.apiSpec.model.access.acls.allow.allow
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+            supportCrossNamespaceReference: true
+          - path: spec.apiSpec.model.access.acls.deny.deny
+            kinds: [AIGatewayConsumerGroup]
+            refTypeName: AIGatewayACLRef
+            resolvesTo: name
+            supportCrossNamespaceReference: true
           - path: spec.apiSpec.api.targets.provider
             kinds: [AIGatewayModelProvider]
             refTypeName: AIGatewayModelProviderRef
