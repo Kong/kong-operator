@@ -40,7 +40,7 @@ func TestKonnectExtensionSharedSecretCleanup(t *testing.T) {
 		{name: "peer still references Secret in status", deletingSecret: true, statusRefOnly: true},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
-			r, secret, first, second := sharedSecretCleanupFixture(t, tt.controlPlane, tt.deletingSecret)
+			r, secret, first, second := sharedSecretCleanupFixture(t, tt.controlPlane, tt.deletingSecret, true)
 			if tt.statusRefOnly {
 				second.Status.DataPlaneClientAuth = &konnectv1alpha2.DataPlaneClientAuthStatus{
 					CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: secret.Name},
@@ -54,28 +54,15 @@ func TestKonnectExtensionSharedSecretCleanup(t *testing.T) {
 				if !reconcileExtensionForCleanup(t, r, first) {
 					break
 				}
-				assertSharedSecretProtected(t, r.Client, secret)
+				if !tt.statusRefOnly {
+					assertSharedSecretProtected(t, r.Client, secret)
+				}
 			}
 			if tt.statusRefOnly {
-				var waiting konnectv1alpha2.KonnectExtension
-				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(first), &waiting))
-				assert.Contains(t, waiting.Finalizers, KonnectCleanupFinalizer)
-				assertSharedSecretProtected(t, r.Client, secret)
-
-				// Once the peer status catches up with its replacement Secret,
-				// the waiting extension must finish cleanup of the old Secret.
-				var surviving konnectv1alpha2.KonnectExtension
-				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &surviving))
-				surviving.Status.DataPlaneClientAuth.CertificateSecretRef.Name = "replacement-certificate"
-				require.NoError(t, r.Status().Update(t.Context(), &surviving))
-				for range 16 {
-					if !reconcileExtensionForCleanup(t, r, first) {
-						break
-					}
-				}
 				assertExtensionDeleted(t, r.Client, first)
 				var got corev1.Secret
 				assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKeyFromObject(secret), &got)))
+				var surviving konnectv1alpha2.KonnectExtension
 				require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &surviving))
 				assert.True(t, surviving.DeletionTimestamp.IsZero())
 				assert.Contains(t, surviving.Finalizers, KonnectCleanupFinalizer)
@@ -111,12 +98,15 @@ func TestKonnectExtensionSharedSecretCleanup(t *testing.T) {
 }
 
 func TestKonnectExtensionSharedSecretWaitsForPeerCertificateCleanup(t *testing.T) {
-	r, secret, first, second := sharedSecretCleanupFixture(t, false, true)
+	r, secret, first, second := sharedSecretCleanupFixture(t, false, true, true)
 	require.NoError(t, r.Delete(t.Context(), second))
 	certificate := &configurationv1alpha1.KongDataPlaneClientCertificate{
 		Name:       "peer-certificate",
 		Namespace:  secret.Namespace,
 		Finalizers: []string{KonnectCleanupFinalizer},
+		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+			Cert: string(secret.Data[consts.TLSCRT]),
+		},
 		OwnerReferences: []metav1.OwnerReference{{
 			APIVersion: konnectv1alpha2.GroupVersion.String(),
 			Kind:       konnectv1alpha2.KonnectExtensionKind,
@@ -166,7 +156,7 @@ func TestKonnectExtensionSharedSecretWaitsForPeerCertificateCleanup(t *testing.T
 }
 
 func TestKonnectExtensionSharedSecretConcurrentCleanup(t *testing.T) {
-	r, secret, first, second := sharedSecretCleanupFixture(t, false, true)
+	r, secret, first, second := sharedSecretCleanupFixture(t, false, true, true)
 	require.NoError(t, r.Delete(t.Context(), second))
 	reconcileSharedExtensionsConcurrently(t, r, first, second)
 	assertExtensionDeleted(t, r.Client, first)
@@ -176,7 +166,7 @@ func TestKonnectExtensionSharedSecretConcurrentCleanup(t *testing.T) {
 }
 
 func TestKonnectExtensionSharedSecretWaitsForOwnCertificateCleanup(t *testing.T) {
-	r, secret, first, _ := sharedSecretCleanupFixture(t, true, true)
+	r, secret, first, _ := sharedSecretCleanupFixture(t, true, true, true)
 	// Even a certificate without a Konnect ID must finish deletion before the
 	// extension can leave and hand Secret protection to an active peer.
 	certificate := &configurationv1alpha1.KongDataPlaneClientCertificate{
@@ -209,7 +199,7 @@ func TestKonnectExtensionSharedSecretWaitsForOwnCertificateCleanup(t *testing.T)
 }
 
 func TestKonnectExtensionSharedSecretLookupFailurePreservesFinalizers(t *testing.T) {
-	r, secret, first, _ := sharedSecretCleanupFixture(t, false, true)
+	r, secret, first, _ := sharedSecretCleanupFixture(t, false, true, true)
 	liveClient, ok := r.Client.(client.WithWatch)
 	require.True(t, ok)
 	lookupErr := errors.New("extension lookup failed")
@@ -234,7 +224,94 @@ func TestKonnectExtensionSharedSecretLookupFailurePreservesFinalizers(t *testing
 	assert.Contains(t, current.Finalizers, KonnectCleanupFinalizer)
 }
 
-func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret bool) (
+func TestKonnectExtensionStatusOnlyPeerWaitsForMatchingCertificate(t *testing.T) {
+	r, secret, first, second := sharedSecretCleanupFixture(t, false, true, true)
+	var peer konnectv1alpha2.KonnectExtension
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &peer))
+	peer.Status.DataPlaneClientAuth = &konnectv1alpha2.DataPlaneClientAuthStatus{
+		CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: secret.Name},
+	}
+	require.NoError(t, r.Status().Update(t.Context(), &peer))
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &peer))
+	peer.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name = "replacement-certificate"
+	require.NoError(t, r.Update(t.Context(), &peer))
+
+	certificate := &configurationv1alpha1.KongDataPlaneClientCertificate{
+		Name:      "peer-certificate",
+		Namespace: secret.Namespace,
+		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+			Cert: string(secret.Data[consts.TLSCRT]),
+		},
+		OwnerReferences: []metav1.OwnerReference{{
+			APIVersion: konnectv1alpha2.GroupVersion.String(),
+			Kind:       konnectv1alpha2.KonnectExtensionKind,
+			Name:       second.Name,
+			UID:        second.UID,
+		}},
+	}
+	require.NoError(t, r.Create(t.Context(), certificate))
+
+	for range 8 {
+		require.True(t, reconcileExtensionForCleanup(t, r, first))
+	}
+	assertSharedSecretProtected(t, r.Client, secret)
+	var waiting konnectv1alpha2.KonnectExtension
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(first), &waiting))
+	assert.Contains(t, waiting.Finalizers, KonnectCleanupFinalizer)
+
+	require.NoError(t, r.Delete(t.Context(), certificate))
+	for range 16 {
+		if !reconcileExtensionForCleanup(t, r, first) {
+			break
+		}
+	}
+	assertExtensionDeleted(t, r.Client, first)
+	var got corev1.Secret
+	assert.True(t, apierrors.IsNotFound(r.Get(t.Context(), client.ObjectKeyFromObject(secret), &got)))
+}
+
+func TestKonnectExtensionStaleSecretOwnerDoesNotBlockCleanup(t *testing.T) {
+	r, secret, first, second := sharedSecretCleanupFixture(t, false, false, true)
+	var peer konnectv1alpha2.KonnectExtension
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &peer))
+	peer.Spec.ClientAuth.CertificateSecret.CertificateSecretRef.Name = "replacement-certificate"
+	require.NoError(t, r.Update(t.Context(), &peer))
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(second), &peer))
+	peer.Status.DataPlaneClientAuth = &konnectv1alpha2.DataPlaneClientAuthStatus{
+		CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: "replacement-certificate"},
+	}
+	require.NoError(t, r.Status().Update(t.Context(), &peer))
+
+	var oldSecret corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(secret), &oldSecret))
+	oldSecret.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: konnectv1alpha2.GroupVersion.String(),
+		Kind:       konnectv1alpha2.KonnectExtensionKind,
+		Name:       second.Name,
+		UID:        second.UID,
+		Controller: new(true),
+	}}
+	require.NoError(t, r.Update(t.Context(), &oldSecret))
+
+	for range 16 {
+		if !reconcileExtensionForCleanup(t, r, first) {
+			break
+		}
+	}
+	assertExtensionDeleted(t, r.Client, first)
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(secret), &oldSecret))
+	assert.Empty(t, oldSecret.Finalizers)
+}
+
+func TestKonnectExtensionMissingControlPlanePreservesSharedSecret(t *testing.T) {
+	r, secret, first, _ := sharedSecretCleanupFixture(t, false, false, false)
+	for range 8 {
+		require.True(t, reconcileExtensionForCleanup(t, r, first))
+	}
+	assertSharedSecretProtected(t, r.Client, secret)
+}
+
+func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret, deletingFirst bool) (
 	*KonnectExtensionReconciler, *corev1.Secret, *konnectv1alpha2.KonnectExtension, *konnectv1alpha2.KonnectExtension,
 ) {
 	t.Helper()
@@ -271,7 +348,9 @@ func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret bool)
 		}
 	}
 	first, second := newExtension("extension-a"), newExtension("extension-b")
-	first.DeletionTimestamp = new(metav1.Now())
+	if deletingFirst {
+		first.DeletionTimestamp = new(metav1.Now())
+	}
 	objects := []client.Object{secret, first, second}
 	if controlPlane {
 		objects = append(objects,
