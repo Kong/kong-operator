@@ -46,7 +46,8 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date
@@ -79,7 +80,8 @@ spec:
       config:
         url: https://flights-mcp.kongair.example
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
         # Refresh the cached tools list every 5 minutes; set to 0 to refresh
         # on every client call.
         toolsCacheTtlSeconds: 300
@@ -120,7 +122,8 @@ spec:
                 name: ai-gw-mcp-consumer-group
       config:
         route:
-          paths: /mcp/flights
+          paths:
+          - /mcp/flights
         logging:
           payloads: Disabled
       labels:

@@ -7036,3 +7036,121 @@ func TestGenerateEntityOpsTestFile_MirrorAPISpecIsPointer(t *testing.T) {
 	require.Contains(t, content, "APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{")
 	require.NotContains(t, content, "APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{")
 }
+
+func TestGenerateSchemaTypes_AllOfCompositeEmitsPlainStruct(t *testing.T) {
+	// A named schema the parser flattened from a composite allOf (merged
+	// properties, e.g. AIGatewayMCPServerRouteWithMatcher) must emit a plain
+	// struct, not the map[string]string fallback.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	content := g.generateSchemaTypes(map[string]bool{
+		"RouteWithMatcher": true,
+		"Config":           true,
+	}, &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"RouteWithMatcher": {
+				Name: "RouteWithMatcher",
+				Type: "object",
+				Properties: []*parser.Property{
+					{
+						Name: "headers",
+						Type: "object",
+						AdditionalProperties: &parser.Property{
+							Type: "object",
+						},
+					},
+					{Name: "hosts", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "paths", Type: "array", Items: &parser.Property{Type: "string"}},
+					{Name: "strip_path", Type: "boolean"},
+				},
+			},
+			"Config": {
+				Name: "Config",
+				Properties: []*parser.Property{
+					{Name: "route", RefName: "RouteWithMatcher"},
+				},
+			},
+		},
+	}, nil)
+
+	assert.Contains(t, content, "type RouteWithMatcher struct")
+	assert.Contains(t, content, "Paths []string")
+	assert.Contains(t, content, "Headers map[string]apiextensionsv1.JSON")
+	assert.Contains(t, content, "StripPath string")
+	assert.Contains(t, content, "// +kubebuilder:validation:Enum=Enabled;Disabled")
+	assert.NotContains(t, content, "type RouteWithMatcher map[string]string")
+
+	_, err := format.Source([]byte(content))
+	require.NoError(t, err)
+}
+
+func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testing.T) {
+	// Bools and free-form maps nested behind $ref chains (here: listener
+	// variant -> config -> route, where route was flattened from a composite
+	// allOf) must be collected: bools for Enabled/Disabled normalization,
+	// headers as a free-form (data-keyed) subtree, and no bare free-form entry
+	// for route itself (its own keys are field names that need renaming).
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+
+	routeProps := []*parser.Property{
+		{Name: "paths", Type: "array", Items: &parser.Property{Type: "string"}},
+		{Name: "preserve_host", Type: "boolean"},
+		{Name: "strip_path", Type: "boolean"},
+		{
+			Name: "headers",
+			Type: "object",
+			AdditionalProperties: &parser.Property{
+				Type: "object",
+			},
+		},
+	}
+	parsed := &parser.ParsedSpec{
+		Schemas: map[string]*parser.Schema{
+			"RouteWithMatcher": {
+				Name:       "RouteWithMatcher",
+				Type:       "object",
+				Properties: routeProps,
+			},
+		},
+	}
+	g.parsed = parsed
+
+	schema := &parser.Schema{
+		OneOf: []*parser.Property{
+			{
+				RefName: "ListenerPolicy",
+				Properties: []*parser.Property{
+					{
+						Name: "config",
+						Type: "object",
+						Properties: []*parser.Property{
+							// Mirror ParseProperty: a $ref prop inlines the
+							// target schema's properties.
+							{Name: "route", RefName: "RouteWithMatcher", Type: "object", Properties: routeProps},
+						},
+					},
+				},
+			},
+		},
+		DiscriminatorMapping: map[string]string{
+			"listener": "ListenerPolicy",
+		},
+	}
+
+	content, err := g.generateSDKOps("MCPServer", schema, &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/operations.CreateEventGatewayListenerPolicyRequest",
+			},
+		},
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, content, `Label: "listener.config.route.preserve_host"`)
+	assert.Contains(t, content, `Label: "listener.config.route.strip_path"`)
+	// headers is data-keyed: its subtree must be exempt from key renaming...
+	assert.Contains(t, content, "\"listener\",\n\t\t\t\"config\",\n\t\t\t\"route\",\n\t\t\t\"headers\",")
+	// ...and route itself must NOT be listed as free-form (its keys are field
+	// names that need camelCase -> snake_case renaming).
+	assert.NotContains(t, content, "\"listener\",\n\t\t\t\"config\",\n\t\t\t\"route\",\n\t\t},")
+}
