@@ -17,6 +17,7 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/discovery"
 	"k8s.io/client-go/dynamic"
@@ -351,9 +352,9 @@ func reportConformanceCleanupTimeout(remaining []string, ctxErr error, logf func
 }
 
 // logRemainingFinalizerBearingObjects lists all namespaced resources in the given
-// namespaces and logs every object that still carries finalizers. Finalizer-bearing
-// objects are what keep a namespace in Terminating, so this identifies the exact
-// objects (and their finalizers) that blocked conformance cleanup.
+// namespaces and logs every object that still carries finalizers. Such objects are
+// the common cause of a namespace stuck in Terminating, but not the only one: the
+// namespaces' own finalizers are reported too.
 func logRemainingFinalizerBearingObjects(
 	ctx context.Context,
 	cfg *rest.Config,
@@ -369,6 +370,23 @@ func logRemainingFinalizerBearingObjects(
 	if err != nil {
 		logf("ERROR: failed to create dynamic client for cleanup diagnostics: %v", err)
 		return
+	}
+
+	// A namespace also stays in Terminating while it carries its own finalizers
+	// (metadata.finalizers / spec.finalizers). Report those too.
+	nsList, err := dyn.Resource(corev1.SchemeGroupVersion.WithResource("namespaces")).List(ctx, metav1.ListOptions{})
+	if err != nil {
+		logf("ERROR: failed to list namespaces for cleanup diagnostics: %v", err)
+	} else {
+		for i := range nsList.Items {
+			ns := &nsList.Items[i]
+			specFinalizers, _, _ := unstructured.NestedStringSlice(ns.Object, "spec", "finalizers")
+			finalizers := slices.Concat(ns.GetFinalizers(), specFinalizers)
+			if !slices.Contains(namespaces, ns.GetName()) || len(finalizers) == 0 {
+				continue
+			}
+			logf("REMAINING: namespace %s has finalizers %v", ns.GetName(), finalizers)
+		}
 	}
 	// Discovery requests carry no context, so diagCtx cannot bound them.
 	// Give the discovery client its own timeout so a hanging API server cannot
@@ -412,7 +430,7 @@ func logRemainingFinalizerBearingObjects(
 			for _, ns := range namespaces {
 				list, err := dyn.Resource(gvr).Namespace(ns).List(ctx, metav1.ListOptions{})
 				if err != nil {
-					// Resource types that went away with the terminating namespace are expected.
+					// Resource types no longer served (e.g. removed CRDs) are expected to fail listing.
 					if !apierrors.IsNotFound(err) {
 						logf("ERROR: failed to list %s in namespace %s: %v", gvr.String(), ns, err)
 					}
