@@ -114,6 +114,32 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate source SBOM
+        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        # An upstream Grype DB outage must never block the release: the SBOM
+        # step itself is what we consume here, the vulnerability scan is not.
+        continue-on-error: true
+        with:
+          dir: '.'
+          asset_prefix: source
+
+      - uses: ./.github/actions/setup-mise
+
+      - name: Generate image SBOM
+        env:
+          IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
+          VERSION: ${{ needs.semver.outputs.version }}
+        run: |
+          syft "registry:docker.io/${IMAGE_NAME}:${VERSION}" \
+            --platform linux/amd64 \
+            -o spdx-json=image-linux-amd64-sbom.spdx.json \
+            -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
+
+      - name: Generate SBOM checksums
+        run: sha256sum -- *-sbom.*.json > SHA256SUMS
+
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           body: |
@@ -136,6 +162,12 @@ jobs:
           # branches (e.g. 2.0.11 after 2.2.3). Only mark latest when the release commit
           # was explicitly tagged with [latest].
           makeLatest: ${{ needs.look_for_release.outputs.release_latest == 'true' && needs.look_for_release.outputs.release_type == 'release' }}
+          artifacts: |-
+            source-sbom.spdx.json
+            source-sbom.cyclonedx.json
+            image-linux-amd64-sbom.spdx.json
+            image-linux-amd64-sbom.cyclonedx.json
+            SHA256SUMS
 
   create-release-branch:
     permissions:
