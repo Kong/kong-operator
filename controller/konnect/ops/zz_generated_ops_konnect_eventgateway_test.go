@@ -7,12 +7,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
-
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func testGeneratedKonnectEventGatewayForSDKOps() *konnectv1alpha1.KonnectEventGateway {
@@ -88,6 +89,51 @@ func TestCreateKonnectEventGateway_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
+func TestCreateKonnectEventGateway_MirrorFetchesExistingByID(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockEventGatewaysSDK(t)
+	obj := testGeneratedKonnectEventGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "konnect_eventgateway-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+
+	sdk.EXPECT().
+		GetEventGateway(mock.Anything, mirrorID).
+		Return(&sdkkonnectops.GetEventGatewayResponse{
+			EventGatewayInfo: &sdkkonnectcomp.EventGatewayInfo{},
+		}, nil).
+		Once()
+
+	require.NoError(t, createKonnectEventGateway(ctx, sdk, obj))
+	require.Equal(t, mirrorID, obj.GetKonnectID())
+}
+
+func TestCreateKonnectEventGateway_MirrorFetchPropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockEventGatewaysSDK(t)
+	obj := testGeneratedKonnectEventGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "konnect_eventgateway-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		GetEventGateway(mock.Anything, mirrorID).
+		Return(nil, sdkErr).
+		Once()
+
+	err := createKonnectEventGateway(ctx, sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+
 func TestUpdateKonnectEventGateway_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
@@ -136,6 +182,18 @@ func TestUpdateKonnectEventGateway_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
+func TestUpdateKonnectEventGateway_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockEventGatewaysSDK(t)
+	obj := testGeneratedKonnectEventGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("konnect_eventgateway-id")
+
+	require.NoError(t, updateKonnectEventGateway(ctx, sdk, obj))
+}
+
 func TestDeleteKonnectEventGateway_UsesGeneratedSDKOps(t *testing.T) {
 	t.Parallel()
 
@@ -174,4 +232,16 @@ func TestDeleteKonnectEventGateway_PropagatesSDKError(t *testing.T) {
 
 	err := deleteKonnectEventGateway(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestDeleteKonnectEventGateway_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockEventGatewaysSDK(t)
+	obj := testGeneratedKonnectEventGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("konnect_eventgateway-id")
+
+	require.NoError(t, deleteKonnectEventGateway(ctx, sdk, obj))
 }

@@ -7,12 +7,13 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"testing"
-
-	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 func testGeneratedKonnectAIGatewayForSDKOps() *konnectv1alpha1.KonnectAIGateway {
@@ -89,6 +90,28 @@ func TestCreateKonnectAIGateway_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
+func TestCreateKonnectAIGateway_MirrorFetchPropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockAIGatewaysSDK(t)
+	obj := testGeneratedKonnectAIGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "konnect_aigateway-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		GetAiGateway(mock.Anything, mirrorID).
+		Return(nil, sdkErr).
+		Once()
+
+	err := createKonnectAIGateway(ctx, sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+
 func TestUpdateKonnectAIGateway_UsesSDKOpsConversion(t *testing.T) {
 	t.Parallel()
 
@@ -137,6 +160,18 @@ func TestUpdateKonnectAIGateway_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
+func TestUpdateKonnectAIGateway_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockAIGatewaysSDK(t)
+	obj := testGeneratedKonnectAIGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("konnect_aigateway-id")
+
+	require.NoError(t, updateKonnectAIGateway(ctx, sdk, obj))
+}
+
 func TestDeleteKonnectAIGateway_UsesGeneratedSDKOps(t *testing.T) {
 	t.Parallel()
 
@@ -175,4 +210,16 @@ func TestDeleteKonnectAIGateway_PropagatesSDKError(t *testing.T) {
 
 	err := deleteKonnectAIGateway(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestDeleteKonnectAIGateway_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockAIGatewaysSDK(t)
+	obj := testGeneratedKonnectAIGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("konnect_aigateway-id")
+
+	require.NoError(t, deleteKonnectAIGateway(ctx, sdk, obj))
 }

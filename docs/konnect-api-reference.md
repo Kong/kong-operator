@@ -2734,7 +2734,7 @@ MirrorKonnect contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `id` _[KonnectIDType](#common-konghq-com-v1alpha1-types-konnectidtype)_ | ID is the ID of the Konnect entity. It can be set only in case the ControlPlane type is Mirror. |
+| `id` _[KonnectIDType](#common-konghq-com-v1alpha1-types-konnectidtype)_ | ID is the ID of the existing Konnect entity to mirror. It can be set only when source is Mirror. |
 
 _Appears in:_
 
@@ -2749,7 +2749,7 @@ MirrorSpec contains the Konnect Mirror configuration.
 
 | Field | Description |
 | --- | --- |
-| `konnect` _[MirrorKonnect](#konnect-konghq-com-v1alpha2-types-mirrorkonnect)_ | Konnect contains the KonnectID of the KonnectGatewayControlPlane that is mirrored. |
+| `konnect` _[MirrorKonnect](#konnect-konghq-com-v1alpha2-types-mirrorkonnect)_ | Konnect contains the KonnectID of the existing Konnect entity that is mirrored. |
 
 _Appears in:_
 
