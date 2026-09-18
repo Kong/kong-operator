@@ -49,7 +49,7 @@ func TestWithoutFinalizerStaleCopyDoesNotReAddOtherFinalizers(t *testing.T) {
 		// Another controller removes its finalizer server-side in the meantime.
 		current := newSecret()
 		require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(current), current))
-		current.Finalizers = []string{siblingFinalizer}
+		current.Finalizers = []string{ownFinalizer}
 		require.NoError(t, fakeClient.Update(t.Context(), current))
 
 		// Removing our finalizer from the stale copy must not re-add the sibling.
