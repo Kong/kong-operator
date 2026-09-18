@@ -548,6 +548,37 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 		assert.True(t, truncated)
 	})
 
+	for _, tc := range []struct {
+		name string
+		next string
+	}{
+		{
+			name: "marks the key list truncated when the next page URI has no cursor",
+			next: "https://us.api.konghq.com/v2/control-planes/" + parentID +
+				"/config-stores/" + storeID + "/secrets",
+		},
+		{
+			name: "marks the key list truncated when the next page URI has an empty cursor",
+			next: "https://us.api.konghq.com/v2/control-planes/" + parentID +
+				"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=",
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+
+			secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+			secretsSDK.EXPECT().
+				ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
+				Return(newListResponse(&tc.next, "cert-a"), nil).
+				Once()
+
+			keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+			require.NoError(t, err)
+			assert.Equal(t, []string{"cert-a"}, keys)
+			assert.True(t, truncated)
+		})
+	}
+
 	t.Run("marks the key list truncated when the page limit is reached", func(t *testing.T) {
 		t.Parallel()
 

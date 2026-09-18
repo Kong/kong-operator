@@ -189,6 +189,10 @@ func deleteKonnectConfigStoreGuarded(
 // next-page URI as returned in Konnect list responses' meta.page.next. The SDK
 // models Next as a full URI while the list requests' PageAfter parameter
 // expects only the item cursor, so the URI must be parsed.
+//
+// A non-nil next-page URI must carry a non-empty page[after] cursor. Otherwise
+// pagination cannot continue and the caller must treat the collected keys as
+// a partial list.
 func pageAfterCursorFromNextPageURL(next *string) (string, error) {
 	if next == nil {
 		return "", nil
@@ -197,7 +201,11 @@ func pageAfterCursorFromNextPageURL(next *string) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("failed to parse next page URI %q: %w", *next, err)
 	}
-	return u.Query().Get("page[after]"), nil
+	cursor := u.Query().Get("page[after]")
+	if cursor == "" {
+		return "", fmt.Errorf("next page URI %q carries no page[after] cursor", *next)
+	}
+	return cursor, nil
 }
 
 // listConfigStoreSecretKeys lists the keys of all secret entries held by the
