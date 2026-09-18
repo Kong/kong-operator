@@ -2068,7 +2068,6 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 {{- if $.SupportsMirror}}
-{{- if not .Create.ResponseStatusFields}}
 
 func TestCreate{{.Entity}}_MirrorFetchesExistingByID(t *testing.T) {
 	t.Parallel()
@@ -2085,17 +2084,37 @@ func TestCreate{{.Entity}}_MirrorFetchesExistingByID(t *testing.T) {
 		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
 	}
 
+	resp := &sdkkonnectops.{{.Create.GetSDKMethod}}Response{
+		{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{},
+	}
+{{- range .Create.ResponseStatusFields}}
+{{- if .Fields}}
+{{- range .Fields}}
+	resp.{{$.Create.RespField}}.{{.RespPath}} = "https://test-{{.JSON}}.example.com"
+{{- end}}
+{{- else}}
+	resp.{{$.Create.RespField}}.{{.RespPath}} = new("test-{{.StatusJSON}}-value")
+{{- end}}
+{{- end}}
+
 	sdk.EXPECT().
 		{{.Create.GetSDKMethod}}(mock.Anything, mirrorID).
-		Return(&sdkkonnectops.{{.Create.GetSDKMethod}}Response{
-			{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{},
-		}, nil).
+		Return(resp, nil).
 		Once()
 
 	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
 	require.Equal(t, mirrorID, obj.GetKonnectID())
-}
+{{- range .Create.ResponseStatusFields}}
+{{- $field := .}}
+{{- if .Fields}}
+{{- range .Fields}}
+	require.Equal(t, "test-{{.JSON}}.example.com", obj.Status.{{$field.StatusField}}.{{.Name}})
 {{- end}}
+{{- else}}
+	require.Equal(t, "test-{{.StatusJSON}}-value", *obj.Status.{{.StatusField}})
+{{- end}}
+{{- end}}
+}
 
 func TestCreate{{.Entity}}_MirrorFetchPropagatesSDKError(t *testing.T) {
 	t.Parallel()
@@ -2120,6 +2139,21 @@ func TestCreate{{.Entity}}_MirrorFetchPropagatesSDKError(t *testing.T) {
 
 	err := create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestCreate{{.Entity}}_MirrorMissingMirrorBlockReturnsError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+
+	err := create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, "spec.mirror must be set for source Mirror")
 }
 {{- end}}
 {{- end}}

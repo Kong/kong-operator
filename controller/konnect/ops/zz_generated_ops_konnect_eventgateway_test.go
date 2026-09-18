@@ -101,11 +101,13 @@ func TestCreateKonnectEventGateway_MirrorFetchesExistingByID(t *testing.T) {
 		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
 	}
 
+	resp := &sdkkonnectops.GetEventGatewayResponse{
+		EventGatewayInfo: &sdkkonnectcomp.EventGatewayInfo{},
+	}
+
 	sdk.EXPECT().
 		GetEventGateway(mock.Anything, mirrorID).
-		Return(&sdkkonnectops.GetEventGatewayResponse{
-			EventGatewayInfo: &sdkkonnectcomp.EventGatewayInfo{},
-		}, nil).
+		Return(resp, nil).
 		Once()
 
 	require.NoError(t, createKonnectEventGateway(ctx, sdk, obj))
@@ -132,6 +134,18 @@ func TestCreateKonnectEventGateway_MirrorFetchPropagatesSDKError(t *testing.T) {
 
 	err := createKonnectEventGateway(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestCreateKonnectEventGateway_MirrorMissingMirrorBlockReturnsError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockEventGatewaysSDK(t)
+	obj := testGeneratedKonnectEventGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+
+	err := createKonnectEventGateway(ctx, sdk, obj)
+	require.ErrorContains(t, err, "spec.mirror must be set for source Mirror")
 }
 
 func TestUpdateKonnectEventGateway_UsesSDKOpsConversion(t *testing.T) {

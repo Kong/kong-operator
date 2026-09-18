@@ -90,6 +90,37 @@ func TestCreateKonnectAIGateway_PropagatesSDKError(t *testing.T) {
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
+func TestCreateKonnectAIGateway_MirrorFetchesExistingByID(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockAIGatewaysSDK(t)
+	obj := testGeneratedKonnectAIGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "konnect_aigateway-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+
+	resp := &sdkkonnectops.GetAiGatewayResponse{
+		AIGateway: &sdkkonnectcomp.AIGateway{},
+	}
+	resp.AIGateway.Endpoints.Configuration = "https://test-configuration.example.com"
+	resp.AIGateway.Endpoints.Telemetry = "https://test-telemetry.example.com"
+	resp.AIGateway.ConfigVersion = new("test-configVersion-value")
+
+	sdk.EXPECT().
+		GetAiGateway(mock.Anything, mirrorID).
+		Return(resp, nil).
+		Once()
+
+	require.NoError(t, createKonnectAIGateway(ctx, sdk, obj))
+	require.Equal(t, mirrorID, obj.GetKonnectID())
+	require.Equal(t, "test-configuration.example.com", obj.Status.Endpoints.Configuration)
+	require.Equal(t, "test-telemetry.example.com", obj.Status.Endpoints.Telemetry)
+	require.Equal(t, "test-configVersion-value", *obj.Status.ConfigVersion)
+}
+
 func TestCreateKonnectAIGateway_MirrorFetchPropagatesSDKError(t *testing.T) {
 	t.Parallel()
 
@@ -110,6 +141,18 @@ func TestCreateKonnectAIGateway_MirrorFetchPropagatesSDKError(t *testing.T) {
 
 	err := createKonnectAIGateway(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestCreateKonnectAIGateway_MirrorMissingMirrorBlockReturnsError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.NewMockAIGatewaysSDK(t)
+	obj := testGeneratedKonnectAIGatewayForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+
+	err := createKonnectAIGateway(ctx, sdk, obj)
+	require.ErrorContains(t, err, "spec.mirror must be set for source Mirror")
 }
 
 func TestUpdateKonnectAIGateway_UsesSDKOpsConversion(t *testing.T) {
