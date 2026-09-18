@@ -222,8 +222,9 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			}
 		}
 
-		// if the certificate does not exist, or the cleanup in Konnect has been performed, we can remove the konnect-cleanup finalizer from the konnectExtension.
-		if !certExists || ext.Status.Konnect == nil || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
+		// If the certificate does not exist, or the cleanup in Konnect has been performed,
+		// we can remove the konnect-cleanup finalizer from the KonnectExtension.
+		if !certExists || !controllerutil.ContainsFinalizer(certificateSecret, KonnectCleanupFinalizer) {
 			// remove the konnect-cleanup finalizer from the KonnectExtension.
 			updated = controllerutil.RemoveFinalizer(ext, KonnectCleanupFinalizer)
 			if updated {
@@ -343,22 +344,37 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 			)
 			if err != nil {
 				log.Debug(logger, "Couldn't delete all KongDataPlaneClientCertificates referencing not existing ControlPlane", "error", err)
-				// Continue with cleanup.
+				if cleanup {
+					return ctrl.Result{}, err
+				}
 			} else {
+				var deleteErr error
 				for _, dp := range dpCerts.Items {
 					if err := r.Delete(ctx, &dp); client.IgnoreNotFound(err) != nil {
 						log.Debug(logger,
 							"Couldn't delete KongDataPlaneClientCertificate during ControlPlane not found cleanup",
 							"dataPlaneClientCertificate", client.ObjectKeyFromObject(&dp),
 							"error", err)
+						deleteErr = errors.Join(deleteErr, err)
 					}
 				}
+				if cleanup && deleteErr != nil {
+					return ctrl.Result{}, deleteErr
+				}
+			}
+			if cleanup && len(dpCerts.Items) > 0 {
+				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
 
 			// Removed the secret in use finalizer from Secret as the ControlPlane so any
 			// certificate using this Secret has been already removed from Konnect along with the ControlPlane.
 			if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
 				return res, err
+			}
+			if cleanup && metav1.IsControlledBy(certificateSecret, ext) {
+				if updated, res, err := patch.WithoutFinalizer(ctx, r.Client, certificateSecret, KonnectCleanupFinalizer); err != nil || !res.IsZero() || updated {
+					return res, err
+				}
 			}
 
 			if !cleanup {
