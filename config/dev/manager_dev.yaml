@@ -22,6 +22,7 @@ spec:
             - -cluster-ca-secret-namespace=kong-system
             - -zap-log-level=debug
             - -zap-devel=true
+            - -enable-controller-onpremaigateway
             - -enable-controller-kongplugininstallation
             - -enable-controller-aigateway
             - -enable-controller-aigatewaydataplane
