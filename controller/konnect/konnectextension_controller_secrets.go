@@ -53,11 +53,19 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 		statusReferences := other.Status.DataPlaneClientAuth != nil &&
 			other.Status.DataPlaneClientAuth.CertificateSecretRef != nil &&
 			other.Status.DataPlaneClientAuth.CertificateSecretRef.Name == secret.Name
-		if !specReferences && !statusReferences && !k8sutils.IsOwnedByRefUID(secret, other.UID) {
+		ownsSecret := k8sutils.IsOwnedByRefUID(secret, other.UID)
+		if !specReferences && !statusReferences && !ownsSecret {
 			continue
 		}
 		if other.DeletionTimestamp.IsZero() || controllerutil.ContainsFinalizer(&other, consts.ExtensionInUseFinalizer) {
-			return true, false, nil
+			if specReferences || ownsSecret {
+				return true, false, nil
+			}
+			// A status-only reference is transient after the peer switches
+			// Secrets. Keep this extension around to finish cleanup once the
+			// peer status catches up: the Secret mapper only indexes spec
+			// references, so the peer cannot take over cleanup of the old Secret.
+			return false, true, nil
 		}
 		deletingOwners[other.UID] = struct{}{}
 	}
@@ -95,7 +103,7 @@ func (r *KonnectExtensionReconciler) finishCertificateSecretCleanup(
 		return ctrl.Result{}, err
 	}
 	if pendingCleanup {
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
 	}
 	if !inUse {
 		updated := secret.DeepCopy()
