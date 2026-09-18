@@ -58,9 +58,8 @@ type ResolvedControlPlane struct {
 	Object ControlPlaneObject
 }
 
-// IsConfigured reports whether the DataPlane has a control plane reference
-// configured and resolved.
-func (cp ResolvedControlPlane) IsConfigured() bool {
+// IsResolved reports whether the DataPlane has a control plane reference resolved.
+func (cp ResolvedControlPlane) IsResolved() bool {
 	return cp.Object != nil
 }
 
