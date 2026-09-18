@@ -1,0 +1,59 @@
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DBBackedHybridControlPlane
+metadata:
+  name: example-dbbacked-hybrid-controlplane
+spec:
+  deployment:
+    podTemplateSpec:
+      metadata:
+        labels:
+          dataplane-pod-label: example
+        annotations:
+          dataplane-pod-annotation: example
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.16
+          env:
+          - name: KONG_LOG_LEVEL
+            value: debug
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "1024Mi"
+              cpu: "1000m"
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+    license:
+      type: secretRef
+      secretRef:
+        name: example-license-secret
+        key: license
+    database:
+      host: example-database-host
+      port: 5432
+      username: example-database-user
+      password:
+        type: secretRef
+        secretRef:
+          name: example-database-password-secret
+          key: password
+      databaseName: kong
+      tls:
+        required: required
+        verify: enabled
+        version: tlsv1_3
+        trustedCertificates: []
+        verifyDepth: 5
+        clientCertificate: 
+          name: example-client-certificate-secret
+  network:
+    services:
+      adminGUI:
+        enabled: enabled
+        type: LoadBalancer
+        port: 8445
