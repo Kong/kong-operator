@@ -44,7 +44,9 @@ type KonnectConfigStoreNotEmptyError struct {
 	// Keys are the keys of the secret entries blocking the deletion, sorted
 	// alphabetically and deduplicated. Empty when the store listed no entries
 	// (e.g. they were removed between the rejected delete and the listing).
-	// Nil when listing the entries failed; see ListErr.
+	// Nil when listing failed before any entries were retrieved; see ListErr.
+	// When KeysTruncated is true, Keys contains only the entries retrieved
+	// before pagination stopped.
 	Keys []string
 	// KeysTruncated indicates that Keys is only a partial list because the
 	// listing reached its page limit or could not continue pagination.
@@ -59,6 +61,11 @@ type KonnectConfigStoreNotEmptyError struct {
 // Error implements the error interface.
 func (e KonnectConfigStoreNotEmptyError) Error() string {
 	switch {
+	case len(e.Keys) > 0 && e.KeysTruncated:
+		return fmt.Sprintf(
+			"config store %s still holds at least %d secret entries (listing incomplete), deletion blocked: %v",
+			e.ConfigStoreID, len(e.Keys), e.Err,
+		)
 	case e.ListErr != nil:
 		return fmt.Sprintf(
 			"config store %s still holds secret entries (listing them failed), deletion blocked: %v",
@@ -68,11 +75,6 @@ func (e KonnectConfigStoreNotEmptyError) Error() string {
 		return fmt.Sprintf(
 			"config store %s was reported as not empty but no secret entries were listed, deletion blocked: %v",
 			e.ConfigStoreID, e.Err,
-		)
-	case e.KeysTruncated:
-		return fmt.Sprintf(
-			"config store %s still holds at least %d secret entries, deletion blocked: %v",
-			e.ConfigStoreID, len(e.Keys), e.Err,
 		)
 	}
 	return fmt.Sprintf(
@@ -94,6 +96,22 @@ const maxKeysInDeletionBlockedMessage = 10
 // config store deletion is blocked by the secret entries it still holds, so
 // the user knows exactly what to clean up before deletion can proceed.
 func (e KonnectConfigStoreNotEmptyError) DeletionBlockedMessage() string {
+	if len(e.Keys) > 0 && e.KeysTruncated {
+		keysToReport := min(len(e.Keys), maxKeysInDeletionBlockedMessage)
+		if e.ListErr != nil {
+			return fmt.Sprintf(
+				"deletion blocked: the config store still holds at least %d secret entries; "+
+					"listing stopped before all keys could be retrieved; "+
+					"remove the entries (first %d listed keys: %v) and the deletion will proceed automatically",
+				len(e.Keys), keysToReport, e.Keys[:keysToReport],
+			)
+		}
+		return fmt.Sprintf(
+			"deletion blocked: the config store still holds at least %d secret entries; "+
+				"remove the entries (first %d listed keys: %v) and the deletion will proceed automatically",
+			len(e.Keys), keysToReport, e.Keys[:keysToReport],
+		)
+	}
 	if e.ListErr != nil {
 		return "deletion blocked: the config store still holds secret entries " +
 			"(could not list their keys); remove the entries from Konnect and the deletion will proceed automatically"
@@ -102,14 +120,6 @@ func (e KonnectConfigStoreNotEmptyError) DeletionBlockedMessage() string {
 		return "deletion blocked: Konnect rejected the deletion because the config store still holds " +
 			"secret entries, but no entries were listed (they may have just been removed); " +
 			"the deletion will be retried automatically"
-	}
-	if e.KeysTruncated {
-		keysToReport := min(len(e.Keys), maxKeysInDeletionBlockedMessage)
-		return fmt.Sprintf(
-			"deletion blocked: the config store still holds at least %d secret entries; "+
-				"remove the entries (first %d listed keys: %v) and the deletion will proceed automatically",
-			len(e.Keys), keysToReport, e.Keys[:keysToReport],
-		)
 	}
 	if len(e.Keys) <= maxKeysInDeletionBlockedMessage {
 		return fmt.Sprintf(
@@ -211,10 +221,10 @@ func listConfigStoreSecretKeys(
 			PageAfter:      pageAfter,
 		})
 		if err != nil {
-			return nil, false, err
+			return partialConfigStoreSecretKeysResult(keys, err)
 		}
 		if resp == nil || resp.ListConfigStoreSecretsResponse == nil {
-			return nil, false, ErrNilResponse
+			return partialConfigStoreSecretKeysResult(keys, ErrNilResponse)
 		}
 
 		for _, secret := range resp.ListConfigStoreSecretsResponse.Data {
@@ -254,4 +264,12 @@ func listConfigStoreSecretKeys(
 
 	slices.Sort(keys)
 	return slices.Compact(keys), truncated, nil
+}
+
+func partialConfigStoreSecretKeysResult(keys []string, err error) ([]string, bool, error) {
+	if len(keys) == 0 {
+		return nil, false, err
+	}
+	slices.Sort(keys)
+	return slices.Compact(keys), true, err
 }
