@@ -143,8 +143,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 			return ctrl.Result{}, err
 		}
 		// A bad reference or malformed entity is a user-fixable input error, not a transient
-		// failure: don't requeue with backoff. The watch on AIGatewayModel (and, eventually, its
-		// sibling entity kinds) picks the resource back up once the input changes.
+		// failure: don't requeue with backoff. Re-rendering on input changes is handled by the
+		// instance's own configuration-entity controllers via its ChangeNotifier, not by a
+		// watch on this controller.
 
 		// TODO: https://github.com/Kong/kong-operator/issues/5665
 		// return the error so controller-runtime retries with backoff and
