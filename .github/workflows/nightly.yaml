@@ -26,3 +26,79 @@ jobs:
       # Ensure manual workflow_dispatch runs produce the same 'nightly' and YYYYMMDD
       # tags as scheduled runs, so the nightly Helm chart can consume the image.
       nightly-tags: true
+
+  # Signing needs the GitHub OIDC token, so it cannot live inside
+  # __build-workflow.yaml: a reusable workflow whose job requests
+  # 'id-token: write' fails validation on any caller that cannot grant it, and
+  # pull requests from forks always get 'id-token: none'. Keeping it here
+  # confines the permission to the paths that actually publish.
+  sign-image:
+    needs: [build-push-images]
+    if: ${{ needs.build-push-images.outputs.index_digest != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # keyless cosign signing via the GitHub OIDC token
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      # Keyless: no signing key exists in this repo or in GitHub Secrets. cosign
+      # exchanges this job's GitHub OIDC token with Fulcio for a short-lived
+      # certificate and records the signing event in the public Rekor
+      # transparency log. The subject is the index digest, never the per-arch
+      # digests.
+      - name: Sign the image index
+        uses: Kong/public-shared-actions/security-actions/sign-docker-image@eb651af2c2f7ed987a3a8176d0ac32172e1d50e4 # sign-docker-image@5.1.0
+        with:
+          # The action reads only the repository part of this value, so the bare
+          # repository is enough and avoids picking one of several tags.
+          tags: docker.io/${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
+          image_digest: ${{ needs.build-push-images.outputs.index_digest }}
+          registry_username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+          registry_password: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+          signature_registry: ${{ vars.DOCKERHUB_NOTARY_REPOSITORY_NIGHTLY }}
+
+      # Fail loudly if the signature just published cannot be verified. The
+      # identity pattern is deliberately broad until the first real run shows
+      # the exact value; tighten it then.
+      - name: Verify the image index signature
+        env:
+          IMAGE: docker.io/${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
+          DIGEST: ${{ needs.build-push-images.outputs.index_digest }}
+          NOTARY_REPOSITORY: ${{ vars.DOCKERHUB_NOTARY_REPOSITORY_NIGHTLY }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NOTARY_REPOSITORY}" ]; then
+            export COSIGN_REPOSITORY="${NOTARY_REPOSITORY}"
+          fi
+          cosign verify \
+            --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${IMAGE}@${DIGEST}"
+
+  # Provenance comes from a reusable workflow, so it has to be a job rather than
+  # a step. It is deliberately NOT pinned to a commit SHA: the generator's
+  # detect-workflow step needs a tag reference to identify itself. See
+  # slsa-github-generator#3498; kong-ee and kong-mesh carry the same note.
+  image-provenance:
+    needs: [build-push-images]
+    if: ${{ needs.build-push-images.outputs.index_digest != '' }}
+    permissions:
+      contents: read
+      actions: read # the generator reads workflow run info to build provenance
+      packages: write # required for publishing provenance, see the generator's known issues
+      id-token: write # keyless signing of the provenance
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      # Must carry neither a tag nor a digest.
+      image: docker.io/${{ vars.DOCKERHUB_IMAGE_NAME_KO_NIGHTLY }}
+      digest: ${{ needs.build-push-images.outputs.index_digest }}
+      registry-username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+      provenance-repository: ${{ vars.DOCKERHUB_NOTARY_REPOSITORY_NIGHTLY }}
+      provenance-registry-username: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
+    secrets:
+      registry-password: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
+      provenance-registry-password: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_NIGHTLY }}
