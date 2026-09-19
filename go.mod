@@ -59,7 +59,7 @@ require (
 	k8s.io/apimachinery v0.37.0
 	k8s.io/cli-runtime v0.37.0
 	k8s.io/client-go v0.37.0
-	k8s.io/kube-openapi v0.0.0-20260821135717-be32def86098
+	k8s.io/kube-openapi v0.0.0-20260911184034-7970a1e230da
 	k8s.io/kubectl v0.37.0
 	k8s.io/kubernetes v1.36.4
 	oras.land/oras-go/v2 v2.6.2
@@ -316,6 +316,7 @@ require (
 	sigs.k8s.io/kustomize/api v0.21.1 // indirect
 	sigs.k8s.io/kustomize/kyaml v0.21.1 // indirect
 	sigs.k8s.io/randfill v1.0.0 // indirect
+	sigs.k8s.io/structured-merge-diff/v7 v7.0.0 // indirect
 )
 
 // The replace directives for `k8s.io/*` are required for making it possible to
