@@ -144,7 +144,7 @@
 - Security: harden containers for `MCPServerDataPlane`'s `Deployment` with
   a tight security context:
   - disallows privilege escalation
-  - drop all capabilities (except for `NET_BIND_SERVICE` to allow binding to ports < 1024)
+  - drop all capabilities
   - run as non-root user
   - read-only root filesystem
   This change enforces patching of `Deployment`s, which causes
