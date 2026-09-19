@@ -215,6 +215,16 @@ func TestKonnectExtensionCleanupWaitsForCertificateSecret(t *testing.T) {
 					Provisioning: &automatic,
 				},
 			},
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "missing-control-plane",
+						},
+					},
+				},
+			},
 		},
 	}
 	secret := &corev1.Secret{
@@ -222,6 +232,9 @@ func TestKonnectExtensionCleanupWaitsForCertificateSecret(t *testing.T) {
 		Namespace: namespace,
 		Labels: map[string]string{
 			SecretKonnectDataPlaneCertificateLabel: "true",
+		},
+		Data: map[string][]byte{
+			consts.TLSCRT: []byte("certificate"),
 		},
 		OwnerReferences: []metav1.OwnerReference{
 			{
@@ -236,9 +249,25 @@ func TestKonnectExtensionCleanupWaitsForCertificateSecret(t *testing.T) {
 			KonnectCleanupFinalizer,
 		},
 	}
+	certificate := &configurationv1alpha1.KongDataPlaneClientCertificate{
+		Name:       "pending-certificate",
+		Namespace:  namespace,
+		Finalizers: []string{KonnectCleanupFinalizer},
+		Spec: configurationv1alpha1.KongDataPlaneClientCertificateSpec{
+			Cert: "certificate",
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: konnectv1alpha2.GroupVersion.String(),
+				Kind:       konnectv1alpha2.KonnectExtensionKind,
+				Name:       ownerName,
+				UID:        ownerUID,
+			},
+		},
+	}
 	fakeClient := fake.NewClientBuilder().
 		WithScheme(scheme.Get()).
-		WithObjects(extension, secret).
+		WithObjects(extension, secret, certificate).
 		WithStatusSubresource(extension).
 		WithIndex(
 			&operatorv1beta1.DataPlane{},
@@ -250,15 +279,39 @@ func TestKonnectExtensionCleanupWaitsForCertificateSecret(t *testing.T) {
 			index.KonnectExtensionIndex,
 			func(client.Object) []string { return nil },
 		).
+		WithIndex(
+			&configurationv1alpha1.KongDataPlaneClientCertificate{},
+			index.IndexFieldKongDataPlaneClientCertificateOnKonnectExtensionOwner,
+			func(obj client.Object) []string {
+				var names []string
+				for _, owner := range obj.GetOwnerReferences() {
+					names = append(names, owner.Name)
+				}
+				return names
+			},
+		).
 		Build()
 	reconciler := KonnectExtensionReconciler{Client: fakeClient}
 
-	_, err := reconciler.Reconcile(t.Context(), extension.DeepCopy())
-	require.NoError(t, err)
+	for range 8 {
+		var current konnectv1alpha2.KonnectExtension
+		require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(extension), &current))
+		_, err := reconciler.Reconcile(t.Context(), &current)
+		require.NoError(t, err)
+	}
 
 	var got konnectv1alpha2.KonnectExtension
 	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(extension), &got))
 	assert.Contains(t, got.Finalizers, KonnectCleanupFinalizer)
+
+	var gotCertificate configurationv1alpha1.KongDataPlaneClientCertificate
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(certificate), &gotCertificate))
+	assert.False(t, gotCertificate.DeletionTimestamp.IsZero())
+
+	var gotSecret corev1.Secret
+	require.NoError(t, fakeClient.Get(t.Context(), client.ObjectKeyFromObject(secret), &gotSecret))
+	assert.Contains(t, gotSecret.Finalizers, consts.KonnectExtensionSecretInUseFinalizer)
+	assert.Contains(t, gotSecret.Finalizers, KonnectCleanupFinalizer)
 }
 
 func TestKonnectExtensionCleanupWithManualSecretAndMissingControlPlane(t *testing.T) {
