@@ -33,14 +33,14 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 	ctx context.Context,
 	ext *konnectv1alpha2.KonnectExtension,
 	secret *corev1.Secret,
-) (inUse, pendingCleanup bool, err error) {
+) (activeUser *konnectv1alpha2.KonnectExtension, pendingCleanup bool, err error) {
 	reader := r.apiReader
 	if reader == nil {
 		reader = r.Client
 	}
 	var extensions konnectv1alpha2.KonnectExtensionList
 	if err := reader.List(ctx, &extensions, client.InNamespace(secret.Namespace)); err != nil {
-		return false, false, err
+		return nil, false, err
 	}
 	pendingOwners := make(map[k8stypes.UID]struct{})
 	for _, other := range extensions.Items {
@@ -59,13 +59,13 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 		}
 		if other.DeletionTimestamp.IsZero() || controllerutil.ContainsFinalizer(&other, consts.ExtensionInUseFinalizer) {
 			if specReferences {
-				return true, false, nil
+				return &other, false, nil
 			}
 		}
 		pendingOwners[other.UID] = struct{}{}
 	}
 	if len(pendingOwners) == 0 {
-		return false, false, nil
+		return nil, false, nil
 	}
 
 	// Status-only references, stale owner references, and deleting references
@@ -75,7 +75,7 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 	// a stale owner reference.
 	var certificates configurationv1alpha1.KongDataPlaneClientCertificateList
 	if err := reader.List(ctx, &certificates, client.InNamespace(secret.Namespace)); err != nil {
-		return false, false, err
+		return nil, false, err
 	}
 	certData := sanitizeCert(string(secret.Data[consts.TLSCRT]))
 	for _, certificate := range certificates.Items {
@@ -84,11 +84,11 @@ func (r *KonnectExtensionReconciler) certificateSecretUsage(
 		}
 		for _, owner := range certificate.OwnerReferences {
 			if _, found := pendingOwners[owner.UID]; found {
-				return false, true, nil
+				return nil, true, nil
 			}
 		}
 	}
-	return false, false, nil
+	return nil, false, nil
 }
 
 // finishCertificateSecretCleanup is called after this extension's certificates
@@ -98,33 +98,106 @@ func (r *KonnectExtensionReconciler) finishCertificateSecretCleanup(
 	ext *konnectv1alpha2.KonnectExtension,
 	secret *corev1.Secret,
 ) (ctrl.Result, error) {
-	inUse, pendingCleanup, err := r.certificateSecretUsage(ctx, ext, secret)
+	requeue, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, secret)
 	if err != nil {
 		return ctrl.Result{}, err
 	}
-	if pendingCleanup {
-		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
+	if requeue != nil {
+		return *requeue, nil
 	}
-	if !inUse {
-		updated := secret.DeepCopy()
-		removedInUse := controllerutil.RemoveFinalizer(updated, consts.KonnectExtensionSecretInUseFinalizer)
-		removedCleanup := controllerutil.RemoveFinalizer(updated, KonnectCleanupFinalizer)
-		if removedInUse || removedCleanup {
-			if err := r.Patch(ctx, updated, client.MergeFromWithOptions(secret, client.MergeFromWithOptimisticLock{})); err != nil && !apierrors.IsNotFound(err) {
-				if apierrors.IsConflict(err) {
-					return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
-				}
-				return ctrl.Result{}, err
-			}
-			// Recheck owned Secrets before releasing the extension: automatic
-			// provisioning can leave more than one Secret pending cleanup.
-			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+
+	ownedSecrets, err := r.listOwnedCertificateSecrets(ctx, ext)
+	if err != nil {
+		return ctrl.Result{}, err
+	}
+	for i := range ownedSecrets {
+		ownedSecret := &ownedSecrets[i]
+		if ownedSecret.Name == secret.Name {
+			continue
+		}
+		requeue, err := r.finishOwnedCertificateSecretCleanup(ctx, ext, ownedSecret)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if requeue != nil {
+			return *requeue, nil
 		}
 	}
+
 	// This extension has finished its own cleanup. An active peer keeps the
 	// shared Secret protected without blocking deletion of this extension.
 	_, res, err := patch.WithoutFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
 	return res, client.IgnoreNotFound(err)
+}
+
+// finishOwnedCertificateSecretCleanup finishes cleanup for one Secret. When an
+// active peer still uses an automatically provisioned Secret, ownership moves
+// to that peer so garbage collection does not start deleting the shared Secret
+// with the current extension.
+func (r *KonnectExtensionReconciler) finishOwnedCertificateSecretCleanup(
+	ctx context.Context,
+	ext *konnectv1alpha2.KonnectExtension,
+	secret *corev1.Secret,
+) (*ctrl.Result, error) {
+	activeUser, pendingCleanup, err := r.certificateSecretUsage(ctx, ext, secret)
+	if err != nil {
+		return nil, err
+	}
+	if pendingCleanup {
+		return &ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithBackoff}, nil
+	}
+
+	updated := secret.DeepCopy()
+	if activeUser != nil {
+		for i := range updated.OwnerReferences {
+			owner := &updated.OwnerReferences[i]
+			if owner.UID != ext.UID {
+				continue
+			}
+			owner.Name = activeUser.Name
+			owner.UID = activeUser.UID
+			if err := r.Patch(ctx, updated, client.MergeFromWithOptions(secret, client.MergeFromWithOptimisticLock{})); err != nil && !apierrors.IsNotFound(err) {
+				if apierrors.IsConflict(err) {
+					return &ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+				}
+				return nil, err
+			}
+			return &ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+		return nil, nil
+	}
+
+	removedInUse := controllerutil.RemoveFinalizer(updated, consts.KonnectExtensionSecretInUseFinalizer)
+	removedCleanup := controllerutil.RemoveFinalizer(updated, KonnectCleanupFinalizer)
+	if !removedInUse && !removedCleanup {
+		return nil, nil
+	}
+	if err := r.Patch(ctx, updated, client.MergeFromWithOptions(secret, client.MergeFromWithOptimisticLock{})); err != nil && !apierrors.IsNotFound(err) {
+		if apierrors.IsConflict(err) {
+			return &ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+		return nil, err
+	}
+	// Re-list owned Secrets before releasing the extension: automatic
+	// provisioning can leave more than one Secret pending cleanup.
+	return &ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+}
+
+func (r *KonnectExtensionReconciler) listOwnedCertificateSecrets(
+	ctx context.Context,
+	ext *konnectv1alpha2.KonnectExtension,
+) ([]corev1.Secret, error) {
+	reader := r.apiReader
+	if reader == nil {
+		reader = r.Client
+	}
+	return k8sutils.ListSecretsForOwner(
+		ctx,
+		reader,
+		ext.UID,
+		client.InNamespace(ext.Namespace),
+		client.MatchingLabels{SecretKonnectDataPlaneCertificateLabel: "true"},
+	)
 }
 
 func listKonnectExtensionsBySecret(ctx context.Context, cl client.Client, s *corev1.Secret) ([]konnectv1alpha2.KonnectExtension, error) {

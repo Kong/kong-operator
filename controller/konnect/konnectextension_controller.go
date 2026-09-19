@@ -372,11 +372,11 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 
 			// A missing ControlPlane only releases this extension's use of the
 			// certificate. Other extensions may still use it in their ControlPlanes.
-			inUse, pendingCleanup, err := r.certificateSecretUsage(ctx, ext, certificateSecret)
+			activeUser, pendingCleanup, err := r.certificateSecretUsage(ctx, ext, certificateSecret)
 			if err != nil {
 				return ctrl.Result{}, err
 			}
-			if !inUse && !pendingCleanup {
+			if activeUser == nil && !pendingCleanup {
 				if op, res, err := enforceSecretInUseFinalizer(ctx, r.Client, certificateSecret, logger, SecretInUseEnforceRemove); err != nil || !res.IsZero() || op {
 					return res, err
 				}
