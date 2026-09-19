@@ -199,9 +199,11 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 		},
 	}
 
-	// If the data plane type is MCP Server, we don't need to
-	// add additional volumes or/and adjust environment variables.
+	// If the data plane type is MCP Server, it doesn't need
+	// any additional capabilities and add additional volumes
+	// or/and adjust environment variables.
 	if dpType == DataPlaneTypeMcpServer {
+		container.SecurityContext.Capabilities.Add = nil
 		return container, nil
 	}
 

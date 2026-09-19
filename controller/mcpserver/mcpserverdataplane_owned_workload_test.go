@@ -437,7 +437,6 @@ func Test_generateDeployment_SecurityContext(t *testing.T) {
 		RunAsGroup:               new(int64(65532)),
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
-			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
 	}
 
