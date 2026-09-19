@@ -430,20 +430,21 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 		RunAsGroup:               new(int64(65532)),
 		Capabilities: &corev1.Capabilities{
 			Drop: []corev1.Capability{"ALL"},
-			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
 	}
 
 	tests := []struct {
-		name                 string
-		dpType               DataPlaneType
-		expectedVolumeMounts []corev1.VolumeMount
-		expectedVolumes      []corev1.Volume
-		expectedEnvAppended  []corev1.EnvVar
+		name                    string
+		dpType                  DataPlaneType
+		expectedAddCapabilities []corev1.Capability
+		expectedVolumeMounts    []corev1.VolumeMount
+		expectedVolumes         []corev1.Volume
+		expectedEnvAppended     []corev1.EnvVar
 	}{
 		{
-			name:   "non-KEG container gets tmp and var-kong volumes plus KONG_PREFIX",
-			dpType: DataPlaneTypeGateway,
+			name:                    "non-KEG dataplane container gets tmp and var-kong volumes plus KONG_PREFIX",
+			dpType:                  DataPlaneTypeGateway,
+			expectedAddCapabilities: []corev1.Capability{"NET_BIND_SERVICE"},
 			expectedVolumeMounts: []corev1.VolumeMount{
 				{Name: "existing", MountPath: "/existing"},
 				{Name: "tmp", MountPath: "/tmp"},
@@ -466,8 +467,9 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 			},
 		},
 		{
-			name:   "KEG container only gets tmp volume, no var-kong and no KONG_PREFIX",
-			dpType: DataPlaneTypeKeg,
+			name:                    "KEG container only gets tmp volume, no var-kong and no KONG_PREFIX",
+			dpType:                  DataPlaneTypeKeg,
+			expectedAddCapabilities: []corev1.Capability{"NET_BIND_SERVICE"},
 			expectedVolumeMounts: []corev1.VolumeMount{
 				{Name: "existing", MountPath: "/existing"},
 				{Name: "tmp", MountPath: "/tmp"},
@@ -480,6 +482,15 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 					},
 				},
 			},
+			expectedEnvAppended: nil,
+		},
+		{
+			name:   "MCP Server container gets no additional volumes, volume mounts nor env vars",
+			dpType: DataPlaneTypeMcpServer,
+			expectedVolumeMounts: []corev1.VolumeMount{
+				{Name: "existing", MountPath: "/existing"},
+			},
+			expectedVolumes:     nil,
 			expectedEnvAppended: nil,
 		},
 	}
@@ -498,6 +509,7 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 
 			container, volumes := HardenContainerWithSecurityContext(input, tt.dpType)
 
+			expectedSecurityContext.Capabilities.Add = tt.expectedAddCapabilities
 			require.Equal(t, expectedSecurityContext, container.SecurityContext)
 			require.Equal(t, tt.expectedVolumeMounts, container.VolumeMounts)
 			require.Equal(t, tt.expectedVolumes, volumes)
