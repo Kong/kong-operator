@@ -9,12 +9,15 @@ permissions:
   contents: read
 
 jobs:
+  github-app-token:
+    uses: ./.github/workflows/__github_app_token.yaml
+    secrets: inherit
   backport:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    needs:
+    - github-app-token
     # Only react to merged PRs for security reasons.
     # See https://docs.github.com/en/actions/using-workflows/events-that-trigger-workflows#pull_request_target.
     if: >
@@ -33,4 +36,4 @@ jobs:
           egress-policy: audit
       - uses: tibdex/backport@9565281eda0731b1d20c4025c43339fb0a23812e # v2.0.4
         with:
-          github_token: ${{ secrets.PAT_GITHUB }}
+          github_token: ${{ needs.github-app-token.outputs.token }}
