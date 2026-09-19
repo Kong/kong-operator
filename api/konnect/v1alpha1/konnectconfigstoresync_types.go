@@ -283,7 +283,7 @@ type KonnectConfigStoreSyncStatus struct {
 	// +optional
 	// +kubebuilder:validation:MaxItems=64
 	// +listType=map
-	// +listMapKey=subfield
+	// +listMapKey=suffix
 	References []KonnectConfigStoreSyncReference `json:"references,omitempty"`
 
 	// EntriesSynced is the number of entries currently synced to the Config
@@ -357,21 +357,23 @@ type KonnectConfigStoreSyncEntryStatus struct {
 	ObservedUpdatedAt *metav1.Time `json:"observedUpdatedAt,omitempty"`
 }
 
-// KonnectConfigStoreSyncReference publishes the reference suffix for one JSON
-// subfield of a synced entry, so consumers can assemble a vault reference
-// string as {vault://<KongVault prefix>/<suffix>} without hand-assembling the
-// store key and subfield fragments.
+// KonnectConfigStoreSyncReference publishes the reference suffix for one
+// synced entry (or one JSON subfield of it), so consumers can assemble a
+// vault reference string as {vault://<KongVault prefix>/<suffix>} without
+// hand-assembling the store key and subfield fragments.
 type KonnectConfigStoreSyncReference struct {
-	// SubField is the JSON subfield of the Config Store entry value
-	// (e.g. "certificate" or "key" in Combined mode).
+	// SubField is the JSON subfield of the Config Store entry value. It is
+	// set for Combined mode entries ("certificate" or "key") and omitted for
+	// Split mode entries, whose raw values are referenced by store key alone.
 	//
-	// +required
+	// +optional
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=64
-	SubField string `json:"subfield"`
+	SubField string `json:"subfield,omitempty"`
 
-	// Suffix is the "<storeKey>/<subfield>" suffix of the vault reference
-	// (e.g. "mytls/certificate").
+	// Suffix is the suffix of the vault reference: "<storeKey>/<subfield>"
+	// for Combined mode entries (e.g. "mytls/certificate"), or "<storeKey>"
+	// for Split mode entries.
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
