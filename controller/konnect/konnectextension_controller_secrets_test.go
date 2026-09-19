@@ -311,6 +311,54 @@ func TestKonnectExtensionMissingControlPlanePreservesSharedSecret(t *testing.T) 
 	assertSharedSecretProtected(t, r.Client, secret)
 }
 
+func TestKonnectExtensionCleanupHandlesAllOwnedSecretsBeforeDeletion(t *testing.T) {
+	r, sharedSecret, first, second := sharedSecretCleanupFixture(t, false, false, false)
+
+	automatic := konnectv1alpha2.AutomaticSecretProvisioning
+	var deletingExtension konnectv1alpha2.KonnectExtension
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(first), &deletingExtension))
+	deletingExtension.Spec.ClientAuth.CertificateSecret.Provisioning = &automatic
+	deletingExtension.Spec.ClientAuth.CertificateSecret.CertificateSecretRef = nil
+	require.NoError(t, r.Update(t.Context(), &deletingExtension))
+	require.NoError(t, r.Delete(t.Context(), &deletingExtension))
+
+	var shared corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(sharedSecret), &shared))
+	shared.OwnerReferences = []metav1.OwnerReference{{
+		APIVersion: konnectv1alpha2.GroupVersion.String(),
+		Kind:       konnectv1alpha2.KonnectExtensionKind,
+		Name:       first.Name,
+		UID:        first.UID,
+		Controller: new(true),
+	}}
+	require.NoError(t, r.Update(t.Context(), &shared))
+
+	staleSecret := shared.DeepCopy()
+	staleSecret.ResourceVersion = ""
+	staleSecret.UID = ""
+	staleSecret.Name = "stale-owned-certificate"
+	staleSecret.Data = map[string][]byte{consts.TLSCRT: []byte("stale-certificate")}
+	require.NoError(t, r.Create(t.Context(), staleSecret))
+
+	for range 16 {
+		if !reconcileExtensionForCleanup(t, r, first) {
+			break
+		}
+	}
+	assertExtensionDeleted(t, r.Client, first)
+
+	var gotShared corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(sharedSecret), &gotShared))
+	assertSharedSecretProtected(t, r.Client, sharedSecret)
+	require.Len(t, gotShared.OwnerReferences, 1)
+	assert.Equal(t, second.Name, gotShared.OwnerReferences[0].Name)
+	assert.Equal(t, second.UID, gotShared.OwnerReferences[0].UID)
+
+	var gotStale corev1.Secret
+	require.NoError(t, r.Get(t.Context(), client.ObjectKeyFromObject(staleSecret), &gotStale))
+	assert.Empty(t, gotStale.Finalizers)
+}
+
 func sharedSecretCleanupFixture(t *testing.T, controlPlane, deletingSecret, deletingFirst bool) (
 	*KonnectExtensionReconciler, *corev1.Secret, *konnectv1alpha2.KonnectExtension, *konnectv1alpha2.KonnectExtension,
 ) {

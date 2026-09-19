@@ -261,13 +261,7 @@ func (r *KonnectExtensionReconciler) getCertificateSecret(ctx context.Context, e
 		}, certificateSecret)
 	case cleanup:
 		var secretsForOwner []corev1.Secret
-		secretsForOwner, err = k8sutils.ListSecretsForOwner(
-			ctx,
-			r.Client,
-			ext.UID,
-			client.InNamespace(ext.Namespace),
-			client.MatchingLabels{SecretKonnectDataPlaneCertificateLabel: "true"},
-		)
+		secretsForOwner, err = r.listOwnedCertificateSecrets(ctx, &ext)
 		switch {
 		case err != nil:
 		case len(secretsForOwner) == 0:
