@@ -66553,33 +66553,34 @@ spec:
                   {vault://<KongVault prefix>/<suffix>}.
                 items:
                   description: |-
-                    KonnectConfigStoreSyncReference publishes the reference suffix for one JSON
-                    subfield of a synced entry, so consumers can assemble a vault reference
-                    string as {vault://<KongVault prefix>/<suffix>} without hand-assembling the
-                    store key and subfield fragments.
+                    KonnectConfigStoreSyncReference publishes the reference suffix for one
+                    synced entry (or one JSON subfield of it), so consumers can assemble a
+                    vault reference string as {vault://<KongVault prefix>/<suffix>} without
+                    hand-assembling the store key and subfield fragments.
                   properties:
                     subfield:
                       description: |-
-                        SubField is the JSON subfield of the Config Store entry value
-                        (e.g. "certificate" or "key" in Combined mode).
+                        SubField is the JSON subfield of the Config Store entry value. It is
+                        set for Combined mode entries ("certificate" or "key") and omitted for
+                        Split mode entries, whose raw values are referenced by store key alone.
                       maxLength: 64
                       minLength: 1
                       type: string
                     suffix:
                       description: |-
-                        Suffix is the "<storeKey>/<subfield>" suffix of the vault reference
-                        (e.g. "mytls/certificate").
+                        Suffix is the suffix of the vault reference: "<storeKey>/<subfield>"
+                        for Combined mode entries (e.g. "mytls/certificate"), or "<storeKey>"
+                        for Split mode entries.
                       maxLength: 577
                       minLength: 1
                       type: string
                   required:
-                  - subfield
                   - suffix
                   type: object
                 maxItems: 64
                 type: array
                 x-kubernetes-list-map-keys:
-                - subfield
+                - suffix
                 x-kubernetes-list-type: map
               storeID:
                 description: |-

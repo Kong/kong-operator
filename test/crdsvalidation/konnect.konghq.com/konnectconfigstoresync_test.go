@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -396,6 +398,93 @@ func TestKonnectConfigStoreSync(t *testing.T) {
 				Update: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
 					obj.Spec.Split.Entries = obj.Spec.Split.Entries[:1]
 				},
+			},
+		}.RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("status validation", func(t *testing.T) {
+		common.TestCasesGroup[*konnectv1alpha1.KonnectConfigStoreSync]{
+			{
+				Name:       "valid status update is accepted",
+				TestObject: validKonnectConfigStoreSync(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status = konnectv1alpha1.KonnectConfigStoreSyncStatus{
+						StoreID:                       "5f9b1a2c-3d4e-4f50-8a6b-7c8d9e0f1a2b",
+						ControlPlaneID:                "1a2b3c4d-5e6f-4a5b-8c9d-0e1f2a3b4c5d",
+						ObservedSecretResourceVersion: "12481",
+						EntriesSynced:                 1,
+						EntriesTotal:                  1,
+						Entries: []konnectv1alpha1.KonnectConfigStoreSyncEntryStatus{
+							{
+								StoreKey:     "mytls",
+								SourceFields: []string{"tls.crt", "tls.key"},
+								Hash:         "sha256:" + strings.Repeat("ab", 32),
+								ValueBytes:   2877,
+								KeyBytes:     5,
+							},
+						},
+						References: []konnectv1alpha1.KonnectConfigStoreSyncReference{
+							{SubField: "certificate", Suffix: "mytls/certificate"},
+							{SubField: "key", Suffix: "mytls/key"},
+						},
+					}
+				},
+			},
+			{
+				Name:       "status update without conditions gets the four default conditions",
+				TestObject: validKonnectConfigStoreSync(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status = konnectv1alpha1.KonnectConfigStoreSyncStatus{
+						StoreID: "5f9b1a2c-3d4e-4f50-8a6b-7c8d9e0f1a2b",
+					}
+				},
+			},
+			{
+				Name:       "status update with fewer than four conditions is rejected",
+				TestObject: validKonnectConfigStoreSync(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status.Conditions = []metav1.Condition{
+						{Type: "ConfigStoreRefValid", Status: metav1.ConditionUnknown, Reason: "Pending", Message: "Waiting for controller", LastTransitionTime: metav1.Now()},
+						{Type: "SecretRefValid", Status: metav1.ConditionUnknown, Reason: "Pending", Message: "Waiting for controller", LastTransitionTime: metav1.Now()},
+						{Type: "PairValid", Status: metav1.ConditionUnknown, Reason: "Pending", Message: "Waiting for controller", LastTransitionTime: metav1.Now()},
+					}
+				},
+				ExpectedStatusUpdateErrorMessage: new("status.conditions"),
+			},
+			{
+				Name:       "entry hash must be a sha256 digest",
+				TestObject: validKonnectConfigStoreSync(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status.Entries = []konnectv1alpha1.KonnectConfigStoreSyncEntryStatus{
+						{
+							StoreKey:     "mytls",
+							SourceFields: []string{"tls.crt"},
+							Hash:         "plaintext-value",
+						},
+					}
+				},
+				ExpectedStatusUpdateErrorMessage: new("should match '^sha256:[0-9a-f]{64}$'"),
+			},
+			{
+				Name:       "split mode references without subfield are accepted",
+				TestObject: validKonnectConfigStoreSyncSplit(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status.References = []konnectv1alpha1.KonnectConfigStoreSyncReference{
+						{Suffix: "mytls-crt"},
+						{Suffix: "mytls-key"},
+					}
+				},
+			},
+			{
+				Name:       "duplicate reference suffixes are rejected",
+				TestObject: validKonnectConfigStoreSync(ns.Name),
+				StatusUpdate: func(obj *konnectv1alpha1.KonnectConfigStoreSync) {
+					obj.Status.References = []konnectv1alpha1.KonnectConfigStoreSyncReference{
+						{SubField: "certificate", Suffix: "mytls/certificate"},
+						{SubField: "key", Suffix: "mytls/certificate"},
+					}
+				},
+				ExpectedStatusUpdateErrorMessage: new("Duplicate value"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

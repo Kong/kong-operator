@@ -16550,17 +16550,17 @@ Allowed values:
 #### KonnectConfigStoreSyncReference
 
 
-KonnectConfigStoreSyncReference publishes the reference suffix for one JSON
-subfield of a synced entry, so consumers can assemble a vault reference
-string as {vault://<KongVault prefix>/<suffix>} without hand-assembling the
-store key and subfield fragments.
+KonnectConfigStoreSyncReference publishes the reference suffix for one
+synced entry (or one JSON subfield of it), so consumers can assemble a
+vault reference string as {vault://<KongVault prefix>/<suffix>} without
+hand-assembling the store key and subfield fragments.
 
 
 
 | Field | Description |
 | --- | --- |
-| `subfield` _string_ | SubField is the JSON subfield of the Config Store entry value (e.g. "certificate" or "key" in Combined mode). |
-| `suffix` _string_ | Suffix is the "<storeKey>/<subfield>" suffix of the vault reference (e.g. "mytls/certificate"). |
+| `subfield` _string_ | SubField is the JSON subfield of the Config Store entry value. It is set for Combined mode entries ("certificate" or "key") and omitted for Split mode entries, whose raw values are referenced by store key alone. |
+| `suffix` _string_ | Suffix is the suffix of the vault reference: "<storeKey>/<subfield>" for Combined mode entries (e.g. "mytls/certificate"), or "<storeKey>" for Split mode entries. |
 
 _Appears in:_
 
