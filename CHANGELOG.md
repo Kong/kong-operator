@@ -120,6 +120,12 @@
 - Konnect entities: Added `spec.id` in `KongCACertificate` to specify the ID of
   the created CA certificate in Konnect.
   [#5738](https://github.com/Kong/kong-operator/pull/5738)
+- Added IPv6 support for DataPlanes: Kong's proxy, admin, status and stream
+  listeners can now bind to IPv6 or dual-stack addresses, controlled by the new
+  `--ip-family` flag (`auto`, `ipv4`, `ipv6`, `dual`). The default `auto` detects
+  the cluster's IP family from the `default/kubernetes` Service at startup. If
+  detection failed, please set `--ip-family` manually.
+  [#5499](https://github.com/Kong/kong-operator/pull/5499)
 
 ### Breaking changes
 
@@ -160,6 +166,11 @@
 
 ### Fixes
 
+- KonnectExtension: complete certificate cleanup when the referenced ControlPlane
+  was deleted before extension status was persisted. Keep shared client-certificate
+  Secret finalizers while another extension still uses the Secret or has pending
+  certificate cleanup.
+  [#5774](https://github.com/Kong/kong-operator/pull/5774)
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
