@@ -28,7 +28,7 @@ func TestKonnectEventGateway(t *testing.T) {
 							Name: "test-auth",
 						},
 					},
-					APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+					APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{
 						Name: "event-control-plane",
 						Labels: konnectv1alpha1.Labels{
 							"team": konnectv1alpha1.LabelsValue(labelValue),

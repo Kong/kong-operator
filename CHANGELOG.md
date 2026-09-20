@@ -114,6 +114,9 @@
   aren't translated yet, so the rendered payload isn't a complete, pushable
   configuration on its own; pushing it to data planes is also not wired yet.
   [#5661](https://github.com/Kong/kong-operator/pull/5661)
+- `KonnectEventGateway` now supports `spec.source: Mirror`, referencing an
+  existing Konnect Event Gateway by ID (`spec.mirror.konnect.id`) instead of
+  creating one. `Origin` (the default) is unchanged.
 
 ### Breaking changes
 
