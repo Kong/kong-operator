@@ -69,7 +69,7 @@
 - Added `KonnectConfigStoreSync` CRD (`konnect.konghq.com/v1alpha1`): declares a
   one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
   only adds the API types, CEL validation and CRD; it is not reconciled yet.
-  [#5709](https://github.com/Kong/kong-operator/issues/5709)
+  [#5773](https://github.com/Kong/kong-operator/pull/5773)
 - `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
   `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
   control plane in the same namespace.
