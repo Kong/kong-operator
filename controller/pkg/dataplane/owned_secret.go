@@ -181,6 +181,9 @@ func (r *Reconciler[T, Cert]) deleteAdminCertificateSecretsIfOwned(
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "SecretDeleted", "DeleteSecret",
 			"Admin API certificate Secret %s deleted", secret.Name)
 	}
+	// NOTE: this only mutates the in-memory object. It is persisted by the
+	// single deferred applyStatus at the top of Reconcile, which runs on
+	// every exit path — do not patch the status here directly.
 	removeStatusCondition(dp, r.Config.Conditions.AdminCertificateProvisionedType)
 	return nil
 }

@@ -172,6 +172,8 @@ type DeploymentConfig[T Object] struct {
 }
 
 // ServiceConfig carries the type specific bits of an owned Service.
+// For Ingress Service, defined in Config.Service
+// For Admin Service, derived by Config.AdminAPI.serviceConfig()
 type ServiceConfig[T Object] struct {
 	// Description is the human-readable Service description used in logs,
 	// errors and events (e.g. "Ingress", "Kafka").
@@ -365,7 +367,7 @@ type Config[T Object, Cert CertificateObject] struct {
 	// Deployment configures the owned Deployment.
 	Deployment DeploymentConfig[T]
 
-	// Service configures the primary Service: the one feeding the DataPlane
+	// Service configures the Ingress Service: the one feeding the DataPlane
 	// status (SetStatusAddresses) and driving the ServiceReady condition.
 	// It is always reconciled and never removed, so Enabled does not apply
 	// to it and must be left nil.
