@@ -132,7 +132,7 @@ func testKonnectEventGateway() *konnectv1alpha1.KonnectEventGateway {
 					Name: "test-auth",
 				},
 			},
-			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+			APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{
 				Name:              "event-control-plane",
 				Description:       "Event gateway description",
 				MinRuntimeVersion: "3.8",

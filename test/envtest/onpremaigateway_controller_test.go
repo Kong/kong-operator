@@ -1,10 +1,13 @@
 package envtest
 
 import (
+	"slices"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zapcore"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -45,6 +48,9 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
 			InstancesManager: instancesMgr,
+			RestConfig:       cfg,
+			Scheme:           scheme.Get(),
+			CacheSyncTimeout: waitTime,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -93,10 +99,12 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	}, waitTime, tickTime)
 }
 
-// TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies that an AIGatewayModel
-// pointing at an OnPremAIGateway drives its rendered configuration: creating one changes
-// status.configHash, exercising the index registration, the watch on AIGatewayModel, and the
-// drift-detection loop together.
+// TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels verifies the configuration-change
+// pipeline end to end: an AIGatewayModel pointing at an OnPremAIGateway is reconciled by the
+// onpremconfig controller, which notifies the shared ChangeNotifier, which wakes the running
+// control plane instance so that it re-renders the gateway's configuration document. It also
+// verifies that deleting the model notifies the instance with the parent gateway reference
+// that the reconciler stored in its cache.
 func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Parallel()
 
@@ -115,6 +123,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 			Client:           mgr.GetClient(),
 			TypeConverter:    ssaProvider,
 			InstancesManager: instancesMgr,
+			RestConfig:       cfg,
+			Scheme:           scheme.Get(),
+			CacheSyncTimeout: waitTime,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -137,8 +148,6 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		}
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
-	hashBefore := onprem.Status.ConfigHash
-	require.NotEmpty(t, hashBefore)
 
 	t.Log("Creating the AIGatewayModelProvider the model's target references")
 	provider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
@@ -174,9 +183,12 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-model",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+			// TODO: fix this when on prem ai gateway ref is added
+			// https://github.com/Kong/kong-operator/issues/5666
 			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
+				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{
@@ -203,12 +215,47 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	}
 	require.NoError(t, cl.Create(ctx, model))
 
-	t.Log("Expecting the rendered configuration hash to change")
-	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(onprem), onprem)) {
-			return
+	// The reconciler writes no status in this setup (DataplaneClient is unset), so a model
+	// create triggers exactly one reconcile and one change notification, with no requeue
+	// after it. The log line carries no create/delete distinction, so the deletion check
+	// below only counts notifications logged after the delete.
+	countModelNotifications := func(since time.Time) (n int) {
+		for _, entry := range logs.All() {
+			if entry.Time.After(since) &&
+				entry.Message == "Received change notification" &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "name" && f.String == "test-model" }) &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "namespace" && f.String == ns.Name }) {
+				n++
+			}
 		}
-		assert.NotEqual(ct, hashBefore, onprem.Status.ConfigHash)
-		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
+		return n
+	}
+
+	// The render step runs unobserved: sendConfig only logs on failure. Assert that no
+	// render failed, so a broken instance-cache field index or a conversion failure cannot
+	// hide behind the notification checks above.
+	countSendFailures := func() (n int) {
+		for _, entry := range logs.All() {
+			if entry.Message == "Failed to send configuration" {
+				n++
+			}
+		}
+		return n
+	}
+
+	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countModelNotifications(time.Time{}))
+		assert.Zero(ct, countSendFailures())
+	}, waitTime, tickTime)
+
+	t.Log("Deleting the AIGatewayModel")
+	deleteStart := time.Now()
+	require.NoError(t, cl.Delete(ctx, model))
+
+	t.Log("Expecting the instance to receive the model's deletion notification, addressed to its parent gateway")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countModelNotifications(deleteStart))
+		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 }

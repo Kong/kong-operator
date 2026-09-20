@@ -31,6 +31,12 @@ set -o pipefail
 
 FQDN="${FQDN}"
 PROXY_IP="${PROXY_IP}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 METHOD="${METHOD}"
 ROUTE_PATH="${ROUTE_PATH:-/}"
 INSECURE="${INSECURE:-true}"
@@ -57,7 +63,7 @@ fi
 BODY_FILE=$(mktemp /tmp/curl_body.XXXXXX)
 trap 'rm -f "$BODY_FILE"' EXIT
 
-CURL_CMD="curl -s -w '%{http_code}' -X $METHOD --resolve '${FQDN}:443:${PROXY_IP}' 'https://${FQDN}${ROUTE_PATH}' -vv $INSECURE_FLAG -o $BODY_FILE"
+CURL_CMD="curl -s -w '%{http_code}' -X $METHOD --resolve '${FQDN}:443:${PROXY_HOST}' 'https://${FQDN}${ROUTE_PATH}' -vv $INSECURE_FLAG -o $BODY_FILE"
 
 # Pure shell JSON string escaping, since jq isn't available in the
 # curlimages/curl image this script runs under for in-cluster checks.

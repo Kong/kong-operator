@@ -64289,13 +64289,13 @@ spec:
                 properties:
                   konnect:
                     description: |-
-                      Konnect contains the KonnectID of the KonnectGatewayControlPlane that
+                      Konnect contains the KonnectID of the existing Konnect entity that
                       is mirrored.
                     properties:
                       id:
                         description: |-
-                          ID is the ID of the Konnect entity. It can be set only in case
-                          the ControlPlane type is Mirror.
+                          ID is the ID of the existing Konnect entity to mirror. It can be set
+                          only when source is Mirror.
                         maxLength: 36
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
@@ -66206,9 +66206,48 @@ spec:
                 required:
                 - authRef
                 type: object
+              mirror:
+                description: Mirror is the Konnect Mirror configuration, only applicable when source is Mirror.
+                properties:
+                  konnect:
+                    description: |-
+                      Konnect contains the KonnectID of the existing Konnect entity that
+                      is mirrored.
+                    properties:
+                      id:
+                        description: |-
+                          ID is the ID of the existing Konnect entity to mirror. It can be set
+                          only when source is Mirror.
+                        maxLength: 36
+                        pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
+                        type: string
+                    required:
+                    - id
+                    type: object
+                required:
+                - konnect
+                type: object
+              source:
+                default: Origin
+                description: Source represents the source type of the Konnect entity.
+                enum:
+                - Origin
+                - Mirror
+                type: string
             required:
             - konnect
             type: object
+            x-kubernetes-validations:
+            - message: spec.source is immutable
+              rule: '!has(self.source) && !has(oldSelf.source) ? true : self.source == oldSelf.source'
+            - message: mirror field must be set for type Mirror
+              rule: self.source != 'Mirror' || has(self.mirror)
+            - message: mirror field cannot be set for type Origin
+              rule: self.source != 'Origin' || !has(self.mirror)
+            - message: apiSpec must be set for type Origin
+              rule: self.source != 'Origin' || has(self.apiSpec)
+            - message: apiSpec cannot be set for type Mirror
+              rule: self.source != 'Mirror' || !has(self.apiSpec)
           status:
             description: KonnectEventGatewayStatus defines the observed state of KonnectEventGateway.
             properties:
@@ -107355,13 +107394,13 @@ spec:
                 properties:
                   konnect:
                     description: |-
-                      Konnect contains the KonnectID of the KonnectGatewayControlPlane that
+                      Konnect contains the KonnectID of the existing Konnect entity that
                       is mirrored.
                     properties:
                       id:
                         description: |-
-                          ID is the ID of the Konnect entity. It can be set only in case
-                          the ControlPlane type is Mirror.
+                          ID is the ID of the existing Konnect entity to mirror. It can be set
+                          only when source is Mirror.
                         maxLength: 36
                         pattern: ^[0-9a-f]{8}(?:\-[0-9a-f]{4}){3}-[0-9a-f]{12}$
                         type: string
@@ -107651,7 +107690,6 @@ rules:
   - aigatewaymodelproviders/finalizers
   - aigatewaymodelproviders/status
   - aigatewaymodels/finalizers
-  - aigatewaymodels/status
   - aigatewaypolicies/finalizers
   - aigatewaypolicies/status
   - aigatewaysnis/finalizers
@@ -107671,6 +107709,14 @@ rules:
   - patch
   - update
   - watch
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewaymodels/status
+  verbs:
+  - get
+  - patch
+  - update
 - apiGroups:
   - aigateway.konghq.com
   resources:

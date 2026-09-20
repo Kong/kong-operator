@@ -20,18 +20,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"time"
 
-	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/util/managedfields"
+	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
@@ -42,7 +43,6 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
-	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -63,18 +63,22 @@ type Reconciler struct {
 	// InstancesManager runs the in-process on-prem AI Gateway control plane instances, one per
 	// OnPremAIGateway resource.
 	InstancesManager *multiinstanceai.Manager
+
+	// RestConfig, Scheme and CacheSyncTimeout are passed down to each instance so it can build
+	// and run its own controller-runtime manager hosting the configuration-entity controllers.
+	RestConfig       *rest.Config
+	Scheme           *runtime.Scheme
+	CacheSyncTimeout time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&aigatewayv1alpha1.OnPremAIGateway{}).
-		// Watching AIGatewayModel only. A rename of a referenced
-		// AIGatewayModelProvider/Policy/AuthStrategy/ConsumerGroup changes the rendered payload
-		// but does not re-trigger. Add those watches when those kinds join translator.BuildDocument.
+		// Watching AIGatewayDataPlane resources to requeue the OnPremAIGateway when relevant changes occur.
 		Watches(
-			&aiconfigurationv1alpha1.AIGatewayModel{},
-			handler.EnqueueRequestsFromMapFunc(mapAIGatewayModelToOnPremAIGateway),
+			&aigatewayv1alpha1.AIGatewayDataPlane{},
+			handler.EnqueueRequestsFromMapFunc(mapAIGatewayDataPlaneToOnPremAIGateway),
 		).
 		Complete(reconcile.AsReconciler(r.Client, r))
 }
@@ -120,7 +124,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		}
 		// Requeue to ensure that we do not miss next reconciliation request in case
 		// AddFinalizer calls returned true but the update resulted in a noop.
-		return ctrl.Result{Requeue: true, RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
 	cfg, err := r.configFromSpec(ctx, logger, onprem)
@@ -139,8 +143,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 			return ctrl.Result{}, err
 		}
 		// A bad reference or malformed entity is a user-fixable input error, not a transient
-		// failure: don't requeue with backoff. The watch on AIGatewayModel (and, eventually, its
-		// sibling entity kinds) picks the resource back up once the input changes.
+		// failure: don't requeue with backoff. Re-rendering on input changes is handled by the
+		// instance's own configuration-entity controllers via its ChangeNotifier, not by a
+		// watch on this controller.
 
 		// TODO: https://github.com/Kong/kong-operator/issues/5665
 		// return the error so controller-runtime retries with backoff and
@@ -199,46 +204,34 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 	return ctrl.Result{}, nil
 }
 
-// configFromSpec builds the control plane instance configuration from the OnPremAIGateway spec:
-// its AIGatewayModels, assembled into an aigw.Document and rendered into a dbless payload.
-//
-// No CRD fields drive convert.Options yet (OnPremAIGatewaySpec is still empty; the engineering
-// brief's spec.conversion - modelSelectorSources, labelTagPrefix, strict - is a follow-up), so
-// this always renders non-strict: with only AIGatewayModel converted so far, every model's
-// dangling model_providers/policies/auth_strategies references would otherwise turn into fatal
-// errors instead of warnings.
+// configFromSpec builds the control plane instance configuration from the OnPremAIGateway spec.
+// AIGatewayModel assembly and dbless rendering live in Instance.sendConfig, which converts
+// non-strict until spec.conversion options drive convert.Options: dangling references are
+// warnings, not fatal errors.
 // TODO: https://github.com/Kong/kong-operator/issues/5569
-//
-// NOTE: this currently builds out the runtime configuration for OnPremAIGateway
-// control plane instance based on configuration CRs but it will be changed to
-// drive the startup configuration of the control plane instance when OnPremAIGateway
-// CRD spec options are added and runtime config gets moved elsewhere.
 func (r *Reconciler) configFromSpec(
 	ctx context.Context,
 	logger logr.Logger,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
 ) (multiinstanceai.Config, error) {
-	doc, err := translator.BuildDocument(ctx, r.Client, onprem)
-	if err != nil {
-		return multiinstanceai.Config{}, fmt.Errorf("building configuration document: %w", err)
-	}
-	payload, warnings, err := convert.ConvertDocumentToDBLessYAML(doc, convert.Options{Strict: false})
-	if err != nil {
-		return multiinstanceai.Config{}, fmt.Errorf("rendering dbless configuration: %w", err)
-	}
-	for _, w := range warnings {
-		// TODO: https://github.com/Kong/kong-operator/issues/5664
-		// - emit warnings as events on the OnPremAIGateway resource
-		// - emit warnings somewhere in OnPremAIGateway status
-		log.Info(logger, "AI Gateway configuration warning", "warning", w)
-	}
-	return multiinstanceai.Config{DBLessConfig: payload}, nil
+	// TODO: fill this in based on the OnPremAIGateway spec.
+	return multiinstanceai.Config{}, nil
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
 func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg multiinstanceai.Config) error {
+	// TODO: When https://github.com/Kong/kong-operator/pull/5734 is done we should
+	// handle multiple data plane Admin API services which can be associated with
+	// a single control plane - OnPremAIGateway - instance.
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
-	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(mgrID, logger, cfg)); err != nil {
+	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(
+		mgrID, logger, cfg,
+		multiinstanceai.Env{
+			RestConfig:       r.RestConfig,
+			Scheme:           r.Scheme,
+			CacheSyncTimeout: r.CacheSyncTimeout,
+		},
+	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)
 	}
 	return nil

@@ -357,7 +357,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -422,6 +422,10 @@ generate.cli-arguments-docs:
 	$(PROJECT_DIR)/scripts/cli-arguments-docs-gen/post-process-for-konghq.sh \
 		$(PROJECT_DIR)/docs/cli-arguments-for-developer-konghq-com.md \
 		$(PROJECT_DIR)/docs/cli-arguments.md
+
+.PHONY: generate.controllers-aigw
+generate.controllers-aigw:
+	go run ./hack/generators/controllers/aigw/
 
 # ------------------------------------------------------------------------------
 # Build - Manifests
@@ -590,7 +594,11 @@ docker.run.openssf:
 
 GOTESTSUM_FORMAT ?= standard-verbose
 INTEGRATION_TEST_TIMEOUT ?= "30m"
-CONFORMANCE_TEST_TIMEOUT ?= "20m"
+# The hybrid flavor of the conformance suite needs ~20m for the tests alone.
+# The timeout must also cover the up-to-5m post-suite wait for the conformance
+# namespaces to terminate (suite_test.go), or the test binary gets SIGQUIT'd
+# mid-cleanup and the job fails even when every conformance test passed.
+CONFORMANCE_TEST_TIMEOUT ?= "30m"
 E2E_TEST_TIMEOUT ?= "20m"
 _CLUSTER_VERSION ?= $(shell $(YQ) eval -r -o=json '.[0] | sub("^v"; "")' .github/supported_k8s_node_versions.yaml)
 CLUSTER_VERSION ?=$(patsubst v%,%,$(_CLUSTER_VERSION ))
@@ -1072,6 +1080,7 @@ _run:
 		go run ./cmd/main.go \
 		--no-leader-election \
 		-cluster-ca-secret-namespace kong-system \
+		-enable-controller-onpremaigateway \
 		-enable-controller-kongplugininstallation \
 		-enable-controller-aigateway \
 		-enable-controller-aigatewaydataplane \

@@ -11,13 +11,19 @@ set -o pipefail
 #   SLEEP_SECONDS: Sleep between attempts. Default: 5.
 
 PROXY_IP="${PROXY_IP}"
+# Bracket PROXY_IP for use in a host:port string when it's an IPv6 address
+# (identified by containing a colon), matching RFC 3986.
+case "$PROXY_IP" in
+  *:*) PROXY_HOST="[${PROXY_IP}]" ;;
+  *) PROXY_HOST="$PROXY_IP" ;;
+esac
 ROUTE_PATH="${ROUTE_PATH}"
 ATTEMPTS="${ATTEMPTS:-60}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-5}"
 
 out=""
 for _ in $(seq 1 "${ATTEMPTS}"); do
-  out="$(curl -sI --connect-timeout 5 --max-time 10 "http://${PROXY_IP}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz" || true)"
+  out="$(curl -sI --connect-timeout 5 --max-time 10 "http://${PROXY_HOST}${ROUTE_PATH}/response-headers?x-remove=qux&x-set=baz" || true)"
   if printf '%s' "${out}" | grep -q '200 OK' &&
      printf '%s' "${out}" | grep -q 'X-Add: bar' &&
      printf '%s' "${out}" | grep -q 'X-Set: foo' &&
