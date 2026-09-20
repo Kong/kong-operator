@@ -355,6 +355,8 @@ func Delete[
 		err = deleteKonnectDataPlaneGroupConfiguration(ctx, sdk.GetCloudGatewaysSDK(), e, sdk.GetServer().Region())
 	case *konnectv1alpha1.KonnectCloudGatewayTransitGateway:
 		err = deleteKonnectTransitGateway(ctx, sdk.GetCloudGatewaysSDK(), e)
+	case *konnectv1alpha1.KonnectConfigStore:
+		err = deleteKonnectConfigStoreGuarded(ctx, sdk.GetConfigStoresSDK(), sdk.GetConfigStoreSecretsSDK(), e)
 	case *configurationv1alpha1.KongService:
 		err = deleteService(ctx, sdk.GetServicesSDK(), e)
 	case *configurationv1alpha1.KongRoute:
@@ -410,6 +412,8 @@ func Delete[
 	if err != nil {
 		if errSDK, ok := errors.AsType[*sdkkonnecterrs.SDKError](err); ok {
 			statusCode = errSDK.StatusCode
+		} else if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
+			statusCode = int(errBadRequest.Status)
 		}
 		metricRecorder.RecordKonnectEntityOperationFailure(
 			sdk.GetServerURL(),
@@ -924,6 +928,20 @@ func getMatchingEntryFromListResponseData[
 // with each request and makes the reconciliation loop requeue the resource
 // instead of performing the backoff.
 func ClearInstanceFromError(err error) error {
+	// Some delete operations wrap the typed SDK error in a richer error that
+	// carries extra context for the reconciler (KonnectConfigStoreNotEmptyError
+	// carries the keys of the entries blocking the deletion). Keep such
+	// wrappers intact so reconcilers can act on them; the instance field of
+	// the underlying typed error is still cleared in place. This check must
+	// stay ahead of the typed-error branches below, which unwrap and would
+	// otherwise silently drop the wrapper.
+	if _, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err); ok {
+		if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
+			errBadRequest.Instance = ""
+		}
+		return err
+	}
+
 	if errBadRequest, ok := errors.AsType[*sdkkonnecterrs.BadRequestError](err); ok {
 		errBadRequest.Instance = ""
 		return errBadRequest

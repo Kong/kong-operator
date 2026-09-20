@@ -4,11 +4,14 @@ import (
 	"context"
 	"testing"
 
+	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
+	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -19,6 +22,7 @@ import (
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
@@ -162,6 +166,165 @@ func TestReconcileDeleteDoesNotDoubleDeleteOnConflict(t *testing.T) {
 	var gone konnectv1alpha1.KonnectConfigStore
 	assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), key, &gone)),
 		"finalizer must be released so the object is deleted")
+
+	factory.SDK.ConfigStoresSDK.AssertExpectations(t)
+}
+
+// TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries verifies that deleting a
+// KonnectConfigStore whose Konnect config store still holds secret entries does
+// not cascade-delete the entries: the CR keeps its finalizer and reports a
+// Programmed=False condition with reason DeletionBlocked. Once the store is
+// empty, deletion proceeds and the finalizer is released.
+func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
+	const (
+		cpKonnectID = "cp-12345"
+		csKonnectID = "config-store-12345"
+	)
+
+	apiAuth := &konnectv1alpha1.KonnectAPIAuthConfiguration{
+		Name:      "api-auth",
+		Namespace: "default",
+		Spec: konnectv1alpha1.KonnectAPIAuthConfigurationSpec{
+			Type:      konnectv1alpha1.KonnectAPIAuthTypeToken,
+			Token:     "kpat_test",
+			ServerURL: sdkmocks.SDKServerURL,
+		},
+		Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+			Conditions: []metav1.Condition{
+				{
+					Type:               konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+					Status:             metav1.ConditionTrue,
+					Reason:             konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+					LastTransitionTime: metav1.Now(),
+				},
+			},
+		},
+	}
+
+	cp := &konnectv1alpha2.KonnectGatewayControlPlane{
+		Name:      "cp",
+		Namespace: "default",
+		Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+			KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+				APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
+					Name: apiAuth.Name,
+				},
+			},
+		},
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: cpKonnectID},
+			Conditions: []metav1.Condition{
+				{
+					Type:   konnectv1alpha1.KonnectEntityProgrammedConditionType,
+					Status: metav1.ConditionTrue,
+				},
+			},
+		},
+	}
+
+	configStore := &konnectv1alpha1.KonnectConfigStore{
+		Name:       "config-store",
+		Namespace:  "default",
+		Finalizers: []string{KonnectCleanupFinalizer},
+		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
+			ControlPlaneRef: commonv1alpha1.ObjectRef{
+				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: cp.Name},
+			},
+		},
+		Status: konnectv1alpha1.KonnectConfigStoreStatus{
+			KonnectEntityStatus: konnectv1alpha1.KonnectEntityStatus{ID: csKonnectID},
+			ControlPlaneID:      &konnectv1alpha1.KonnectEntityRef{ID: cpKonnectID},
+		},
+	}
+	key := client.ObjectKeyFromObject(configStore)
+
+	cl := fake.NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(apiAuth, cp, configStore).
+		WithStatusSubresource(&konnectv1alpha1.KonnectConfigStore{}).
+		Build()
+
+	require.NoError(t, cl.Delete(t.Context(), configStore))
+
+	factory := sdkmocks.NewMockSDKFactory(t)
+	factory.SDK.ConfigStoresSDK.EXPECT().
+		DeleteConfigStore(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteConfigStoreRequest) bool {
+			return req.ControlPlaneID == cpKonnectID && req.ConfigStoreID == csKonnectID &&
+				req.Force == nil
+		})).
+		Return(nil, &sdkkonnecterrs.BadRequestError{
+			Status: 400,
+			Title:  "Bad Request",
+			Detail: "server wording is not part of the contract",
+		}).
+		Once()
+	factory.SDK.ConfigStoreSecretsSDK.EXPECT().
+		ListConfigStoreSecrets(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListConfigStoreSecretsRequest) bool {
+			return req.ControlPlaneID == cpKonnectID && req.ConfigStoreID == csKonnectID
+		})).
+		Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
+			ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{
+				Data: []sdkkonnectcomp.ConfigStoreSecret{
+					{Key: new("cert-b")},
+					{Key: new("cert-a")},
+				},
+			},
+		}, nil)
+
+	reconciler := NewKonnectEntityReconciler[konnectv1alpha1.KonnectConfigStore](
+		factory, logging.DevelopmentMode, cl,
+		WithMetricRecorder[konnectv1alpha1.KonnectConfigStore](&metricsmocks.MockRecorder{}),
+	)
+
+	// Drive Reconcile like a real controller would across several watch-triggered
+	// passes, re-reading the object each time. The blocked delete must not return
+	// an error (to avoid error-backoff degradation) but requeue on a fixed,
+	// human-scale interval until the store is empty.
+	var cur konnectv1alpha1.KonnectConfigStore
+	blocked := false
+	for range 6 {
+		require.NoError(t, cl.Get(t.Context(), key, &cur))
+		res, err := reconciler.Reconcile(t.Context(), &cur)
+		require.NoError(t, err)
+		if res.RequeueAfter == ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod {
+			blocked = true
+			break
+		}
+	}
+	require.True(t, blocked, "delete must be blocked while the config store holds entries")
+
+	// The CR must still exist with its finalizer and report the blockage.
+	require.NoError(t, cl.Get(t.Context(), key, &cur))
+	assert.Contains(t, cur.Finalizers, KonnectCleanupFinalizer, "finalizer must be kept while the store holds entries")
+	programmed := apimeta.FindStatusCondition(cur.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType)
+	require.NotNil(t, programmed, "Programmed condition must be set")
+	assert.Equal(t, metav1.ConditionFalse, programmed.Status)
+	assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked, programmed.Reason)
+	assert.Contains(t, programmed.Message, "still holds secret entries")
+	assert.NotContains(t, programmed.Message, "cert-a")
+	assert.NotContains(t, programmed.Message, "cert-b")
+
+	// Once the entries are removed, the delete succeeds and the finalizer is released.
+	factory.SDK.ConfigStoresSDK.EXPECT().
+		DeleteConfigStore(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteConfigStoreRequest) bool {
+			return req.ControlPlaneID == cpKonnectID && req.ConfigStoreID == csKonnectID
+		})).
+		Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil).
+		Once()
+
+	for range 6 {
+		if err := cl.Get(t.Context(), key, &cur); apierrors.IsNotFound(err) {
+			break
+		} else {
+			require.NoError(t, err)
+		}
+		_, err := reconciler.Reconcile(t.Context(), &cur)
+		require.NoError(t, err)
+	}
+
+	assert.True(t, apierrors.IsNotFound(cl.Get(t.Context(), key, &cur)),
+		"finalizer must be released once the store is empty")
 
 	factory.SDK.ConfigStoresSDK.AssertExpectations(t)
 }

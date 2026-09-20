@@ -21,6 +21,7 @@ import (
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/controller/konnect/ops"
 	sdkops "github.com/kong/kong-operator/v2/controller/konnect/ops/sdk"
@@ -609,6 +610,34 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 					logger.Info("rate limited by Konnect API during delete, requeueing", "retry_after", retryAfter.String())
 					return ctrl.Result{RequeueAfter: retryAfter}, nil
 				}
+
+				// If Konnect refused to delete the entity because it still holds
+				// entries (e.g. a config store with secrets), report a dedicated
+				// DeletionBlocked condition and requeue on a fixed period. The
+				// finalizer stays in place until the entries are removed and the
+				// delete succeeds.
+				if errNotEmpty, ok := errors.AsType[ops.KonnectConfigStoreNotEmptyError](err); ok {
+					if res, errStatus := patch.StatusWithCondition(
+						ctx, r.Client, ent,
+						konnectv1alpha1.KonnectEntityProgrammedConditionType,
+						metav1.ConditionFalse,
+						konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked,
+						errNotEmpty.DeletionBlockedMessage(),
+					); errStatus != nil || !res.IsZero() {
+						return res, errStatus
+					}
+					// Do not return the error: the blockage is resolved out of
+					// band in Konnect, which produces no watch event, so the
+					// default error backoff would degrade to ~16min between
+					// retries. Poll on a dedicated fixed interval: every
+					// attempt logs an error and records a failed operation
+					// metric, so the interval must stay human-scale rather
+					// than RequeueWithBackoff's few seconds.
+					return ctrl.Result{
+						RequeueAfter: ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod,
+					}, nil
+				}
+
 				if res, errStatus := patch.StatusWithCondition(
 					ctx, r.Client, ent,
 					konnectv1alpha1.KonnectEntityProgrammedConditionType,
