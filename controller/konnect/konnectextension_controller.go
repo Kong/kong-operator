@@ -46,6 +46,8 @@ import (
 type KonnectExtensionReconciler struct {
 	client.Client
 
+	// apiReader bypasses the controller-runtime cache for cleanup decisions
+	// that must observe the latest extension, certificate, and Secret state.
 	apiReader client.Reader
 
 	ControllerOptions        controller.Options
@@ -59,6 +61,8 @@ type KonnectExtensionReconciler struct {
 
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectExtensionReconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) error {
+	// Cleanup decisions must use current API server state because the cached
+	// client may still contain deleted or stale peer resources.
 	r.apiReader = mgr.GetAPIReader()
 	ls := metav1.LabelSelector{
 		// A secret must have `konghq.com/konnect-dp-cert` label to be watched by the controller.
