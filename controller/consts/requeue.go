@@ -11,7 +11,11 @@ const (
 	// e.g. external system errors.
 	RequeueWithBackoff = time.Second * 3
 
-	// KonnectConfigStoreDeletionBlockedRequeuePeriod is the interval between
-	// deletion attempts while a Konnect config store still holds secret entries.
+	// KonnectConfigStoreDeletionBlockedRequeuePeriod is the fixed interval at which
+	// deletions blocked by Konnect (e.g. a config store that still holds
+	// secret entries) are retried. The blockage is resolved out of band on
+	// human timescales and produces no watch event; polling slower than
+	// RequeueWithBackoff bounds Konnect API calls, failure metrics and error
+	// logs while the entity stays blocked.
 	KonnectConfigStoreDeletionBlockedRequeuePeriod = time.Minute
 )

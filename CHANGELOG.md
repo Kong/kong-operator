@@ -129,9 +129,9 @@
   instantly removed every stored certificate/key and broke the SNIs referencing
   them). Konnect rejects deleting a non-empty config store, so the operator now
   keeps the CR's cleanup finalizer, sets the `Programmed` condition to `False`
-  with reason `DeletionBlocked` listing the blocking entry keys, and retries on
-  a fixed interval. Deletion proceeds automatically once the entries are
-  removed from the store in Konnect.
+  with reason `DeletionBlocked`, and retries on a fixed interval. Deletion
+  proceeds automatically once the entries are removed from the store in
+  Konnect.
   Recovery: while deletion is blocked the CR stays in `Terminating` (this also
   blocks deletion of the containing namespace). Either remove the entries from
   the config store in Konnect — the deletion then proceeds on its own — or, to

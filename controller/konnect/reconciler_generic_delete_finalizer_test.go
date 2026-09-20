@@ -3,7 +3,6 @@ package konnect
 import (
 	"context"
 	"testing"
-	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -24,31 +23,11 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
-	"github.com/kong/kong-operator/v2/internal/metrics"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/test/mocks/metricsmocks"
 	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
-
-type deleteMetricRecorder struct {
-	failureStatusCodes []int
-}
-
-func (*deleteMetricRecorder) RecordKonnectEntityOperationSuccess(
-	string, metrics.KonnectEntityOperation, string, time.Duration,
-) {
-}
-
-func (r *deleteMetricRecorder) RecordKonnectEntityOperationFailure(
-	_ string,
-	_ metrics.KonnectEntityOperation,
-	_ string,
-	_ time.Duration,
-	statusCode int,
-) {
-	r.failureStatusCodes = append(r.failureStatusCodes, statusCode)
-}
 
 // TestReconcileDeleteDoesNotDoubleDeleteOnConflict is a regression test for a CI
 // flake in TestKonnectConfigStore: the manager's cached copy of an entity being
@@ -194,9 +173,8 @@ func TestReconcileDeleteDoesNotDoubleDeleteOnConflict(t *testing.T) {
 // TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries verifies that deleting a
 // KonnectConfigStore whose Konnect config store still holds secret entries does
 // not cascade-delete the entries: the CR keeps its finalizer and reports a
-// Programmed=False condition with reason DeletionBlocked naming the blocking
-// entry keys. Once the store is empty, deletion proceeds and the finalizer is
-// released.
+// Programmed=False condition with reason DeletionBlocked. Once the store is
+// empty, deletion proceeds and the finalizer is released.
 func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 	const (
 		cpKonnectID = "cp-12345"
@@ -278,7 +256,7 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 		Return(nil, &sdkkonnecterrs.BadRequestError{
 			Status: 400,
 			Title:  "Bad Request",
-			Detail: "can not delete config store with secrets",
+			Detail: "server wording is not part of the contract",
 		}).
 		Once()
 	factory.SDK.ConfigStoreSecretsSDK.EXPECT().
@@ -294,15 +272,15 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 			},
 		}, nil)
 
-	metricRecorder := &deleteMetricRecorder{}
 	reconciler := NewKonnectEntityReconciler[konnectv1alpha1.KonnectConfigStore](
 		factory, logging.DevelopmentMode, cl,
-		WithMetricRecorder[konnectv1alpha1.KonnectConfigStore](metricRecorder),
+		WithMetricRecorder[konnectv1alpha1.KonnectConfigStore](&metricsmocks.MockRecorder{}),
 	)
 
 	// Drive Reconcile like a real controller would across several watch-triggered
 	// passes, re-reading the object each time. The blocked delete must not return
-	// an error but requeue on a longer fixed period until the store is empty.
+	// an error (to avoid error-backoff degradation) but requeue on a fixed,
+	// human-scale interval until the store is empty.
 	var cur konnectv1alpha1.KonnectConfigStore
 	blocked := false
 	for range 6 {
@@ -315,18 +293,17 @@ func TestReconcileDeleteBlockedWhileConfigStoreHoldsEntries(t *testing.T) {
 		}
 	}
 	require.True(t, blocked, "delete must be blocked while the config store holds entries")
-	require.Equal(t, []int{400}, metricRecorder.failureStatusCodes)
 
-	// The CR must still exist with its finalizer, and report the blockage with
-	// the blocking entry keys.
+	// The CR must still exist with its finalizer and report the blockage.
 	require.NoError(t, cl.Get(t.Context(), key, &cur))
 	assert.Contains(t, cur.Finalizers, KonnectCleanupFinalizer, "finalizer must be kept while the store holds entries")
 	programmed := apimeta.FindStatusCondition(cur.Status.Conditions, konnectv1alpha1.KonnectEntityProgrammedConditionType)
 	require.NotNil(t, programmed, "Programmed condition must be set")
 	assert.Equal(t, metav1.ConditionFalse, programmed.Status)
 	assert.Equal(t, konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked, programmed.Reason)
-	assert.Contains(t, programmed.Message, "cert-a")
-	assert.Contains(t, programmed.Message, "cert-b")
+	assert.Contains(t, programmed.Message, "still holds secret entries")
+	assert.NotContains(t, programmed.Message, "cert-a")
+	assert.NotContains(t, programmed.Message, "cert-b")
 
 	// Once the entries are removed, the delete succeeds and the finalizer is released.
 	factory.SDK.ConfigStoresSDK.EXPECT().

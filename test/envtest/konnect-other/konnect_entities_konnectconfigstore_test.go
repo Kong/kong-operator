@@ -1,7 +1,6 @@
 package konnectother
 
 import (
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -10,8 +9,10 @@ import (
 	sdkkonnecterrs "github.com/Kong/sdk-konnect-go/models/sdkerrors"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	apiwatch "k8s.io/apimachinery/pkg/watch"
+	"k8s.io/client-go/util/retry"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
@@ -160,8 +161,8 @@ func TestKonnectConfigStore(t *testing.T) {
 	// Konnect rejects deleting a config store that still holds secret entries
 	// with a 400. The operator must not force-delete the entries (an accidental
 	// store deletion would instantly break every SNI referencing them): it keeps
-	// the cleanup finalizer, reports a DeletionBlocked condition naming the
-	// blocking entry keys, and retries until the entries are removed.
+	// the cleanup finalizer, reports a DeletionBlocked condition, and retries
+	// until the entries are removed.
 	t.Run("should block deletion while the config store holds secret entries", func(t *testing.T) {
 		const configStoreID = "config-store-with-entries"
 
@@ -203,7 +204,7 @@ func TestKonnectConfigStore(t *testing.T) {
 			Return(nil, &sdkkonnecterrs.BadRequestError{
 				Status: 400,
 				Title:  "Bad Request",
-				Detail: "can not delete config store with secrets",
+				Detail: "server wording is not part of the contract",
 			})
 		sdk.ConfigStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.DeleteConfigStoreRequest) bool {
@@ -212,21 +213,19 @@ func TestKonnectConfigStore(t *testing.T) {
 			Return(&sdkkonnectops.DeleteConfigStoreResponse{}, nil)
 		sdk.ConfigStoreSecretsSDK.EXPECT().
 			ListConfigStoreSecrets(mock.Anything, mock.MatchedBy(func(req sdkkonnectops.ListConfigStoreSecretsRequest) bool {
-				return req.ConfigStoreID == configStoreID
+				return req.ConfigStoreID == configStoreID &&
+					req.PageSize != nil && *req.PageSize == 1
 			})).
 			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
 				ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{
-					Data: []sdkkonnectcomp.ConfigStoreSecret{
-						{Key: new("cert-a")},
-						{Key: new("cert-b")},
-					},
+					Data: []sdkkonnectcomp.ConfigStoreSecret{{Key: new("cert-a")}},
 				},
 			}, nil)
 
 		t.Log("Deleting KonnectConfigStore while it still holds entries")
 		require.NoError(t, clientNamespaced.Delete(ctx, configStore))
 
-		t.Log("Waiting for KonnectConfigStore to report the DeletionBlocked condition with the blocking keys")
+		t.Log("Waiting for KonnectConfigStore to report the DeletionBlocked condition")
 		envtest.WatchFor(t, ctx, w, apiwatch.Modified, func(cs *konnectv1alpha1.KonnectConfigStore) bool {
 			if cs.GetName() != configStore.GetName() {
 				return false
@@ -237,28 +236,28 @@ func TestKonnectConfigStore(t *testing.T) {
 			}
 			return c.Status == metav1.ConditionFalse &&
 				c.Reason == konnectv1alpha1.KonnectEntityProgrammedReasonDeletionBlocked &&
-				strings.Contains(c.Message, "cert-a") &&
-				strings.Contains(c.Message, "cert-b") &&
 				controllerutil.ContainsFinalizer(cs, konnect.KonnectCleanupFinalizer)
-		}, "KonnectConfigStore should get the Programmed condition set to status=False with reason DeletionBlocked and the blocking entry keys")
+		}, "KonnectConfigStore should get the Programmed condition set to status=False with reason DeletionBlocked")
 
 		t.Log("Simulating the user removing the entries: the delete now succeeds and the CR is cleaned up")
 		blocked.Store(false)
-
-		// Removing entries in Konnect does not produce a Kubernetes watch event.
-		// Trigger a reconcile explicitly instead of making this test depend on
-		// the one-minute polling interval or a queued status update.
-		var configStoreCurrent konnectv1alpha1.KonnectConfigStore
-		require.NoError(t, clientNamespaced.Get(ctx, client.ObjectKeyFromObject(configStore), &configStoreCurrent))
-		configStoreBeforeUpdate := configStoreCurrent.DeepCopy()
-		annotations := configStoreCurrent.GetAnnotations()
-		if annotations == nil {
-			annotations = make(map[string]string)
-		}
-		annotations["test.konghq.com/config-store-entries-removed"] = "true"
-		configStoreCurrent.SetAnnotations(annotations)
-		require.NoError(t, clientNamespaced.Patch(ctx, &configStoreCurrent, client.MergeFrom(configStoreBeforeUpdate)))
-
+		// Trigger an immediate reconcile instead of waiting for the blocked-deletion
+		// requeue. Retry on conflict: the controller may patch the status concurrently.
+		// A concurrent reconcile may also have finished the deletion already; that is
+		// the goal state, so tolerate NotFound.
+		require.NoError(t, retry.RetryOnConflict(retry.DefaultRetry, func() error {
+			if err := clientNamespaced.Get(ctx, client.ObjectKeyFromObject(configStore), configStore); err != nil {
+				if apierrors.IsNotFound(err) {
+					return nil
+				}
+				return err
+			}
+			if configStore.Annotations == nil {
+				configStore.Annotations = make(map[string]string)
+			}
+			configStore.Annotations["gateway-operator.konghq.com/reconcile-after-secret-removal"] = "true"
+			return clientNamespaced.Update(ctx, configStore)
+		}))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, configStore, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoreSecretsSDK, consts.WaitTime, consts.TickTime)

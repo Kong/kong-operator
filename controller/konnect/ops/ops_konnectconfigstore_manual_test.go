@@ -2,7 +2,6 @@ package ops
 
 import (
 	"errors"
-	"fmt"
 	"testing"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
@@ -16,7 +15,7 @@ import (
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
-func TestErrorIsConfigStoreNotEmpty(t *testing.T) {
+func TestErrorIsBadRequest(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
@@ -35,54 +34,37 @@ func TestErrorIsConfigStoreNotEmpty(t *testing.T) {
 			expected: false,
 		},
 		{
-			name: "BadRequestError with not-empty detail",
-			err: &sdkkonnecterrs.BadRequestError{
-				Status: 400,
-				Title:  "Bad Request",
-				Detail: "can not delete config store with secrets",
-			},
-			expected: true,
-		},
-		{
-			name: "BadRequestError with unrelated detail",
+			name: "BadRequestError",
 			err: &sdkkonnecterrs.BadRequestError{
 				Status: 400,
 				Title:  "Bad Request",
 				Detail: "invalid name",
 			},
-			expected: false,
-		},
-		{
-			name: "SDKError 400 with not-empty body",
-			err: &sdkkonnecterrs.SDKError{
-				StatusCode: 400,
-				Body:       `{"detail":"can not delete config store with secrets"}`,
-			},
 			expected: true,
 		},
 		{
-			name: "SDKError 400 with unrelated body",
+			name: "SDKError 400",
 			err: &sdkkonnecterrs.SDKError{
 				StatusCode: 400,
 				Body:       `{"detail":"invalid name"}`,
 			},
-			expected: false,
+			expected: true,
 		},
 		{
-			name: "SDKError 500 with matching body",
+			name: "SDKError 500",
 			err: &sdkkonnecterrs.SDKError{
 				StatusCode: 500,
-				Body:       `{"detail":"can not delete config store with secrets"}`,
+				Body:       `{"detail":"server error"}`,
 			},
 			expected: false,
 		},
 		{
-			name: "wrapped BadRequestError with not-empty detail",
+			name: "wrapped BadRequestError",
 			err: KonnectOperationFailedError{
 				Op: DeleteOp,
 				Err: &sdkkonnecterrs.BadRequestError{
 					Status: 400,
-					Detail: "can not delete config store with secrets",
+					Detail: "server wording is not part of the contract",
 				},
 			},
 			expected: true,
@@ -92,7 +74,7 @@ func TestErrorIsConfigStoreNotEmpty(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			assert.Equal(t, tc.expected, ErrorIsConfigStoreNotEmpty(tc.err))
+			assert.Equal(t, tc.expected, errorIsBadRequest(tc.err))
 		})
 	}
 }
@@ -105,10 +87,10 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		storeID  = "konnect_configstore-id"
 	)
 
-	notEmptyErr := &sdkkonnecterrs.BadRequestError{
+	badRequestErr := &sdkkonnecterrs.BadRequestError{
 		Status: 400,
 		Title:  "Bad Request",
-		Detail: "can not delete config store with secrets",
+		Detail: "server wording is not part of the contract",
 	}
 
 	newObject := func() *konnectv1alpha1.KonnectConfigStore {
@@ -156,7 +138,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		require.NoError(t, deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj))
 	})
 
-	t.Run("blocked delete returns not-empty error with sorted entry keys", func(t *testing.T) {
+	t.Run("bad request with a secret entry returns not-empty error", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := t.Context()
@@ -166,7 +148,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 
 		configStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.Anything).
-			Return(nil, notEmptyErr).
+			Return(nil, badRequestErr).
 			Once()
 		secretsSDK.EXPECT().
 			ListConfigStoreSecrets(
@@ -174,13 +156,12 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 				sdkkonnectops.ListConfigStoreSecretsRequest{
 					ControlPlaneID: parentID,
 					ConfigStoreID:  storeID,
-					PageSize:       new(int64(configStoreSecretsListPageSize)),
+					PageSize:       new(int64(configStoreSecretsProbePageSize)),
 				},
 			).
 			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
 				ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{
 					Data: []sdkkonnectcomp.ConfigStoreSecret{
-						{Key: new("cert-b")},
 						{Key: new("cert-a")},
 					},
 				},
@@ -193,11 +174,43 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
 		require.True(t, ok, "expected KonnectConfigStoreNotEmptyError, got %T (%v)", err, err)
 		assert.Equal(t, storeID, errNotEmpty.ConfigStoreID)
-		assert.Equal(t, []string{"cert-a", "cert-b"}, errNotEmpty.Keys)
-		require.ErrorIs(t, err, notEmptyErr)
+		require.ErrorIs(t, err, badRequestErr)
 	})
 
-	t.Run("blocked delete with failing keys listing still reports blocked", func(t *testing.T) {
+	t.Run("SDKError 400 with a secret entry returns not-empty error", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		obj := newObject()
+		sdkErr := &sdkkonnecterrs.SDKError{
+			StatusCode: 400,
+			Body:       `{"detail":"some unrecognized wording"}`,
+		}
+
+		configStoresSDK.EXPECT().
+			DeleteConfigStore(mock.Anything, mock.Anything).
+			Return(nil, sdkErr).
+			Once()
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
+				ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{
+					Data: []sdkkonnectcomp.ConfigStoreSecret{{Key: new("cert-a")}},
+				},
+			}, nil).
+			Once()
+
+		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
+		require.Error(t, err)
+
+		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
+		require.True(t, ok, "expected KonnectConfigStoreNotEmptyError, got %T (%v)", err, err)
+		require.ErrorIs(t, errNotEmpty, sdkErr)
+	})
+
+	t.Run("bad request with no secret entries passes through untouched", func(t *testing.T) {
 		t.Parallel()
 
 		ctx := t.Context()
@@ -207,7 +220,33 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 
 		configStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.Anything).
-			Return(nil, notEmptyErr).
+			Return(nil, badRequestErr).
+			Once()
+		secretsSDK.EXPECT().
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
+			Return(&sdkkonnectops.ListConfigStoreSecretsResponse{
+				ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{},
+			}, nil).
+			Once()
+
+		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
+		require.Error(t, err)
+		_, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
+		assert.False(t, ok, "expected a non-KonnectConfigStoreNotEmptyError error")
+		require.ErrorIs(t, err, badRequestErr)
+	})
+
+	t.Run("bad request with a failing secret probe passes through untouched", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		obj := newObject()
+
+		configStoresSDK.EXPECT().
+			DeleteConfigStore(mock.Anything, mock.Anything).
+			Return(nil, badRequestErr).
 			Once()
 		secretsSDK.EXPECT().
 			ListConfigStoreSecrets(mock.Anything, mock.Anything).
@@ -216,178 +255,41 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 
 		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
 		require.Error(t, err)
-
-		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
-		require.True(t, ok, "expected KonnectConfigStoreNotEmptyError, got %T (%v)", err, err)
-		assert.Nil(t, errNotEmpty.Keys)
-		require.Error(t, errNotEmpty.ListErr)
-		assert.Contains(t, errNotEmpty.ListErr.Error(), "list boom")
-		assert.Contains(t, err.Error(), "listing them failed")
-	})
-
-	t.Run("blocked delete with nil keys list response still reports blocked", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := t.Context()
-		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
-		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		obj := newObject()
-
-		configStoresSDK.EXPECT().
-			DeleteConfigStore(mock.Anything, mock.Anything).
-			Return(nil, notEmptyErr).
-			Once()
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, mock.Anything).
-			Return(nil, nil).
-			Once()
-
-		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
-		require.Error(t, err)
-
-		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
-		require.True(t, ok, "expected KonnectConfigStoreNotEmptyError, got %T (%v)", err, err)
-		require.ErrorIs(t, errNotEmpty.ListErr, ErrNilResponse)
-		assert.Nil(t, errNotEmpty.Keys)
-	})
-
-	t.Run("unrelated 400 error passes through untouched", func(t *testing.T) {
-		t.Parallel()
-
-		ctx := t.Context()
-		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
-		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		obj := newObject()
-
-		unrelatedErr := &sdkkonnecterrs.BadRequestError{
-			Status: 400,
-			Title:  "Bad Request",
-			Detail: "some other validation failure",
-		}
-		configStoresSDK.EXPECT().
-			DeleteConfigStore(mock.Anything, mock.Anything).
-			Return(nil, unrelatedErr).
-			Once()
-
-		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
-		require.Error(t, err)
 		_, ok := errors.AsType[KonnectConfigStoreNotEmptyError](err)
-		assert.False(t, ok, "expected a non-KonnectConfigStoreNotEmptyError error")
-		require.ErrorIs(t, err, unrelatedErr)
+		assert.False(t, ok, "expected the original bad request")
+		require.ErrorIs(t, err, badRequestErr)
+	})
+
+	t.Run("non-bad-request error does not probe secret entries", func(t *testing.T) {
+		t.Parallel()
+
+		ctx := t.Context()
+		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
+		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
+		obj := newObject()
+		serverErr := errors.New("server error")
+
+		configStoresSDK.EXPECT().
+			DeleteConfigStore(mock.Anything, mock.Anything).
+			Return(nil, serverErr).
+			Once()
+
+		err := deleteKonnectConfigStoreGuarded(ctx, configStoresSDK, secretsSDK, obj)
+		require.ErrorIs(t, err, serverErr)
 	})
 }
 
 func TestKonnectConfigStoreNotEmptyError_DeletionBlockedMessage(t *testing.T) {
 	t.Parallel()
 
-	manyKeys := make([]string, 12)
-	for i := range manyKeys {
-		manyKeys[i] = string(rune('a' + i))
-	}
-
-	testCases := []struct {
-		name        string
-		err         KonnectConfigStoreNotEmptyError
-		contains    []string
-		notContains []string
-	}{
-		{
-			name: "listing the keys failed",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				ListErr:       errors.New("list boom"),
-			},
-			contains: []string{
-				"deletion blocked",
-				"still holds secret entries",
-				"could not list their keys",
-			},
-		},
-		{
-			name: "no entries listed",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				Keys:          []string{},
-			},
-			contains:    []string{"deletion blocked", "no entries were listed", "retried automatically"},
-			notContains: []string{"could not list"},
-		},
-		{
-			name: "few keys",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				Keys:          []string{"cert-a", "cert-b"},
-			},
-			contains: []string{"2 secret entries", "cert-a", "cert-b"},
-		},
-		{
-			name: "many keys are capped",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				Keys:          manyKeys,
-			},
-			contains:    []string{"12 secret entries", "first 10 keys", "a", "j"},
-			notContains: []string{"[k", "l]"},
-		},
-		{
-			name: "truncated keys report a lower bound",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				Keys:          manyKeys,
-				KeysTruncated: true,
-			},
-			contains:    []string{"at least 12 secret entries", "first 10 listed keys", "a", "j"},
-			notContains: []string{"[k", "l]"},
-		},
-		{
-			name: "partial keys from a failed later page are reported",
-			err: KonnectConfigStoreNotEmptyError{
-				ConfigStoreID: "store-id",
-				Keys:          []string{"cert-a", "cert-b"},
-				KeysTruncated: true,
-				ListErr:       errors.New("list boom"),
-			},
-			contains: []string{
-				"at least 2 secret entries",
-				"listing stopped before all keys could be retrieved",
-				"cert-a",
-				"cert-b",
-			},
-			notContains: []string{"could not list their keys"},
-		},
-	}
-
-	for _, tc := range testCases {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			msg := tc.err.DeletionBlockedMessage()
-			for _, s := range tc.contains {
-				assert.Contains(t, msg, s)
-			}
-			for _, s := range tc.notContains {
-				assert.NotContains(t, msg, s)
-			}
-		})
-	}
+	err := KonnectConfigStoreNotEmptyError{ConfigStoreID: "store-id"}
+	msg := err.DeletionBlockedMessage()
+	assert.Contains(t, msg, "deletion blocked")
+	assert.Contains(t, msg, "still holds secret entries")
+	assert.Contains(t, msg, "remove the entries from Konnect")
 }
 
-func TestKonnectConfigStoreNotEmptyError_ErrorReportsPartialKeys(t *testing.T) {
-	t.Parallel()
-
-	err := KonnectConfigStoreNotEmptyError{
-		ConfigStoreID: "store-id",
-		Keys:          []string{"cert-a"},
-		KeysTruncated: true,
-		ListErr:       errors.New("list boom"),
-		Err:           errors.New("delete rejected"),
-	}
-
-	assert.Contains(t, err.Error(), "at least 1 secret entries")
-	assert.Contains(t, err.Error(), "listing incomplete")
-	assert.NotContains(t, err.Error(), "listing them failed")
-}
-
-func TestListConfigStoreSecretKeysPagination(t *testing.T) {
+func TestConfigStoreHasSecretEntries(t *testing.T) {
 	t.Parallel()
 
 	const (
@@ -402,211 +304,85 @@ func TestListConfigStoreSecretKeysPagination(t *testing.T) {
 		return obj
 	}
 
-	newListRequest := func(pageAfter *string) sdkkonnectops.ListConfigStoreSecretsRequest {
-		return sdkkonnectops.ListConfigStoreSecretsRequest{
-			ControlPlaneID: parentID,
-			ConfigStoreID:  storeID,
-			PageSize:       new(int64(configStoreSecretsListPageSize)),
-			PageAfter:      pageAfter,
-		}
-	}
-
-	newListResponse := func(nextPageURI *string, keys ...string) *sdkkonnectops.ListConfigStoreSecretsResponse {
+	newListResponse := func(keys ...string) *sdkkonnectops.ListConfigStoreSecretsResponse {
 		data := make([]sdkkonnectcomp.ConfigStoreSecret, 0, len(keys))
-		for _, k := range keys {
-			data = append(data, sdkkonnectcomp.ConfigStoreSecret{Key: new(k)})
+		for _, key := range keys {
+			data = append(data, sdkkonnectcomp.ConfigStoreSecret{Key: new(key)})
 		}
 		return &sdkkonnectops.ListConfigStoreSecretsResponse{
 			ListConfigStoreSecretsResponse: &sdkkonnectcomp.ListConfigStoreSecretsResponse{
 				Data: data,
-				Meta: sdkkonnectcomp.CursorMeta{
-					Page: sdkkonnectcomp.CursorMetaPage{Next: nextPageURI},
-				},
 			},
 		}
 	}
 
-	t.Run("follows the page[after] cursor from the next page URI", func(t *testing.T) {
+	t.Run("reports true when at least one entry exists", func(t *testing.T) {
 		t.Parallel()
 
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		// The SDK models meta.page.next as a full URI; the page[after] item
-		// cursor must be extracted from it.
-		page1Next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
-			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1&page%5Bsize%5D=100"
 		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(&page1Next, "cert-b"), nil).
-			Once()
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
-			Return(newListResponse(nil, "cert-a"), nil).
+			ListConfigStoreSecrets(mock.Anything, sdkkonnectops.ListConfigStoreSecretsRequest{
+				ControlPlaneID: parentID,
+				ConfigStoreID:  storeID,
+				PageSize:       new(int64(configStoreSecretsProbePageSize)),
+			}).
+			Return(newListResponse("cert-a"), nil).
 			Once()
 
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		hasEntries, err := configStoreHasSecretEntries(t.Context(), secretsSDK, newObject())
 		require.NoError(t, err)
-		assert.Equal(t, []string{"cert-a", "cert-b"}, keys)
-		assert.False(t, truncated)
+		assert.True(t, hasEntries)
 	})
 
-	t.Run("returns a non-nil empty slice when the listing succeeds with no entries", func(t *testing.T) {
+	t.Run("reports false when no entries exist", func(t *testing.T) {
 		t.Parallel()
 
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
 		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(nil), nil).
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
+			Return(newListResponse(), nil).
 			Once()
 
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		hasEntries, err := configStoreHasSecretEntries(t.Context(), secretsSDK, newObject())
 		require.NoError(t, err)
-		assert.NotNil(t, keys)
-		assert.Empty(t, keys)
-		assert.False(t, truncated)
+		assert.False(t, hasEntries)
 	})
 
-	t.Run("returns keys collected before a later page fails", func(t *testing.T) {
+	t.Run("returns list error", func(t *testing.T) {
 		t.Parallel()
 
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		page1Next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
-			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1"
 		listErr := errors.New("list boom")
 		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(&page1Next, "cert-b", "cert-a"), nil).
-			Once()
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
 			Return(nil, listErr).
 			Once()
 
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		hasEntries, err := configStoreHasSecretEntries(t.Context(), secretsSDK, newObject())
+		assert.False(t, hasEntries)
 		require.ErrorIs(t, err, listErr)
-		assert.Equal(t, []string{"cert-a", "cert-b"}, keys)
-		assert.True(t, truncated)
 	})
 
-	t.Run("returns keys collected before a later page has a nil response", func(t *testing.T) {
+	t.Run("returns an error for a nil response", func(t *testing.T) {
 		t.Parallel()
 
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		page1Next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
-			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1"
 		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(&page1Next, "cert-a"), nil).
-			Once()
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
+			ListConfigStoreSecrets(mock.Anything, mock.Anything).
 			Return(nil, nil).
 			Once()
 
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
+		hasEntries, err := configStoreHasSecretEntries(t.Context(), secretsSDK, newObject())
+		assert.False(t, hasEntries)
 		require.ErrorIs(t, err, ErrNilResponse)
-		assert.Equal(t, []string{"cert-a"}, keys)
-		assert.True(t, truncated)
-	})
-
-	t.Run("stops and deduplicates when the cursor does not advance", func(t *testing.T) {
-		t.Parallel()
-
-		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
-			"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=cursor-1"
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(&next, "cert-a"), nil).
-			Once()
-		// The second page returns the same cursor and the same entry: the
-		// listing must stop instead of looping to the page cap, and the
-		// duplicate key must not be reported twice.
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(new("cursor-1"))).
-			Return(newListResponse(&next, "cert-a"), nil).
-			Once()
-
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
-		require.NoError(t, err)
-		assert.Equal(t, []string{"cert-a"}, keys)
-		assert.True(t, truncated)
-	})
-
-	t.Run("returns the keys collected so far when the next page URI is unparseable", func(t *testing.T) {
-		t.Parallel()
-
-		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		unparseable := "://not a url"
-		secretsSDK.EXPECT().
-			ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-			Return(newListResponse(&unparseable, "cert-a"), nil).
-			Once()
-
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
-		require.NoError(t, err)
-		assert.Equal(t, []string{"cert-a"}, keys)
-		assert.True(t, truncated)
-	})
-
-	for _, tc := range []struct {
-		name string
-		next string
-	}{
-		{
-			name: "marks the key list truncated when the next page URI has no cursor",
-			next: "https://us.api.konghq.com/v2/control-planes/" + parentID +
-				"/config-stores/" + storeID + "/secrets",
-		},
-		{
-			name: "marks the key list truncated when the next page URI has an empty cursor",
-			next: "https://us.api.konghq.com/v2/control-planes/" + parentID +
-				"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=",
-		},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-
-			secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-			secretsSDK.EXPECT().
-				ListConfigStoreSecrets(mock.Anything, newListRequest(nil)).
-				Return(newListResponse(&tc.next, "cert-a"), nil).
-				Once()
-
-			keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
-			require.NoError(t, err)
-			assert.Equal(t, []string{"cert-a"}, keys)
-			assert.True(t, truncated)
-		})
-	}
-
-	t.Run("marks the key list truncated when the page limit is reached", func(t *testing.T) {
-		t.Parallel()
-
-		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
-		var pageAfter *string
-		for page := range configStoreSecretsListMaxPages {
-			nextCursor := fmt.Sprintf("cursor-%d", page+1)
-			next := "https://us.api.konghq.com/v2/control-planes/" + parentID +
-				"/config-stores/" + storeID + "/secrets?page%5Bafter%5D=" + nextCursor
-			secretsSDK.EXPECT().
-				ListConfigStoreSecrets(mock.Anything, newListRequest(pageAfter)).
-				Return(newListResponse(&next, fmt.Sprintf("cert-%02d", page)), nil).
-				Once()
-			pageAfter = new(nextCursor)
-		}
-
-		keys, truncated, err := listConfigStoreSecretKeys(t.Context(), secretsSDK, newObject())
-		require.NoError(t, err)
-		assert.Len(t, keys, configStoreSecretsListMaxPages)
-		assert.True(t, truncated)
 	})
 }
 
 // TestClearInstanceFromErrorPreservesNotEmptyWrapper is a regression test:
 // ClearInstanceFromError must keep the KonnectConfigStoreNotEmptyError wrapper
 // intact (while still clearing the trace instance in place) so the reconciler
-// can extract the blocking entry keys, regardless of which typed SDK error
-// shape sits underneath.
+// can detect the blocked deletion regardless of which typed SDK error shape
+// sits underneath.
 func TestClearInstanceFromErrorPreservesNotEmptyWrapper(t *testing.T) {
 	t.Parallel()
 
@@ -615,19 +391,18 @@ func TestClearInstanceFromErrorPreservesNotEmptyWrapper(t *testing.T) {
 
 		badRequest := &sdkkonnecterrs.BadRequestError{
 			Status:   400,
-			Detail:   "can not delete config store with secrets",
+			Detail:   "server wording is not part of the contract",
 			Instance: "trace-id",
 		}
 		err := KonnectConfigStoreNotEmptyError{
 			ConfigStoreID: "store-id",
-			Keys:          []string{"cert-a"},
 			Err:           badRequest,
 		}
 
 		cleared := ClearInstanceFromError(err)
 		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](cleared)
 		require.True(t, ok, "wrapper must be preserved, got %T (%v)", cleared, cleared)
-		assert.Equal(t, []string{"cert-a"}, errNotEmpty.Keys)
+		assert.Equal(t, "store-id", errNotEmpty.ConfigStoreID)
 		assert.Empty(t, badRequest.Instance, "instance must be cleared in place")
 	})
 
@@ -636,17 +411,16 @@ func TestClearInstanceFromErrorPreservesNotEmptyWrapper(t *testing.T) {
 
 		sdkErr := &sdkkonnecterrs.SDKError{
 			StatusCode: 400,
-			Body:       `{"detail":"can not delete config store with secrets"}`,
+			Body:       `{"detail":"server wording is not part of the contract"}`,
 		}
 		err := KonnectConfigStoreNotEmptyError{
 			ConfigStoreID: "store-id",
-			Keys:          []string{"cert-a"},
 			Err:           sdkErr,
 		}
 
 		cleared := ClearInstanceFromError(err)
 		errNotEmpty, ok := errors.AsType[KonnectConfigStoreNotEmptyError](cleared)
 		require.True(t, ok, "wrapper must be preserved, got %T (%v)", cleared, cleared)
-		assert.Equal(t, []string{"cert-a"}, errNotEmpty.Keys)
+		assert.Equal(t, "store-id", errNotEmpty.ConfigStoreID)
 	})
 }

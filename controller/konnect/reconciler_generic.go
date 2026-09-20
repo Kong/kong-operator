@@ -613,9 +613,9 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 
 				// If Konnect refused to delete the entity because it still holds
 				// entries (e.g. a config store with secrets), report a dedicated
-				// DeletionBlocked condition naming the blocking entries and
-				// requeue on a fixed period. The finalizer stays in place until
-				// the entries are removed and the delete succeeds.
+				// DeletionBlocked condition and requeue on a fixed period. The
+				// finalizer stays in place until the entries are removed and the
+				// delete succeeds.
 				if errNotEmpty, ok := errors.AsType[ops.KonnectConfigStoreNotEmptyError](err); ok {
 					if res, errStatus := patch.StatusWithCondition(
 						ctx, r.Client, ent,
@@ -626,9 +626,13 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 					); errStatus != nil || !res.IsZero() {
 						return res, errStatus
 					}
-					// The blockage is resolved out of band in Konnect, which
-					// produces no watch event. Poll on a human-scale interval
-					// to bound API calls, failure metrics, and error logs.
+					// Do not return the error: the blockage is resolved out of
+					// band in Konnect, which produces no watch event, so the
+					// default error backoff would degrade to ~16min between
+					// retries. Poll on a dedicated fixed interval: every
+					// attempt logs an error and records a failed operation
+					// metric, so the interval must stay human-scale rather
+					// than RequeueWithBackoff's few seconds.
 					return ctrl.Result{
 						RequeueAfter: ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod,
 					}, nil
