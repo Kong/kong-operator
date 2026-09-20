@@ -70,6 +70,11 @@
   one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
   only adds the API types, CEL validation and CRD; it is not reconciled yet.
   [#5773](https://github.com/Kong/kong-operator/pull/5773)
+- Added groundwork for the `KonnectConfigStoreSync` controller: key derivation,
+  entry resolution, x509 pair validation and value hashing helpers, field
+  indexers (including the `(storeID, storeKey)` conflict index), and a
+  semantics-accurate fake of the Konnect `ConfigStoreSecrets` SDK for tests.
+  [#5710](https://github.com/Kong/kong-operator/issues/5710)
 - `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
   `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
   control plane in the same namespace.
