@@ -299,7 +299,7 @@ func ListConfigMapsForOwner(ctx context.Context,
 // using the provided list options and reduce by OwnerReference UID to efficiently
 // list only the objects owned by the provided UID.
 func ListSecretsForOwner(ctx context.Context,
-	c client.Client,
+	c client.Reader,
 	uid types.UID,
 	listOpts ...client.ListOption,
 ) ([]corev1.Secret, error) {
