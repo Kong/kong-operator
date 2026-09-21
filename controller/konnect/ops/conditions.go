@@ -18,16 +18,29 @@ type entityType interface {
 
 // SetKonnectEntityProgrammedConditionTrue sets the KonnectEntityProgrammed condition to true
 // on the provided object.
+// Unlike the failure counterpart, the condition is upserted even when its content is
+// unchanged, so LastTransitionTime advances on every successful Konnect operation.
+// shouldUpdate uses that timestamp as the last-sync time to enforce the sync period,
+// so it has to be refreshed on each success.
 func SetKonnectEntityProgrammedConditionTrue(
 	obj entityType,
 ) {
-	_setKonnectEntityConditon(
-		obj,
+	condition := k8sutils.NewConditionWithGeneration(
 		konnectv1alpha1.KonnectEntityProgrammedConditionType,
 		metav1.ConditionTrue,
 		konnectv1alpha1.KonnectEntityProgrammedReasonProgrammed,
 		"",
+		obj.GetGeneration(),
 	)
+	conditions := obj.GetConditions()
+	for i := range conditions {
+		if conditions[i].Type == condition.Type {
+			conditions[i] = condition
+			obj.SetConditions(conditions)
+			return
+		}
+	}
+	obj.SetConditions(append(conditions, condition))
 }
 
 // SetKonnectEntityProgrammedConditionFalse sets the KonnectEntityProgrammed condition
