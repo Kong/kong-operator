@@ -84,16 +84,23 @@ permissions:
 
 jobs:
   github-app-token:
-    uses: ./.github/workflows/__github_app_token.yaml
-    with:
-      repositories: |
-        kong-operator
-        developer.konghq.com
-    secrets:
-      # The reusable token workflow reads GH_APP__KONG_K8S__PRIVATE_KEY, but in
-      # this nested workflow_call chain only secrets explicitly declared above
-      # are visible, so map the declared gh-app-private-key to that name.
-      GH_APP__KONG_K8S__PRIVATE_KEY: ${{ secrets.gh-app-private-key }}
+    runs-on: ubuntu-latest
+    outputs:
+      token: ${{ steps.app-token.outputs.token }}
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.gh-app-private-key }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
+            developer.konghq.com
 
   semver:
     outputs:
