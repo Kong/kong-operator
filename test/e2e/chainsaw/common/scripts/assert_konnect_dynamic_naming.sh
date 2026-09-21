@@ -68,7 +68,7 @@ fi
 
 # The fix in https://github.com/Kong/kong-operator/issues/4079 qualifies the Konnect name
 # ONLY under static naming.
-if [ "$KONNECT_NAME" = "${NAMESPACE}-${GATEWAY_NAME}" ]; then
+if [ "$KONNECT_NAME" = "${NAMESPACE}_${GATEWAY_NAME}" ]; then
   fail "the dynamic Konnect name must not be qualified with the namespace"
 fi
 
