@@ -199,9 +199,8 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 		},
 	}
 
-	// If the data plane type is MCP Server, it doesn't need
-	// any additional capabilities and add additional volumes
-	// or/and adjust environment variables.
+	// MCP Server containers do not run Kong Gateway, so they need
+	// neither NET_BIND_SERVICE, nor /tmp or /var/kong, nor KONG_PREFIX.
 	if dpType == DataPlaneTypeMcpServer {
 		container.SecurityContext.Capabilities.Add = nil
 		return container, nil
