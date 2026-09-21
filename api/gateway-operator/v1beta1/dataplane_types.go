@@ -384,9 +384,9 @@ type ServiceOptions struct {
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
 	//
 	// +optional
-	// +kubebuilder:validation:Enum=IPv4;IPv6
 	// +kubebuilder:validation:MinItems=1
 	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:XValidation:message="each ipFamilies entry must be IPv4 or IPv6",rule="self.all(f, f == 'IPv4' || f == 'IPv6')"
 	IPFamilies []corev1.IPFamily `json:"ipFamilies,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 
 	// IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.

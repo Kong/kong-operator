@@ -229,7 +229,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("Unsupported value: \"IPv5\""),
+				ExpectedErrorMessage: new("each ipFamilies entry must be IPv4 or IPv6"),
 			},
 			{
 				Name: "invalid ipFamilyPolicy value",
@@ -269,7 +269,7 @@ func TestGatewayConfigurationV2(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("Too long"),
+				ExpectedErrorMessage: new("must have at most 2 items"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

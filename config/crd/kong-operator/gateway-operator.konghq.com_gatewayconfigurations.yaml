@@ -18375,9 +18375,6 @@ spec:
                                   expose the DataPlane over both address families.
 
                                   More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
-                                enum:
-                                - IPv4
-                                - IPv6
                                 items:
                                   description: |-
                                     IPFamily represents the IP Family (IPv4 or IPv6). This type is used
@@ -18386,6 +18383,9 @@ spec:
                                 maxItems: 2
                                 minItems: 1
                                 type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
                               ipFamilyPolicy:
                                 description: |-
                                   IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
@@ -28632,9 +28632,6 @@ spec:
                                   expose the DataPlane over both address families.
 
                                   More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
-                                enum:
-                                - IPv4
-                                - IPv6
                                 items:
                                   description: |-
                                     IPFamily represents the IP Family (IPv4 or IPv6). This type is used
@@ -28643,6 +28640,9 @@ spec:
                                 maxItems: 2
                                 minItems: 1
                                 type: array
+                                x-kubernetes-validations:
+                                - message: each ipFamilies entry must be IPv4 or IPv6
+                                  rule: self.all(f, f == 'IPv4' || f == 'IPv6')
                               ipFamilyPolicy:
                                 description: |-
                                   IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
