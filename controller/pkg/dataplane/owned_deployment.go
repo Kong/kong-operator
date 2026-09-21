@@ -46,10 +46,11 @@ func (r *Reconciler[T, Cert]) ensureDeployment(
 	dp T,
 	cp ResolvedControlPlane,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
-	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, certChecksum, r.Config)
+	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
@@ -97,10 +98,10 @@ func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 	if !k8sutils.DeploymentRolloutComplete(deployment) {
 		return false, nil
 	}
-	if r.Config.CertificateChecksumAnnotation == "" {
+	if r.Config.Certificate.ChecksumAnnotation == "" {
 		return true, nil
 	}
-	return deployment.Spec.Template.Annotations[r.Config.CertificateChecksumAnnotation] == certChecksum, nil
+	return deployment.Spec.Template.Annotations[r.Config.Certificate.ChecksumAnnotation] == certChecksum, nil
 }
 
 // ResolveImage determines the DataPlane container image using the following priority:
@@ -131,10 +132,11 @@ func BuildDeployment[T Object, Cert CertificateObject](
 	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 	cfg Config[T, Cert],
 ) (*unstructured.Unstructured, error) {
-	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, certChecksum, cfg)
+	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -169,10 +171,10 @@ func BuildDeployment[T Object, Cert CertificateObject](
 		// The user overlay wins on annotation conflicts, so a user-supplied
 		// value for the checksum key would otherwise silently pin the checksum
 		// and stop rollouts from being triggered on certificate rotation.
-		if certChecksum != "" && cfg.CertificateChecksumAnnotation != "" {
+		if certChecksum != "" && cfg.Certificate.ChecksumAnnotation != "" {
 			if err := unstructured.SetNestedField(u.Object, certChecksum,
 				"spec", "template", "metadata", "annotations",
-				cfg.CertificateChecksumAnnotation); err != nil {
+				cfg.Certificate.ChecksumAnnotation); err != nil {
 				return nil, fmt.Errorf("failed to re-assert certificate checksum annotation: %w", err)
 			}
 		}
@@ -203,6 +205,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 	cfg Config[T, Cert],
 ) (*appsv1.Deployment, error) {
@@ -211,7 +214,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 
 	selector := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
 
-	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName)
+	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName, adminCertSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +228,17 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 				Name: KonnectCertVolumeName,
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: certSecretName,
+				},
+			})
+	}
+	// Likewise for the Admin API certificate Secret.
+	if adminCertSecretName != "" {
+		volumes = append(
+			volumes,
+			corev1.Volume{
+				Name: AdminCertVolumeName,
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: adminCertSecretName,
 				},
 			})
 	}
@@ -243,7 +257,7 @@ func GenerateBaseDeployment[T Object, Cert CertificateObject](
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: certChecksumAnnotation(certChecksum, cfg.CertificateChecksumAnnotation),
+					Annotations: certChecksumAnnotation(certChecksum, cfg.Certificate.ChecksumAnnotation),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{container},
