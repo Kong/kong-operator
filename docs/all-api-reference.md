@@ -15505,6 +15505,7 @@ Package v1alpha1 contains API Schema definitions for the konnect.konghq.com v1al
 - [KonnectCloudGatewayNetwork](#konnect-konghq-com-v1alpha1-konnectcloudgatewaynetwork)
 - [KonnectCloudGatewayTransitGateway](#konnect-konghq-com-v1alpha1-konnectcloudgatewaytransitgateway)
 - [KonnectConfigStore](#konnect-konghq-com-v1alpha1-konnectconfigstore)
+- [KonnectConfigStoreSync](#konnect-konghq-com-v1alpha1-konnectconfigstoresync)
 - [KonnectEventGateway](#konnect-konghq-com-v1alpha1-konnecteventgateway)
 - [KonnectExtension](#konnect-konghq-com-v1alpha1-konnectextension)
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
@@ -15606,6 +15607,25 @@ KonnectConfigStore is the Schema for the konnectconfigstores API.
 | `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
 | `spec` _[KonnectConfigStoreSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstorespec)_ |  |
 | `status` _[KonnectConfigStoreStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstorestatus)_ |  |
+
+### KonnectConfigStoreSync
+
+
+KonnectConfigStoreSync is the Schema for the KonnectConfigStoreSync API.<br /><br />A KonnectConfigStoreSync declares a one-way mapping from one Kubernetes
+Secret to one Konnect Config Store: the operator keeps the store entry (or
+entries) in step with the Secret so that certificate rotation is a pure
+data event. Private key material is written only to the Config Store and
+never lands in Konnect configuration entities.
+
+<!-- konnect_config_store_sync description placeholder -->
+
+| Field | Description |
+| --- | --- |
+| `apiVersion` _string_ | `konnect.konghq.com/v1alpha1`
+| `kind` _string_ | `KonnectConfigStoreSync`
+| `metadata` _k8s.io/apimachinery/pkg/apis/meta/v1.ObjectMeta_ | Refer to Kubernetes API documentation for fields of `metadata`. |
+| `spec` _[KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)_ | Spec is the specification of the KonnectConfigStoreSync resource. |
+| `status` _[KonnectConfigStoreSyncStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncstatus)_ | Status is the status of the KonnectConfigStoreSync resource. |
 
 ### KonnectEventGateway
 
@@ -16440,6 +16460,187 @@ KonnectConfigStoreStatus defines the observed state of KonnectConfigStore.
 _Appears in:_
 
 - [KonnectConfigStore](#konnect-konghq-com-v1alpha1-konnectconfigstore)
+
+#### KonnectConfigStoreSyncCombined
+
+
+KonnectConfigStoreSyncCombined configures Combined mode: one Config Store
+entry holds the certificate/key pair as a JSON object with the frozen
+subfields "certificate" and "key". Those subfield names are part of the API
+contract - they appear verbatim in every vault reference string - and will
+never be renamed.
+
+
+
+| Field | Description |
+| --- | --- |
+| `storeKey` _*string_ | StoreKey is the key of the Config Store entry holding the pair. When unset, the controller derives it from the sync's identity using the length-prefixed format k8s-<len(namespace)>-<namespace>-<len(name)>-<name>. Set it explicitly only for topologies that require identical reference strings across Control Planes (e.g. multi-CP fan-out).<br /><br />It is immutable once set. |
+| `certificateField` _string_ | CertificateField is the key of the Secret data entry holding the certificate PEM (chain included, if any). It maps to the JSON subfield "certificate" in the stored value. |
+| `keyField` _string_ | KeyField is the key of the Secret data entry holding the private key PEM. It maps to the JSON subfield "key" in the stored value. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)
+
+#### KonnectConfigStoreSyncDeletionPolicy
+
+_Underlying type:_ `string`
+
+KonnectConfigStoreSyncDeletionPolicy determines what happens to the Config
+Store entries owned by a sync when the sync is deleted.
+
+
+
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Orphan` | KonnectConfigStoreSyncDeletionPolicyOrphan keeps the Config Store<br />entries when the sync is deleted. This is the default: a stale entry is<br />recoverable, a deleted entry breaks live TLS with no fallback.<br /> |
+| `Delete` | KonnectConfigStoreSyncDeletionPolicyDelete deletes the Config Store<br />entries owned by the sync when the sync is deleted, after a best-effort<br />in-use check.<br /> |
+
+#### KonnectConfigStoreSyncEntryStatus
+
+
+KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
+entry owned by the sync.
+
+
+
+| Field | Description |
+| --- | --- |
+| `storeKey` _string_ | StoreKey is the resolved key of the Config Store entry. |
+| `sourceFields` _[]string_ | SourceFields are the Secret data keys whose values produced this entry. |
+| `hash` _string_ | Hash is the SHA-256 hash ("sha256:<hex>") of the value written to the store. The value itself is never exposed: status, logs and events must never contain Secret plaintext. |
+| `valueBytes` _int64_ | ValueBytes is the size in bytes of the decoded value last written, measured against the 5120-byte entry value cap. |
+| `keyBytes` _int64_ | KeyBytes is the size in bytes of the resolved store key, measured against the 512-byte key cap. |
+| `notAfter` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | NotAfter is the expiry time of the certificate last written. It is only set when the entry holds a certificate. |
+| `lastPushTime` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | LastPushTime is the time the entry was last pushed to the Config Store. |
+| `observedUpdatedAt` _*k8s.io/apimachinery/pkg/apis/meta/v1.Time_ | ObservedUpdatedAt is the store-side updated_at timestamp of the entry, observed from the Config Store API. It is a drift signal: a value advancing without a corresponding push means the entry was modified outside this sync. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncstatus)
+
+#### KonnectConfigStoreSyncMode
+
+_Underlying type:_ `string`
+
+KonnectConfigStoreSyncMode is the mode in which Secret data is mapped to
+Config Store entries.
+
+
+
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Combined` | KonnectConfigStoreSyncModeCombined writes the certificate/key pair as a<br />single Config Store entry whose value is a JSON object with the frozen<br />subfields "certificate" and "key". This is the default and the only mode<br />in which a mismatched cert/key pair is unrepresentable.<br /> |
+| `Split` | KonnectConfigStoreSyncModeSplit writes each listed Secret data field to<br />its own Config Store entry. Split is intended for single-field and<br />non-TLS material; it is not a fallback for oversize cert/key pairs<br />because the intermediate state of a two-entry rotation is exactly the<br />mismatched-pair condition Combined mode exists to prevent.<br /> |
+
+#### KonnectConfigStoreSyncReference
+
+
+KonnectConfigStoreSyncReference publishes the reference suffix for one
+synced entry (or one JSON subfield of it), so consumers can assemble a
+vault reference string as {vault://<KongVault prefix>/<suffix>} without
+hand-assembling the store key and subfield fragments.
+
+
+
+| Field | Description |
+| --- | --- |
+| `subfield` _string_ | SubField is the JSON subfield of the Config Store entry value. It is set for Combined mode entries ("certificate" or "key") and omitted for Split mode entries, whose raw values are referenced by store key alone. |
+| `suffix` _string_ | Suffix is the suffix of the vault reference: "<storeKey>/<subfield>" for Combined mode entries (e.g. "mytls/certificate"), or "<storeKey>" for Split mode entries. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncstatus)
+
+#### KonnectConfigStoreSyncSpec
+
+
+KonnectConfigStoreSyncSpec defines the desired state of KonnectConfigStoreSync.
+
+
+
+| Field | Description |
+| --- | --- |
+| `configStoreRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ConfigStoreRef is a reference to the KonnectConfigStore this sync writes to. The sync reads the store's Konnect ID and Control Plane ID from the referenced store's status and never resolves a Control Plane itself.<br /><br />The name is immutable; the namespace may be changed. Referencing a store in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
+| `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to the Secret whose data is synced to the Config Store. It is mutable: repointing at another Secret changes only the synced value, not the entry key.<br /><br />Referencing a Secret in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
+| `mode` _[KonnectConfigStoreSyncMode](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncmode)_ | Mode selects how Secret data is mapped to Config Store entries. It is immutable: re-keying is an explicit create-new-sync-and-migrate procedure because the reference string itself changes with the key. |
+| `combined` _[KonnectConfigStoreSyncCombined](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresynccombined)_ | Combined configures the single-entry mapping. It must be set if and only if mode is Combined. |
+| `split` _[KonnectConfigStoreSyncSplit](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplit)_ | Split configures the per-field mapping. It must be set if and only if mode is Split. |
+| `deletionPolicy` _[KonnectConfigStoreSyncDeletionPolicy](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncdeletionpolicy)_ | DeletionPolicy determines what happens to the Config Store entries owned by this sync when the sync is deleted. It is mutable, including during deletion - that is the intended escape hatch. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSync](#konnect-konghq-com-v1alpha1-konnectconfigstoresync)
+
+#### KonnectConfigStoreSyncSplit
+
+
+KonnectConfigStoreSyncSplit configures Split mode: each listed Secret data
+field is written to its own Config Store entry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `entries` _[][KonnectConfigStoreSyncSplitEntry](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplitentry)_ | Entries lists the Secret data fields to sync. Fields may be added or removed freely; the storeKey of an existing entry (identified by its field) is immutable. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncSpec](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncspec)
+
+#### KonnectConfigStoreSyncSplitEntry
+
+
+KonnectConfigStoreSyncSplitEntry maps one Secret data field to one Config
+Store entry.
+
+
+
+| Field | Description |
+| --- | --- |
+| `field` _string_ | Field is the key of the Secret data entry to sync. Any Secret data key may be mapped; it is validated as a Secret key name, not whitelisted. |
+| `storeKey` _*string_ | StoreKey is the key of the Config Store entry holding this field's value. When unset, the controller derives it as <derived sync key>-<field>.<br /><br />It is immutable once set (per entry, identified by its field). |
+
+_Appears in:_
+
+- [KonnectConfigStoreSyncSplit](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplit)
+
+#### KonnectConfigStoreSyncStatus
+
+
+KonnectConfigStoreSyncStatus defines the observed state of KonnectConfigStoreSync.<br /><br />The status never contains Secret plaintext: values are represented only by
+their hashes and sizes.
+
+
+
+| Field | Description |
+| --- | --- |
+| `conditions` _[]k8s.io/apimachinery/pkg/apis/meta/v1.Condition_ | Conditions describe the status of the KonnectConfigStoreSync. All four condition types (ConfigStoreRefValid, SecretRefValid, PairValid, Synced) are always present so that kubectl wait never hangs. |
+| `storeID` _string_ | StoreID is the Konnect ID of the referenced Config Store, observed from the store's status. |
+| `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the Control Plane the referenced Config Store belongs to, observed from the store's status. A sync never resolves a Control Plane itself. |
+| `observedSecretResourceVersion` _string_ | ObservedSecretResourceVersion is the resourceVersion of the Secret at the last successful sync. It is an observation aid only and is never an input to a push decision. |
+| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports the state of each Config Store entry owned by this sync. |
+| `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References publishes the reference suffixes consumers need to build vault reference strings. A full reference is {vault://<KongVault prefix>/<suffix>}. |
+| `entriesSynced` _int32_ | EntriesSynced is the number of entries currently synced to the Config Store. |
+| `entriesTotal` _int32_ | EntriesTotal is the total number of entries this sync manages. |
+
+_Appears in:_
+
+- [KonnectConfigStoreSync](#konnect-konghq-com-v1alpha1-konnectconfigstoresync)
 
 #### KonnectConfigurationDataPlaneGroup
 
