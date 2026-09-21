@@ -266,7 +266,9 @@ func TestFakeConfigStoreSecretsErrorHook(t *testing.T) {
 	createSecret(t, f, "key", "value")
 
 	injected := errors.New("injected failure")
+	hooked := []string{}
 	f.ErrorHook = func(method, key string) error {
+		hooked = append(hooked, method+"/"+key)
 		if key == "boom" {
 			return injected
 		}
@@ -302,6 +304,7 @@ func TestFakeConfigStoreSecretsErrorHook(t *testing.T) {
 		Key:            "boom",
 	})
 	require.ErrorIs(t, err, injected)
+	assert.Equal(t, []string{"Create/boom", "Update/boom", "Delete/boom"}, hooked)
 
 	// All four calls (initial Create + 3 hooked calls) are logged in order.
 	calls := f.Calls()

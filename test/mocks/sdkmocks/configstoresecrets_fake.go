@@ -193,6 +193,8 @@ func (f *FakeConfigStoreSecrets) CreateConfigStoreSecret(
 }
 
 // ListConfigStoreSecrets lists secret metadata. Values are never returned.
+// Pagination is not simulated: PageSize and PageAfter are ignored and every
+// call returns the whole store.
 func (f *FakeConfigStoreSecrets) ListConfigStoreSecrets(
 	_ context.Context,
 	request sdkkonnectops.ListConfigStoreSecretsRequest,
