@@ -11,8 +11,8 @@ on:
           kong-operator
     secrets:
       GH_APP__KONG_K8S__PRIVATE_KEY:
-        description: "GitHub App private key. Callers without secrets: inherit must pass it."
-        required: false
+        description: "GitHub App private key. Callers that pass secrets explicitly must map this name; secrets: inherit callers need not."
+        required: true
     outputs:
       token:
         description: GitHub App installation token
