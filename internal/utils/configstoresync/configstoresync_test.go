@@ -76,6 +76,41 @@ func TestResolveEntries(t *testing.T) {
 		}))
 		assert.Empty(t, entries)
 	})
+
+	t.Run("explicit storeKey can collide with another entry's derived key", func(t *testing.T) {
+		// Pins the gap CRD validation cannot express: explicit storeKeys are
+		// only checked against each other, never against derived keys, so
+		// ResolveEntries can return duplicate StoreKeys. Callers must reject
+		// this (see DuplicateStoreKeys).
+		entries := ResolveEntries(newSync(func(s *konnectv1alpha1.KonnectConfigStoreSync) {
+			s.Spec.Mode = konnectv1alpha1.KonnectConfigStoreSyncModeSplit
+			s.Spec.Split = &konnectv1alpha1.KonnectConfigStoreSyncSplit{
+				Entries: []konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{
+					{Field: "tls.crt"},
+					{Field: "tls.key", StoreKey: new(DerivedKey("default", "sync") + "-tls.crt")},
+				},
+			}
+		}))
+		require.Len(t, entries, 2)
+		assert.Equal(t, entries[0].StoreKey, entries[1].StoreKey)
+		assert.Equal(t, []string{entries[0].StoreKey}, DuplicateStoreKeys(entries))
+	})
+}
+
+func TestDuplicateStoreKeys(t *testing.T) {
+	t.Run("distinct keys return nil", func(t *testing.T) {
+		entries := []ResolvedEntry{{StoreKey: "a"}, {StoreKey: "b"}}
+		assert.Nil(t, DuplicateStoreKeys(entries))
+	})
+
+	t.Run("every duplicate occurrence is reported", func(t *testing.T) {
+		entries := []ResolvedEntry{{StoreKey: "a"}, {StoreKey: "b"}, {StoreKey: "a"}, {StoreKey: "a"}}
+		assert.Equal(t, []string{"a", "a"}, DuplicateStoreKeys(entries))
+	})
+
+	t.Run("empty input returns nil", func(t *testing.T) {
+		assert.Nil(t, DuplicateStoreKeys(nil))
+	})
 }
 
 func TestCombinedValue(t *testing.T) {

@@ -58,6 +58,11 @@ type ResolvedEntry struct {
 // ResolveEntries computes the set of Config Store entries a sync manages from
 // its spec alone (no Secret or store data needed), applying key derivation
 // where no explicit storeKey is set.
+//
+// A Split entry's explicit storeKey may still equal another entry's derived
+// key: CRD validation checks uniqueness of explicit storeKeys only, so the
+// caller must reject duplicate resolved StoreKeys itself (see
+// DuplicateStoreKeys).
 func ResolveEntries(sync *konnectv1alpha1.KonnectConfigStoreSync) []ResolvedEntry {
 	derived := DerivedKey(sync.Namespace, sync.Name)
 	switch sync.Spec.Mode {
@@ -99,6 +104,23 @@ func ResolveEntries(sync *konnectv1alpha1.KonnectConfigStoreSync) []ResolvedEntr
 			},
 		}
 	}
+}
+
+// DuplicateStoreKeys returns the store keys claimed by more than one resolved
+// entry, or nil when all keys are distinct. Status entries are list-keyed by
+// storeKey, so duplicates would both double-write the same Config Store entry
+// and be rejected by the API server on status update.
+func DuplicateStoreKeys(entries []ResolvedEntry) []string {
+	seen := make(map[string]struct{}, len(entries))
+	var duplicates []string
+	for _, e := range entries {
+		if _, ok := seen[e.StoreKey]; ok {
+			duplicates = append(duplicates, e.StoreKey)
+			continue
+		}
+		seen[e.StoreKey] = struct{}{}
+	}
+	return duplicates
 }
 
 // combinedValue is the frozen JSON shape of a Combined mode entry value. The
