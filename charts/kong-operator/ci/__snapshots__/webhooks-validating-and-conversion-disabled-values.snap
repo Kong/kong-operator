@@ -63224,6 +63224,43 @@ spec:
                             - Cluster
                             - Local
                             type: string
+                          ipFamilies:
+                            description: |-
+                              IPFamilies specifies the IP families (e.g. IPv4, IPv6) the Service should
+                              use. If unset, the Kubernetes API server default applies, which is a
+                              single IPv4 stack on dual-stack clusters and single-stack on IPv4-only and
+                              IPv6-only clusters. On dual-stack clusters, set this to ["IPv4", "IPv6"]
+                              (typically along with ipFamilyPolicy) to expose the DataPlane over both
+                              address families.
+
+                              More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+                            enum:
+                            - IPv4
+                            - IPv6
+                            items:
+                              description: |-
+                                IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                                to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
+                              type: string
+                            maxItems: 2
+                            minItems: 1
+                            type: array
+                          ipFamilyPolicy:
+                            description: |-
+                              IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
+                              SingleStack, PreferDualStack, RequireDualStack). If unset, the Kubernetes
+                              API server default (SingleStack) applies. When neither this field nor
+                              ipFamilies is set and the operator's IP family is dual (e.g. configured
+                              via the --ip-family flag), the operator defaults the Service to
+                              PreferDualStack so that the DataPlane is exposed over both address
+                              families.
+
+                              More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+                            enum:
+                            - SingleStack
+                            - PreferDualStack
+                            - RequireDualStack
+                            type: string
                           labels:
                             additionalProperties:
                               description: LabelValue is a label value with constraints matching Kubernetes label value requirements.
@@ -80366,6 +80403,43 @@ spec:
                                 enum:
                                 - Cluster
                                 - Local
+                                type: string
+                              ipFamilies:
+                                description: |-
+                                  IPFamilies specifies the IP families (e.g. IPv4, IPv6) the Service should
+                                  use. If unset, the Kubernetes API server default applies, which is a
+                                  single IPv4 stack on dual-stack clusters and single-stack on IPv4-only and
+                                  IPv6-only clusters. On dual-stack clusters, set this to ["IPv4", "IPv6"]
+                                  (typically along with ipFamilyPolicy) to expose the DataPlane over both
+                                  address families.
+
+                                  More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+                                enum:
+                                - IPv4
+                                - IPv6
+                                items:
+                                  description: |-
+                                    IPFamily represents the IP Family (IPv4 or IPv6). This type is used
+                                    to express the family of an IP expressed by a type (e.g. service.spec.ipFamilies).
+                                  type: string
+                                maxItems: 2
+                                minItems: 1
+                                type: array
+                              ipFamilyPolicy:
+                                description: |-
+                                  IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
+                                  SingleStack, PreferDualStack, RequireDualStack). If unset, the Kubernetes
+                                  API server default (SingleStack) applies. When neither this field nor
+                                  ipFamilies is set and the operator's IP family is dual (e.g. configured
+                                  via the --ip-family flag), the operator defaults the Service to
+                                  PreferDualStack so that the DataPlane is exposed over both address
+                                  families.
+
+                                  More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+                                enum:
+                                - SingleStack
+                                - PreferDualStack
+                                - RequireDualStack
                                 type: string
                               labels:
                                 additionalProperties:

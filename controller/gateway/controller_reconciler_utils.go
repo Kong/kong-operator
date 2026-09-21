@@ -328,6 +328,8 @@ func gatewayConfigDataPlaneOptionsToDataPlaneOptions(
 					Labels:                ingressLabels,
 					ExternalTrafficPolicy: opts.Network.Services.Ingress.ExternalTrafficPolicy,
 					Name:                  opts.Network.Services.Ingress.Name,
+					IPFamilies:            opts.Network.Services.Ingress.IPFamilies,
+					IPFamilyPolicy:        opts.Network.Services.Ingress.IPFamilyPolicy,
 				},
 			},
 		}

@@ -10,6 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 )
 
 func TestGetSelectorOverrides(t *testing.T) {
@@ -401,6 +402,90 @@ func TestGenerateNewIngressServiceForDataPlane(t *testing.T) {
 			svc, err := GenerateNewIngressServiceForDataPlane(tc.dataplane)
 			require.Equal(t, tc.expectedErr, err)
 			require.Equal(t, tc.expectedSvc, svc)
+		})
+	}
+}
+
+func TestGenerateNewIngressServiceForDataPlaneIPFamilies(t *testing.T) {
+	makeDP := func(ingress *operatorv1beta1.DataPlaneServiceOptions) *operatorv1beta1.DataPlane {
+		dp := &operatorv1beta1.DataPlane{
+			Name:       "dp-1",
+			Namespace:  "default",
+			UID:        types.UID("1234"),
+			APIVersion: "gateway.konghq.com/v1beta1",
+			Kind:       "DataPlane",
+		}
+		if ingress != nil {
+			dp.Spec = operatorv1beta1.DataPlaneSpec{
+				Network: operatorv1beta1.DataPlaneNetworkOptions{
+					Services: &operatorv1beta1.DataPlaneServices{
+						Ingress: ingress,
+					},
+				},
+			}
+		}
+		return dp
+	}
+	singleStack := corev1.IPFamilyPolicySingleStack
+	preferDualStack := corev1.IPFamilyPolicyPreferDualStack
+
+	testCases := []struct {
+		name        string
+		ipFamily    ipfamily.IPFamily
+		ingress     *operatorv1beta1.DataPlaneServiceOptions
+		expected    *corev1.IPFamilyPolicy
+		expectedIPs []corev1.IPFamily
+	}{
+		{
+			name:     "dual IP family defaults to PreferDualStack",
+			ipFamily: ipfamily.Dual,
+			expected: &preferDualStack,
+		},
+		{
+			name:     "single-stack families leave the policy unset",
+			ipFamily: ipfamily.IPv6,
+			expected: nil,
+		},
+		{
+			name:     "auto family leaves the policy unset",
+			ipFamily: ipfamily.Auto,
+			expected: nil,
+		},
+		{
+			name:        "user-specified ipFamilyPolicy wins over the dual default",
+			ipFamily:    ipfamily.Dual,
+			ingress:     &operatorv1beta1.DataPlaneServiceOptions{IPFamilyPolicy: &singleStack},
+			expected:    &singleStack,
+			expectedIPs: nil,
+		},
+		{
+			name:     "user-specified ipFamilies are applied",
+			ipFamily: ipfamily.Dual,
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
+			},
+			expected:    &preferDualStack,
+			expectedIPs: []corev1.IPFamily{corev1.IPv6Protocol},
+		},
+		{
+			name:     "user-specified RequireDualStack is preserved",
+			ipFamily: ipfamily.IPv4,
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				IPFamilyPolicy: new(corev1.IPFamilyPolicyRequireDualStack),
+			},
+			expected: new(corev1.IPFamilyPolicyRequireDualStack),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			svc, err := GenerateNewIngressServiceForDataPlane(
+				makeDP(tc.ingress),
+				IPFamilyPolicyServiceOpt(tc.ipFamily),
+			)
+			require.NoError(t, err)
+			require.Equal(t, tc.expected, svc.Spec.IPFamilyPolicy)
+			require.Equal(t, tc.expectedIPs, svc.Spec.IPFamilies)
 		})
 	}
 }

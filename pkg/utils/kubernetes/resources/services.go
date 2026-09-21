@@ -12,6 +12,7 @@ import (
 
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
 	"github.com/kong/kong-operator/v2/pkg/consts"
+	"github.com/kong/kong-operator/v2/pkg/ipfamily"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
 
@@ -53,6 +54,10 @@ func GenerateNewIngressServiceForDataPlane(dataplane *operatorv1beta1.DataPlane,
 	for _, opt := range opts {
 		opt(svc)
 	}
+
+	// Applied after the opts so that explicit user configuration wins over the
+	// IP-family-derived default (see IPFamilyPolicyServiceOpt).
+	setDataPlaneIngressServiceIPFamilies(dataplane, svc)
 
 	if selectorOverride, ok := dataplane.Annotations[consts.ServiceSelectorOverrideAnnotation]; ok {
 		newSelector, err := getSelectorOverrides(selectorOverride)
@@ -133,6 +138,43 @@ func setDataPlaneIngressServiceInternalTrafficPolicy(
 		return
 	}
 	svc.Spec.InternalTrafficPolicy = dataplane.Spec.Network.Services.Ingress.InternalTrafficPolicy
+}
+
+func setDataPlaneIngressServiceIPFamilies(
+	dataplane *operatorv1beta1.DataPlane,
+	svc *corev1.Service,
+) {
+	if dataplane == nil ||
+		dataplane.Spec.Network.Services == nil ||
+		dataplane.Spec.Network.Services.Ingress == nil {
+		return
+	}
+	ingressOptions := dataplane.Spec.Network.Services.Ingress
+	if ingressOptions.IPFamilyPolicy != nil {
+		svc.Spec.IPFamilyPolicy = ingressOptions.IPFamilyPolicy
+	}
+	if len(ingressOptions.IPFamilies) > 0 {
+		svc.Spec.IPFamilies = ingressOptions.IPFamilies
+	}
+}
+
+// IPFamilyPolicyServiceOpt returns a ServiceOpt which sets the Service's
+// dual-stack policy based on the IP family the DataPlane's Kong listens are
+// configured for: when the family is ipfamily.Dual, the Service defaults to
+// PreferDualStack, so that a dual-stack cluster exposes the DataPlane over
+// both address families. Any other family leaves the Service untouched,
+// letting the Kubernetes API server apply its defaults.
+//
+// Explicit user configuration (ipFamilies/ipFamilyPolicy in the DataPlane's
+// ingress ServiceOptions) always wins over this default, as it is applied
+// afterwards by setDataPlaneIngressServiceIPFamilies.
+func IPFamilyPolicyServiceOpt(family ipfamily.IPFamily) ServiceOpt {
+	return func(s *corev1.Service) {
+		if family == ipfamily.Dual {
+			svcPolicy := corev1.IPFamilyPolicyPreferDualStack
+			s.Spec.IPFamilyPolicy = &svcPolicy
+		}
+	}
 }
 
 // ServiceOpt is an option function for a Service.

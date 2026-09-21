@@ -817,6 +817,7 @@ func (r *BlueGreenReconciler) ensurePreviewIngressService(
 		dataplane,
 		additionalServiceLabels,
 		labelSelectorFromDataPlaneRolloutStatusSelectorServiceOpt(dataplane),
+		k8sresources.IPFamilyPolicyServiceOpt(r.DataPlaneIPFamily),
 	)
 	if err != nil {
 		return op.Noop, nil, err
