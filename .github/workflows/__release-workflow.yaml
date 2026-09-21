@@ -89,7 +89,11 @@ jobs:
       repositories: |
         kong-operator
         developer.konghq.com
-    secrets: inherit
+    secrets:
+      # The reusable token workflow reads GH_APP__KONG_K8S__PRIVATE_KEY, but in
+      # this nested workflow_call chain only secrets explicitly declared above
+      # are visible, so map the declared gh-app-private-key to that name.
+      GH_APP__KONG_K8S__PRIVATE_KEY: ${{ secrets.gh-app-private-key }}
 
   semver:
     outputs:

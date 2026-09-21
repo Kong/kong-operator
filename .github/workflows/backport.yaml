@@ -12,6 +12,16 @@ jobs:
   github-app-token:
     uses: ./.github/workflows/__github_app_token.yaml
     secrets: inherit
+    # Same guard as the backport job below: only mint a token for merged PRs.
+    if: >
+      github.event.pull_request.merged
+      && (
+        github.event.action == 'closed'
+        || (
+          github.event.action == 'labeled'
+          && contains(github.event.label.name, 'backport')
+        )
+      )
   backport:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
