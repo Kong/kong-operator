@@ -802,7 +802,9 @@ func removeFinalizerIfNotManaged[t converter.RootObject](ctx context.Context, cl
 		"finalizer", finalizerName)
 
 	// Create a patch from the original object.
-	patch := client.MergeFrom(obj.DeepCopyObject().(client.Object))
+	// Optimistic lock ensures a patch computed from a stale cached copy fails with
+	// a conflict instead of re-adding finalizers removed by other controllers.
+	patch := client.MergeFromWithOptions(obj.DeepCopyObject().(client.Object), client.MergeFromWithOptimisticLock{})
 
 	// Remove the finalizer.
 	controllerutil.RemoveFinalizer(obj, finalizerName)

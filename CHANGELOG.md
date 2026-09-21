@@ -63,6 +63,12 @@
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
   [#5683](https://github.com/Kong/kong-operator/pull/5683)
+- KonnectExtension: complete certificate cleanup when the referenced ControlPlane
+  was deleted before extension status was persisted. Keep shared client-certificate
+  Secret finalizers while another extension still uses the Secret or has pending
+  certificate cleanup.
+  [#5774](https://github.com/Kong/kong-operator/pull/5774)
+  [#5767](https://github.com/Kong/kong-operator/pull/5767)
 - On-prem gateway: keep tags of translated Kong certificate stable when multiple
   `Secret`s have the same certificate content. The tags generated from the `Secret`
   with the earliest creation timestamp are chosen, and the one with the lowest
