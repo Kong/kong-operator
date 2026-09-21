@@ -796,10 +796,36 @@ apiGroupVersions:
             interface: github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK
             fieldName: PortalAuthSettings
           # The SDK list endpoint uses positional args and response items lack
-          # labels/tags, and there is no deterministic field-match strategy for
-          # the nested identity-provider config union yet. See
+          # labels/tags, so recover conflicts by matching the stable spec
+          # fields of the selected identity-provider config variant that are
+          # echoed back by the API. This mitigates
           # https://github.com/Kong/kong-operator/issues/3987.
-          skipGetForUID: true
+          listCallStylePositional: true
+          getForUID:
+            listItemsSource: slice
+            rootUnion:
+              unionField: Spec.APISpec.Config
+              responseTypePointer: true
+              responseVariantContainer: GetConfig()
+              cases:
+                - typeValue: oIDC
+                  variantField: OIDC
+                  responseTypeValue: oidc
+                  responseVariantField: OIDCIdentityProviderConfigOutput
+                  matchFields:
+                    - objectField: IssuerURL
+                      responseField: GetIssuerURL()
+                    - objectField: ClientID
+                      responseField: GetClientID()
+                - typeValue: portalSAML
+                  variantField: PortalSAML
+                  responseTypeValue: saml
+                  responseVariantField: PortalSAMLIdentityProviderConfig
+                  matchFields:
+                    - objectField: IdpMetadataURL
+                      responseField: GetIdpMetadataURL()
+                    - objectField: IdpMetadataXML
+                      responseField: GetIdpMetadataXML()
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.PortalCreateIdentityProvider
           update:

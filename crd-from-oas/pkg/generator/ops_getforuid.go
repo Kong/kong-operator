@@ -45,6 +45,10 @@ type opsGetForUIDFuncData struct {
 	// ListCallStylePositional indicates the SDK list method takes positional
 	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
 	ListCallStylePositional bool
+	// ListCallPositionalWithParent is true when the SDK list method uses
+	// positional args and the entity has a single parent, so the generated
+	// call passes the parent ID as the first positional argument.
+	ListCallPositionalWithParent bool
 	// HasLabels indicates the entity's request schema declares a "labels"
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
@@ -85,14 +89,24 @@ type opsGetForUIDMatchFieldData struct {
 type opsGetForUIDRootUnionData struct {
 	UnionField        string
 	ResponseTypeField string
-	Cases             []opsGetForUIDRootUnionCaseData
+	// ResponseTypePointer is true when the SDK discriminator getter returns a
+	// pointer to an enum rather than a plain string.
+	ResponseTypePointer bool
+	// ResponseVariantContainer is the getter path on the list entry returning
+	// the SDK union container that holds per-variant payload fields.
+	ResponseVariantContainer string
+	Cases                    []opsGetForUIDRootUnionCaseData
 }
 
 type opsGetForUIDRootUnionCaseData struct {
 	TypeValue         string
 	VariantField      string
 	ResponseTypeValue string
-	MatchFields       []opsGetForUIDMatchFieldData
+	// ResponseVariantField is the field on the SDK union container holding
+	// this case's variant payload. When set, MatchFields response paths are
+	// relative to that variant payload.
+	ResponseVariantField string
+	MatchFields          []opsGetForUIDMatchFieldData
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -189,16 +203,19 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 				responseTypeField = "GetType()"
 			}
 			rootUnion = &opsGetForUIDRootUnionData{
-				UnionField:        opsConfig.GetForUID.RootUnion.UnionField,
-				ResponseTypeField: responseTypeField,
-				Cases:             make([]opsGetForUIDRootUnionCaseData, 0, len(opsConfig.GetForUID.RootUnion.Cases)),
+				UnionField:               opsConfig.GetForUID.RootUnion.UnionField,
+				ResponseTypeField:        responseTypeField,
+				ResponseTypePointer:      opsConfig.GetForUID.RootUnion.ResponseTypePointer,
+				ResponseVariantContainer: opsConfig.GetForUID.RootUnion.ResponseVariantContainer,
+				Cases:                    make([]opsGetForUIDRootUnionCaseData, 0, len(opsConfig.GetForUID.RootUnion.Cases)),
 			}
 			for _, c := range opsConfig.GetForUID.RootUnion.Cases {
 				caseData := opsGetForUIDRootUnionCaseData{
-					TypeValue:         c.TypeValue,
-					VariantField:      c.VariantField,
-					ResponseTypeValue: c.ResponseTypeValue,
-					MatchFields:       make([]opsGetForUIDMatchFieldData, 0, len(c.MatchFields)),
+					TypeValue:            c.TypeValue,
+					VariantField:         c.VariantField,
+					ResponseTypeValue:    c.ResponseTypeValue,
+					ResponseVariantField: c.ResponseVariantField,
+					MatchFields:          make([]opsGetForUIDMatchFieldData, 0, len(c.MatchFields)),
 				}
 				for _, field := range c.MatchFields {
 					caseData.MatchFields = append(caseData.MatchFields, opsGetForUIDMatchFieldData{
@@ -224,13 +241,15 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		GetForUIDWrappedType:    getForUIDWrappedType,
 		ParentIDField:           parentIDField,
 		ListCallStylePositional: opsConfig != nil && opsConfig.ListCallStylePositional,
-		HasLabels:               hasLabels,
-		UseUIDTagFilter:         opsConfig != nil && opsConfig.UseUIDTagFilter,
-		MatchFields:             matchFields,
-		RootUnion:               rootUnion,
-		HasName:                 hasName,
-		SingletonByParent:       isParentScopedSingleton(schema),
-		SingletonNoID:           isSingletonNoID(schema),
+		ListCallPositionalWithParent: opsConfig != nil && opsConfig.ListCallStylePositional &&
+			len(parents) == 1,
+		HasLabels:         hasLabels,
+		UseUIDTagFilter:   opsConfig != nil && opsConfig.UseUIDTagFilter,
+		MatchFields:       matchFields,
+		RootUnion:         rootUnion,
+		HasName:           hasName,
+		SingletonByParent: isParentScopedSingleton(schema),
+		SingletonNoID:     isSingletonNoID(schema),
 	}, nil
 }
 

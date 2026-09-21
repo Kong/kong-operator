@@ -3180,6 +3180,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3227,6 +3229,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3256,14 +3260,32 @@ func get{{.Entity}}ForUID(
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}
 		for _, entry := range {{$.ListResponseItemsExpr}} {
+			{{- if $.RootUnion.ResponseTypePointer}}
+			if responseType := entry.{{$.RootUnion.ResponseTypeField}}; responseType == nil || string(*responseType) != "{{.ResponseTypeValue}}" {
+				continue
+			}
+			{{- else}}
 			if entry.{{$.RootUnion.ResponseTypeField}} != "{{.ResponseTypeValue}}" {
 				continue
 			}
+			{{- end}}
+			{{- $matchTarget := "entry"}}
+			{{- if and $.RootUnion.ResponseVariantContainer .ResponseVariantField}}
+			entryContainer := entry.{{$.RootUnion.ResponseVariantContainer}}
+			if entryContainer == nil {
+				continue
+			}
+			entryVariant := entryContainer.{{.ResponseVariantField}}
+			if entryVariant == nil {
+				continue
+			}
+			{{- $matchTarget = "entryVariant"}}
+			{{- end}}
 			{{- range .MatchFields}}
 			{{- if .SliceMatch}}
-			if !matchSliceField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchSliceField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- else}}
-			if !matchStringField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- end}}
 				continue
 			}
@@ -3296,6 +3318,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3333,6 +3357,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},

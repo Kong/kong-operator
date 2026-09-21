@@ -466,6 +466,15 @@ type GetForUIDRootUnionConfig struct {
 	// ResponseTypeField is the Go field or getter path, relative to the list
 	// entry, that returns the SDK discriminator value. Defaults to "GetType()".
 	ResponseTypeField string `yaml:"responseTypeField,omitempty"`
+	// ResponseTypePointer indicates the SDK discriminator getter returns a
+	// pointer to an enum (e.g. *IdentityProviderType) rather than a plain
+	// string, so generated comparisons must nil-check and dereference it.
+	ResponseTypePointer bool `yaml:"responseTypePointer,omitempty"`
+	// ResponseVariantContainer is the Go getter path, relative to the list
+	// entry, that returns the SDK union container holding per-variant payload
+	// fields (for example "GetConfig()"). Required when the SDK list entry
+	// nests variant payloads inside a union container without getters.
+	ResponseVariantContainer string `yaml:"responseVariantContainer,omitempty"`
 	// Cases enumerates the supported CRD union variants.
 	Cases []GetForUIDRootUnionCase `yaml:"cases,omitempty"`
 }
@@ -480,6 +489,12 @@ type GetForUIDRootUnionCase struct {
 	// ResponseTypeValue is the SDK discriminator value expected on the list entry
 	// (for example "tls_server").
 	ResponseTypeValue string `yaml:"responseTypeValue"`
+	// ResponseVariantField is the Go field on the SDK union container (see
+	// ResponseVariantContainer) that holds the variant payload matching this
+	// case (for example "OIDCIdentityProviderConfigOutput"). When set,
+	// MatchFields response paths are relative to that variant payload instead
+	// of the list entry.
+	ResponseVariantField string `yaml:"responseVariantField,omitempty"`
 	// MatchFields lists the fields, relative to the selected variant payload and
 	// the list entry respectively, that must match.
 	MatchFields []GetForUIDMatchField `yaml:"matchFields,omitempty"`

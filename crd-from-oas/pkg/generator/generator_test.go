@@ -5027,6 +5027,86 @@ func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
 	assert.Contains(t, content, `if entry.GetType() != "forward_to_virtual_cluster" {`)
 }
 
+func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalIdentityProviderRequest": {IsRoot: new(false), ParentEntityType: "Portal"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "get-portal-identity-providers",
+		ListTags:               []string{"Portal Auth Settings"},
+		ListSuccessResponseRef: "PortalIdentityProviders",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		ListCallStylePositional: true,
+		GetForUID: &config.GetForUIDConfig{
+			ListItemsSource: config.GetForUIDListItemsSourceSlice,
+			RootUnion: &config.GetForUIDRootUnionConfig{
+				UnionField:               "Spec.APISpec.Config",
+				ResponseTypePointer:      true,
+				ResponseVariantContainer: "GetConfig()",
+				Cases: []config.GetForUIDRootUnionCase{
+					{
+						TypeValue:            "oIDC",
+						VariantField:         "OIDC",
+						ResponseTypeValue:    "oidc",
+						ResponseVariantField: "OIDCIdentityProviderConfigOutput",
+						MatchFields: []config.GetForUIDMatchField{
+							{ObjectField: "IssuerURL", ResponseField: "GetIssuerURL()"},
+							{ObjectField: "ClientID", ResponseField: "GetClientID()"},
+						},
+					},
+					{
+						TypeValue:            "portalSAML",
+						VariantField:         "PortalSAML",
+						ResponseTypeValue:    "saml",
+						ResponseVariantField: "PortalSAMLIdentityProviderConfig",
+						MatchFields: []config.GetForUIDMatchField{
+							{ObjectField: "IdpMetadataURL", ResponseField: "GetIdpMetadataURL()"},
+						},
+					},
+				},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK",
+			FieldName: "PortalAuthSettings",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalIdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+	require.NotNil(t, res.GetForUIDInfo)
+
+	content := res.File.Content
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// Positional list call passes the single parent ID instead of a request
+	// struct or bare pagination args.
+	assert.Contains(t, content, "sdk.GetPortalIdentityProviders(ctx, parentID, nil)")
+	assert.NotContains(t, content, "sdkkonnectops.GetPortalIdentityProvidersRequest")
+	// Slice list-items source iterates the response field directly.
+	assert.Contains(t, content, "for _, entry := range resp.PortalIdentityProviders {")
+	// Pointer-typed SDK discriminator is nil-checked and dereferenced.
+	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "oidc" {`)
+	assert.Contains(t, content, `if responseType := entry.GetType(); responseType == nil || string(*responseType) != "saml" {`)
+	// Response union variant is navigated nil-safely before matching.
+	assert.Contains(t, content, "entryContainer := entry.GetConfig()")
+	assert.Contains(t, content, "entryVariant := entryContainer.OIDCIdentityProviderConfigOutput")
+	assert.Contains(t, content, "entryVariant := entryContainer.PortalSAMLIdentityProviderConfig")
+	assert.Contains(t, content, "if !matchStringField(selected.IssuerURL, entryVariant.GetIssuerURL()) {")
+	assert.Contains(t, content, "if !matchStringField(selected.IdpMetadataURL, entryVariant.GetIdpMetadataURL()) {")
+}
+
 func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {
 	g := NewGenerator(Config{
 		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
