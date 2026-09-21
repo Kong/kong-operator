@@ -375,11 +375,11 @@ type ServiceOptions struct {
 	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 
 	// IPFamilies specifies the IP families (e.g. IPv4, IPv6) the Service should
-	// use. If unset, the Kubernetes API server default applies, which is a
-	// single IPv4 stack on dual-stack clusters and single-stack on IPv4-only and
-	// IPv6-only clusters. On dual-stack clusters, set this to ["IPv4", "IPv6"]
-	// (typically along with ipFamilyPolicy) to expose the DataPlane over both
-	// address families.
+	// use. If unset, the Kubernetes API server default applies: the primary
+	// family of the cluster, or both families when the operator defaults
+	// ipFamilyPolicy to PreferDualStack (see below). On dual-stack clusters,
+	// set this to ["IPv4", "IPv6"] (typically along with ipFamilyPolicy) to
+	// expose the DataPlane over both address families.
 	//
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
 	//

@@ -594,6 +594,119 @@ func TestDataplane(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("service ip families", func(t *testing.T) {
+		ipFamilies := func(families ...corev1.IPFamily) []corev1.IPFamily {
+			return families
+		}
+
+		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
+			{
+				Name: "both ip families with PreferDualStack policy",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										IPFamilies:     ipFamilies(corev1.IPv4Protocol, corev1.IPv6Protocol),
+										IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "single IPv6 family with SingleStack policy",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										IPFamilies:     ipFamilies(corev1.IPv6Protocol),
+										IPFamilyPolicy: new(corev1.IPFamilyPolicySingleStack),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "invalid IP family value",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										IPFamilies: ipFamilies(corev1.IPFamily("IPv5")),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Unsupported value: \"IPv5\""),
+			},
+			{
+				Name: "invalid ipFamilyPolicy value",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										IPFamilyPolicy: new(corev1.IPFamilyPolicy("Prefer")),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Unsupported value: \"Prefer\""),
+			},
+			{
+				// NOTE: An explicitly empty ipFamilies list cannot be tested here:
+				// the field is serialized with omitempty, so the typed client drops
+				// it before it reaches the API server (the MinItems=1 marker still
+				// guards direct API users, e.g. kubectl apply with "ipFamilies: []").
+				Name: "more than two IP families",
+				TestObject: &operatorv1beta1.DataPlane{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv1beta1.DataPlaneSpec{
+						DataPlaneOptions: operatorv1beta1.DataPlaneOptions{
+							Deployment: validDataplaneOptions.Deployment,
+							Network: operatorv1beta1.DataPlaneNetworkOptions{
+								Services: &operatorv1beta1.DataPlaneServices{
+									Ingress: &operatorv1beta1.DataPlaneServiceOptions{
+										IPFamilies: ipFamilies(
+											corev1.IPv4Protocol,
+											corev1.IPv6Protocol,
+											corev1.IPv4Protocol,
+										),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Too long"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("spec update", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv1beta1.DataPlane]{
 			{
