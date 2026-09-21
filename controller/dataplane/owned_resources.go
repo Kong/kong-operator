@@ -401,6 +401,18 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
+		// Only copy the IP family fields when the generated Service sets them:
+		// the API server defaults ipFamilies on existing Services, so clearing
+		// them here would fight with that defaulting (and churn the object).
+		if generatedService.Spec.IPFamilyPolicy != nil {
+			existingService.Spec.IPFamilyPolicy = generatedService.Spec.IPFamilyPolicy
+			updated = true
+		}
+		if len(generatedService.Spec.IPFamilies) > 0 {
+			existingService.Spec.IPFamilies = generatedService.Spec.IPFamilies
+			updated = true
+		}
+
 		if updated {
 			res, existingService, err := patch.ApplyPatchIfNotEmpty(ctx, cl, logger, existingService, old, updated)
 			if err != nil {

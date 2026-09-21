@@ -66,6 +66,13 @@
 
 ### Added
 
+- `DataPlane`: `spec.network.services.ingress` now supports `ipFamilies` and
+  `ipFamilyPolicy`, letting users control the IP families of the DataPlane's
+  ingress Service (e.g. requesting a dual-stack Service on dual-stack clusters).
+  Additionally, when the operator's IP family is dual (e.g. `--ip-family dual`)
+  and the user configures neither field, the ingress Service now defaults to
+  `PreferDualStack` so that the DataPlane is exposed over both address families.
+  [#5352](https://github.com/Kong/kong-operator/issues/5352)
 - Added `KonnectConfigStoreSync` CRD (`konnect.konghq.com/v1alpha1`): declares a
   one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
   only adds the API types, CEL validation and CRD; it is not reconciled yet.

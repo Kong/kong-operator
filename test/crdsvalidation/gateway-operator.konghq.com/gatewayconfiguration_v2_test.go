@@ -190,6 +190,91 @@ func TestGatewayConfigurationV2(t *testing.T) {
 			RunWithConfig(t, cfg, scheme)
 	})
 
+	t.Run("DataPlaneOptions service ip families", func(t *testing.T) {
+		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
+			{
+				Name: "valid ipFamilies and ipFamilyPolicy",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										IPFamilies: []corev1.IPFamily{
+											corev1.IPv4Protocol,
+											corev1.IPv6Protocol,
+										},
+										IPFamilyPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "invalid IP family value",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										IPFamilies: []corev1.IPFamily{corev1.IPFamily("IPv5")},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("each ipFamilies entry must be IPv4 or IPv6"),
+			},
+			{
+				Name: "invalid ipFamilyPolicy value",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										IPFamilyPolicy: new(corev1.IPFamilyPolicy("Prefer")),
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("Unsupported value: \"Prefer\""),
+			},
+			{
+				Name: "more than two IP families",
+				TestObject: &operatorv2beta1.GatewayConfiguration{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: operatorv2beta1.GatewayConfigurationSpec{
+						DataPlaneOptions: &operatorv2beta1.GatewayConfigDataPlaneOptions{
+							Network: operatorv2beta1.GatewayConfigDataPlaneNetworkOptions{
+								Services: &operatorv2beta1.GatewayConfigDataPlaneServices{
+									Ingress: &operatorv2beta1.GatewayConfigServiceOptions{
+										IPFamilies: []corev1.IPFamily{
+											corev1.IPv4Protocol,
+											corev1.IPv6Protocol,
+											corev1.IPv4Protocol,
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("must have at most 2 items"),
+			},
+		}.
+			RunWithConfig(t, cfg, scheme)
+	})
+
 	t.Run("ControlPlaneOptions", func(t *testing.T) {
 		common.TestCasesGroup[*operatorv2beta1.GatewayConfiguration]{
 			{

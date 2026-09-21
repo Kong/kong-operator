@@ -373,6 +373,35 @@ type ServiceOptions struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Cluster;Local
 	InternalTrafficPolicy *corev1.ServiceInternalTrafficPolicy `json:"internalTrafficPolicy,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
+
+	// IPFamilies specifies the IP families (e.g. IPv4, IPv6) the Service should
+	// use. If unset, the Kubernetes API server default applies: the primary
+	// family of the cluster, or both families when the operator defaults
+	// ipFamilyPolicy to PreferDualStack (see below). On dual-stack clusters,
+	// set this to ["IPv4", "IPv6"] (typically along with ipFamilyPolicy) to
+	// expose the DataPlane over both address families.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+	//
+	// +optional
+	// +kubebuilder:validation:MinItems=1
+	// +kubebuilder:validation:MaxItems=2
+	// +kubebuilder:validation:XValidation:message="each ipFamilies entry must be IPv4 or IPv6",rule="self.all(f, f == 'IPv4' || f == 'IPv6')"
+	IPFamilies []corev1.IPFamily `json:"ipFamilies,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
+
+	// IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
+	// SingleStack, PreferDualStack, RequireDualStack). If unset, the Kubernetes
+	// API server default (SingleStack) applies. When neither this field nor
+	// ipFamilies is set and the operator's IP family is dual (e.g. configured
+	// via the --ip-family flag), the operator defaults the Service to
+	// PreferDualStack so that the DataPlane is exposed over both address
+	// families.
+	//
+	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=SingleStack;PreferDualStack;RequireDualStack
+	IPFamilyPolicy *corev1.IPFamilyPolicy `json:"ipFamilyPolicy,omitempty" hash:"ignore"` // hash:"ignore": Service-only; kept out of Deployment spec-hash (PR #4627).
 }
 
 // DataPlaneStatus defines the observed state of DataPlane.
