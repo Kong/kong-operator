@@ -178,6 +178,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -879,6 +890,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -1591,6 +1613,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -1899,6 +1932,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -2707,6 +2751,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -2993,6 +3048,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -3306,6 +3372,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -3584,6 +3661,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -7750,6 +7838,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -12477,6 +12576,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -21029,6 +21139,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object
@@ -21371,6 +21492,17 @@ spec:
                     required:
                     - name
                     type: object
+                  type:
+                    default: namespacedRef
+                    description: |-
+                      Type is the type of the reference. Only namespacedRef is supported.
+
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
+                    enum:
+                    - namespacedRef
+                    type: string
                 required:
                 - namespacedRef
                 type: object

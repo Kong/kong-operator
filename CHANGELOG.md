@@ -127,6 +127,14 @@
   detection failed, please set `--ip-family` manually.
   [#5499](https://github.com/Kong/kong-operator/pull/5499)
 
+### Changed
+
+- AI Gateway configuration entities (`AIGatewayModel`, `AIGatewayPolicy`,
+  `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds):
+  `spec.aiGatewayRef` now uses a dedicated `AIGatewayRef` type instead of the
+  shared `commonv1alpha1.ObjectRef`.
+  [#5788](https://github.com/Kong/kong-operator/pull/5788)
+
 ### Breaking changes
 
 - `KonnectConfigStore`: deleting a `KonnectConfigStore` no longer force-deletes

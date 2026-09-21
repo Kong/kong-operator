@@ -28,6 +28,16 @@ const (
 	AIGatewayRefKindOnPrem AIGatewayRefKind = "OnPremAIGateway"
 )
 
+// AIGatewayRefType is the type of the reference held by an AIGatewayRef.
+//
+// +kubebuilder:validation:Enum=namespacedRef
+type AIGatewayRefType string
+
+const (
+	// AIGatewayRefTypeNamespacedRef references an entity by its namespaced name.
+	AIGatewayRefTypeNamespacedRef AIGatewayRefType = "namespacedRef"
+)
+
 // AIGatewayRef is the reference to the AI Gateway (control plane) that owns an
 // AI Gateway configuration entity.
 //
@@ -37,6 +47,16 @@ const (
 //
 // +kong:channels=kong-operator
 type AIGatewayRef struct {
+	// Type is the type of the reference. Only namespacedRef is supported.
+	//
+	// Deprecated: kept only for backward compatibility with objects written
+	// before the AIGatewayRef type was introduced; it defaults to
+	// namespacedRef and will be removed in a future release.
+	//
+	// +optional
+	// +kubebuilder:default=namespacedRef
+	Type AIGatewayRefType `json:"type,omitempty"`
+
 	// Group is the API group of the referenced AI Gateway (control plane).
 	// Defaults to konnect.konghq.com.
 	//

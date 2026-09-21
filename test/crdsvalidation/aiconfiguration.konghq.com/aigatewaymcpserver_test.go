@@ -61,6 +61,15 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				TestObject: validAIGatewayMCPServer(ns.Name),
 			},
 			{
+				Name: "deprecated type namespacedRef is accepted for backward compatibility",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					//nolint:staticcheck // SA1019: deliberately set the deprecated field to verify backward compatibility.
+					obj.Spec.AIGatewayRef.Type = aiconfigurationv1alpha1.AIGatewayRefTypeNamespacedRef
+					return obj
+				}(),
+			},
+			{
 				Name: "namespacedRef is required",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
