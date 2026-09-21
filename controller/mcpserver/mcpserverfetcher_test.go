@@ -680,7 +680,6 @@ func TestFetchAllPagination(t *testing.T) {
 			case "":
 				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
 			case "cursor-1":
-				// The second page fails once, then succeeds.
 				if attempts.Add(1) == 1 {
 					return http.StatusForbidden, `{"error":"forbidden"}`
 				}
