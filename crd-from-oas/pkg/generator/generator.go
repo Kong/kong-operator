@@ -2608,6 +2608,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		parentRef                *config.ParentRefConfig
 		parentRefGoFieldName     string
 		parentRefJSONName        string
+		parentRefCustomTypeName  string
 		setParentIDEntityName    string
 		parentStatusEntityName   string
 		emitParentRefStatusField bool
@@ -2616,6 +2617,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		parentRef = rc.ParentRef
 		parentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
 		parentRefJSONName = rc.ParentRef.FieldName
+		parentRefCustomTypeName = rc.ParentRef.TypeName
 		setParentIDEntityName = rc.ParentEntityKind()
 		parentStatusEntityName = parentRefStatusEntityName(rootParentDep, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootParentDep, rc)
@@ -2658,15 +2660,23 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	// Determine whether we need the ObjectRef import: either for dependencies/refs,
 	// sensitive data source SecretRef type, configured inter-CR references, or
-	// a parentRef override field.
+	// a parentRef override field. Entities whose parent ref field uses a custom
+	// (hand-written) type don't reference commonv1alpha1 from the CRD type file
+	// through the parent ref, so the parentRef-driven import is skipped there.
+	// The same applies to the OAS-derived parent dependency import: its field
+	// emission is suppressed in favour of the custom-typed parent ref field.
+	customParentRefType := parentRef != nil && parentRef.TypeName != ""
 	objectRefImport := g.objectRefImportIfNeeded(schema)
-	if objectRefImport == nil && g.hasSecretRefs(entityName) && g.objectRefImported() {
+	if customParentRefType {
+		objectRefImport = nil
+	}
+	if objectRefImport == nil && !customParentRefType && g.hasSecretRefs(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	if objectRefImport == nil && g.entityHasReferences(entityName) && g.objectRefImported() {
+	if objectRefImport == nil && !customParentRefType && g.entityHasReferences(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	if objectRefImport == nil && parentRef != nil && g.objectRefImported() {
+	if objectRefImport == nil && parentRef != nil && !customParentRefType && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 
@@ -2735,6 +2745,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRef                 *config.ParentRefConfig
 		ParentRefGoFieldName      string
 		ParentRefJSONFieldName    string
+		ParentRefCustomTypeName   string
 		SetParentIDEntityName     string
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
@@ -2759,6 +2770,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRef:                 parentRef,
 		ParentRefGoFieldName:      parentRefGoFieldName,
 		ParentRefJSONFieldName:    parentRefJSONName,
+		ParentRefCustomTypeName:   parentRefCustomTypeName,
 		SetParentIDEntityName:     setParentIDEntityName,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
@@ -2897,15 +2909,17 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	rootRefDependency := rootRefDependency(schema)
 
 	var (
-		funcsParentRef              *config.ParentRefConfig
-		funcsParentRefGoFieldName   string
-		funcsSetParentIDEntityName  string
-		funcsParentStatusEntityName string
-		emitParentRefStatusField    bool
+		funcsParentRef               *config.ParentRefConfig
+		funcsParentRefGoFieldName    string
+		funcsParentRefCustomTypeName string
+		funcsSetParentIDEntityName   string
+		funcsParentStatusEntityName  string
+		emitParentRefStatusField     bool
 	)
 	if rc != nil && rc.ParentRef != nil {
 		funcsParentRef = rc.ParentRef
 		funcsParentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
+		funcsParentRefCustomTypeName = rc.ParentRef.TypeName
 		funcsSetParentIDEntityName = rc.ParentEntityKind()
 		funcsParentStatusEntityName = parentRefStatusEntityName(rootRefDependency, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootRefDependency, rc)
@@ -3013,6 +3027,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ObjectRefTypeName                  string
 		ParentRef                          *config.ParentRefConfig
 		ParentRefGoFieldName               string
+		ParentRefCustomTypeName            string
 		SetParentIDEntityName              string
 		ParentStatusEntityName             string
 		EmitParentRefStatusField           bool
@@ -3054,6 +3069,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ObjectRefTypeName:        g.objectRefTypeName(),
 		ParentRef:                funcsParentRef,
 		ParentRefGoFieldName:     funcsParentRefGoFieldName,
+		ParentRefCustomTypeName:  funcsParentRefCustomTypeName,
 		SetParentIDEntityName:    funcsSetParentIDEntityName,
 		ParentStatusEntityName:   funcsParentStatusEntityName,
 		EmitParentRefStatusField: emitParentRefStatusField,

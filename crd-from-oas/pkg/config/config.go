@@ -278,6 +278,14 @@ type ParentRefConfig struct {
 	// ReplacesAPISpecField is the JSON name of the apiSpec property to suppress
 	// in favour of the new top-level field, e.g. "destination".
 	ReplacesAPISpecField string `yaml:"replacesAPISpecField"`
+	// TypeName optionally overrides the Go type of the emitted parent ref spec
+	// field and its typed accessor (Get<FieldEntity>Ref). When set, it must
+	// name a type defined in the target API package (hand-written, not
+	// generated) that provides ToObjectRef and <TypeName>FromObjectRef
+	// conversion helpers, so that the generic GetParentRef/SetParentRef
+	// accessors keep their commonv1alpha1.ObjectRef signature. When unset, the
+	// field is emitted as commonv1alpha1.ObjectRef.
+	TypeName string `yaml:"typeName,omitempty"`
 }
 
 // ReconcilerConfig holds configuration for reconciler code generation.

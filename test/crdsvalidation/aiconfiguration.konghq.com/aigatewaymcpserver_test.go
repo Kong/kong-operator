@@ -19,8 +19,7 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "test-ai-gateway",
 				},
@@ -62,30 +61,27 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				TestObject: validAIGatewayMCPServer(ns.Name),
 			},
 			{
-				Name: "type namespacedRef without namespacedRef set is rejected",
+				Name: "namespacedRef is required",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
-					obj.Spec.AIGatewayRef = commonv1alpha1.ObjectRef{
-						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-					}
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{}
 					return obj
 				}(),
-				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
+				ExpectedErrorMessage: new("spec.aiGatewayRef: Required value"),
 			},
 			{
-				Name: "type konnectID with namespacedRef set is rejected",
+				Name: "unknown kind is rejected",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
-					obj.Spec.AIGatewayRef = commonv1alpha1.ObjectRef{
-						Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-						KonnectID: new("12345678-1234-1234-1234-123456789abc"),
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: "NotARealKind",
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},
 					}
 					return obj
 				}(),
-				ExpectedErrorMessage: new("when type is konnectID, namespacedRef must not be set"),
+				ExpectedErrorMessage: new("spec.aiGatewayRef.kind"),
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})

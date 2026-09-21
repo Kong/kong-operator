@@ -379,7 +379,7 @@ AIGatewayAgentSpec defines the desired state of AIGatewayAgent.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayAgentAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -686,7 +686,7 @@ AIGatewayAuthStrategySpec defines the desired state of AIGatewayAuthStrategy.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayAuthStrategyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -780,7 +780,7 @@ AIGatewayCACertificateSpec defines the desired state of AIGatewayCACertificate.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayCACertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -886,7 +886,7 @@ AIGatewayCertificateSpec defines the desired state of AIGatewayCertificate.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1029,7 +1029,7 @@ AIGatewayConsumerGroupSpec defines the desired state of AIGatewayConsumerGroup.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayConsumerGroupAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1062,7 +1062,7 @@ AIGatewayConsumerSpec defines the desired state of AIGatewayConsumer.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `consumerGroups` _[][AIGatewayConsumerGroupRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupref)_ | ConsumerGroups is the list of AIGatewayConsumerGroup references this resource is associated with. |
 | `apiSpec` _[AIGatewayConsumerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
@@ -1148,7 +1148,7 @@ AIGatewayDataPlaneCertificateSpec defines the desired state of AIGatewayDataPlan
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayDataPlaneCertificateAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificateapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -1873,7 +1873,7 @@ AIGatewayMCPServerSpec defines the desired state of AIGatewayMCPServer.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayMCPServerAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -4080,7 +4080,7 @@ AIGatewayModelProviderSpec defines the desired state of AIGatewayModelProvider.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayModelProviderAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -4266,7 +4266,7 @@ AIGatewayModelSpec defines the desired state of AIGatewayModel.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayModelAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -4699,7 +4699,7 @@ AIGatewayPolicySpec defines the desired state of AIGatewayPolicy.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
@@ -5083,6 +5083,78 @@ _Appears in:_
 - [AIGatewayModelVectorDBConfigRedisCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelvectordbconfigrediscloudauthentication)
 - [AIGatewayRedisCloudConfigurationCloudAuthentication](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfigurationcloudauthentication)
 
+#### AIGatewayRef
+
+
+AIGatewayRef is the reference to the AI Gateway (control plane) that owns an
+AI Gateway configuration entity.<br /><br />When Group and Kind are unset they default to konnect.konghq.com and
+KonnectAIGateway respectively, so that existing objects which predate the
+Group/Kind fields keep referencing their KonnectAIGateway.
+
+
+
+| Field | Description |
+| --- | --- |
+| `group` _[AIGatewayRefGroup](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrefgroup)_ | Group is the API group of the referenced AI Gateway (control plane). Defaults to konnect.konghq.com. |
+| `kind` _[AIGatewayRefKind](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrefkind)_ | Kind is the kind of the referenced AI Gateway (control plane): KonnectAIGateway (default) or OnPremAIGateway. |
+| `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef references the AI Gateway (control plane) by namespaced name. When Namespace is unset, the namespace of the referencing entity is used. |
+
+_Appears in:_
+
+- [AIGatewayAgentSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentspec)
+- [AIGatewayAuthStrategySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayauthstrategyspec)
+- [AIGatewayCACertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycacertificatespec)
+- [AIGatewayCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycertificatespec)
+- [AIGatewayConsumerGroupSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumergroupspec)
+- [AIGatewayConsumerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayconsumerspec)
+- [AIGatewayDataPlaneCertificateSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaydataplanecertificatespec)
+- [AIGatewayMCPServerSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverspec)
+- [AIGatewayModelProviderSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderspec)
+- [AIGatewayModelSpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelspec)
+- [AIGatewayPolicySpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyspec)
+- [AIGatewaySNISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysnispec)
+
+#### AIGatewayRefGroup
+
+_Underlying type:_ `string`
+
+AIGatewayRefGroup is the API group of the AI Gateway (control plane) kinds
+that an AIGatewayRef can reference.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `konnect.konghq.com` | AIGatewayRefGroupKonnect is the API group of the Konnect-hosted<br />KonnectAIGateway.<br /> |
+
+#### AIGatewayRefKind
+
+_Underlying type:_ `string`
+
+AIGatewayRefKind is the kind of the AI Gateway (control plane) that an
+AIGatewayRef references.
+
+
+
+
+_Appears in:_
+
+- [AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `KonnectAIGateway` | AIGatewayRefKindKonnect references a KonnectAIGateway.<br /> |
+| `OnPremAIGateway` | AIGatewayRefKindOnPrem references an OnPremAIGateway.<br /> |
+
 #### AIGatewayRouteConfig
 
 
@@ -5140,7 +5212,7 @@ AIGatewaySNISpec defines the desired state of AIGatewaySNI.
 
 | Field | Description |
 | --- | --- |
-| `aiGatewayRef` _[ObjectRef](#common-konghq-com-v1alpha1-types-objectref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
+| `aiGatewayRef` _[AIGatewayRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayref)_ | AIGatewayRef is the reference to the parent KonnectAIGateway object. |
 | `apiSpec` _[AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)_ | APISpec defines the desired state of the resource's API spec fields. |
 
 _Appears in:_
