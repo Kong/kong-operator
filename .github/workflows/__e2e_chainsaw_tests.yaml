@@ -132,12 +132,16 @@ jobs:
         # job timeout), so /tmp/chainsaw stays empty and the upload below is a
         # no-op. Dump cluster state and operator logs at the workflow level too.
         # We don't know which test namespace was active on cancellation, so
-        # capture every non-system namespace plus the operator namespace.
+        # capture every non-system, non-infra namespace plus the operator
+        # namespace. The runner only allows ~5 minutes of post-cancellation
+        # steps before killing them, so keep this dump fast: skip the slow
+        # resource-counting summary and infra namespaces we don't debug.
         NAMESPACES=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
-          | grep -vE '^kube-(system|node-lease|public)$' | tr '\n' ' ')
+          | grep -vE '^(kube-(system|node-lease|public)|cert-manager|metallb-system|local-path-storage)$' | tr '\n' ' ')
         TEST_NAME="${SUITE}" \
-        NAMESPACE="$(echo ${NAMESPACES} | awk '{print $1}')" \
-        ADDITIONAL_NAMESPACES="$(echo ${NAMESPACES} | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        NAMESPACE="$(echo "${NAMESPACES}" | awk '{print $1}')" \
+        ADDITIONAL_NAMESPACES="$(echo "${NAMESPACES}" | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        SKIP_RESOURCE_COUNTS=1 \
         bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh
 
     - name: Upload debug snapshots as artifacts
