@@ -40,8 +40,6 @@ jobs:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     needs:
     - github-app-token
     # Only react to merged PRs for security reasons.
