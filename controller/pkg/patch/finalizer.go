@@ -32,7 +32,10 @@ func WithFinalizer[
 		return false, ctrl.Result{}, nil
 	}
 
-	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+	// Optimistic lock ensures the patch is applied only if the object hasn't changed
+	// since it was read. Without it, a merge patch computed from a stale cached copy
+	// would silently re-add finalizers that other controllers removed in the meantime.
+	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFromWithOptions(ent, client.MergeFromWithOptimisticLock{})); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}
@@ -66,7 +69,8 @@ func WithoutFinalizer[
 		return false, ctrl.Result{}, nil
 	}
 
-	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFrom(ent)); errUpd != nil {
+	// Optimistic lock: see WithFinalizer.
+	if errUpd := cl.Patch(ctx, objWithFinalizer, client.MergeFromWithOptions(ent, client.MergeFromWithOptimisticLock{})); errUpd != nil {
 		if apierrors.IsConflict(errUpd) {
 			return false, ctrl.Result{Requeue: true}, nil
 		}

@@ -81,7 +81,9 @@ func (r *Reconciler) cleanup(
 	} else {
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupControlPlanes)) {
-			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
+			// Optimistic lock ensures a patch computed from a stale cached copy fails with
+			// a conflict instead of re-adding finalizers removed by other controllers.
+			if err := r.Patch(ctx, gateway, client.MergeFromWithOptions(oldGateway, client.MergeFromWithOptimisticLock{})); err != nil {
 				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return false, res, err
 			}
@@ -111,7 +113,9 @@ func (r *Reconciler) cleanup(
 	} else {
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupDataPlanes)) {
-			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
+			// Optimistic lock ensures a patch computed from a stale cached copy fails with
+			// a conflict instead of re-adding finalizers removed by other controllers.
+			if err := r.Patch(ctx, gateway, client.MergeFromWithOptions(oldGateway, client.MergeFromWithOptimisticLock{})); err != nil {
 				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return false, res, err
 			}
@@ -151,7 +155,9 @@ func (r *Reconciler) cleanup(
 	} else {
 		oldGateway := gateway.DeepCopy()
 		if controllerutil.RemoveFinalizer(gateway, string(GatewayFinalizerCleanupNetworkPolicies)) {
-			if err := r.Patch(ctx, gateway, client.MergeFrom(oldGateway)); err != nil {
+			// Optimistic lock ensures a patch computed from a stale cached copy fails with
+			// a conflict instead of re-adding finalizers removed by other controllers.
+			if err := r.Patch(ctx, gateway, client.MergeFromWithOptions(oldGateway, client.MergeFromWithOptimisticLock{})); err != nil {
 				res, err := finalizer.HandlePatchOrUpdateError(err, logger)
 				return true, res, err
 			}
