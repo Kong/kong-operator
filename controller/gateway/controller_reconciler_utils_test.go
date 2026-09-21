@@ -5259,9 +5259,10 @@ func TestSetAcceptedAndAttachedRoutes(t *testing.T) {
 func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 	ns := func(s string) *string { return &s }
 
-	// The unqualified name a Control Plane created before the #4079 fix carries. Every case
-	// seeds it and asserts it survives: renaming it here would rename every Control Plane
-	// already created in Konnect, on the first reconcile after an upgrade.
+	// The unqualified name a Control Plane created before the fix in
+	// https://github.com/Kong/kong-operator/issues/4079 carries. Every case seeds it and
+	// asserts it survives: renaming it here would rename every Control Plane already created
+	// in Konnect, on the first reconcile after an upgrade.
 	const legacyKonnectName = "test-kgcp"
 
 	authRef := konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{
@@ -5466,8 +5467,9 @@ func TestHasStaticNaming(t *testing.T) {
 }
 
 // TestKonnectControlPlaneName covers the derivation of the Konnect-side Control Plane name:
-// namespace-qualified under static naming (#4079), identical to the Kubernetes name on the
-// dynamic path (#3357).
+// namespace-qualified under static naming (https://github.com/Kong/kong-operator/issues/4079),
+// identical to the Kubernetes name on the dynamic path
+// (https://github.com/Kong/kong-operator/issues/3357).
 func TestKonnectControlPlaneName(t *testing.T) {
 	testCases := []struct {
 		name        string
@@ -5531,7 +5533,8 @@ func TestKonnectControlPlaneName(t *testing.T) {
 
 			// Random suffix: assert the relationship between the names, not a literal.
 			assert.Equal(t, kgcpName, konnectName,
-				"under dynamic naming the Konnect name must equal the Kubernetes name (#3357)")
+				"under dynamic naming the Konnect name must equal the Kubernetes name "+
+					"(https://github.com/Kong/kong-operator/issues/3357)")
 			assert.NotEqual(t, gateway.Name, kgcpName,
 				"the dynamic Kubernetes name must carry a random suffix")
 			assert.NotEqual(t, gateway.Namespace+"-"+gateway.Name, konnectName,

@@ -6,7 +6,8 @@ spec:
   description: |
     Non-regression lock for the default (dynamic) naming path. Without the static-naming
     annotation the operator generates "<gateway-name>-<random suffix>" and uses that same
-    string as the Konnect name (#3357). The #4079 fix qualifies the Konnect name only under
+    string as the Konnect name (https://github.com/Kong/kong-operator/issues/3357). The fix in
+    https://github.com/Kong/kong-operator/issues/4079 qualifies it only under
     static naming: this makes sure the dynamic path is not changed by accident.
   bindings:
     - name: test_name
@@ -67,7 +68,8 @@ spec:
 
     - name: 06-assert-dynamic-naming-invariants
       description: |
-        The Konnect name equals the generated Kubernetes name (#3357) and is not qualified
+        The Konnect name equals the generated Kubernetes name
+        (https://github.com/Kong/kong-operator/issues/3357) and is not qualified
         with the namespace. A script rather than an assertion tree because it compares two
         fields of the same resource, whose values are not known up front. The preceding step
         already waited for the resource, so the script's single read is enough.

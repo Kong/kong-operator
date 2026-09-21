@@ -1,8 +1,9 @@
 #!/bin/bash
 # Assert the invariants of the default (dynamic) Gateway naming path:
-#   - the Konnect Control Plane name equals the generated Kubernetes name (#3357);
-#   - the Konnect name is not qualified with the Gateway namespace (#4079 qualifies it only
-#     under static naming);
+#   - the Konnect Control Plane name equals the generated Kubernetes name
+#     (https://github.com/Kong/kong-operator/issues/3357);
+#   - the Konnect name is not qualified with the Gateway namespace (the fix in
+#     https://github.com/Kong/kong-operator/issues/4079 qualifies it only under static naming);
 #   - the generated Kubernetes name carries a random suffix, i.e. it is not the bare Gateway
 #     name that static naming would produce.
 #
@@ -59,12 +60,14 @@ if [ -z "$K8S_NAME" ] || [ -z "$KONNECT_NAME" ]; then
   fail "could not read both names from the KonnectGatewayControlPlane"
 fi
 
-# #3357: on the dynamic path the two names are the same string.
+# On the dynamic path the two names are the same string
+# (https://github.com/Kong/kong-operator/issues/3357).
 if [ "$K8S_NAME" != "$KONNECT_NAME" ]; then
   fail "the Konnect name must equal the Kubernetes name on the dynamic naming path (#3357)"
 fi
 
-# #4079 qualifies the Konnect name ONLY under static naming.
+# The fix in https://github.com/Kong/kong-operator/issues/4079 qualifies the Konnect name
+# ONLY under static naming.
 if [ "$KONNECT_NAME" = "${NAMESPACE}-${GATEWAY_NAME}" ]; then
   fail "the dynamic Konnect name must not be qualified with the namespace"
 fi

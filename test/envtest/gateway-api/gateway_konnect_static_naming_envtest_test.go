@@ -27,7 +27,8 @@ import (
 
 // TestGatewayKonnectControlPlaneStaticNaming asserts that a statically-named Gateway gets a
 // KonnectGatewayControlPlane keeping the bare Gateway name in Kubernetes, and a
-// namespace-qualified name in Konnect so same-named Gateways do not collide (#4079).
+// namespace-qualified name in Konnect so same-named Gateways do not collide
+// (https://github.com/Kong/kong-operator/issues/4079).
 func TestGatewayKonnectControlPlaneStaticNaming(t *testing.T) {
 	t.Parallel()
 
@@ -100,8 +101,9 @@ func TestGatewayKonnectControlPlaneStaticNaming(t *testing.T) {
 }
 
 // TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility asserts that a
-// KonnectGatewayControlPlane created before the #4079 fix keeps its old unqualified Konnect
-// name on upgrade -- renaming it would rename the Control Plane in Konnect -- and keeps being
+// KonnectGatewayControlPlane created before the fix in
+// https://github.com/Kong/kong-operator/issues/4079 keeps its old unqualified Konnect name
+// on upgrade -- renaming it would rename the Control Plane in Konnect -- and keeps being
 // resolved by the resources referring to it.
 func TestGatewayKonnectControlPlaneStaticNamingBackwardCompatibility(t *testing.T) {
 	t.Parallel()

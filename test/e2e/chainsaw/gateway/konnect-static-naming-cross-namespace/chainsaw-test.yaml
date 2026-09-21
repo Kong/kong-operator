@@ -7,7 +7,8 @@ spec:
   description: |
     Two Gateways sharing a name across namespaces, both statically named, each get their own
     Control Plane in Konnect. Before the fix both requested a Control Plane named "edge-gw"
-    and the second create failed with HTTP 409 (#4079); the Konnect name is now qualified
+    and the second create failed with HTTP 409
+    (https://github.com/Kong/kong-operator/issues/4079); the Konnect name is now qualified
     with the namespace, while metadata.name stays the bare Gateway name.
 
     First Konnect-backed test in the gateway/ suite: it lives here because the code under

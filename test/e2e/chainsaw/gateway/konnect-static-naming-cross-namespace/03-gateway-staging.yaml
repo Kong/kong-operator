@@ -1,5 +1,6 @@
 # Statically named, and deliberately identical to the Gateway in the "production"
-# namespace: the condition that triggers the Konnect 409 of #4079.
+# namespace: the condition that triggers the Konnect 409 of
+# https://github.com/Kong/kong-operator/issues/4079.
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:

@@ -1936,7 +1936,8 @@ func hasStaticNaming(gateway *gwtypes.Gateway) bool {
 // name is the bare Gateway name -- the namespace is prepended, joined with "_". An underscore
 // is valid in neither a namespace nor a Gateway name, so the encoding stays unambiguous,
 // unlike "<namespace>-<name>" where both sides may contain "-". The dynamic name already
-// carries a random suffix and is used as is (#3357).
+// carries a random suffix and is used as is
+// (https://github.com/Kong/kong-operator/issues/3357).
 func konnectControlPlaneName(gateway *gwtypes.Gateway, kgcpName string) string {
 	if hasStaticNaming(gateway) {
 		return fmt.Sprintf("%s_%s", gateway.Namespace, gateway.Name)
