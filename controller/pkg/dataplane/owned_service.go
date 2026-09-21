@@ -23,6 +23,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/intstr"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -70,35 +71,44 @@ type ServicePort struct {
 	NodePort *int32
 }
 
-// ensureService reconciles the Service for the given DataPlane and returns the
-// live Service object (with Status populated).
-func (r *Reconciler[T, CP, Cert]) ensureService(
+// serviceName returns the name of the Service configured by cfg for the
+// given DataPlane: the DataPlane name plus the configured suffix. It is the
+// single source of truth for the Service name, used both to build the desired
+// Service and to find leftovers to remove.
+func (cfg ServiceConfig[T]) serviceName(dp T) string {
+	return dp.GetName() + cfg.NameSuffix
+}
+
+// ensureService reconciles the Service configured by cfg for the given
+// DataPlane and returns the live Service object (with Status populated).
+func (r *Reconciler[T, Cert]) ensureService(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
+	cfg ServiceConfig[T],
 ) (*corev1.Service, error) {
-	desired, err := BuildService(r.TypeConverter, dp, r.Config.Service)
+	desired, err := BuildService(r.TypeConverter, dp, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build %s Service for %s %s/%s: %w",
-			r.Config.Service.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+			cfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
 	result, err := controllerpkgssa.ApplyIfChanged(ctx, logger, r.Client, r.TypeConverter, desired, controllerpkgssa.FieldManager)
 	if err != nil {
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeWarning, "ServiceFailed", "ApplyService",
-			"Failed to apply %s Service: %v", r.Config.Service.Description, err)
+			"Failed to apply %s Service: %v", cfg.Description, err)
 		return nil, fmt.Errorf("failed to apply %s Service for %s %s/%s: %w",
-			r.Config.Service.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+			cfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 	switch result {
 	case op.Created:
-		log.Debug(logger, r.Config.Service.Description+" Service created", "name", desired.GetName())
+		log.Debug(logger, cfg.Description+" Service created", "name", desired.GetName())
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "ServiceCreated", "CreateService",
-			"%s Service %s created", r.Config.Service.Description, desired.GetName())
+			"%s Service %s created", cfg.Description, desired.GetName())
 	case op.Updated:
-		log.Debug(logger, r.Config.Service.Description+" Service updated", "name", desired.GetName())
+		log.Debug(logger, cfg.Description+" Service updated", "name", desired.GetName())
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "ServiceUpdated", "UpdateService",
-			"%s Service %s updated", r.Config.Service.Description, desired.GetName())
+			"%s Service %s updated", cfg.Description, desired.GetName())
 	case op.Noop, op.Deleted:
 	}
 
@@ -109,14 +119,51 @@ func (r *Reconciler[T, CP, Cert]) ensureService(
 	svc := &corev1.Service{}
 	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), svc); err != nil {
 		if apierrors.IsNotFound(err) {
-			log.Debug(logger, r.Config.Service.Description+" Service not yet in cache, will retry on next reconcile",
+			log.Debug(logger, cfg.Description+" Service not yet in cache, will retry on next reconcile",
 				"name", desired.GetName())
 			return nil, nil
 		}
 		return nil, fmt.Errorf("failed to get %s Service for %s %s/%s: %w",
-			r.Config.Service.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+			cfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 	return svc, nil
+}
+
+// deleteServiceIfOwned removes the Service configured by cfg when it exists
+// and is controller-owned by the DataPlane, i.e. a leftover from an earlier
+// reconcile in which the Service's Enabled predicate was true. A Service that
+// exists but is not owned by the DataPlane is left untouched.
+func (r *Reconciler[T, Cert]) deleteServiceIfOwned(
+	ctx context.Context,
+	logger logr.Logger,
+	dp T,
+	cfg ServiceConfig[T],
+) error {
+	svc := &corev1.Service{}
+	name := cfg.serviceName(dp)
+	if err := r.Get(ctx, client.ObjectKey{Namespace: dp.GetNamespace(), Name: name}, svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		return fmt.Errorf("failed to get %s Service for %s %s/%s: %w",
+			cfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+	if !metav1.IsControlledBy(svc, dp) {
+		return nil
+	}
+	if err := r.Delete(ctx, svc); err != nil {
+		if apierrors.IsNotFound(err) {
+			return nil
+		}
+		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeWarning, "ServiceFailed", "DeleteService",
+			"Failed to delete %s Service: %v", cfg.Description, err)
+		return fmt.Errorf("failed to delete %s Service for %s %s/%s: %w",
+			cfg.Description, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+	}
+	log.Debug(logger, cfg.Description+" Service removed (no longer enabled)", "name", name)
+	r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "ServiceDeleted", "DeleteService",
+		"%s Service %s deleted", cfg.Description, name)
+	return nil
 }
 
 // BuildService constructs the desired Service. If the user has provided
@@ -130,6 +177,9 @@ func BuildService[T Object](
 ) (client.Object, error) {
 	base := GenerateBaseService(dp, cfg)
 
+	if cfg.Options == nil {
+		return base, nil
+	}
 	opts := cfg.Options(dp)
 	if opts == nil {
 		return base, nil
@@ -152,10 +202,12 @@ func BuildService[T Object](
 func GenerateBaseService[T Object](dp T, cfg ServiceConfig[T]) *corev1.Service {
 	// Collect user-provided port names so we can skip conflicting base ports.
 	userPortNames := make(map[string]struct{})
-	if opts := cfg.Options(dp); opts != nil {
-		for _, p := range opts.Ports {
-			if p.Name != nil {
-				userPortNames[*p.Name] = struct{}{}
+	if cfg.Options != nil {
+		if opts := cfg.Options(dp); opts != nil {
+			for _, p := range opts.Ports {
+				if p.Name != nil {
+					userPortNames[*p.Name] = struct{}{}
+				}
 			}
 		}
 	}
@@ -177,7 +229,7 @@ func GenerateBaseService[T Object](dp T, cfg ServiceConfig[T]) *corev1.Service {
 	svc := &corev1.Service{
 		APIVersion: "v1",
 		Kind:       "Service",
-		Name:       dp.GetName() + cfg.NameSuffix,
+		Name:       cfg.serviceName(dp),
 		Namespace:  dp.GetNamespace(),
 		Spec: corev1.ServiceSpec{
 			Selector: map[string]string{
@@ -217,7 +269,7 @@ func GenerateServiceOverlay[T Object](dp T, cfg ServiceConfig[T], opts *ServiceO
 	svc := &corev1.Service{
 		APIVersion:  "v1",
 		Kind:        "Service",
-		Name:        dp.GetName() + cfg.NameSuffix,
+		Name:        cfg.serviceName(dp),
 		Namespace:   dp.GetNamespace(),
 		Labels:      opts.Labels,
 		Annotations: opts.Annotations,

@@ -37,15 +37,15 @@ import (
 // ensureKonnectCertificate ensures a DataPlane certificate resource exists for
 // the given DataPlane, referencing the provisioned mTLS Secret and the
 // resolved control plane.
-func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
+func (r *Reconciler[T, Cert]) ensureKonnectCertificate(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	certSecret *corev1.Secret,
 	certChecksum string,
 ) (programmed bool, err error) {
-	desired := r.Config.BuildCertificate(dp, cp, certSecret.Name, certChecksum)
+	desired := r.Config.Certificate.Build(dp, cp, certSecret.Name, certChecksum)
 
 	k8sutils.SetOwnerForObject(desired, dp)
 
@@ -55,22 +55,22 @@ func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
 			Type:               r.Config.Conditions.KonnectCertificateRegisteredType,
 			Status:             metav1.ConditionFalse,
 			Reason:             r.Config.Conditions.KonnectCertificateRegistrationFailedReason,
-			Message:            fmt.Sprintf("failed to ensure %s: %v", r.Config.CertificateKind, err),
+			Message:            fmt.Sprintf("failed to ensure %s: %v", r.Config.Certificate.Kind, err),
 			ObservedGeneration: dp.GetGeneration(),
 		})
 		return false, fmt.Errorf("failed to apply %s for %s %s/%s: %w",
-			r.Config.CertificateKind, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
+			r.Config.Certificate.Kind, r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
 	}
 
 	switch result {
 	case op.Created:
-		log.Debug(logger, r.Config.CertificateKind+" created", "name", desired.GetName())
+		log.Debug(logger, r.Config.Certificate.Kind+" created", "name", desired.GetName())
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "KonnectCertificateCreated", "CreateKonnectCertificate",
-			"%s %s created", r.Config.CertificateKind, desired.GetName())
+			"%s %s created", r.Config.Certificate.Kind, desired.GetName())
 	case op.Updated:
-		log.Debug(logger, r.Config.CertificateKind+" updated", "name", desired.GetName())
+		log.Debug(logger, r.Config.Certificate.Kind+" updated", "name", desired.GetName())
 		r.EventRecorder.Eventf(dp, nil, corev1.EventTypeNormal, "KonnectCertificateUpdated", "UpdateKonnectCertificate",
-			"%s %s updated", r.Config.CertificateKind, desired.GetName())
+			"%s %s updated", r.Config.Certificate.Kind, desired.GetName())
 	case op.Noop, op.Deleted:
 	}
 
@@ -80,7 +80,7 @@ func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
 			Type:               r.Config.Conditions.KonnectCertificateRegisteredType,
 			Status:             metav1.ConditionFalse,
 			Reason:             r.Config.Conditions.KonnectCertificateRegistrationFailedReason,
-			Message:            fmt.Sprintf("failed to check %s status: %v", r.Config.CertificateKind, err),
+			Message:            fmt.Sprintf("failed to check %s status: %v", r.Config.Certificate.Kind, err),
 			ObservedGeneration: dp.GetGeneration(),
 		})
 		return false, err
@@ -92,7 +92,7 @@ func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
 		Type:               r.Config.Conditions.KonnectCertificateRegisteredType,
 		Status:             metav1.ConditionTrue,
 		Reason:             r.Config.Conditions.KonnectCertificateRegisteredReason,
-		Message:            r.Config.CertificateKind + " ensured and programmed on Konnect",
+		Message:            r.Config.Certificate.Kind + " ensured and programmed on Konnect",
 		ObservedGeneration: dp.GetGeneration(),
 	})
 	return true, nil
@@ -103,7 +103,7 @@ func (r *Reconciler[T, CP, Cert]) ensureKonnectCertificate(
 // It sets KonnectCertificateRegistered=False on the DataPlane when not yet
 // programmed and returns false so the caller can return early; the Owns()
 // watch will retrigger once the Konnect controller flips Programmed to True.
-func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
+func (r *Reconciler[T, Cert]) checkKonnectCertificateProgrammed(
 	ctx context.Context,
 	dp T,
 	desired Cert,
@@ -113,7 +113,7 @@ func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
 			Type:               r.Config.Conditions.KonnectCertificateRegisteredType,
 			Status:             metav1.ConditionFalse,
 			Reason:             r.Config.Conditions.KonnectCertificateNotProgrammedReason,
-			Message:            r.Config.CertificateKind + " is not yet programmed on Konnect",
+			Message:            r.Config.Certificate.Kind + " is not yet programmed on Konnect",
 			ObservedGeneration: dp.GetGeneration(),
 		})
 		return false, nil
@@ -123,7 +123,7 @@ func (r *Reconciler[T, CP, Cert]) checkKonnectCertificateProgrammed(
 	if err := r.Get(ctx, client.ObjectKeyFromObject(desired), current); err != nil {
 		if !apierrors.IsNotFound(err) {
 			return false, fmt.Errorf("failed to get %s %s/%s: %w",
-				r.Config.CertificateKind, desired.GetNamespace(), desired.GetName(), err)
+				r.Config.Certificate.Kind, desired.GetNamespace(), desired.GetName(), err)
 		}
 		// A NotFound here means the informer cache has not caught up with the
 		// apply yet; treat it as not-programmed. The Owns() watch on the

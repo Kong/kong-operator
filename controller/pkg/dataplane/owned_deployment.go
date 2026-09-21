@@ -40,16 +40,17 @@ import (
 )
 
 // ensureDeployment reconciles the DataPlane Deployment for the given DataPlane.
-func (r *Reconciler[T, CP, Cert]) ensureDeployment(
+func (r *Reconciler[T, Cert]) ensureDeployment(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
 ) error {
 	image := ResolveImage(dp, r.Config.Deployment)
-	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, certChecksum, r.Config)
+	desired, err := BuildDeployment(logger, r.TypeConverter, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, r.Config)
 	if err != nil {
 		return fmt.Errorf("failed to build Deployment for %s %s/%s: %w",
 			r.Config.Kind, dp.GetNamespace(), dp.GetName(), err)
@@ -82,7 +83,7 @@ func (r *Reconciler[T, CP, Cert]) ensureDeployment(
 // annotation. A missing Deployment reports not-complete; the caller retries
 // on the next reconcile. When no checksum annotation is configured the gate
 // reduces to the plain rollout-complete check.
-func (r *Reconciler[T, CP, Cert]) rolloutOntoCertificateComplete(
+func (r *Reconciler[T, Cert]) rolloutOntoCertificateComplete(
 	ctx context.Context,
 	dp T,
 	certChecksum string,
@@ -97,17 +98,17 @@ func (r *Reconciler[T, CP, Cert]) rolloutOntoCertificateComplete(
 	if !k8sutils.DeploymentRolloutComplete(deployment) {
 		return false, nil
 	}
-	if r.Config.CertificateChecksumAnnotation == "" {
+	if r.Config.Certificate.ChecksumAnnotation == "" {
 		return true, nil
 	}
-	return deployment.Spec.Template.Annotations[r.Config.CertificateChecksumAnnotation] == certChecksum, nil
+	return deployment.Spec.Template.Annotations[r.Config.Certificate.ChecksumAnnotation] == certChecksum, nil
 }
 
 // ResolveImage determines the DataPlane container image using the following priority:
 //  1. User-specified image in the pod template overlay (the DataPlane container)
 //  2. The related-image environment variable
 //  3. The configured default image
-func ResolveImage[T Object, CP ControlPlaneObject](dp T, cfg DeploymentConfig[T, CP]) string {
+func ResolveImage[T Object](dp T, cfg DeploymentConfig[T]) string {
 	if pts := cfg.PodTemplateSpec(dp); pts != nil {
 		if c := k8sutils.GetPodContainerByName(&pts.Spec, cfg.ContainerName); c != nil && c.Image != "" {
 			return c.Image
@@ -124,17 +125,18 @@ func ResolveImage[T Object, CP ControlPlaneObject](dp T, cfg DeploymentConfig[T,
 // overlay, it is merged with the operator base via SMD. The result always has
 // spec.strategy removed so that SSA does not claim ownership of it, leaving
 // the API server (or admission webhooks) free to apply their own default.
-func BuildDeployment[T Object, CP ControlPlaneObject, Cert CertificateObject](
+func BuildDeployment[T Object, Cert CertificateObject](
 	logger logr.Logger,
 	tc managedfields.TypeConverter,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
-	cfg Config[T, CP, Cert],
+	cfg Config[T, Cert],
 ) (*unstructured.Unstructured, error) {
-	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, certChecksum, cfg)
+	base, err := GenerateBaseDeployment(logger, dp, cp, image, certSecretName, adminCertSecretName, certChecksum, cfg)
 	if err != nil {
 		return nil, err
 	}
@@ -169,10 +171,10 @@ func BuildDeployment[T Object, CP ControlPlaneObject, Cert CertificateObject](
 		// The user overlay wins on annotation conflicts, so a user-supplied
 		// value for the checksum key would otherwise silently pin the checksum
 		// and stop rollouts from being triggered on certificate rotation.
-		if certChecksum != "" && cfg.CertificateChecksumAnnotation != "" {
+		if certChecksum != "" && cfg.Certificate.ChecksumAnnotation != "" {
 			if err := unstructured.SetNestedField(u.Object, certChecksum,
 				"spec", "template", "metadata", "annotations",
-				cfg.CertificateChecksumAnnotation); err != nil {
+				cfg.Certificate.ChecksumAnnotation); err != nil {
 				return nil, fmt.Errorf("failed to re-assert certificate checksum annotation: %w", err)
 			}
 		}
@@ -197,21 +199,22 @@ func SelectorLabels[T Object](dp T, managedByLabelValue string) map[string]strin
 
 // GenerateBaseDeployment creates the operator-managed DataPlane Deployment
 // without user overlays.
-func GenerateBaseDeployment[T Object, CP ControlPlaneObject, Cert CertificateObject](
+func GenerateBaseDeployment[T Object, Cert CertificateObject](
 	logger logr.Logger,
 	dp T,
-	cp CP,
+	cp ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 	certChecksum string,
-	cfg Config[T, CP, Cert],
+	cfg Config[T, Cert],
 ) (*appsv1.Deployment, error) {
 	labels := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
 	labels["app.kubernetes.io/name"] = cfg.Deployment.ContainerName
 
 	selector := SelectorLabels(dp, cfg.Deployment.ManagedByLabelValue)
 
-	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName)
+	container, volumes, err := cfg.Deployment.BuildContainer(dp, cp, image, certSecretName, adminCertSecretName)
 	if err != nil {
 		return nil, err
 	}
@@ -225,6 +228,17 @@ func GenerateBaseDeployment[T Object, CP ControlPlaneObject, Cert CertificateObj
 				Name: KonnectCertVolumeName,
 				Secret: &corev1.SecretVolumeSource{
 					SecretName: certSecretName,
+				},
+			})
+	}
+	// Likewise for the Admin API certificate Secret.
+	if adminCertSecretName != "" {
+		volumes = append(
+			volumes,
+			corev1.Volume{
+				Name: AdminCertVolumeName,
+				Secret: &corev1.SecretVolumeSource{
+					SecretName: adminCertSecretName,
 				},
 			})
 	}
@@ -243,7 +257,7 @@ func GenerateBaseDeployment[T Object, CP ControlPlaneObject, Cert CertificateObj
 			Template: corev1.PodTemplateSpec{
 				ObjectMeta: metav1.ObjectMeta{
 					Labels:      labels,
-					Annotations: certChecksumAnnotation(certChecksum, cfg.CertificateChecksumAnnotation),
+					Annotations: certChecksumAnnotation(certChecksum, cfg.Certificate.ChecksumAnnotation),
 				},
 				Spec: corev1.PodSpec{
 					Containers: []corev1.Container{container},

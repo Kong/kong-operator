@@ -2,6 +2,7 @@ package envtest
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,6 +11,7 @@ import (
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	apimeta "k8s.io/apimachinery/pkg/api/meta"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
@@ -431,7 +433,7 @@ func setupProgrammedAIGWDP(
 
 	spec.ControlPlaneRef = &aigatewayv1alpha1.ControlPlaneRef{
 		Type:                 aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-		KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{Name: aigwcpName},
+		KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: aigwcpName},
 	}
 	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
 		Name: aigwdpName, Namespace: ns,
@@ -653,6 +655,221 @@ func TestAIGatewayDataPlaneReconciler_HPA(t *testing.T) {
 	})
 }
 
+// TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI verifies that an
+// AIGatewayDataPlane referencing a Ready OnPremAIGateway gets its Admin API
+// exposed: an SSL-terminated admin listener wired to an operator-provisioned
+// admin certificate Secret, and an admin Service, alongside the regular
+// Deployment and ingress Service. A Konnect-referencing AIGatewayDataPlane
+// must not get any of the admin resources.
+func TestAIGatewayDataPlaneReconciler_OnPremAIGatewayAdminAPI(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
+	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
+
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "aigw-cluster-ca-onprem")
+
+	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
+	require.NoError(t, err)
+
+	StartReconcilers(ctx, t, mgr, logs,
+		&aigwdataplane.Reconciler{
+			Client:                   mgr.GetClient(),
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
+			TypeConverter:            ssaProvider,
+		},
+		&crdschema.Reconciler{
+			Client:   mgr.GetClient(),
+			Provider: ssaProvider,
+		},
+	)
+
+	cl := mgr.GetClient()
+
+	t.Run("on-prem reference: admin Service, admin cert Secret and admin listener are provisioned", func(t *testing.T) {
+		t.Parallel()
+
+		onprem := &aigatewayv1alpha1.OnPremAIGateway{
+			Name: "onprem-aigwcp-admin", Namespace: ns.Name,
+		}
+		require.NoError(t, cl.Create(ctx, onprem))
+		updateOnPremAIGatewayStatusWithReady(t, ctx, cl, onprem)
+
+		aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+			Name: "aigwdp-onprem", Namespace: ns.Name,
+		}
+		aigwdp.Spec.ControlPlaneRef = &aigatewayv1alpha1.ControlPlaneRef{
+			Type:                aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef,
+			OnPremNamespacedRef: &aigatewayv1alpha1.NamespacedRef{Name: onprem.Name},
+		}
+		require.NoError(t, cl.Create(ctx, aigwdp))
+
+		// The Deployment is created with the admin listener wired to the
+		// provisioned admin certificate.
+		deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
+		require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+		container := deploy.Spec.Template.Spec.Containers[0]
+
+		envs := map[string]string{}
+		for _, e := range container.Env {
+			envs[e.Name] = e.Value
+		}
+		assert.Equal(t, "off", envs[aigwdataplane.EnvKongKonnectMode])
+		assert.Equal(t, fmt.Sprintf("0.0.0.0:%d ssl", aigwdataplane.DefaultAdminPort),
+			envs[aigwdataplane.EnvKongAdminListen])
+		assert.Equal(t, aigwdataplane.AdminCertMountPath+"tls.crt", envs[aigwdataplane.EnvKongAdminSSLCert])
+		assert.Equal(t, aigwdataplane.AdminCertMountPath+"tls.key", envs[aigwdataplane.EnvKongAdminSSLCertKey])
+		// The pushing control plane authenticates with a client certificate
+		// signed by the cluster CA carried in the mounted Secret.
+		assert.Equal(t, aigwdataplane.AdminCertMountPath+"ca.crt", envs[aigwdataplane.EnvKongNginxAdminSSLClientCertificate])
+		assert.Equal(t, "on", envs[aigwdataplane.EnvKongNginxAdminSSLVerifyClient])
+		assert.NotContains(t, envs, aigwdataplane.EnvKongClusterControlPlane)
+
+		// Exactly one admin certificate Secret is provisioned, and the
+		// Deployment mounts it.
+		var adminSecrets corev1.SecretList
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			adminSecrets = corev1.SecretList{}
+			assert.NoError(ct, cl.List(ctx, &adminSecrets, client.InNamespace(ns.Name),
+				client.MatchingLabels{consts.SecretAIGatewayDataPlaneAdminCertificateLabel: "true"},
+			))
+			assert.Len(ct, adminSecrets.Items, 1)
+		}, waitTime, tickTime)
+		adminSecret := adminSecrets.Items[0]
+		var adminVolume *corev1.Volume
+		for i := range deploy.Spec.Template.Spec.Volumes {
+			if deploy.Spec.Template.Spec.Volumes[i].Name == aigwdataplane.AdminCertVolumeName {
+				adminVolume = &deploy.Spec.Template.Spec.Volumes[i]
+			}
+		}
+		require.NotNil(t, adminVolume, "admin cert volume not found in Deployment")
+		require.NotNil(t, adminVolume.Secret)
+		assert.Equal(t, adminSecret.Name, adminVolume.Secret.SecretName)
+		// The listener verifies client certificates against ca.crt, so the
+		// Secret the Deployment mounts has to carry it.
+		assert.Contains(t, adminSecret.Data, "ca.crt")
+
+		// The admin Service is created with the admin port and the DataPlane's
+		// pod selector.
+		adminSvc := &corev1.Service{}
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			assert.NoError(ct, cl.Get(ctx, client.ObjectKey{
+				Name: aigwdp.Name + aigwdataplane.AdminServiceNameSuffix, Namespace: ns.Name,
+			}, adminSvc))
+		}, waitTime, tickTime)
+		require.Len(t, adminSvc.Spec.Ports, 1)
+		assert.Equal(t, aigwdataplane.DefaultAdminPort, adminSvc.Spec.Ports[0].Port)
+		assert.Equal(t, "admin", adminSvc.Spec.Ports[0].Name)
+		assert.Equal(t, consts.AIGatewayDataPlaneManagedByLabelValue, adminSvc.Spec.Selector[consts.GatewayOperatorManagedByLabel])
+		assert.Equal(t, aigwdp.Name, adminSvc.Spec.Selector[consts.GatewayOperatorManagedByNameLabel])
+
+		// The ingress Service is created as usual.
+		ingressSvc := &corev1.Service{}
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{
+			Name: aigwdp.Name + "-ingress", Namespace: ns.Name,
+		}, ingressSvc))
+
+		// The AdminCertificateProvisioned condition is set to True and no
+		// Konnect certificate machinery ran for this DataPlane: no Konnect mTLS
+		// client certificate Secret, no AIGatewayDataPlaneCertificate. Both
+		// assertions are scoped to this DataPlane's managed-by-name label: the
+		// parallel Konnect subtest provisions its own certificate resources in
+		// the same namespace.
+		require.EventuallyWithT(t, func(ct *assert.CollectT) {
+			current := &aigatewayv1alpha1.AIGatewayDataPlane{}
+			if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(aigwdp), current)) {
+				return
+			}
+			cond := apimeta.FindStatusCondition(current.Status.Conditions, string(aigatewayv1alpha1.AdminCertificateProvisionedType))
+			if !assert.NotNil(ct, cond, "AdminCertificateProvisioned condition not set") {
+				return
+			}
+			assert.Equal(ct, metav1.ConditionTrue, cond.Status)
+		}, waitTime, tickTime)
+		assert.Never(t, func() bool {
+			var secretList corev1.SecretList
+			if err := cl.List(ctx, &secretList, client.InNamespace(ns.Name),
+				client.MatchingLabels{
+					consts.SecretAIGatewayDataPlaneCertificateLabel: "true",
+					consts.GatewayOperatorManagedByNameLabel:        aigwdp.Name,
+				},
+			); err != nil {
+				return false
+			}
+			return len(secretList.Items) > 0
+		}, waitTime, tickTime)
+		assert.Never(t, func() bool {
+			var certList aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateList
+			if err := cl.List(ctx, &certList, client.InNamespace(ns.Name),
+				client.MatchingLabels{consts.GatewayOperatorManagedByNameLabel: aigwdp.Name},
+			); err != nil {
+				return false
+			}
+			return len(certList.Items) > 0
+		}, waitTime, tickTime)
+	})
+
+	t.Run("Konnect reference: no admin Service is provisioned", func(t *testing.T) {
+		t.Parallel()
+
+		aigwdp := setupProgrammedAIGWDP(t, ctx, cl, ns.Name,
+			"aigwcp-no-admin", "konnect-id-no-admin", "aigwdp-konnect-no-admin",
+			aigatewayv1alpha1.AIGatewayDataPlaneSpec{},
+		)
+		deploy := waitForAIGWDeployment(t, ctx, cl, ns.Name, aigwdp.Name)
+
+		// No admin listener env vars either: the SSL admin listener is never
+		// announced without its certificate.
+		require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+		for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+			assert.NotEqual(t, aigwdataplane.EnvKongAdminListen, e.Name)
+			assert.NotEqual(t, aigwdataplane.EnvKongAdminSSLCert, e.Name)
+			assert.NotEqual(t, aigwdataplane.EnvKongAdminSSLCertKey, e.Name)
+			assert.NotEqual(t, aigwdataplane.EnvKongNginxAdminSSLClientCertificate, e.Name)
+			assert.NotEqual(t, aigwdataplane.EnvKongNginxAdminSSLVerifyClient, e.Name)
+		}
+
+		assert.Never(t, func() bool {
+			svc := &corev1.Service{}
+			return cl.Get(ctx, client.ObjectKey{
+				Name: aigwdp.Name + aigwdataplane.AdminServiceNameSuffix, Namespace: ns.Name,
+			}, svc) == nil
+		}, waitTime, tickTime)
+	})
+}
+
+// updateOnPremAIGatewayStatusWithReady sets onprem's status to Ready=True, as
+// the real OnPremAIGateway controller would once its control plane instance is
+// up.
+func updateOnPremAIGatewayStatusWithReady(
+	t *testing.T,
+	ctx context.Context,
+	cl client.Client,
+	onprem *aigatewayv1alpha1.OnPremAIGateway,
+) {
+	t.Helper()
+	nn := client.ObjectKeyFromObject(onprem)
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		if !assert.NoError(ct, cl.Get(ctx, nn, onprem)) {
+			return
+		}
+		onprem.Status.Conditions = []metav1.Condition{
+			{
+				Type:               string(aigatewayv1alpha1.ReadyType),
+				Status:             metav1.ConditionTrue,
+				Reason:             "Ready",
+				Message:            "Instance is running",
+				ObservedGeneration: onprem.Generation,
+				LastTransitionTime: metav1.Now(),
+			},
+		}
+		assert.NoError(ct, cl.Status().Update(ctx, onprem))
+	}, waitTime, tickTime)
+}
+
 // updateAIGatewayDataPlaneCertificateStatusWithProgrammed flips the owned
 // AIGatewayDataPlaneCertificate to Programmed=True, as the real Konnect
 // controller would once the certificate is registered on Konnect.
@@ -663,8 +880,9 @@ func updateAIGatewayDataPlaneCertificateStatusWithProgrammed(
 	obj *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ) {
 	t.Helper()
+	nn := client.ObjectKeyFromObject(obj)
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		if !assert.NoError(ct, cl.Get(ctx, client.ObjectKeyFromObject(obj), obj)) {
+		if !assert.NoError(ct, cl.Get(ctx, nn, obj)) {
 			return
 		}
 		obj.Status.Conditions = []metav1.Condition{

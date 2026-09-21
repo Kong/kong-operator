@@ -14,7 +14,12 @@ jobs:
   conformance-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1}', matrix.gateway-type, matrix.router-flavor) }}
+    name: ${{ matrix.gateway-type }} ${{ matrix.router-flavor }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }}
+    env:
+      # Only used by the hybrid+ipv6 leg's pre-created cluster (see below);
+      # harmless and unused by every other leg, which manages its own
+      # cluster inside the `make test.conformance` Go test binary.
+      CLUSTER_NAME: gwapi-conformance-hybrid-ipv6
     strategy:
       fail-fast: false
       matrix:
@@ -24,9 +29,28 @@ jobs:
         gateway-type:
           - standard
           - hybrid
+        ip_family:
+          - ipv4
         exclude:
          - router-flavor: expressions
            gateway-type: hybrid
+        include:
+          - router-flavor: traditional_compatible
+            gateway-type: standard
+            ip_family: ipv6
+          - router-flavor: expressions
+            gateway-type: standard
+            ip_family: ipv6
+          # Hybrid makes real Konnect API calls, which on an ipv6-only
+          # cluster needs NAT64/DNS64 (see e2e chainsaw's hybridgateway
+          # ipv6 leg). That needs the cluster to exist before the Go test
+          # binary starts (to patch CoreDNS), so this leg pre-creates its
+          # own cluster via the ktf CLI and hands it to `make
+          # test.conformance` as an existing cluster (KONG_TEST_CLUSTER)
+          # instead of letting the test binary create+own it.
+          - router-flavor: traditional_compatible
+            gateway-type: hybrid
+            ip_family: ipv6
 
     steps:
     - name: Harden Runner
@@ -45,7 +69,7 @@ jobs:
 
     - uses: ./.github/actions/setup-mise
       with:
-        install: false
+        install_args: github:Kong/kubernetes-testing-framework kind
 
     - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
       id: license
@@ -91,12 +115,31 @@ jobs:
 
     - uses: ./.github/actions/bump-inotify
 
+    # Only the hybrid+ipv6 leg needs a cluster that exists before the test
+    # binary starts (see the include entry above for why): every other leg
+    # still creates and owns its cluster inside `make test.conformance`.
+    - name: Create k8s KinD Cluster with ktf (hybrid+ipv6 only)
+      if: ${{ matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6' }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        ktf environments create --name "$CLUSTER_NAME" --ipv6-only
+
+    - name: Set up NAT64 + DNS64 for IPv6-only cluster external reachability
+      if: ${{ matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6' }}
+      uses: ./.github/actions/setup-nat64-dns64
+
     - name: run conformance tests
       run: make test.conformance
       env:
-        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+        GOTESTSUM_JUNITFILE: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}.xml
         TEST_KONG_ROUTER_FLAVOR: ${{ matrix.router-flavor }}
         KONG_TEST_CONFORMANCE_GATEWAY_TYPE: ${{ matrix.gateway-type }}
+        KONG_TEST_CLUSTER_IP_FAMILY: ${{ matrix.ip_family }}
+        # hybrid+ipv6 hands off its pre-created (and NAT64/DNS64-patched)
+        # cluster here instead of letting the test binary create its own;
+        # every other leg leaves this empty and self-manages as before.
+        KONG_TEST_CLUSTER: ${{ (matrix.gateway-type == 'hybrid' && matrix.ip_family == 'ipv6') && format('kind:{0}', env.CLUSTER_NAME) || '' }}
         KONG_TEST_KONNECT_ACCESS_TOKEN: ${{ matrix.gateway-type == 'hybrid' && secrets.KONG_TEST_KONNECT_ACCESS_TOKEN || '' }}
         KONG_TEST_KONNECT_SERVER_URL: ${{ matrix.gateway-type == 'hybrid' && 'us.api.konghq.tech' || '' }}
         KONG_TEST_FORCE_CLEANUP: "true"
@@ -106,7 +149,7 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: diagnostics-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
@@ -114,19 +157,19 @@ jobs:
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
-        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}.xml
+        name: tests-report-conformance-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+        path: conformance-tests-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}.xml
 
     - name: collect conformance report
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: conformance-report-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: experimental-*-report.yaml
 
     - name: upload controller logs
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}
+        name: controller-logs-${{ matrix.router-flavor }}-${{ matrix.gateway-type }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/kong-operator-controller-logs*
         if-no-files-found: error

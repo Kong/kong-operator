@@ -9,6 +9,8 @@ import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+
+	"github.com/kong/kong-operator/v2/test/helpers"
 )
 
 // URLForService returns the URL for the given service and port.
@@ -22,11 +24,11 @@ func URLForService(ctx context.Context, cluster clusters.Cluster, nsn types.Name
 	switch service.Spec.Type {
 	case corev1.ServiceTypeLoadBalancer:
 		if len(service.Status.LoadBalancer.Ingress) == 1 {
-			return url.Parse(fmt.Sprintf("http://%s:%d", service.Status.LoadBalancer.Ingress[0].IP, port))
+			return url.Parse(fmt.Sprintf("http://%s", helpers.HostPort(service.Status.LoadBalancer.Ingress[0].IP, port)))
 		}
 	default:
 		if service.Spec.ClusterIP != "" {
-			return url.Parse(fmt.Sprintf("http://%s:%d", service.Spec.ClusterIP, port))
+			return url.Parse(fmt.Sprintf("http://%s", helpers.HostPort(service.Spec.ClusterIP, port)))
 		}
 	}
 

@@ -66,6 +66,17 @@
 
 ### Added
 
+- `AIGatewayDataPlane`: add management of admin API service, admin server cert and
+  admin listener to AIGatewayDataPlane reconciler.
+  [#5734](https://github.com/Kong/kong-operator/pull/5734)
+- Added `KonnectConfigStoreSync` CRD (`konnect.konghq.com/v1alpha1`): declares a
+  one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
+  only adds the API types, CEL validation and CRD; it is not reconciled yet.
+  [#5773](https://github.com/Kong/kong-operator/pull/5773)
+- `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
+  `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
+  control plane in the same namespace.
+  [#5666](https://github.com/Kong/kong-operator/issues/5666)
 - `MCPServerDataPlane`: add support for HPA (horizontal pod autoscaler) autoscaling
   via `spec.deployment.scaling.horizontal`.
   [#5556](https://github.com/Kong/kong-operator/pull/5556)
@@ -110,9 +121,37 @@
   aren't translated yet, so the rendered payload isn't a complete, pushable
   configuration on its own; pushing it to data planes is also not wired yet.
   [#5661](https://github.com/Kong/kong-operator/pull/5661)
+- `KonnectEventGateway` now supports `spec.source: Mirror`, referencing an
+  existing Konnect Event Gateway by ID (`spec.mirror.konnect.id`) instead of
+  creating one. `Origin` (the default) is unchanged.
+- Konnect entities: Added `spec.id` in `KongCACertificate` to specify the ID of
+  the created CA certificate in Konnect.
+  [#5738](https://github.com/Kong/kong-operator/pull/5738)
+- Added IPv6 support for DataPlanes: Kong's proxy, admin, status and stream
+  listeners can now bind to IPv6 or dual-stack addresses, controlled by the new
+  `--ip-family` flag (`auto`, `ipv4`, `ipv6`, `dual`). The default `auto` detects
+  the cluster's IP family from the `default/kubernetes` Service at startup. If
+  detection failed, please set `--ip-family` manually.
+  [#5499](https://github.com/Kong/kong-operator/pull/5499)
 
 ### Breaking changes
 
+- `KonnectConfigStore`: deleting a `KonnectConfigStore` no longer force-deletes
+  the Konnect config store together with all the secret entries it holds
+  (previously the delete op passed `Force: true`, so one accidental CR deletion
+  instantly removed every stored certificate/key and broke the SNIs referencing
+  them). Konnect rejects deleting a non-empty config store, so the operator now
+  keeps the CR's cleanup finalizer, sets the `Programmed` condition to `False`
+  with reason `DeletionBlocked`, and retries on a fixed interval. Deletion
+  proceeds automatically once the entries are removed from the store in
+  Konnect.
+  Recovery: while deletion is blocked the CR stays in `Terminating` (this also
+  blocks deletion of the containing namespace). Either remove the entries from
+  the config store in Konnect — the deletion then proceeds on its own — or, to
+  abandon the store in Konnect instead, remove the
+  `gateway.konghq.com/konnect-cleanup` finalizer from the CR manually, which
+  leaves the config store and its entries orphaned in Konnect.
+  [#5723](https://github.com/Kong/kong-operator/pull/5723)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
   This corrects a bug where a certificate was previously always auto-provisioned
@@ -134,6 +173,11 @@
 
 ### Fixes
 
+- KonnectExtension: complete certificate cleanup when the referenced ControlPlane
+  was deleted before extension status was persisted. Keep shared client-certificate
+  Secret finalizers while another extension still uses the Secret or has pending
+  certificate cleanup.
+  [#5774](https://github.com/Kong/kong-operator/pull/5774)
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
@@ -180,6 +224,17 @@
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
   [#5683](https://github.com/Kong/kong-operator/pull/5683)
+- MCP server: fixed listing MCP servers of a control plane across multiple
+  pages. The full `meta.page.next` URI was passed as the `page[after]` request
+  parameter instead of only the item cursor it contains, malforming every
+  page 2+ request: the fetch loop either retried the rejected request forever,
+  never returning any MCP server, or, if Konnect ignored the invalid cursor,
+  re-fetched the first page indefinitely. The item cursor is now extracted from
+  the next-page URI, and a fetch that cannot follow pagination to the end fails
+  and is retried with a backoff instead of returning a truncated list, which
+  was treated as authoritative and deleted the in-cluster `MCPServer`s missing
+  from it.
+  [#5727](https://github.com/Kong/kong-operator/pull/5727)
 
 ## [v2.3.1]
 

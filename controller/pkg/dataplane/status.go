@@ -41,6 +41,14 @@ func setStatusCondition(dp k8sutils.ConditionsAware, condition metav1.Condition)
 	dp.SetConditions(conditions)
 }
 
+// removeStatusCondition removes the condition with the given type from the
+// DataPlane, if present.
+func removeStatusCondition(dp k8sutils.ConditionsAware, condType string) {
+	conditions := dp.GetConditions()
+	apimeta.RemoveStatusCondition(&conditions, condType)
+	dp.SetConditions(conditions)
+}
+
 // ensureReadyStatus computes the Ready condition for a DataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets
 // Ready=False immediately without fetching the Deployment. Otherwise it reads
@@ -48,7 +56,7 @@ func setStatusCondition(dp k8sutils.ConditionsAware, condition metav1.Condition)
 // which requires the controller to have observed the current generation and
 // all desired replicas to be updated and available.
 // Status is not patched here; the caller flushes via applyStatus.
-func (r *Reconciler[T, CP, Cert]) ensureReadyStatus(
+func (r *Reconciler[T, Cert]) ensureReadyStatus(
 	ctx context.Context,
 	dp T,
 ) error {
@@ -104,7 +112,7 @@ func (r *Reconciler[T, CP, Cert]) ensureReadyStatus(
 }
 
 // applyStatus patches the DataPlane status subresource via SSA.
-func (r *Reconciler[T, CP, Cert]) applyStatus(
+func (r *Reconciler[T, Cert]) applyStatus(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,

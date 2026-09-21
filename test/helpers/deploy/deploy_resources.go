@@ -531,7 +531,7 @@ func KonnectEventGateway(
 					Name: apiAuth.Name,
 				},
 			},
-			APISpec: konnectv1alpha1.KonnectEventGatewayAPISpec{
+			APISpec: &konnectv1alpha1.KonnectEventGatewayAPISpec{
 				Name: konnectv1alpha1.GatewayName(name),
 			},
 		},

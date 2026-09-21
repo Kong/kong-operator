@@ -42,7 +42,7 @@ func TestReconcile_ControlPlaneNotReady(t *testing.T) {
 	}{
 		{
 			name:       "control plane not found: no error retry, resolution condition set",
-			wantReason: string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
+			wantReason: string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
 		},
 		{
 			name:       "control plane not yet Programmed: no error retry, resolution condition set",
@@ -136,7 +136,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 		svc := &corev1.Service{
 			Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeClusterIP, ClusterIPs: []string{"10.0.0.1"}},
 		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Service, svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)
@@ -149,7 +149,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 	t.Run("LoadBalancer with no ingress sets ServiceReady=False", func(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		svc := &corev1.Service{Spec: corev1.ServiceSpec{Type: corev1.ServiceTypeLoadBalancer}}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Service, svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)
@@ -168,7 +168,7 @@ func TestEnsureServiceReadyCondition(t *testing.T) {
 				},
 			},
 		}
-		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, svc))
+		require.NoError(t, r.ensureServiceReadyCondition(aigwdp, testConfig.Service, svc))
 
 		cond := apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.ServiceReadyType))
 		require.NotNil(t, cond)

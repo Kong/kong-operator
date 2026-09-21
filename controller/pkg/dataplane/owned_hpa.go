@@ -31,7 +31,7 @@ import (
 
 // ensureHPA reconciles the HPA for the given DataPlane.
 // If horizontal scaling is not configured, any existing HPA is deleted.
-func (r *Reconciler[T, CP, Cert]) ensureHPA(
+func (r *Reconciler[T, Cert]) ensureHPA(
 	ctx context.Context,
 	logger logr.Logger,
 	dp T,

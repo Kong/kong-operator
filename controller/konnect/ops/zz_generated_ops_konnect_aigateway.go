@@ -20,6 +20,9 @@ func createKonnectAIGateway(
 ) error {
 	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
 		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		if obj.Spec.Mirror == nil {
+			return fmt.Errorf("spec.mirror must be set for source Mirror on %s", obj.GetTypeName())
+		}
 		id := string(obj.Spec.Mirror.Konnect.ID)
 		resp, err := sdk.GetAiGateway(ctx, id)
 		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {

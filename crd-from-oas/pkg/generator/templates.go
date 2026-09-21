@@ -1875,7 +1875,13 @@ import (
 {{- end}}
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
+{{- if .SupportsMirror}}
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+{{- end}}
 	{{.APIAlias}} "{{.APIPackagePath}}"
+{{- if .SupportsMirror}}
+	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
+{{- end}}
 {{- if .NeedsFakeClient}}
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 {{- end}}
@@ -2061,6 +2067,95 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	err = create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
+{{- if $.SupportsMirror}}
+
+func TestCreate{{.Entity}}_MirrorFetchesExistingByID(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "{{$.FixtureName}}-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+
+	resp := &sdkkonnectops.{{.Create.GetSDKMethod}}Response{
+		{{.Create.RespField}}: &sdkkonnectcomp.{{.Create.RespField}}{},
+	}
+{{- range .Create.ResponseStatusFields}}
+{{- if .Fields}}
+{{- range .Fields}}
+	resp.{{$.Create.RespField}}.{{.RespPath}} = "https://test-{{.JSON}}.example.com"
+{{- end}}
+{{- else}}
+	resp.{{$.Create.RespField}}.{{.RespPath}} = new("test-{{.StatusJSON}}-value")
+{{- end}}
+{{- end}}
+
+	sdk.EXPECT().
+		{{.Create.GetSDKMethod}}(mock.Anything, mirrorID).
+		Return(resp, nil).
+		Once()
+
+	require.NoError(t, create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj))
+	require.Equal(t, mirrorID, obj.GetKonnectID())
+{{- range .Create.ResponseStatusFields}}
+{{- $field := .}}
+{{- if .Fields}}
+{{- range .Fields}}
+	require.Equal(t, "test-{{.JSON}}.example.com", obj.Status.{{$field.StatusField}}.{{.Name}})
+{{- end}}
+{{- else}}
+	require.Equal(t, "test-{{.StatusJSON}}-value", *obj.Status.{{.StatusField}})
+{{- end}}
+{{- end}}
+}
+
+func TestCreate{{.Entity}}_MirrorFetchPropagatesSDKError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	mirrorID := "{{$.FixtureName}}-mirror-id"
+	obj.Spec.Mirror = &konnectv1alpha2.MirrorSpec{
+		Konnect: konnectv1alpha2.MirrorKonnect{ID: commonv1alpha1.KonnectIDType(mirrorID)},
+	}
+	sdkErr := errors.New("sdk error")
+
+	sdk.EXPECT().
+		{{.Create.GetSDKMethod}}(mock.Anything, mirrorID).
+		Return(nil, sdkErr).
+		Once()
+
+	err := create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, sdkErr.Error())
+}
+
+func TestCreate{{.Entity}}_MirrorMissingMirrorBlockReturnsError(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Create.MockConstructorName}}(t)
+{{- if .Create.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+
+	err := create{{.Entity}}(ctx, {{if .Create.NeedsClient}}cl, {{end}}sdk, obj)
+	require.ErrorContains(t, err, "spec.mirror must be set for source Mirror")
+}
+{{- end}}
 {{- end}}
 {{- if .Update}}
 
@@ -2217,6 +2312,23 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	err = update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
+{{- if $.SupportsMirror}}
+
+func TestUpdate{{.Entity}}_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Update.MockConstructorName}}(t)
+{{- if .Update.NeedsClient}}
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()){{range $.ExtraSeedObjects}}.WithObjects({{.}}){{end}}.Build()
+{{- end}}
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+
+	require.NoError(t, update{{.Entity}}(ctx, {{if .Update.NeedsClient}}cl, {{end}}sdk, obj))
+}
+{{- end}}
 {{- end}}
 {{- if .Delete}}
 
@@ -2367,6 +2479,20 @@ func TestDelete{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	err := delete{{.Entity}}(ctx, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
+{{- if $.SupportsMirror}}
+
+func TestDelete{{.Entity}}_MirrorIsNoOp(t *testing.T) {
+	t.Parallel()
+
+	ctx := t.Context()
+	sdk := mocks.{{.Delete.MockConstructorName}}(t)
+	obj := testGenerated{{.Entity}}ForSDKOps()
+	obj.Spec.Source = new(commonv1alpha1.EntitySourceMirror)
+	obj.SetKonnectID("{{$.FixtureName}}-id")
+
+	require.NoError(t, delete{{.Entity}}(ctx, sdk, obj))
+}
+{{- end}}
 {{- end}}`
 
 const commonTypesTemplate = sharedGeneratedFilePreamble + `
@@ -2469,6 +2595,9 @@ func create{{.Entity}}(
 {{- if .SupportsMirror}}
 	if obj.Spec.Source != nil && *obj.Spec.Source == commonv1alpha1.EntitySourceMirror {
 		// Mirror: the entity already exists in Konnect; fetch it by ID instead of creating it.
+		if obj.Spec.Mirror == nil {
+			return fmt.Errorf("spec.mirror must be set for source Mirror on %s", obj.GetTypeName())
+		}
 		id := string(obj.Spec.Mirror.Konnect.ID)
 		resp, err := sdk.{{.GetSDKMethod}}(ctx, id)
 		if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {

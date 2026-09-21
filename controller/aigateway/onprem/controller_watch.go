@@ -22,25 +22,24 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 )
 
-// mapAIGatewayModelToOnPremAIGateway requeues the OnPremAIGateway an AIGatewayModel's
-// aiGatewayRef names, so config changes on the model are picked up without waiting for the
-// OnPremAIGateway's own resync.
-func mapAIGatewayModelToOnPremAIGateway(_ context.Context, obj client.Object) []reconcile.Request {
-	model, ok := obj.(*aiconfigurationv1alpha1.AIGatewayModel)
-	if !ok || model.Spec.AIGatewayRef.NamespacedRef == nil {
+// mapAIGatewayDataPlaneToOnPremAIGateway requeues the OnPremAIGateway for
+// changes to the AIGatewayDataPlane resource.
+func mapAIGatewayDataPlaneToOnPremAIGateway(_ context.Context, obj client.Object) []reconcile.Request {
+	dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
+	if !ok || dp.Spec.ControlPlaneRef == nil ||
+		dp.Spec.ControlPlaneRef.Type != aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef {
 		return nil
 	}
-	ns := model.Namespace
-	ref := model.Spec.AIGatewayRef.NamespacedRef
-	if ref.Namespace != nil && *ref.Namespace != "" {
-		ns = *ref.Namespace
+	ref := dp.Spec.ControlPlaneRef.OnPremNamespacedRef
+	if ref == nil {
+		return nil
 	}
 	return []reconcile.Request{
 		{
-			Namespace: ns,
+			Namespace: dp.Namespace,
 			Name:      ref.Name,
 		},
 	}

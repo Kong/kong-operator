@@ -41,11 +41,47 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
+// konnectAIGatewayKind wires the KonnectAIGateway control plane kind into the
+// shared generic DataPlane reconciler.
+var konnectAIGatewayKind = shareddataplane.ControlPlaneKindConfig{
+	Kind:                      "KonnectAIGateway",
+	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	IsKonnect:                 true,
+	Conditions: shareddataplane.ControlPlaneConditions{
+		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+	},
+}
+
+// onPremAIGatewayKind wires the OnPremAIGateway control plane kind into the
+// shared generic DataPlane reconciler.
+var onPremAIGatewayKind = shareddataplane.ControlPlaneKindConfig{
+	Kind:                      "OnPremAIGateway",
+	NewObject:                 func() shareddataplane.ControlPlaneObject { return &aigatewayv1alpha1.OnPremAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnOnPremAIGateway,
+	IsKonnect:                 false,
+	ReadinessConditionType:    string(aigatewayv1alpha1.ReadyType),
+	Conditions: shareddataplane.ControlPlaneConditions{
+		ResolvedType:    string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
+		ResolvedReason:  string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage: aigatewayv1alpha1.OnPremAIGatewayResolvedMessage,
+		NotFoundReason:  string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage: aigatewayv1alpha1.OnPremAIGatewayNotFoundMessage,
+		NotReadyReason:  string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
+		NotReadyMessage: aigatewayv1alpha1.OnPremAIGatewayNotReadyMessage,
+	},
+}
+
 // config wires the AIGatewayDataPlane specific behavior into the shared
 // generic DataPlane reconciler.
 var config = shareddataplane.Config[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]{
 	ControllerName: ControllerName,
@@ -54,9 +90,6 @@ var config = shareddataplane.Config[
 	NewObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{}
 	},
-	NewControlPlaneObject: func() *konnectv1alpha1.KonnectAIGateway {
-		return &konnectv1alpha1.KonnectAIGateway{}
-	},
 	NewCertificateObject: func() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 		return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	},
@@ -64,14 +97,38 @@ var config = shareddataplane.Config[
 		return &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 	},
 
-	ControlPlaneRefName: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
-		if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
-			return ""
+	ControlPlaneRef: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) shareddataplane.ControlPlaneRef {
+		ref := aigwdp.Spec.ControlPlaneRef
+		if ref == nil {
+			return shareddataplane.ControlPlaneRef{}
 		}
-		return aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name
+		switch ref.Type {
+		case aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef:
+			if ref.KonnectNamespacedRef == nil {
+				return shareddataplane.ControlPlaneRef{}
+			}
+			return shareddataplane.ControlPlaneRef{
+				Kind: konnectAIGatewayKind.Kind,
+				Name: ref.KonnectNamespacedRef.Name,
+			}
+		case aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef:
+			if ref.OnPremNamespacedRef == nil {
+				return shareddataplane.ControlPlaneRef{}
+			}
+			return shareddataplane.ControlPlaneRef{
+				Kind: onPremAIGatewayKind.Kind,
+				Name: ref.OnPremNamespacedRef.Name,
+			}
+		default:
+			// This is in reality an error case: the ControlPlaneRef CRD schema
+			// doesn't allow unsupported ref types, so it shouldn't happen.
+			// To avoid adding an error to the return values here we just
+			// return an empty ref, which makes the DataPlane reconcile as if
+			// it had no control plane reference configured.
+			return shareddataplane.ControlPlaneRef{}
+		}
 	},
-	ControlPlaneKind:          "KonnectAIGateway",
-	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	ControlPlanes: []shareddataplane.ControlPlaneKindConfig{konnectAIGatewayKind, onPremAIGatewayKind},
 
 	Conditions: shareddataplane.Conditions{
 		ReadyType:                    string(aigatewayv1alpha1.ReadyType),
@@ -84,14 +141,6 @@ var config = shareddataplane.Config[
 		CertificateProvisionedType:   string(aigatewayv1alpha1.CertificateProvisionedType),
 		CertificateProvisionedReason: string(aigatewayv1alpha1.CertificateProvisionedReason),
 
-		ControlPlaneResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
-		ControlPlaneResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
-		ControlPlaneNotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		ControlPlaneNotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		ControlPlaneNotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
-
 		KonnectCertificateRegisteredType:           string(aigatewayv1alpha1.KonnectCertificateRegisteredType),
 		KonnectCertificateRegisteredReason:         string(aigatewayv1alpha1.KonnectCertificateRegisteredReason),
 		KonnectCertificateRegistrationFailedReason: string(aigatewayv1alpha1.KonnectCertificateRegistrationFailedReason),
@@ -102,25 +151,35 @@ var config = shareddataplane.Config[
 		ServiceReadyMessage:      aigatewayv1alpha1.ServiceReadyMessage,
 		WaitingForAddressReason:  string(aigatewayv1alpha1.WaitingForAddressReason),
 		WaitingForAddressMessage: aigatewayv1alpha1.WaitingForAddressMessage,
+
+		AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+		AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
 	},
 
-	CertificateLabelKey:      consts.SecretAIGatewayDataPlaneCertificateLabel,
-	CertificateKind:          "AIGatewayDataPlaneCertificate",
-	BuildCertificate:         buildAIGatewayDataPlaneCertificate,
-	EnsureCertificate:        secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
-	ResolveCertificateSecret: resolveCertificateSecret,
-	CertificateRequested: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
-		return aigwdp.Spec.CertificateSecret != nil
-	},
-	CertificateChecksum:           certificateChecksum,
-	CertificateChecksumAnnotation: consts.AIGatewayDataPlaneCertificateChecksumAnnotation,
-	CleanupStaleCertificates:      cleanupStaleCertificates,
-	ExtraWatches:                  extraWatches,
-
-	Deployment: shareddataplane.DeploymentConfig[
+	Certificate: shareddataplane.CertificateConfig[
 		*aigatewayv1alpha1.AIGatewayDataPlane,
-		*konnectv1alpha1.KonnectAIGateway,
+		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 	]{
+		LabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
+		Kind:     "AIGatewayDataPlaneCertificate",
+		Build:    buildAIGatewayDataPlaneCertificate,
+		Ensure:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
+		Resolve:  resolveCertificateSecret,
+		Requested: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
+			// Certificate automation only applies to Konnect-backed control planes.
+			// An on-prem control plane pushes configuration to the DataPlane and
+			// has no consumer for a provisioned mTLS client certificate, so a
+			// configured certificateSecret is ignored there and must not block the
+			// Deployment.
+			return aigwdp.Spec.CertificateSecret != nil && !isOnPremControlPlaneRef(aigwdp)
+		},
+		Checksum:           certificateChecksum,
+		ChecksumAnnotation: consts.AIGatewayDataPlaneCertificateChecksumAnnotation,
+		CleanupStale:       cleanupStaleCertificates,
+	},
+	ExtraWatches: extraWatches,
+
+	Deployment: shareddataplane.DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:         consts.AIGatewayDataPlaneContainerName,
 		RelatedImageEnvVar:    consts.RelatedImageAIGatewayDataPlaneEnvVar,
 		DefaultImage:          consts.DefaultAIGatewayDataPlaneImage,
@@ -133,6 +192,11 @@ var config = shareddataplane.Config[
 		LabelManaged:          k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
 	},
 
+	// The primary (ingress) Service always exists. The Admin API Service and
+	// its TLS server certificate are configured through AdminAPI below: they
+	// are only exposed for on-prem control planes, which push configuration
+	// to the DataPlane's Admin API over them. With any other control plane
+	// kind (or none) they must not exist.
 	Service: shareddataplane.ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		Description:         "Ingress",
 		NameSuffix:          "-ingress",
@@ -140,11 +204,21 @@ var config = shareddataplane.Config[
 		DefaultPort:         DefaultIngressPort,
 		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
 		Options:             serviceOptions,
+
+		SetStatusAddresses: setStatusAddresses,
 	},
 
-	HPAScalingSpec:     hpaScalingSpec,
-	SetStatusReplicas:  setStatusReplicas,
-	SetStatusAddresses: setStatusAddresses,
+	AdminAPI: &shareddataplane.AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             isAdminListenerEnabled,
+		ServiceNameSuffix:   AdminServiceNameSuffix,
+		ServicePortName:     "admin",
+		ServicePort:         DefaultAdminPort,
+		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
+	},
+
+	HPAScalingSpec:    hpaScalingSpec,
+	SetStatusReplicas: setStatusReplicas,
 }
 
 func podTemplateSpec(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *corev1.PodTemplateSpec {
@@ -231,10 +305,14 @@ func serviceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *shareddatapla
 	if aigwdp.Spec.Network == nil || aigwdp.Spec.Network.Services == nil || aigwdp.Spec.Network.Services.Ingress == nil {
 		return nil
 	}
-	ingress := aigwdp.Spec.Network.Services.Ingress
+	return serviceOptionsFromAPI(aigwdp.Spec.Network.Services.Ingress)
+}
 
-	ports := make([]shareddataplane.ServicePort, 0, len(ingress.Ports))
-	for _, p := range ingress.Ports {
+// serviceOptionsFromAPI converts the API ServiceOptions into the shared
+// representation.
+func serviceOptionsFromAPI(opts *aigatewayv1alpha1.ServiceOptions) *shareddataplane.ServiceOptions {
+	ports := make([]shareddataplane.ServicePort, 0, len(opts.Ports))
+	for _, p := range opts.Ports {
 		ports = append(ports, shareddataplane.ServicePort{
 			Name:       p.Name,
 			Port:       p.Port,
@@ -243,32 +321,33 @@ func serviceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *shareddatapla
 		})
 	}
 
-	labels := make(map[string]string, len(ingress.Labels))
-	for k, v := range ingress.Labels {
+	labels := make(map[string]string, len(opts.Labels))
+	for k, v := range opts.Labels {
 		labels[string(k)] = string(v)
 	}
 
 	return &shareddataplane.ServiceOptions{
-		Type:                  ingress.Type,
-		Annotations:           ingress.Annotations,
+		Type:                  opts.Type,
+		Annotations:           opts.Annotations,
 		Labels:                labels,
-		ExternalTrafficPolicy: ingress.ExternalTrafficPolicy,
-		TrafficDistribution:   ingress.TrafficDistribution,
-		InternalTrafficPolicy: ingress.InternalTrafficPolicy,
+		ExternalTrafficPolicy: opts.ExternalTrafficPolicy,
+		TrafficDistribution:   opts.TrafficDistribution,
+		InternalTrafficPolicy: opts.InternalTrafficPolicy,
 		Ports:                 ports,
 	}
 }
 
 // buildContainer builds the AI Gateway container and the additional volumes it
-// requires. cp is nil when the AIGatewayDataPlane has no ControlPlaneRef
+// requires. cp.Object is nil when the AIGatewayDataPlane has no ControlPlaneRef
 // configured.
 func buildContainer(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	certSecretName string,
+	adminCertSecretName string,
 ) (corev1.Container, []corev1.Volume, error) {
-	envVars, err := buildAIGatewayEnvVars(aigatewaycp, certSecretName)
+	envVars, err := buildAIGatewayEnvVars(cp, certSecretName, adminCertSecretName)
 	if err != nil {
 		return corev1.Container{}, nil, err
 	}
@@ -283,27 +362,81 @@ func buildContainer(
 	// manual reference): omit the volumeMount too, a Pod can't mount a volume
 	// that doesn't exist.
 	if certSecretName != "" {
-		container.VolumeMounts = []corev1.VolumeMount{
-			{
-				Name:      KonnectCertVolumeName,
-				MountPath: KonnectCertMountPath,
-				ReadOnly:  true,
-			},
-		}
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      KonnectCertVolumeName,
+			MountPath: KonnectCertMountPath,
+			ReadOnly:  true,
+		})
+	}
+	// Likewise for the Admin API certificate Secret, provisioned only for
+	// on-prem control planes.
+	if adminCertSecretName != "" {
+		container.VolumeMounts = append(container.VolumeMounts, corev1.VolumeMount{
+			Name:      AdminCertVolumeName,
+			MountPath: AdminCertMountPath,
+			ReadOnly:  true,
+		})
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 	return container, volumes, nil
 }
 
-// buildAIGatewayEnvVars builds the AI Gateway environment variables
-// from required hardcoded values and KonnectAIGateway (controlplane) status.
-// aigatewaycp is nil when the AIGatewayDataPlane has no ControlPlaneRef
-// configured; in that case the Konnect-endpoint env vars are omitted and the
-// user is expected to supply them manually (e.g. via PodTemplateSpec).
+// konnectAIGatewayFromResolved returns the KonnectAIGateway carried by the
+// resolved control plane. It returns nil when the AIGatewayDataPlane has no
+// control plane reference configured or the resolved control plane is not
+// Konnect-backed (e.g. an OnPremAIGateway).
+// It panics on a resolved control plane that claims to be Konnect-backed
+// but carries an unexpected object: that is a programming error.
+func konnectAIGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *konnectv1alpha1.KonnectAIGateway {
+	if cp.Object == nil || !cp.IsKonnect {
+		return nil
+	}
+	aigatewaycp, ok := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
+	if !ok {
+		panic(fmt.Sprintf("AIGatewayDataPlane referenced an unexpected Konnect-backed control plane kind %q", cp.Kind))
+	}
+	return aigatewaycp
+}
+
+// isOnPremControlPlaneRef reports whether the AIGatewayDataPlane references an
+// on-prem (non-Konnect) control plane.
+func isOnPremControlPlaneRef(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) bool {
+	return aigwdp.Spec.ControlPlaneRef != nil &&
+		aigwdp.Spec.ControlPlaneRef.Type == aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef
+}
+
+// onPremControlPlane reports whether the resolved control plane is an
+// on-prem (non-Konnect) one.
+func onPremControlPlane(cp shareddataplane.ResolvedControlPlane) bool {
+	return cp.IsResolved() && !cp.IsKonnect
+}
+
+// isAdminListenerEnabled reports whether the DataPlane's Admin API must be
+// exposed: only an on-prem control plane (OnPremAIGateway) consumes it, pushing
+// configuration to the DataPlane over the admin listener. cp is the zero
+// ResolvedControlPlane when the AIGatewayDataPlane has no control plane
+// reference configured.
+func isAdminListenerEnabled(_ *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane) bool {
+	return cp.IsResolved() && cp.Kind == onPremAIGatewayKind.Kind
+}
+
+// buildAIGatewayEnvVars builds the AI Gateway environment variables for the
+// resolved control plane cp. cp.Object is nil when the AIGatewayDataPlane has
+// no ControlPlaneRef configured; in that case the Konnect-endpoint env vars
+// are omitted and the user is expected to supply them manually (e.g. via
+// PodTemplateSpec). An on-prem control plane emits the admin listener (and
+// admin certificate) env vars instead of the Konnect ones. certSecretName is
+// the Konnect client certificate Secret and adminCertSecretName the provisioned
+// Admin API certificate Secret, both empty when none was provisioned.
 func buildAIGatewayEnvVars(
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
+	adminCertSecretName string,
 ) ([]corev1.EnvVar, error) {
+	if onPremControlPlane(cp) {
+		return buildOnPremEnvVars(adminCertSecretName), nil
+	}
+
 	envVars := RequiredHardcodedEnvVars()
 	if certSecretName != "" {
 		envVars = append(
@@ -313,6 +446,7 @@ func buildAIGatewayEnvVars(
 		)
 	}
 
+	aigatewaycp := konnectAIGatewayFromResolved(cp)
 	if aigatewaycp == nil {
 		return envVars, nil
 	}
@@ -331,6 +465,31 @@ func buildAIGatewayEnvVars(
 		corev1.EnvVar{Name: EnvKongClusterTelemetryEndpoint, Value: tpHost + ":443"},
 		corev1.EnvVar{Name: EnvKongClusterTelemetryServerName, Value: tpHost},
 	), nil
+}
+
+// buildOnPremEnvVars returns the environment variables to boot the AI Gateway
+// with an on-prem control plane, wiring the SSL Admin API listener and its
+// certificate together: the listener is only announced when the admin
+// certificate Secret has been provisioned, since an SSL listener without a
+// certificate would prevent Kong from booting.
+func buildOnPremEnvVars(adminCertSecretName string) []corev1.EnvVar {
+	envVars := RequiredOnPremEnvVars()
+	if adminCertSecretName == "" {
+		return envVars
+	}
+	return append(
+		envVars,
+		corev1.EnvVar{Name: EnvKongAdminListen, Value: fmt.Sprintf("0.0.0.0:%d ssl", DefaultAdminPort)},
+		corev1.EnvVar{Name: EnvKongAdminSSLCert, Value: AdminCertMountPath + "tls.crt"},
+		corev1.EnvVar{Name: EnvKongAdminSSLCertKey, Value: AdminCertMountPath + "tls.key"},
+		// The control plane pushes configuration over this listener, so
+		// it must authenticate: it presents a client certificate signed
+		// by the same cluster CA, which the provisioned Secret carries as
+		// ca.crt. Without this any workload able to reach the admin
+		// Service could reconfigure the gateway.
+		corev1.EnvVar{Name: EnvKongNginxAdminSSLClientCertificate, Value: AdminCertMountPath + "ca.crt"},
+		corev1.EnvVar{Name: EnvKongNginxAdminSSLVerifyClient, Value: "on"},
+	)
 }
 
 // certEntityName derives the AIGatewayDataPlaneCertificate CR name from the
@@ -368,10 +527,11 @@ func certEntityName(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, certChecksum s
 // registers a new entity rather than mutating the previous one in place.
 func buildAIGatewayDataPlaneCertificate(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
 	certChecksum string,
 ) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	aigatewaycp := konnectAIGatewayFromResolved(cp)
 	// certName must also be used as Konnect's Title, not just this CR's own
 	// K8s name: Konnect enforces a "unique-certificate-per-entity" constraint
 	// scoped to (gateway, title), not per gateway alone. A constant Title
@@ -422,27 +582,25 @@ func selectorLabelsForAIGatewayDataPlane(aigwdp *aigatewayv1alpha1.AIGatewayData
 // cleanupStaleCertificates removes the certificate resources left over from
 // an earlier rotation or a switch of provisioning mode: stale Konnect
 // certificate entities (all but the one named after the current checksum)
-// and, when a manually-referenced Secret is in use or no control plane is
-// configured, the operator-provisioned Automatic Secret. The shared
-// reconciler only calls this once the rollout onto the current certificate
-// completed, so no running replica is left depending on what this removes.
+// and, when a manually-referenced Secret is in use or no Konnect-backed
+// control plane is configured, the operator-provisioned Automatic Secret. The
+// shared reconciler only calls this once the rollout onto the current
+// certificate completed, so no running replica is left depending on what this
+// removes.
 func cleanupStaleCertificates(
 	ctx context.Context,
 	cl client.Client,
 	logger logr.Logger,
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certChecksum string,
 ) error {
-	if aigatewaycp != nil {
+	if cp.IsKonnect {
 		if err := cleanupStaleKonnectCertificates(ctx, cl, logger, aigwdp, certEntityName(aigwdp, certChecksum)); err != nil {
 			return err
 		}
 	}
-	// No controlPlaneRef at all means no Automatic Secret is ever provisioned
-	// (see resolveCertificateSecret), so any that still exists is stale
-	// regardless of spec.certificateSecret.
-	if aigatewaycp == nil || isManualProvisioning(aigwdp) {
+	if !cp.IsKonnect || isManualProvisioning(aigwdp) {
 		if err := cleanupStaleAutomaticCertificateSecret(ctx, cl, logger, aigwdp); err != nil {
 			return err
 		}

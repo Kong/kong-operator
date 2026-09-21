@@ -22,6 +22,7 @@ import (
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -308,15 +309,30 @@ func Test_getManualCertificateSecret(t *testing.T) {
 	})
 }
 
+// resolvedKonnectAIGatewayCP wraps a KonnectAIGateway into the
+// shareddataplane.ResolvedControlPlane expected by resolveCertificateSecret.
+// A nil control plane returns the zero ResolvedControlPlane: wrapping a typed
+// nil pointer would produce a non-nil Object interface and misrepresent an
+// unconfigured control plane as configured.
+func resolvedKonnectAIGatewayCP(cp *konnectv1alpha1.KonnectAIGateway) shareddataplane.ResolvedControlPlane {
+	if cp == nil {
+		return shareddataplane.ResolvedControlPlane{}
+	}
+	return shareddataplane.ResolvedControlPlane{
+		Kind:      "KonnectAIGateway",
+		IsKonnect: true,
+		Object:    cp,
+	}
+}
+
 func Test_resolveCertificateSecret(t *testing.T) {
 	scheme := managerscheme.Get()
 	aigatewaycp := &konnectv1alpha1.KonnectAIGateway{}
-
 	t.Run("Manual provisioning: fetches referenced secret, never calls EnsureCertificate", func(t *testing.T) {
 		aigwdp := aigwdpWithManualCertRef()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manualCertSecret(true)).Build()
 
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, aigatewaycp, automaticFallbackUnexpected(t))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, resolvedKonnectAIGatewayCP(aigatewaycp), automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -328,7 +344,7 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(caSecret()).Build()
 
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, aigatewaycp, automaticProvisioningForTest(cl))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, resolvedKonnectAIGatewayCP(aigatewaycp), automaticProvisioningForTest(cl))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Created, res)
@@ -339,7 +355,7 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		aigwdp := newReconcileAIGWDP()
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -354,7 +370,7 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		}
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -369,7 +385,7 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		aigwdp := aigwdpWithManualCertRef()
 		cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(manualCertSecret(true)).Build()
 
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)
@@ -388,13 +404,13 @@ func Test_resolveCertificateSecret(t *testing.T) {
 		cl := fake.NewClientBuilder().WithScheme(scheme).Build()
 
 		// Prior reconcile: CertificateSecret was set, condition surfaces the mismatch.
-		_, _, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
+		_, _, err := resolveCertificateSecret(context.Background(), cl, aigwdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 		require.NoError(t, err)
 		require.NotNil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
 
 		// User clears CertificateSecret; still no ControlPlaneRef.
 		aigwdp.Spec.CertificateSecret = nil
-		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, nil, automaticFallbackUnexpected(t))
+		res, secret, err := resolveCertificateSecret(context.Background(), cl, aigwdp, shareddataplane.ResolvedControlPlane{}, automaticFallbackUnexpected(t))
 
 		require.NoError(t, err)
 		assert.Equal(t, op.Noop, res)

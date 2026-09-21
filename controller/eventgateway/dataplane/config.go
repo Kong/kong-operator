@@ -37,11 +37,28 @@ import (
 	k8sresources "github.com/kong/kong-operator/v2/pkg/utils/kubernetes/resources"
 )
 
+// konnectEventGatewayKind wires the KonnectEventGateway control plane kind
+// into the shared generic DataPlane reconciler.
+var konnectEventGatewayKind = shareddataplane.ControlPlaneKindConfig{
+	Kind:                      "KonnectEventGateway",
+	NewObject:                 func() shareddataplane.ControlPlaneObject { return &konnectv1alpha1.KonnectEventGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnKonnectEventGateway,
+	IsKonnect:                 true,
+	Conditions: shareddataplane.ControlPlaneConditions{
+		ResolvedType:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
+		ResolvedReason:       string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
+		ResolvedMessage:      eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
+		NotFoundReason:       string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
+		NotFoundMessage:      eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
+		NotProgrammedReason:  string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
+		NotProgrammedMessage: eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
+	},
+}
+
 // config wires the KegDataPlane specific behavior into the shared generic
 // DataPlane reconciler.
 var config = shareddataplane.Config[
 	*eventgatewayv1alpha1.KegDataPlane,
-	*konnectv1alpha1.KonnectEventGateway,
 	*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 ]{
 	ControllerName: ControllerName,
@@ -50,9 +67,6 @@ var config = shareddataplane.Config[
 	NewObject: func() *eventgatewayv1alpha1.KegDataPlane {
 		return &eventgatewayv1alpha1.KegDataPlane{}
 	},
-	NewControlPlaneObject: func() *konnectv1alpha1.KonnectEventGateway {
-		return &konnectv1alpha1.KonnectEventGateway{}
-	},
 	NewCertificateObject: func() *configurationv1alpha1.EventGatewayDataPlaneCertificate {
 		return &configurationv1alpha1.EventGatewayDataPlaneCertificate{}
 	},
@@ -60,11 +74,13 @@ var config = shareddataplane.Config[
 		return &eventgatewayv1alpha1.KegDataPlaneList{}
 	},
 
-	ControlPlaneRefName: func(egdp *eventgatewayv1alpha1.KegDataPlane) string {
-		return egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name
+	ControlPlaneRef: func(egdp *eventgatewayv1alpha1.KegDataPlane) shareddataplane.ControlPlaneRef {
+		return shareddataplane.ControlPlaneRef{
+			Kind: konnectEventGatewayKind.Kind,
+			Name: egdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name,
+		}
 	},
-	ControlPlaneKind:          "KonnectEventGateway",
-	ControlPlaneRefIndexField: index.IndexFieldKegDataPlaneOnKonnectEventGateway,
+	ControlPlanes: []shareddataplane.ControlPlaneKindConfig{konnectEventGatewayKind},
 
 	Conditions: shareddataplane.Conditions{
 		ReadyType:                    string(eventgatewayv1alpha1.ReadyType),
@@ -76,14 +92,6 @@ var config = shareddataplane.Config[
 		UnableToProvisionReason:      string(eventgatewayv1alpha1.UnableToProvisionReason),
 		CertificateProvisionedType:   string(eventgatewayv1alpha1.CertificateProvisionedType),
 		CertificateProvisionedReason: string(eventgatewayv1alpha1.CertificateProvisionedReason),
-
-		ControlPlaneResolvedType:         string(eventgatewayv1alpha1.KonnectEventGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(eventgatewayv1alpha1.KonnectEventGatewayResolvedReason),
-		ControlPlaneResolvedMessage:      eventgatewayv1alpha1.KonnectEventGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(eventgatewayv1alpha1.KonnectEventGatewayNotFoundReason),
-		ControlPlaneNotFoundMessage:      eventgatewayv1alpha1.KonnectEventGatewayNotFoundMessage,
-		ControlPlaneNotProgrammedReason:  string(eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedReason),
-		ControlPlaneNotProgrammedMessage: eventgatewayv1alpha1.KonnectEventGatewayNotProgrammedMessage,
 
 		KonnectCertificateRegisteredType:           string(eventgatewayv1alpha1.KonnectCertificateRegisteredType),
 		KonnectCertificateRegisteredReason:         string(eventgatewayv1alpha1.KonnectCertificateRegisteredReason),
@@ -97,15 +105,17 @@ var config = shareddataplane.Config[
 		WaitingForAddressMessage: eventgatewayv1alpha1.WaitingForAddressMessage,
 	},
 
-	CertificateLabelKey: consts.SecretKEGDataPlaneCertificateLabel,
-	CertificateKind:     "EventGatewayDataPlaneCertificate",
-	BuildCertificate:    buildEventGatewayDataPlaneCertificate,
-	EnsureCertificate:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
-
-	Deployment: shareddataplane.DeploymentConfig[
+	Certificate: shareddataplane.CertificateConfig[
 		*eventgatewayv1alpha1.KegDataPlane,
-		*konnectv1alpha1.KonnectEventGateway,
+		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
 	]{
+		LabelKey: consts.SecretKEGDataPlaneCertificateLabel,
+		Kind:     "EventGatewayDataPlaneCertificate",
+		Build:    buildEventGatewayDataPlaneCertificate,
+		Ensure:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+	},
+
+	Deployment: shareddataplane.DeploymentConfig[*eventgatewayv1alpha1.KegDataPlane]{
 		ContainerName:       consts.KEGContainerName,
 		RelatedImageEnvVar:  consts.RelatedImageKEGEnvVar,
 		DefaultImage:        consts.DefaultKEGImage,
@@ -139,11 +149,12 @@ var config = shareddataplane.Config[
 		DefaultPort:         DefaultKafkaPort,
 		ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
 		Options:             serviceOptions,
+
+		SetStatusAddresses: setStatusAddresses,
 	},
 
-	HPAScalingSpec:     hpaScalingSpec,
-	SetStatusReplicas:  setStatusReplicas,
-	SetStatusAddresses: setStatusAddresses,
+	HPAScalingSpec:    hpaScalingSpec,
+	SetStatusReplicas: setStatusReplicas,
 }
 
 // replicas returns the replica count to seed on the Deployment: the static
@@ -237,15 +248,32 @@ func serviceOptions(egdp *eventgatewayv1alpha1.KegDataPlane) *shareddataplane.Se
 	}
 }
 
+// konnectEventGatewayFromResolved returns the KonnectEventGateway carried by
+// the resolved control plane, or nil when the KegDataPlane has no control
+// plane resolved. It panics on a resolved control plane of an unexpected
+// kind: KegDataPlane only supports KonnectEventGateway for now, so a mismatch
+// is a programming error.
+func konnectEventGatewayFromResolved(cp shareddataplane.ResolvedControlPlane) *konnectv1alpha1.KonnectEventGateway {
+	if cp.Object == nil {
+		return nil
+	}
+	keg, ok := cp.Object.(*konnectv1alpha1.KonnectEventGateway)
+	if !ok {
+		panic(fmt.Sprintf("KegDataPlane referenced an unsupported control plane kind %q", cp.Kind))
+	}
+	return keg
+}
+
 // buildContainer builds the keg container and the additional volumes it
 // requires.
 func buildContainer(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName: KEG always provisions its certificate Secret.
+	_ string, // adminCertSecretName: KEG never provisions an admin certificate.
 ) (corev1.Container, []corev1.Volume, error) {
-	envVars, err := buildKEGEnvVars(egdp, keg)
+	envVars, err := buildKEGEnvVars(egdp, konnectEventGatewayFromResolved(cp))
 	if err != nil {
 		return corev1.Container{}, nil, err
 	}
@@ -367,10 +395,11 @@ func buildKEGEnvVars(
 // provisioned mTLS Secret and the resolved KonnectEventGateway.
 func buildEventGatewayDataPlaneCertificate(
 	egdp *eventgatewayv1alpha1.KegDataPlane,
-	keg *konnectv1alpha1.KonnectEventGateway,
+	cp shareddataplane.ResolvedControlPlane,
 	certSecretName string,
 	_ string, // certChecksum: KEG does not track certificate content checksums.
 ) *configurationv1alpha1.EventGatewayDataPlaneCertificate {
+	keg := konnectEventGatewayFromResolved(cp)
 	return &configurationv1alpha1.EventGatewayDataPlaneCertificate{
 		APIVersion: configurationv1alpha1.GroupVersion.String(),
 		Kind:       "EventGatewayDataPlaneCertificate",

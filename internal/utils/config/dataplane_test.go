@@ -76,4 +76,26 @@ func TestKongDefaults(t *testing.T) {
 		_, err := KongDefaults(ipfamily.Auto)
 		require.Error(t, err)
 	})
+
+	t.Run("sets the DNS order to prefer AAAA for IPv6 and Dual", func(t *testing.T) {
+		for _, tc := range []struct {
+			family       ipfamily.IPFamily
+			wantDNSOrder string
+			wantSet      bool
+		}{
+			{family: ipfamily.IPv6, wantDNSOrder: "LAST,SRV,AAAA,A,CNAME", wantSet: true},
+			{family: ipfamily.Dual, wantDNSOrder: "LAST,SRV,AAAA,A,CNAME", wantSet: true},
+			{family: ipfamily.IPv4, wantSet: false},
+		} {
+			defaults, err := KongDefaults(tc.family)
+			require.NoError(t, err)
+			got, ok := defaults["KONG_DNS_ORDER"]
+			if tc.wantSet {
+				require.True(t, ok)
+				assert.Equal(t, tc.wantDNSOrder, got)
+			} else {
+				assert.NotContains(t, defaults, "KONG_DNS_ORDER")
+			}
+		}
+	})
 }

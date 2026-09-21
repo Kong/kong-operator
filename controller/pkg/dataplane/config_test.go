@@ -63,15 +63,51 @@ const (
 // testReconciler is the generic Reconciler instantiated with the test types.
 type testReconciler = Reconciler[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]
+
+// testControlPlaneKind mirrors the KonnectAIGateway control plane kind
+// configuration of the AIGatewayDataPlane controller.
+var testControlPlaneKind = ControlPlaneKindConfig{
+	Kind:                      "KonnectAIGateway",
+	NewObject:                 func() ControlPlaneObject { return &konnectv1alpha1.KonnectAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	IsKonnect:                 true,
+	Conditions: ControlPlaneConditions{
+		ResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
+		ResolvedReason:       string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
+		NotFoundReason:       string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
+		NotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
+		NotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
+	},
+}
+
+// testOnPremControlPlaneKind mirrors the OnPremAIGateway control plane kind
+// configuration of the AIGatewayDataPlane controller: not Konnect-backed, with
+// a readiness condition gate.
+var testOnPremControlPlaneKind = ControlPlaneKindConfig{
+	Kind:                      "OnPremAIGateway",
+	NewObject:                 func() ControlPlaneObject { return &aigatewayv1alpha1.OnPremAIGateway{} },
+	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnOnPremAIGateway,
+	IsKonnect:                 false,
+	ReadinessConditionType:    string(aigatewayv1alpha1.ReadyType),
+	Conditions: ControlPlaneConditions{
+		ResolvedType:    string(aigatewayv1alpha1.OnPremAIGatewayResolvedType),
+		ResolvedReason:  string(aigatewayv1alpha1.ControlPlaneResolvedReason),
+		ResolvedMessage: aigatewayv1alpha1.OnPremAIGatewayResolvedMessage,
+		NotFoundReason:  string(aigatewayv1alpha1.ControlPlaneNotFoundReason),
+		NotFoundMessage: aigatewayv1alpha1.OnPremAIGatewayNotFoundMessage,
+		NotReadyReason:  string(aigatewayv1alpha1.OnPremAIGatewayNotReadyReason),
+		NotReadyMessage: aigatewayv1alpha1.OnPremAIGatewayNotReadyMessage,
+	},
+}
 
 // testConfig mirrors the AIGatewayDataPlane controller configuration with a
 // stubbed container builder.
 var testConfig = Config[
 	*aigatewayv1alpha1.AIGatewayDataPlane,
-	*konnectv1alpha1.KonnectAIGateway,
 	*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 ]{
 	ControllerName: "aigw-dataplane",
@@ -80,9 +116,6 @@ var testConfig = Config[
 	NewObject: func() *aigatewayv1alpha1.AIGatewayDataPlane {
 		return &aigatewayv1alpha1.AIGatewayDataPlane{}
 	},
-	NewControlPlaneObject: func() *konnectv1alpha1.KonnectAIGateway {
-		return &konnectv1alpha1.KonnectAIGateway{}
-	},
 	NewCertificateObject: func() *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
 		return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{}
 	},
@@ -90,14 +123,33 @@ var testConfig = Config[
 		return &aigatewayv1alpha1.AIGatewayDataPlaneList{}
 	},
 
-	ControlPlaneRefName: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) string {
-		if aigwdp.Spec.ControlPlaneRef == nil || aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef == nil {
-			return ""
+	ControlPlaneRef: func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) ControlPlaneRef {
+		ref := aigwdp.Spec.ControlPlaneRef
+		if ref == nil {
+			return ControlPlaneRef{}
 		}
-		return aigwdp.Spec.ControlPlaneRef.KonnectNamespacedRef.Name
+		switch ref.Type {
+		case aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef:
+			if ref.KonnectNamespacedRef == nil {
+				return ControlPlaneRef{}
+			}
+			return ControlPlaneRef{
+				Kind: testControlPlaneKind.Kind,
+				Name: ref.KonnectNamespacedRef.Name,
+			}
+		case aigatewayv1alpha1.ControlPlaneRefTypeOnPremNamespacedRef:
+			if ref.OnPremNamespacedRef == nil {
+				return ControlPlaneRef{}
+			}
+			return ControlPlaneRef{
+				Kind: testOnPremControlPlaneKind.Kind,
+				Name: ref.OnPremNamespacedRef.Name,
+			}
+		default:
+			return ControlPlaneRef{}
+		}
 	},
-	ControlPlaneKind:          "KonnectAIGateway",
-	ControlPlaneRefIndexField: index.IndexFieldAIGatewayDataPlaneOnKonnectAIGateway,
+	ControlPlanes: []ControlPlaneKindConfig{testControlPlaneKind, testOnPremControlPlaneKind},
 
 	Conditions: Conditions{
 		ReadyType:                    string(aigatewayv1alpha1.ReadyType),
@@ -109,14 +161,6 @@ var testConfig = Config[
 		UnableToProvisionReason:      string(aigatewayv1alpha1.UnableToProvisionReason),
 		CertificateProvisionedType:   string(aigatewayv1alpha1.CertificateProvisionedType),
 		CertificateProvisionedReason: string(aigatewayv1alpha1.CertificateProvisionedReason),
-
-		ControlPlaneResolvedType:         string(aigatewayv1alpha1.KonnectAIGatewayResolvedType),
-		ControlPlaneResolvedReason:       string(aigatewayv1alpha1.KonnectAIGatewayResolvedReason),
-		ControlPlaneResolvedMessage:      aigatewayv1alpha1.KonnectAIGatewayResolvedMessage,
-		ControlPlaneNotFoundReason:       string(aigatewayv1alpha1.KonnectAIGatewayNotFoundReason),
-		ControlPlaneNotFoundMessage:      aigatewayv1alpha1.KonnectAIGatewayNotFoundMessage,
-		ControlPlaneNotProgrammedReason:  string(aigatewayv1alpha1.KonnectAIGatewayNotProgrammedReason),
-		ControlPlaneNotProgrammedMessage: aigatewayv1alpha1.KonnectAIGatewayNotProgrammedMessage,
 
 		KonnectCertificateRegisteredType:           string(aigatewayv1alpha1.KonnectCertificateRegisteredType),
 		KonnectCertificateRegisteredReason:         string(aigatewayv1alpha1.KonnectCertificateRegisteredReason),
@@ -130,15 +174,17 @@ var testConfig = Config[
 		WaitingForAddressMessage: aigatewayv1alpha1.WaitingForAddressMessage,
 	},
 
-	CertificateLabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
-	CertificateKind:     "AIGatewayDataPlaneCertificate",
-	BuildCertificate:    buildTestCertificate,
-	EnsureCertificate:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
-
-	Deployment: DeploymentConfig[
+	Certificate: CertificateConfig[
 		*aigatewayv1alpha1.AIGatewayDataPlane,
-		*konnectv1alpha1.KonnectAIGateway,
+		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
 	]{
+		LabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
+		Kind:     "AIGatewayDataPlaneCertificate",
+		Build:    buildTestCertificate,
+		Ensure:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
+	},
+
+	Deployment: DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:       consts.AIGatewayDataPlaneContainerName,
 		RelatedImageEnvVar:  consts.RelatedImageAIGatewayDataPlaneEnvVar,
 		DefaultImage:        consts.DefaultAIGatewayDataPlaneImage,
@@ -173,11 +219,12 @@ var testConfig = Config[
 		DefaultPort:         testDefaultIngressPort,
 		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
 		Options:             testServiceOptions,
+
+		SetStatusAddresses: testSetStatusAddresses,
 	},
 
-	HPAScalingSpec:     testHPAScalingSpec,
-	SetStatusReplicas:  testSetStatusReplicas,
-	SetStatusAddresses: testSetStatusAddresses,
+	HPAScalingSpec:    testHPAScalingSpec,
+	SetStatusReplicas: testSetStatusReplicas,
 }
 
 func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
@@ -271,10 +318,12 @@ func testServiceOptions(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *ServiceOp
 // builder's contract of failing when the control plane has no endpoints.
 func buildTestContainer(
 	_ *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName
+	_ string, // adminCertSecretName
 ) (corev1.Container, []corev1.Volume, error) {
+	aigatewaycp, _ := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
 	if aigatewaycp != nil && aigatewaycp.Status.Endpoints == nil {
 		return corev1.Container{}, nil, fmt.Errorf("KonnectAIGateway %q has no endpoints in status", aigatewaycp.Name)
 	}
@@ -323,10 +372,14 @@ func certificateChecksum(secret *corev1.Secret) string {
 // the given AIGatewayDataPlane.
 func buildTestCertificate(
 	aigwdp *aigatewayv1alpha1.AIGatewayDataPlane,
-	aigatewaycp *konnectv1alpha1.KonnectAIGateway,
+	cp ResolvedControlPlane,
 	certSecretName string,
 	certChecksum string,
 ) *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate {
+	aigatewaycp, ok := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
+	if !ok {
+		panic("buildTestCertificate expects a resolved KonnectAIGateway control plane")
+	}
 	name := certEntityName(aigwdp, certChecksum)
 	return &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
@@ -422,7 +475,7 @@ func newReconcileAIGWDP() *aigatewayv1alpha1.AIGatewayDataPlane {
 		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
 			ControlPlaneRef: &aigatewayv1alpha1.ControlPlaneRef{
 				Type: aigatewayv1alpha1.ControlPlaneRefTypeKonnectNamespacedRef,
-				KonnectNamespacedRef: &aigatewayv1alpha1.KonnectNamespacedRef{
+				KonnectNamespacedRef: &aigatewayv1alpha1.NamespacedRef{
 					Name: reconcileTestAIGWCPName,
 				},
 			},
@@ -466,7 +519,7 @@ func newTestReconciler(cl client.WithWatch, recorder *events.FakeRecorder) *test
 // with the default image overridden.
 func deploymentConfigWithDefaultImage(
 	image string,
-) DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane, *konnectv1alpha1.KonnectAIGateway] {
+) DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
 	cfg := testConfig.Deployment
 	cfg.DefaultImage = image
 	return cfg
@@ -481,3 +534,153 @@ func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
 func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
 func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
 func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
+
+// -----------------------------------------------------------------
+// validateConfig
+// -----------------------------------------------------------------
+
+// validAdminAPI returns a fully populated, valid AdminAPIConfig.
+func validAdminAPI() *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+	return &AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true },
+		ServiceNameSuffix:   "-admin",
+		ServicePortName:     "admin",
+		ServicePort:         8444,
+		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
+	}
+}
+
+func Test_validateConfig(t *testing.T) {
+	// validService returns the primary Service config, fully valid.
+	validService := func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		return ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+			Description:        "Ingress",
+			SetStatusAddresses: testSetStatusAddresses,
+		}
+	}
+	// serviceWithout returns the valid primary Service config with the given
+	// modification applied to it.
+	serviceWithout := func(mod func(*ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane])) ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		s := validService()
+		mod(&s)
+		return s
+	}
+	// adminAPIWith returns the valid AdminAPI config with the given
+	// modification applied to it.
+	adminAPIWith := func(mod func(*AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane])) *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		a := validAdminAPI()
+		mod(a)
+		return a
+	}
+
+	tests := []struct {
+		name     string
+		service  ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		adminAPI *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		wantErr  bool
+	}{
+		{
+			name:    "primary Service with SetStatusAddresses: valid",
+			service: validService(),
+		},
+		{
+			name: "primary Service without SetStatusAddresses: invalid (the DataPlane status would never be populated)",
+			service: serviceWithout(func(s *ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				s.SetStatusAddresses = nil
+			}),
+			wantErr: true,
+		},
+		{
+			name: "primary Service with Enabled: invalid (the status-feeding Service must never become deletable)",
+			service: serviceWithout(func(s *ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				s.Enabled = func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+			}),
+			wantErr: true,
+		},
+		{
+			name:     "fully populated AdminAPI: valid",
+			service:  validService(),
+			adminAPI: validAdminAPI(),
+		},
+		{
+			name:    "AdminAPI with nil Enabled: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.Enabled = nil
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ServiceNameSuffix: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServiceNameSuffix = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with non-positive ServicePort: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServicePort = 0
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ServicePortName: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServicePortName = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ManagedByLabelValue: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ManagedByLabelValue = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty CertificateLabelKey: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.CertificateLabelKey = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI CertificateLabelKey equal to Certificate.LabelKey: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.CertificateLabelKey = consts.SecretAIGatewayDataPlaneCertificateLabel
+			}),
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &testReconciler{
+				Config: func() Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate] {
+					cfg := testConfig
+					cfg.Service = tc.service
+					cfg.AdminAPI = tc.adminAPI
+					cfg.Conditions = Conditions{
+						AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+						AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
+					}
+					return cfg
+				}(),
+			}
+			err := r.validateConfig()
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}
