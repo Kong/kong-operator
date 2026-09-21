@@ -79,6 +79,28 @@ spec:
       value: ($namespace)
     - name: http_method
       value: "GET"
+    # ExtensionRef filter backed by a KongPlugin reading its whole config from a Secret.
+    - name: config_from_fqdn
+      value: (join('.', ['httpbin-configfrom', ($test_name), 'example.com']))
+    - name: http_route_config_from_name
+      value: (join('-', [($test_name), 'httpbin-configfrom']))
+    - name: http_route_config_from_namespace
+      value: ($namespace)
+    - name: config_from_plugin_name
+      value: response-transformer-configfrom
+    - name: config_from_secret_name
+      value: response-transformer-configfrom-secret
+    # ExtensionRef filter backed by a KongPlugin patching a Secret value into its config.
+    - name: config_patches_fqdn
+      value: (join('.', ['httpbin-configpatches', ($test_name), 'example.com']))
+    - name: http_route_config_patches_name
+      value: (join('-', [($test_name), 'httpbin-configpatches']))
+    - name: http_route_config_patches_namespace
+      value: ($namespace)
+    - name: config_patches_plugin_name
+      value: response-transformer-configpatches
+    - name: config_patches_secret_name
+      value: response-transformer-configpatches-secret
 
   steps:
     # Step 1: Create the TLS secret that will be referenced by the Gateway TLS listener.
@@ -1087,6 +1109,163 @@ spec:
           value: "http"
         - name: insecure
           value: "false"
+
+    # Step 58: Create the Secret, the KongPlugin reading its whole config from it, and the
+    # HTTPRoute attaching that plugin through an ExtensionRef filter.
+    - name: Create-httproute-with-extensionref-configfrom
+      description: Create HTTPRoute with an ExtensionRef filter to a KongPlugin using spec.configFrom.
+      try:
+        - apply:
+            file: 09-httproute-filter-extensionref-configfrom.yaml
+        - assert:
+            file: 10-httproute-filter-extensionref-configfrom-assert.yaml
+
+    # Step 59: Assert the mirrored KongPlugin carries the config resolved from the Secret.
+    # Before the configFrom fix this KongPlugin was pushed with an empty config.
+    - name: Assert-response-transformer-plugin-for-configfrom
+      description: Assert the mirrored KongPlugin config was resolved from the Secret referenced by spec.configFrom.
+      use:
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
+      bindings:
+        - name: namespace
+          value: ($namespace)
+        - name: http_route_name
+          value: ($http_route_config_from_name)
+        - name: http_route_namespace
+          value: ($http_route_config_from_namespace)
+        - name: plugin_type
+          value: response-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Config-From:from-secret"]}}'
+
+    # Step 60: Verify GET /get works from the host (configFrom).
+    - name: Verify-GET-traffic-from-host-configfrom
+      description: Verify that GET requests to /get work from the host (configFrom).
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_config_from_name)
+        - name: http_route_namespace
+          value: ($http_route_config_from_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($config_from_fqdn)
+
+    # Step 61: Verify the Secret-sourced config actually reached the data plane.
+    - name: Verify-response-transformer-configfrom
+      description: Verify the response header configured only in the Secret is added by the data plane.
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Config-From: from-secret"
+        - name: host_header
+          value: ($config_from_fqdn)
+
+    # Step 62: Rotate the Secret and assert the mirrored KongPlugin picks the new value up, which
+    # exercises the Secret watch mapping Secrets back to the HTTPRoutes using them.
+    - name: Rotate-configfrom-secret
+      description: Rotate the Secret backing the configFrom KongPlugin and assert the mirrored config follows.
+      try:
+        - apply:
+            file: 11-configfrom-secret-rotated.yaml
+
+    - name: Assert-response-transformer-plugin-for-rotated-configfrom
+      description: Assert the mirrored KongPlugin config was re-resolved after the Secret changed.
+      use:
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
+      bindings:
+        - name: namespace
+          value: ($namespace)
+        - name: http_route_name
+          value: ($http_route_config_from_name)
+        - name: http_route_namespace
+          value: ($http_route_config_from_namespace)
+        - name: plugin_type
+          value: response-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Config-From:rotated-secret"]}}'
+
+    # Step 63: Verify the rotated value reached the data plane.
+    - name: Verify-response-transformer-rotated-configfrom
+      description: Verify the rotated response header is added by the data plane.
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Config-From: rotated-secret"
+        - name: host_header
+          value: ($config_from_fqdn)
+
+    # Step 64: Create the Secret, the KongPlugin patching it into spec.config, and the HTTPRoute
+    # attaching that plugin through an ExtensionRef filter.
+    - name: Create-httproute-with-extensionref-configpatches
+      description: Create HTTPRoute with an ExtensionRef filter to a KongPlugin using spec.configPatches.
+      try:
+        - apply:
+            file: 12-httproute-filter-extensionref-configpatches.yaml
+        - assert:
+            file: 13-httproute-filter-extensionref-configpatches-assert.yaml
+
+    # Step 65: Assert the mirrored KongPlugin carries the patched config.
+    # Before the configPatches fix only the patched field was missing from this config.
+    - name: Assert-response-transformer-plugin-for-configpatches
+      description: Assert the mirrored KongPlugin config has the Secret value patched in.
+      use:
+        template: ../../common/_step_templates/assert-kongPluginConfig.yaml
+      bindings:
+        - name: namespace
+          value: ($namespace)
+        - name: http_route_name
+          value: ($http_route_config_patches_name)
+        - name: http_route_namespace
+          value: ($http_route_config_patches_namespace)
+        - name: plugin_type
+          value: response-transformer
+        - name: plugin_config
+          value: '{"add":{"headers":["X-Config-Patch:from-patch"]}}'
+
+    # Step 66: Verify GET /get works from the host (configPatches).
+    - name: Verify-GET-traffic-from-host-configpatches
+      description: Verify that GET requests to /get work from the host (configPatches).
+      use:
+        template: ../../common/_step_templates/verify-http-traffic-from-host.yaml
+      bindings:
+        - name: http_route_name
+          value: ($http_route_config_patches_name)
+        - name: http_route_namespace
+          value: ($http_route_config_patches_namespace)
+        - name: route_path
+          value: "/get"
+        - name: http_method
+          value: "GET"
+        - name: listener_http_port
+          value: "80"
+        - name: host_header
+          value: ($config_patches_fqdn)
+
+    # Step 67: Verify the patched value actually reached the data plane.
+    - name: Verify-response-transformer-configpatches
+      description: Verify the response header patched in from the Secret is added by the data plane.
+      use:
+        template: ../../common/_step_templates/verify-response-transformer-plugin.yaml
+      bindings:
+        - name: route_path
+          value: "/get"
+        - name: expected_header
+          value: "X-Config-Patch: from-patch"
+        - name: host_header
+          value: ($config_patches_fqdn)
 
   catch:
     # Capture debug snapshot on test failure for CI debugging.
