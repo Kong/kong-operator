@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -82,7 +83,9 @@ type FakeConfigStoreSecrets struct {
 	// (Create/Update/Delete) after the call is logged and before any state
 	// change; a non-nil return fails the call with that error. It lets
 	// controller tests inject API failures (e.g. a failed second write in
-	// Split mode). Reads are not hooked: use key trap characters for those.
+	// Split mode). The hook runs under the fake's mutex: it must not call
+	// any FakeConfigStoreSecrets method, or the test deadlocks. Reads are
+	// not hooked: use key trap characters for those.
 	ErrorHook func(method, key string) error
 }
 
@@ -205,7 +208,13 @@ func (f *FakeConfigStoreSecrets) ListConfigStoreSecrets(
 
 	store := f.store(request.ControlPlaneID, request.ConfigStoreID)
 	data := make([]sdkkonnectcomp.ConfigStoreSecret, 0, len(store))
-	for key, entry := range store {
+	keys := make([]string, 0, len(store))
+	for key := range store {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	for _, key := range keys {
+		entry := store[key]
 		k := key
 		created, updated := entry.createdAt, entry.updatedAt
 		data = append(data, sdkkonnectcomp.ConfigStoreSecret{

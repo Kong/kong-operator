@@ -261,6 +261,63 @@ func TestFakeConfigStoreSecretsCallLog(t *testing.T) {
 	assert.Empty(t, f.Calls())
 }
 
+func TestFakeConfigStoreSecretsErrorHook(t *testing.T) {
+	f := NewFakeConfigStoreSecrets()
+	createSecret(t, f, "key", "value")
+
+	injected := errors.New("injected failure")
+	f.ErrorHook = func(method, key string) error {
+		if key == "boom" {
+			return injected
+		}
+		return nil
+	}
+
+	// Create: the failed call is logged but leaves no state behind.
+	_, err := f.CreateConfigStoreSecret(context.Background(), sdkkonnectops.CreateConfigStoreSecretRequest{
+		ControlPlaneID: fakeTestCPID,
+		ConfigStoreID:  fakeTestStoreID,
+		CreateConfigStoreSecret: sdkkonnectcomp.CreateConfigStoreSecret{
+			Key:   "boom",
+			Value: "value",
+		},
+	})
+	require.ErrorIs(t, err, injected)
+	_, ok := f.Value(fakeTestCPID, fakeTestStoreID, "boom")
+	assert.False(t, ok, "a hooked Create must not persist state")
+
+	// Update and Delete consult the hook as well.
+	_, err = f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
+		ControlPlaneID: fakeTestCPID,
+		ConfigStoreID:  fakeTestStoreID,
+		Key:            "boom",
+		UpdateConfigStoreSecret: sdkkonnectcomp.UpdateConfigStoreSecret{
+			Value: "value",
+		},
+	})
+	require.ErrorIs(t, err, injected)
+	_, err = f.DeleteConfigStoreSecret(context.Background(), sdkkonnectops.DeleteConfigStoreSecretRequest{
+		ControlPlaneID: fakeTestCPID,
+		ConfigStoreID:  fakeTestStoreID,
+		Key:            "boom",
+	})
+	require.ErrorIs(t, err, injected)
+
+	// All four calls (initial Create + 3 hooked calls) are logged in order.
+	calls := f.Calls()
+	require.Len(t, calls, 4)
+	assert.Equal(t, "Create", calls[0].Method)
+	assert.Equal(t, "Create", calls[1].Method)
+	assert.Equal(t, "Update", calls[2].Method)
+	assert.Equal(t, "Delete", calls[3].Method)
+
+	// Unrelated keys are unaffected by the hook.
+	createSecret(t, f, "fine", "value")
+	stored, ok := f.Value(fakeTestCPID, fakeTestStoreID, "fine")
+	require.True(t, ok)
+	assert.Equal(t, "value", stored)
+}
+
 func TestFakeConfigStoreSecretsStoresAreIsolated(t *testing.T) {
 	f := NewFakeConfigStoreSecrets()
 	createSecret(t, f, "key", "value")

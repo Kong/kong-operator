@@ -19,6 +19,10 @@ import (
 
 const (
 	// MaxKeyBytes is the Konnect Config Store key size cap (512 bytes).
+	// Explicit storeKeys are capped by CRD validation, but derived keys are
+	// not: a 63-char namespace, 253-char name and 253-char Split field derive
+	// a ~582-byte key. The controller enforces this cap pre-write and reports
+	// KeyTooLong instead of pushing.
 	MaxKeyBytes = 512
 	// MaxValueBytes is the Konnect Config Store value size cap (5120 bytes).
 	MaxValueBytes = 5120
