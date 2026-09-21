@@ -10,8 +10,9 @@ permissions:
 
 jobs:
   github-app-token:
-    uses: ./.github/workflows/__github_app_token.yaml
-    secrets: inherit
+    runs-on: ubuntu-latest
+    outputs:
+      token: ${{ steps.app-token.outputs.token }}
     # Same guard as the backport job below: only mint a token for merged PRs.
     if: >
       github.event.pull_request.merged
@@ -22,10 +23,25 @@ jobs:
           && contains(github.event.label.name, 'backport')
         )
       )
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
   backport:
     timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
     name: Backport
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     needs:
     - github-app-token
     # Only react to merged PRs for security reasons.
