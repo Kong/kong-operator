@@ -27,7 +27,10 @@ spec:
               # <0.32.7 GCC-11/AMX backend bug); retry until a real
               # completion succeeds, then gate readiness on it.
               for model in qwen2.5:0.5b gemma3:270m; do
-                until ollama run "$model" "hi" >/dev/null 2>&1; do sleep 5; done
+                until ollama run "$model" "hi" >/dev/null 2>&1; do
+                  echo "ollama run $model failed; retrying in 5s" >&2
+                  sleep 5
+                done
               done
               touch /tmp/ready
               wait $pid
