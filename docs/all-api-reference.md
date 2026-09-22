@@ -5096,7 +5096,7 @@ Group/Kind fields keep referencing their KonnectAIGateway.
 | Field | Description |
 | --- | --- |
 | `type` _[AIGatewayRefType](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayreftype)_ | Type is the type of the reference. Only namespacedRef is supported.<br /><br />Deprecated: kept only for backward compatibility with objects written before the AIGatewayRef type was introduced; it defaults to namespacedRef and will be removed in a future release. |
-| `group` _[AIGatewayRefGroup](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrefgroup)_ | Group is the API group of the referenced AI Gateway (control plane). Defaults to konnect.konghq.com. |
+| `group` _[AIGatewayRefGroup](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrefgroup)_ | Group is the API group of the referenced AI Gateway (control plane). Defaults to konnect.konghq.com for KonnectAIGateway; on-prem OnPremAIGateway lives in the aigateway.konghq.com group. |
 | `kind` _[AIGatewayRefKind](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrefkind)_ | Kind is the kind of the referenced AI Gateway (control plane): KonnectAIGateway (default) or OnPremAIGateway. |
 | `namespacedRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | NamespacedRef references the AI Gateway (control plane) by namespaced name. When Namespace is unset, the namespace of the referencing entity is used. |
 
@@ -5134,6 +5134,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `konnect.konghq.com` | AIGatewayRefGroupKonnect is the API group of the Konnect-hosted<br />KonnectAIGateway.<br /> |
+| `aigateway.konghq.com` | AIGatewayRefGroupOnPrem is the API group of the on-prem OnPremAIGateway.<br /> |
 
 #### AIGatewayRefKind
 

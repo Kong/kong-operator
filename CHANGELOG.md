@@ -132,7 +132,8 @@
 - AI Gateway configuration entities (`AIGatewayModel`, `AIGatewayPolicy`,
   `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds):
   `spec.aiGatewayRef` now uses a dedicated `AIGatewayRef` type instead of the
-  shared `commonv1alpha1.ObjectRef`.
+  shared `commonv1alpha1.ObjectRef`. And configuration entities can target an
+  on-prem `OnPremAIGateway` in addition to a `KonnectAIGateway`.
   [#5788](https://github.com/Kong/kong-operator/pull/5788)
 
 ### Breaking changes

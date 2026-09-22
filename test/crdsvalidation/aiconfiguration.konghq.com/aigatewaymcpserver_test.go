@@ -92,6 +92,62 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 				ExpectedErrorMessage: new("spec.aiGatewayRef.kind"),
 			},
+			{
+				Name: "unknown group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: "not-a-real-group",
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.aiGatewayRef.group"),
+			},
+			{
+				Name: "OnPremAIGateway kind with aigateway.konghq.com group is accepted",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "OnPremAIGateway kind with default (konnect) group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
+			},
+			{
+				Name: "KonnectAIGateway kind with aigateway.konghq.com group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

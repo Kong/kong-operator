@@ -7,7 +7,7 @@ import (
 // AIGatewayRefGroup is the API group of the AI Gateway (control plane) kinds
 // that an AIGatewayRef can reference.
 //
-// +kubebuilder:validation:Enum=konnect.konghq.com
+// +kubebuilder:validation:Enum=konnect.konghq.com;aigateway.konghq.com
 type AIGatewayRefGroup string
 
 // AIGatewayRefKind is the kind of the AI Gateway (control plane) that an
@@ -20,6 +20,9 @@ const (
 	// AIGatewayRefGroupKonnect is the API group of the Konnect-hosted
 	// KonnectAIGateway.
 	AIGatewayRefGroupKonnect AIGatewayRefGroup = "konnect.konghq.com"
+
+	// AIGatewayRefGroupOnPrem is the API group of the on-prem OnPremAIGateway.
+	AIGatewayRefGroupOnPrem AIGatewayRefGroup = "aigateway.konghq.com"
 
 	// AIGatewayRefKindKonnect references a KonnectAIGateway.
 	AIGatewayRefKindKonnect AIGatewayRefKind = "KonnectAIGateway"
@@ -46,6 +49,7 @@ const (
 // Group/Kind fields keep referencing their KonnectAIGateway.
 //
 // +kong:channels=kong-operator
+// +kubebuilder:validation:XValidation:rule="self.kind == 'OnPremAIGateway' ? self.group == 'aigateway.konghq.com' : self.group == 'konnect.konghq.com'",message="group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway"
 type AIGatewayRef struct {
 	// Type is the type of the reference. Only namespacedRef is supported.
 	//
@@ -58,7 +62,8 @@ type AIGatewayRef struct {
 	Type AIGatewayRefType `json:"type,omitempty"`
 
 	// Group is the API group of the referenced AI Gateway (control plane).
-	// Defaults to konnect.konghq.com.
+	// Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+	// OnPremAIGateway lives in the aigateway.konghq.com group.
 	//
 	// +optional
 	// +kubebuilder:default=konnect.konghq.com

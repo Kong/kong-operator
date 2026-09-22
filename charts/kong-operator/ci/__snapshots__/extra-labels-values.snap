@@ -142,9 +142,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -193,6 +195,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -854,9 +859,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -905,6 +912,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -1577,9 +1587,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -1628,6 +1640,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -1896,9 +1911,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -1947,6 +1964,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -2715,9 +2735,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -2766,6 +2788,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -3012,9 +3037,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -3063,6 +3090,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -3336,9 +3366,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -3387,6 +3419,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -3625,9 +3660,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -3676,6 +3713,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -7802,9 +7842,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -7853,6 +7895,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -12540,9 +12585,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -12591,6 +12638,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -21103,9 +21153,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -21154,6 +21206,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
@@ -21456,9 +21511,11 @@ spec:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com.
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
                     enum:
                     - konnect.konghq.com
+                    - aigateway.konghq.com
                     type: string
                   kind:
                     default: KonnectAIGateway
@@ -21507,6 +21564,9 @@ spec:
                 required:
                 - namespacedRef
                 type: object
+                x-kubernetes-validations:
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API spec fields.
                 properties:
