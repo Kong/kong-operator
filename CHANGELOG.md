@@ -62,8 +62,38 @@
 
 ## Unreleased
 
+### Breaking changes
+
+- `AIGatewayMCPServer`: `route` (under the `conversion-listener`/`conversion-only`/
+  `listener`/`passthrough-listener`/`upstream-server` `config`) changes from an
+  untyped string map to a structured matcher object, with `paths`/`hosts`/`methods`
+  as proper lists and `headers` as a map of header name to list of values. The
+  previous shape could only hold scalar strings, so `paths`/`hosts`/`methods`
+  could never be expressed as the arrays Kong's route matching actually requires,
+  and every `AIGatewayMCPServer` with a non-empty `route` failed to reconcile
+  (`Programmed=False`/`FailedToCreate`) with an SDK unmarshal error.
+  Recovery: change `route.paths`/`route.hosts`/`route.methods` from a bare string
+  to a list, e.g. `paths: /mcp/foo` becomes `paths: [/mcp/foo]`.
+  [#5804](https://github.com/Kong/kong-operator/pull/5804)
+
 ### Fixes
 
+- `AIGatewayMCPServer`: fixed `route` (`spec.apiSpec.<variant>.config.route`, in all
+  five variants: `conversion-only`, `conversion-listener`, `listener`,
+  `passthrough-listener`, `upstream-server`) being generated as an untyped
+  `map[string]string` instead of a structured matcher object. Because a string map
+  only holds scalar values, `paths`/`hosts`/`methods` could not be expressed as the
+  lists Kong's route matching requires: `kubectl apply` accepted the resource, but
+  every `AIGatewayMCPServer` with a non-empty `route` then failed to reconcile with
+  `Programmed=False`/`FailedToCreate` and an SDK unmarshal error
+  (`could not unmarshal ... into any supported union types for
+  AIGatewayMCPServerRouteWithMatcher`), making the field unusable in practice. The
+  root cause was in `crd-from-oas`, which fell back to `map[string]string` for a
+  schema composed via `allOf`; the generator now merges the `allOf` members'
+  properties, and the API types, CRDs, chart and docs are regenerated from the
+  unchanged OpenAPI spec. See the breaking change entry above for the required
+  manifest update.
+  [#5804](https://github.com/Kong/kong-operator/pull/5804)
 - KonnectExtension: complete certificate cleanup when the referenced ControlPlane
   was deleted before extension status was persisted. Keep shared client-certificate
   Secret finalizers while another extension still uses the Secret or has pending

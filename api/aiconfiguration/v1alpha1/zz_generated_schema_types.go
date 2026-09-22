@@ -2020,7 +2020,94 @@ type AIGatewayMCPServerProtectedResourceMetadata struct {
 // of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
 // match
 // incoming requests.
-type AIGatewayMCPServerRouteWithMatcher map[string]string
+type AIGatewayMCPServerRouteWithMatcher struct {
+	// One or more lists of values indexed by header name that will cause this
+	// route to match if present in the request.
+	// The `Host` header cannot be used with this attribute: hosts should be
+	// specified using the `hosts` attribute.
+	// When `headers` contains only one value and that value starts with the
+	// special prefix `~*`, the value is interpreted as a regular expression.
+	//
+	// +optional
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+	// A list of domain names that match this route.
+	// Note that the hosts value is case sensitive.
+	//
+	// +optional
+	Hosts []string `json:"hosts,omitempty"`
+	// The status code Kong responds with when all properties of a route match
+	// except the protocol i.e.
+	// if the protocol of the request is `HTTP` instead of `HTTPS`.
+	// `Location` header is injected by Kong if the field is set to 301, 302, 307
+	// or 308.
+	// Note: This config applies only if the route is configured to only accept the
+	// `https` protocol.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=599
+	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
+	// A list of HTTP methods that match this route.
+	//
+	// +optional
+	Methods []string `json:"methods,omitempty"`
+	// A list of paths that match this route.
+	//
+	// +optional
+	Paths []string `json:"paths,omitempty"`
+	// When matching a route via one of the `hosts` domain names, use the request
+	// `Host` header in the upstream request headers.
+	// If set to `false`, the upstream `Host` header will be that of the service's
+	// `host`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveHost string `json:"preserveHost,omitzero"`
+	// An array of the protocols this route should allow.
+	// See the [route Object](#route-object) section for a list of accepted
+	// protocols.
+	// When set to only `https`, HTTP requests are answered with an upgrade error.
+	// When set to only `http`, HTTPS requests are answered with an error.
+	//
+	// +optional
+	Protocols []string `json:"protocols,omitempty"`
+	// A number used to choose which route resolves a given request when several
+	// routes match it using regexes simultaneously.
+	// When two routes match the path and have the same `regex_priority`, the older
+	// one (lowest `created_at`) is used.
+	// Note that the priority for non-regex routes is different (longer non-regex
+	// routes are matched before shorter ones).
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=-2147483648
+	// +kubebuilder:validation:Maximum=2147483647
+	RegexPriority int `json:"regexPriority,omitzero"`
+	// Whether to enable request body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that receive
+	// data with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequestBuffering string `json:"requestBuffering,omitzero"`
+	// Whether to enable response body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that send data
+	// with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseBuffering string `json:"responseBuffering,omitzero"`
+	// When matching a route via one of the `paths`, strip the matching prefix from
+	// the upstream request URL.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	StripPath string `json:"stripPath,omitzero"`
+	// An optional set of strings associated with the route for grouping and
+	// filtering.
+	//
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+}
 
 // AIGatewayMCPServerServerConfigBase **Pre-release Feature**
 // This feature is currently in beta and is subject to change.
