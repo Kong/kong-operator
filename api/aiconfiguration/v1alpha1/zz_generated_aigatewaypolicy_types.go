@@ -56,6 +56,16 @@ type AIGatewayPolicySpec struct {
 
 // AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 type AIGatewayPolicyAPISpec struct {
+	// An expression used for conditional control over plugin execution.
+	// If the expression evaluates to `true` during the request flow, the plugin is
+	// executed; otherwise, it is skipped.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Condition *string `json:"condition,omitempty"`
+
 	// Configuration for the policy.
 	// This is equivalent to the Kong 3 plugin configuration.
 	// Note: Plugins have been renamed to Policies in Kong AI Gateway.

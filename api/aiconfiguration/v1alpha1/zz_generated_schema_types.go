@@ -1103,6 +1103,27 @@ type AIGatewayMCPPassthroughTool struct {
 	Name string `json:"name,omitzero"`
 }
 
+// AIGatewayMCPServerCacheHint A cache hint Kong emits on a cacheable operation
+// it serves.
+type AIGatewayMCPServerCacheHint struct {
+	// Whether the result may be cached across authorization contexts.
+	// `public` is rejected when
+	// the server's tool list is filtered per subject by `default_tool_acls` or a
+	// tool's own
+	// `access.acls`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=public;private
+	CacheScope string `json:"cacheScope,omitzero"`
+	// How long a client may treat the result as fresh, in milliseconds.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	TtlMs int `json:"ttlMs,omitzero"`
+}
+
 // AIGatewayMCPServerConversionListener is a type alias.
 type AIGatewayMCPServerConversionListener struct {
 	//
@@ -1174,6 +1195,26 @@ type AIGatewayMCPServerConversionListener struct {
 // AIGatewayMCPServerConversionListenerConfig Server-side configuration specific
 // to modes where Kong answers as the MCP server.
 type AIGatewayMCPServerConversionListenerConfig struct {
+	// The MCP protocol revisions this server accepts.
+	// Leave unset to accept every revision Kong
+	// implements, which is the default.
+	// When set, `server/discover` advertises exactly this
+	// list and a request declaring anything else is rejected.
+	// Listing only per-request
+	// revisions refuses handshake clients.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// Cache hints Kong emits on the cacheable operations it serves.
+	// Only clients on a protocol
+	// revision that defines them receive them.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
 	//
 	//
 	// +optional
@@ -1212,6 +1253,23 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerConversionListenerConfigCache Cache hints Kong emits on the
+// cacheable operations it serves.
+// Only clients on a protocol
+// revision that defines them receive them.
+//
+// **Requires a minimum runtime version of `2.1`**.
+type AIGatewayMCPServerConversionListenerConfigCache struct {
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
 // AIGatewayMCPServerConversionListenerAccess represents a union type for access.
@@ -1460,6 +1518,26 @@ type AIGatewayMCPServerListener struct {
 // AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
 // where Kong answers as the MCP server.
 type AIGatewayMCPServerListenerConfig struct {
+	// The MCP protocol revisions this server accepts.
+	// Leave unset to accept every revision Kong
+	// implements, which is the default.
+	// When set, `server/discover` advertises exactly this
+	// list and a request declaring anything else is rejected.
+	// Listing only per-request
+	// revisions refuses handshake clients.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// Cache hints Kong emits on the cacheable operations it serves.
+	// Only clients on a protocol
+	// revision that defines them receive them.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	Cache AIGatewayMCPServerListenerConfigCache `json:"cache,omitzero"`
 	//
 	//
 	// +optional
@@ -1483,6 +1561,23 @@ type AIGatewayMCPServerListenerConfig struct {
 	//
 	// +optional
 	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+}
+
+// AIGatewayMCPServerListenerConfigCache Cache hints Kong emits on the cacheable
+// operations it serves.
+// Only clients on a protocol
+// revision that defines them receive them.
+//
+// **Requires a minimum runtime version of `2.1`**.
+type AIGatewayMCPServerListenerConfigCache struct {
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -2175,6 +2270,20 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	ToolsListAuth *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth `json:"toolsListAuth,omitempty"`
+	// The MCP protocol revision Kong speaks to the upstream MCP server.
+	// Leave unset to
+	// negotiate a handshake revision with an `initialize` exchange, which is the
+	// default.
+	// Set a
+	// per-request revision to reach an upstream that answers no handshake and
+	// mints no session.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=2026-07-28;2025-11-25;2025-06-18;2025-03-26
+	UpstreamProtocolVersion string `json:"upstreamProtocolVersion,omitzero"`
 }
 
 // AIGatewayMCPServerUpstreamServerServerConfigSession Enable managed session
@@ -2888,6 +2997,22 @@ type AIGatewayMistralEmbeddingsModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	UpstreamURL string `json:"upstreamURL,omitzero"`
+}
+
+// AIGatewayModalCostList is a type alias.
+type AIGatewayModalCostList struct {
+	// Cost per 1M tokens for this modal type.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	Cost float64 `json:"cost,omitzero"`
+	// The modal type this price applies to.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=text;audio;image;video
+	Modal string `json:"modal,omitzero"`
 }
 
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
@@ -8343,6 +8468,14 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8368,6 +8501,13 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8378,6 +8518,13 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8423,6 +8570,14 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8467,6 +8622,13 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8477,6 +8639,13 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8517,6 +8686,14 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8547,6 +8724,13 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8557,6 +8741,13 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Latency performance configuration for the model invocation.
 	//
 	// +optional
@@ -8609,6 +8800,14 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8634,6 +8833,13 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8644,6 +8850,13 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8687,6 +8900,14 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8718,6 +8939,13 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8728,6 +8956,13 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9259,6 +9494,14 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9284,6 +9527,13 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// Whether to use the international DashScope endpoint.
 	//
 	// +optional
@@ -9299,6 +9549,13 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9335,6 +9592,14 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9360,6 +9625,13 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9370,6 +9642,13 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9411,6 +9690,14 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9436,6 +9723,13 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9446,6 +9740,13 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9481,6 +9782,14 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9510,6 +9819,13 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9520,6 +9836,13 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9556,6 +9879,14 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9581,6 +9912,13 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9591,6 +9929,13 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9637,6 +9982,14 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9662,6 +10015,13 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// When `true`, requests are sent to `api.moonshot.ai` (international).
 	// When `false`, requests are sent to `api.moonshot.cn` (mainland China).
 	//
@@ -9679,6 +10039,13 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9714,6 +10081,14 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9746,6 +10121,13 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9756,6 +10138,13 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9792,6 +10181,14 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9824,6 +10221,13 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9834,6 +10238,13 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9869,6 +10280,14 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9894,6 +10313,13 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9904,6 +10330,13 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9939,6 +10372,14 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9964,6 +10405,13 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9974,6 +10422,13 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10014,6 +10469,14 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10039,6 +10502,13 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10049,6 +10519,13 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10135,6 +10612,14 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10160,6 +10645,13 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10170,6 +10662,13 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10205,6 +10704,14 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10230,6 +10737,13 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10240,6 +10754,13 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10276,6 +10797,14 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10301,6 +10830,13 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10311,6 +10847,13 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//

@@ -374,6 +374,73 @@ spec:
                           Server-side configuration specific to modes where Kong answers as the MCP
                           server.
                         properties:
+                          allowedVersions:
+                            description: |-
+                              The MCP protocol revisions this server accepts.
+                              Leave unset to accept every revision Kong
+                              implements, which is the default.
+                              When set, `server/discover` advertises exactly this
+                              list and a request declaring anything else is rejected.
+                              Listing only per-request
+                              revisions refuses handshake clients.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            description: |-
+                              Cache hints Kong emits on the cacheable operations it serves.
+                              Only clients on a protocol
+                              revision that defines them receive them.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            properties:
+                              discover:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             x-kubernetes-preserve-unknown-fields: true
                           maxRequestBodySize:
@@ -1876,6 +1943,73 @@ spec:
                           Server-side configuration specific to modes where Kong answers as the MCP
                           server.
                         properties:
+                          allowedVersions:
+                            description: |-
+                              The MCP protocol revisions this server accepts.
+                              Leave unset to accept every revision Kong
+                              implements, which is the default.
+                              When set, `server/discover` advertises exactly this
+                              list and a request declaring anything else is rejected.
+                              Listing only per-request
+                              revisions refuses handshake clients.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            description: |-
+                              Cache hints Kong emits on the cacheable operations it serves.
+                              Only clients on a protocol
+                              revision that defines them receive them.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            properties:
+                              discover:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             x-kubernetes-preserve-unknown-fields: true
                           maxRequestBodySize:
@@ -3963,6 +4097,24 @@ spec:
                                 required:
                                 - type
                                 type: object
+                              upstreamProtocolVersion:
+                                description: |-
+                                  The MCP protocol revision Kong speaks to the upstream MCP server.
+                                  Leave unset to
+                                  negotiate a handshake revision with an `initialize` exchange, which is the
+                                  default.
+                                  Set a
+                                  per-request revision to reach an upstream that answers no handshake and
+                                  mints no session.
+
+                                  **Requires a minimum runtime version of `2.1`**.
+                                enum:
+                                - "2026-07-28"
+                                - "2025-11-25"
+                                - "2025-06-18"
+                                - "2025-03-26"
+                                maxLength: 253
+                                type: string
                             type: object
                           toolsCacheTtlSeconds:
                             description: |-

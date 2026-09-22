@@ -202,6 +202,19 @@ func TestAIGatewayMCPPassthroughTool_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAIGatewayMCPServerCacheHint_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayMCPServerCacheHint
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestAIGatewayMCPServerConversionListener_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -453,6 +466,19 @@ func TestAIGatewayMistralEmbeddingsModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec AIGatewayMistralEmbeddingsModelConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAIGatewayModalCostList_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AIGatewayModalCostList
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)

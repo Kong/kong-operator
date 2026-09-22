@@ -18,8 +18,8 @@ func TestEventGatewayVirtualClusterPolicyAPISpec_SelectedSDKOpsPayload_FlattensS
 
 	spec := &EventGatewayVirtualClusterPolicyAPISpec{
 		EventGatewayVirtualClusterPolicyConfig: &EventGatewayVirtualClusterPolicyConfig{
-			Type: EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy,
-			EventGatewayACLsPolicy: &EventGatewayACLsPolicy{
+			Type: EventGatewayVirtualClusterPolicyConfigTypeACLs,
+			ACLs: &EventGatewayACLsPolicy{
 				Name: "virtual-cluster-policy",
 				Config: EventGatewayACLPolicyConfig{
 					Rules: []EventGatewayACLRule{

@@ -2,6 +2,16 @@
 
 package v1alpha1
 
+// AIGatewayMinRuntimeVersion The minimum AI Gateway runtime version supported
+// by this AI Gateway.
+// This is the lowest data plane version that may receive configuration from it,
+// and it controls which features the API accepts.
+//
+// Data planes older than this version still connect for topology visibility.
+//
+// When not specified, the latest generally available runtime version is used.
+type AIGatewayMinRuntimeVersion string
+
 // AIGatewayProxyURL Proxy URL associated with reaching the data-planes
 // connected to a control-plane.
 type AIGatewayProxyURL struct {
@@ -22,6 +32,20 @@ type AIGatewayProxyURL struct {
 	// +kubebuilder:validation:MaxLength=253
 	Protocol string `json:"protocol,omitzero"`
 }
+
+// AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
+// raise min_runtime_version as connected data planes report a newer AI Gateway
+// runtime version.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type AIGatewayRuntimeAutoUpgrade string
+
+const (
+	// AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.
+	AIGatewayRuntimeAutoUpgradeEnabled AIGatewayRuntimeAutoUpgrade = "Enabled"
+	// AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.
+	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
+)
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string

@@ -118,6 +118,15 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  condition:
+                    description: |-
+                      An expression used for conditional control over plugin execution.
+                      If the expression evaluates to `true` during the request flow, the plugin is
+                      executed; otherwise, it is skipped.
+
+                      **Requires a minimum runtime version of `2.1`**.
+                    maxLength: 1024
+                    type: string
                   config:
                     description: |-
                       Configuration for the policy.
