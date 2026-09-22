@@ -97,6 +97,9 @@
   [#5280](https://github.com/Kong/kong-operator/pull/5280)
   [#5284](https://github.com/Kong/kong-operator/pull/5284)
   [#5400](https://github.com/Kong/kong-operator/pull/5400)
+  - Fix unnecessary reconciliations caused by incorrect status conditions updates.
+  [#5820](https://github.com/Kong/kong-operator/pull/5820)
+  [#5824](https://github.com/Kong/kong-operator/pull/5824)
 
 ## [v2.1.9]
 
