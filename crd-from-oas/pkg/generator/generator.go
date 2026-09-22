@@ -2665,9 +2665,11 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// through the parent ref, so the parentRef-driven import is skipped there.
 	// The same applies to the OAS-derived parent dependency import: its field
 	// emission is suppressed in favour of the custom-typed parent ref field.
+	// Raw OAS reference properties (unrelated to the parent) still emit
+	// commonv1alpha1.ObjectRef fields, so the import must be kept for those.
 	customParentRefType := parentRef != nil && parentRef.TypeName != ""
 	objectRefImport := g.objectRefImportIfNeeded(schema)
-	if customParentRefType {
+	if customParentRefType && !schemaHasReferenceProperties(schema) {
 		objectRefImport = nil
 	}
 	if objectRefImport == nil && !customParentRefType && g.hasSecretRefs(entityName) && g.objectRefImported() {
@@ -5545,6 +5547,18 @@ func schemaUsesObjectRef(schema *parser.Schema) bool {
 	if len(schema.Dependencies) > 0 {
 		return true
 	}
+	for _, prop := range schema.Properties {
+		if !skipProperty(prop) && prop.IsReference {
+			return true
+		}
+	}
+	return false
+}
+
+// schemaHasReferenceProperties returns true if the schema has reference
+// properties (as opposed to dependencies) that generate ObjectRef fields even
+// when the parent ref field uses a custom type.
+func schemaHasReferenceProperties(schema *parser.Schema) bool {
 	for _, prop := range schema.Properties {
 		if !skipProperty(prop) && prop.IsReference {
 			return true

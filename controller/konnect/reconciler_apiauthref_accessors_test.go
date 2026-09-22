@@ -12,7 +12,7 @@ import (
 // accessor signature drifting from the interface would otherwise only fail at
 // reconcile time, not at build time.
 func TestAIGatewayEntitiesImplementKonnectAIGatewayRefAccessor(t *testing.T) {
-	for _, ent := range []konnectAIGatewayRefAccessor{
+	_ = []konnectAIGatewayRefAccessor{
 		&aiconfigurationv1alpha1.AIGatewayAgent{},
 		&aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
 		&aiconfigurationv1alpha1.AIGatewayCACertificate{},
@@ -25,9 +25,5 @@ func TestAIGatewayEntitiesImplementKonnectAIGatewayRefAccessor(t *testing.T) {
 		&aiconfigurationv1alpha1.AIGatewayModelProvider{},
 		&aiconfigurationv1alpha1.AIGatewayPolicy{},
 		&aiconfigurationv1alpha1.AIGatewaySNI{},
-	} {
-		if ent == nil {
-			t.Error("nil entity")
-		}
 	}
 }
