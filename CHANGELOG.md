@@ -171,7 +171,7 @@
   annotations in `Gateway`s and `GatewayClass`es to configure Konnect labels of
   control planes and dataplanes. The key and value in the label are separated by
   `=` and multiple labels in an annotation are separated by `,`.
-  For example: `konghq.com/cp-labels:k1=v1,k2=v2`.
+  For example: `konghq.com/cp-labels: "k1=v1,k2=v2"`.
   The maximum number of labels is limited to 5. If the number of labels in
   `konghq.com/cp-labels` or `konghq.com/dp-labels` annotation is over 5 in
   `Gateway` or `GatewayClass`, the controller rejects the `Gateway` and stops

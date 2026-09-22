@@ -67,7 +67,7 @@ func parseLabelsAnnotationValue(value string) (map[string]string, error) {
 // maxItems, an error is returned since there's nothing left to drop.
 func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[string]string, error) {
 	if len(override) > maxItems || len(base) > maxItems {
-		return nil, fmt.Errorf("too many labels: %d exceeds the maximum of %d", len(override), maxItems)
+		return nil, fmt.Errorf("too many labels: base has %d, override has %d; maximum is %d", len(base), len(override), maxItems)
 	}
 
 	merged := make(map[string]string, len(base)+len(override))
