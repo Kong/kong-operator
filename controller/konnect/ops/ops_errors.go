@@ -532,11 +532,7 @@ func errorIsDataPlaneGroupConflictProposedConfigIsTheSame(err error) bool {
 		return false
 	}
 
-	strDetail, okDetail := errConflict.Detail.(string)
-	if !okDetail ||
-		!strings.Contains(
-			strDetail, "Proposed configuration and current configuration are identical",
-		) {
+	if !strings.Contains(errConflict.Detail, "Proposed configuration and current configuration are identical") {
 		return false
 	}
 
@@ -547,9 +543,8 @@ func errConflictHasStatusCode(err *sdkkonnecterrs.ConflictError, n int) bool {
 	if err == nil {
 		return false
 	}
-	// NOTE: Status contains a float64 value, so we need to cast it to int to deterministically compare.
-	floatStatus, okStatus := (err.Status).(float64)
-	return okStatus && int(floatStatus) == n
+	// NOTE: Status contains an int64 value, so we need to cast it to int to deterministically compare.
+	return int(err.Status) == n
 }
 
 func errorIsDataPlaneGroupBadRequestPreviousConfigNotFinishedProvisioning(err error) bool {

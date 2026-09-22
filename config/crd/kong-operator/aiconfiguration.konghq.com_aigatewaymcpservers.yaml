@@ -370,23 +370,12 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          Server-side configuration specific to modes where Kong answers as the MCP
+                          server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
-                            properties:
-                              audits:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
@@ -952,7 +941,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -1377,7 +1366,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -1883,23 +1872,12 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          Server-side configuration specific to modes where Kong answers as the MCP
+                          server.
                         properties:
                           logging:
-                            description: Configuration for AI Gateway logging.
-                            properties:
-                              audits:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                              payloads:
-                                enum:
-                                - Enabled
-                                - Disabled
-                                type: string
-                            type: object
+                            x-kubernetes-preserve-unknown-fields: true
                           maxRequestBodySize:
                             description: Maximum size of request body to parse. Set
                               to 0 for unlimited.
@@ -2384,7 +2362,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -3332,7 +3310,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -4124,7 +4102,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.

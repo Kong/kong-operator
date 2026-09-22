@@ -81,6 +81,23 @@ type GatewayName string
 // IdentityProviderType Specifies the type of identity provider.
 type IdentityProviderType string
 
+// KonnectManaged Whether the team's membership is managed by Konnect instead of
+// being synced from an identity provider's team mappings.
+// Set to `false` (default) to let identity provider team mappings keep syncing
+// members into this team.
+// Set to `true` to manage membership directly in Konnect and prevent identity
+// provider team mappings from syncing to this team.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type KonnectManaged string
+
+const (
+	// KonnectManagedEnabled sets KonnectManaged as enabled.
+	KonnectManagedEnabled KonnectManaged = "Enabled"
+	// KonnectManagedDisabled sets KonnectManaged as disabled.
+	KonnectManagedDisabled KonnectManaged = "Disabled"
+)
+
 // LabelsValue is the value type for Labels.
 //
 // +kubebuilder:validation:MinLength=1

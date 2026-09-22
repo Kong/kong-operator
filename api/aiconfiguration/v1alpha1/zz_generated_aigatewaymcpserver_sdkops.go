@@ -23,24 +23,6 @@ type AIGatewayMCPServerSDKOpsBoolField struct {
 // AIGatewayMCPServerSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 	{
-		Label: "conversion-listener.config.logging.audits",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"logging",
-			"audits",
-		},
-	},
-	{
-		Label: "conversion-listener.config.logging.payloads",
-		Path: []string{
-			"conversion-listener",
-			"config",
-			"logging",
-			"payloads",
-		},
-	},
-	{
 		Label: "conversion-listener.config.server.forward_client_headers",
 		Path: []string{
 			"conversion-listener",
@@ -224,24 +206,6 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 			"parameters",
 			"[]",
 			"required",
-		},
-	},
-	{
-		Label: "listener.config.logging.audits",
-		Path: []string{
-			"listener",
-			"config",
-			"logging",
-			"audits",
-		},
-	},
-	{
-		Label: "listener.config.logging.payloads",
-		Path: []string{
-			"listener",
-			"config",
-			"logging",
-			"payloads",
 		},
 	},
 	{
@@ -596,6 +560,13 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"conversion-listener",
 			"config",
+			"logging",
+		},
+	},
+	{
+		Path: []string{
+			"conversion-listener",
+			"config",
 			"route",
 		},
 	},
@@ -712,6 +683,13 @@ var AIGatewayMCPServerSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"tools",
 			"[]",
 			"responses",
+		},
+	},
+	{
+		Path: []string{
+			"listener",
+			"config",
+			"logging",
 		},
 	},
 	{

@@ -209,7 +209,7 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -335,7 +335,7 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -1109,10 +1109,11 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +optional
 	Access *AIGatewayMCPServerConversionListenerAccess `json:"access,omitempty"`
-	// Routing, logging, and server configuration for the MCP Server.
+	// Server-side configuration specific to modes where Kong answers as the MCP
+	// server.
 	//
 	// +required
-	Config AIGatewayMCPServerWithUpstreamNoProxyConfig `json:"config,omitzero"`
+	Config AIGatewayMCPServerConversionListenerConfig `json:"config,omitzero"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -1153,7 +1154,7 @@ type AIGatewayMCPServerConversionListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1168,6 +1169,49 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +required
 	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerConversionListenerConfig Server-side configuration specific
+// to modes where Kong answers as the MCP server.
+type AIGatewayMCPServerConversionListenerConfig struct {
+	//
+	//
+	// +optional
+	Logging apiextensionsv1.JSON `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
+	//
+	//
+	// +optional
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
 }
 
 // AIGatewayMCPServerConversionListenerAccess represents a union type for access.
@@ -1333,7 +1377,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1351,10 +1395,11 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +optional
 	Access *AIGatewayMCPServerListenerAccess `json:"access,omitempty"`
-	// Routing, logging, and server configuration for the MCP Server.
+	// Server-side configuration specific to modes where Kong answers as the MCP
+	// server.
 	//
 	// +required
-	Config AIGatewayMCPServerNoUpstreamConfig `json:"config,omitzero"`
+	Config AIGatewayMCPServerListenerConfig `json:"config,omitzero"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -1395,7 +1440,7 @@ type AIGatewayMCPServerListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1410,6 +1455,34 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +required
 	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
+}
+
+// AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
+// where Kong answers as the MCP server.
+type AIGatewayMCPServerListenerConfig struct {
+	//
+	//
+	// +optional
+	Logging apiextensionsv1.JSON `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
+	//
+	//
+	// +optional
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -1642,49 +1715,6 @@ type AIGatewayMCPServerListenerOauth struct {
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
 }
 
-// AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
-// for the MCP Server.
-type AIGatewayMCPServerNoUpstreamConfig struct {
-	// Configuration for AI Gateway logging.
-	//
-	// +optional
-	Logging AIGatewayMCPServerNoUpstreamConfigLogging `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	// Route configuration for an MCP Server that terminates its own listener.
-	// At least one
-	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
-	// match
-	// incoming requests.
-	//
-	//
-	// +optional
-	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
-	// Server-side configuration for the MCP Server.
-	//
-	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
-}
-
-// AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
-// logging.
-type AIGatewayMCPServerNoUpstreamConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Audits string `json:"audits,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
-}
-
 // AIGatewayMCPServerPassthroughListener is a type alias.
 type AIGatewayMCPServerPassthroughListener struct {
 	//
@@ -1735,7 +1765,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -2029,7 +2059,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -2532,7 +2562,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// Server-side configuration for the MCP Server.
 	//
 	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	Server AIGatewayMCPServerWithUpstreamConfigServer `json:"server,omitzero"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
 	//
@@ -2565,62 +2595,79 @@ type AIGatewayMCPServerWithUpstreamConfigLogging struct {
 	Payloads string `json:"payloads,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
-// configuration for the MCP Server.
-type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
-	// Configuration for AI Gateway logging.
+// AIGatewayMCPServerWithUpstreamConfigServer Server-side configuration for the
+// MCP Server.
+type AIGatewayMCPServerWithUpstreamConfigServer struct {
+	// Whether to forward the client request headers to the upstream server when
+	// calling the tools.
 	//
 	// +optional
-	Logging AIGatewayMCPServerWithUpstreamNoProxyConfigLogging `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// Enable managed session when Kong responds as MCP server in listener,
+	// conversion-listener, or upstream-server modes.
+	// This doesn't affect the passthrough-listener mode as the state in that mode
+	// is maintained by the upstream MCP servers.
+	//
+	//
+	// +optional
+	Session AIGatewayMCPServerWithUpstreamConfigServerSession `json:"session,omitzero"`
+	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	// Route configuration for an MCP Server that terminates its own listener.
-	// At least one
-	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
-	// match
-	// incoming requests.
-	//
-	//
-	// +optional
-	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
-	// Server-side configuration for the MCP Server.
-	//
-	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
-	// Configuration applied when proxying to the upstream service, including
-	// authentication.
-	//
-	// +optional
-	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
-	// Helper field to set protocol, host, port and path of the upstream service
-	// using a URL.
-	// This is the same as a Kong Gateway Service URL:
-	// ${scheme}://${host}:${port}/${path}
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	URL string `json:"url,omitzero"`
+	Timeout int `json:"timeout,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
-// Gateway logging.
-type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
+// AIGatewayMCPServerWithUpstreamConfigServerSession Enable managed session when
+// Kong responds as MCP server in listener, conversion-listener, or
+// upstream-server modes.
+// This doesn't affect the passthrough-listener mode as the state in that mode
+// is maintained by the upstream MCP servers.
+type AIGatewayMCPServerWithUpstreamConfigServerSession struct {
+	// The configuration for client-side session storage.
 	//
+	// +optional
+	Client AIGatewayMCPServerWithUpstreamConfigServerSessionClient `json:"client,omitzero"`
+	// If enabled, Kong will maintain managed sessions with the MCP server.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Audits string `json:"audits,omitzero"`
+	Managed string `json:"managed,omitzero"`
+	// Config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
+	// The time-to-live (TTL) for each session in seconds.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	SessionTtl int `json:"sessionTtl,omitzero"`
+	// The strategy for the session.
+	// If the value is 'client', the session is encrypted into MCP session id
+	// assigned to the client.
+	// If the value is not 'client', the session is stored in the configured
+	// database.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client;redis
+	Strategy string `json:"strategy,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamConfigServerSessionClient The configuration for
+// client-side session storage.
+type AIGatewayMCPServerWithUpstreamConfigServerSessionClient struct {
+	// The secrets that are used in session encryption.
+	// Required when the strategy is 'client'.
+	// The first secret is used for encryption, while all secrets are used for
+	// decryption to support key rotation.
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
+	Secrets []string `json:"secrets,omitempty"`
 }
 
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
@@ -2903,7 +2950,7 @@ type AIGatewayModelAPI struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -4445,7 +4492,7 @@ type AIGatewayModelModel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -4778,7 +4825,7 @@ type AIGatewayModelProviderAnthropic struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -4832,7 +4879,7 @@ type AIGatewayModelProviderAzure struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5040,7 +5087,7 @@ type AIGatewayModelProviderBedrock struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5210,7 +5257,7 @@ type AIGatewayModelProviderCerebras struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5264,7 +5311,7 @@ type AIGatewayModelProviderCohere struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5639,7 +5686,7 @@ type AIGatewayModelProviderDashscope struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5694,7 +5741,7 @@ type AIGatewayModelProviderDatabricks struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5748,7 +5795,7 @@ type AIGatewayModelProviderDeepseek struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5802,7 +5849,7 @@ type AIGatewayModelProviderGemini struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5973,7 +6020,7 @@ type AIGatewayModelProviderHuggingface struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6027,7 +6074,7 @@ type AIGatewayModelProviderKimi struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6081,7 +6128,7 @@ type AIGatewayModelProviderLlama2 struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6135,7 +6182,7 @@ type AIGatewayModelProviderMistral struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6189,7 +6236,7 @@ type AIGatewayModelProviderOllama struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6243,7 +6290,7 @@ type AIGatewayModelProviderOpenai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6301,7 +6348,7 @@ type AIGatewayModelProviderSagemaker struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6471,7 +6518,7 @@ type AIGatewayModelProviderVercel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6525,7 +6572,7 @@ type AIGatewayModelProviderVllm struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6579,7 +6626,7 @@ type AIGatewayModelProviderXai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 

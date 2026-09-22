@@ -1468,7 +1468,7 @@ AIGatewayMCPServerConversionListener is a type alias.
 | Field | Description |
 | --- | --- |
 | `access` _[AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)_ |  |
-| `config` _[AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `config` _[AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)_ | Server-side configuration specific to modes where Kong answers as the MCP server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
@@ -1519,6 +1519,27 @@ Allowed values:
 | `consumer` |  |
 | `oauthAccessToken` |  |
 
+#### AIGatewayMCPServerConversionListenerConfig
+
+
+AIGatewayMCPServerConversionListenerConfig Server-side configuration specific
+to modes where Kong answers as the MCP server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ |  |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
+| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
+
+_Appears in:_
+
+- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
+
 #### AIGatewayMCPServerConversionOnly
 
 
@@ -1551,7 +1572,7 @@ AIGatewayMCPServerListener is a type alias.
 | Field | Description |
 | --- | --- |
 | `access` _[AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)_ |  |
-| `config` _[AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)_ | Routing, logging, and server configuration for the MCP Server. |
+| `config` _[AIGatewayMCPServerListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfig)_ | Server-side configuration specific to modes where Kong answers as the MCP server. |
 | `displayName` _string_ | The display name for the MCP Server. |
 | `enabled` _string_ | Whether the MCP Server is enabled. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
@@ -1602,6 +1623,25 @@ Allowed values:
 | `consumer` |  |
 | `oauthAccessToken` |  |
 
+#### AIGatewayMCPServerListenerConfig
+
+
+AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
+where Kong answers as the MCP server.
+
+
+
+| Field | Description |
+| --- | --- |
+| `logging` _k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1.JSON_ |  |
+| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
+| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
+| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
+
 #### AIGatewayMCPServerListenerConsumer
 
 
@@ -1648,42 +1688,6 @@ _Appears in:_
 - [AIGatewayMCPServerConversionListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlisteneraccess)
 - [AIGatewayMCPServerListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlisteneraccess)
 - [AIGatewayMCPServerPassthroughListenerAccess](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverpassthroughlisteneraccess)
-
-#### AIGatewayMCPServerNoUpstreamConfig
-
-
-AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
-for the MCP Server.
-
-
-
-| Field | Description |
-| --- | --- |
-| `logging` _[AIGatewayMCPServerNoUpstreamConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
-
-_Appears in:_
-
-- [AIGatewayMCPServerListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistener)
-
-#### AIGatewayMCPServerNoUpstreamConfigLogging
-
-
-AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
-logging.
-
-
-
-| Field | Description |
-| --- | --- |
-| `audits` _string_ |  |
-| `payloads` _string_ |  |
-
-_Appears in:_
-
-- [AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
 
 #### AIGatewayMCPServerPassthroughListener
 
@@ -1785,10 +1789,10 @@ incoming requests.
 
 _Appears in:_
 
-- [AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
 - [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 
@@ -1809,9 +1813,8 @@ Server.
 
 _Appears in:_
 
-- [AIGatewayMCPServerNoUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpservernoupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
+- [AIGatewayMCPServerListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverlistenerconfig)
 
 #### AIGatewayMCPServerServerConfigBaseSession
 
@@ -2118,7 +2121,7 @@ configuration for the MCP Server.
 | `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
 | `proxy` _[AIGatewayProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayproxyconfig)_ | HTTP/HTTPS proxy configuration for outbound requests to the upstream AI provider. |
 | `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
+| `server` _[AIGatewayMCPServerWithUpstreamConfigServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserver)_ | Server-side configuration for the MCP Server. |
 | `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
 | `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
 
@@ -2143,43 +2146,62 @@ _Appears in:_
 
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
 
-#### AIGatewayMCPServerWithUpstreamNoProxyConfig
+#### AIGatewayMCPServerWithUpstreamConfigServer
 
 
-AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
-configuration for the MCP Server.
-
-
-
-| Field | Description |
-| --- | --- |
-| `logging` _[AIGatewayMCPServerWithUpstreamNoProxyConfigLogging](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfiglogging)_ | Configuration for AI Gateway logging. |
-| `maxRequestBodySize` _int_ | Maximum size of request body to parse. Set to 0 for unlimited. |
-| `route` _[AIGatewayMCPServerRouteWithMatcher](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverroutewithmatcher)_ | Route configuration for an MCP Server that terminates its own listener. At least one of `hosts`, `paths`, `methods`, or `headers` must be set so the route can match incoming requests. |
-| `server` _[AIGatewayMCPServerServerConfigBase](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbase)_ | Server-side configuration for the MCP Server. |
-| `upstream` _[AIGatewayUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayupstreamconfig)_ | Configuration applied when proxying to the upstream service, including authentication. |
-| `url` _string_ | Helper field to set protocol, host, port and path of the upstream service using a URL. This is the same as a Kong Gateway Service URL: ${scheme}://${host}:${port}/${path} |
-
-_Appears in:_
-
-- [AIGatewayMCPServerConversionListener](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistener)
-
-#### AIGatewayMCPServerWithUpstreamNoProxyConfigLogging
-
-
-AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
-Gateway logging.
+AIGatewayMCPServerWithUpstreamConfigServer Server-side configuration for the
+MCP Server.
 
 
 
 | Field | Description |
 | --- | --- |
-| `audits` _string_ |  |
-| `payloads` _string_ |  |
+| `forwardClientHeaders` _string_ | Whether to forward the client request headers to the upstream server when calling the tools. |
+| `session` _[AIGatewayMCPServerWithUpstreamConfigServerSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversession)_ | Enable managed session when Kong responds as MCP server in listener, conversion-listener, or upstream-server modes. This doesn't affect the passthrough-listener mode as the state in that mode is maintained by the upstream MCP servers. |
+| `timeout` _int_ | The timeout for calling the tools in milliseconds. |
 
 _Appears in:_
 
-- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
+- [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
+
+#### AIGatewayMCPServerWithUpstreamConfigServerSession
+
+
+AIGatewayMCPServerWithUpstreamConfigServerSession Enable managed session when
+Kong responds as MCP server in listener, conversion-listener, or
+upstream-server modes.
+This doesn't affect the passthrough-listener mode as the state in that mode
+is maintained by the upstream MCP servers.
+
+
+
+| Field | Description |
+| --- | --- |
+| `client` _[AIGatewayMCPServerWithUpstreamConfigServerSessionClient](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversessionclient)_ | The configuration for client-side session storage. |
+| `managed` _string_ | If enabled, Kong will maintain managed sessions with the MCP server. |
+| `redis` _[AIGatewayRedisCloudConfiguration](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayrediscloudconfiguration)_ | Config for connecting to a Cloud Provider's Redis instance. |
+| `sessionTtl` _int_ | The time-to-live (TTL) for each session in seconds. |
+| `strategy` _string_ | The strategy for the session. If the value is 'client', the session is encrypted into MCP session id assigned to the client. If the value is not 'client', the session is stored in the configured database. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamConfigServer](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserver)
+
+#### AIGatewayMCPServerWithUpstreamConfigServerSessionClient
+
+
+AIGatewayMCPServerWithUpstreamConfigServerSessionClient The configuration for
+client-side session storage.
+
+
+
+| Field | Description |
+| --- | --- |
+| `secrets` _[]string_ | The secrets that are used in session encryption. Required when the strategy is 'client'. The first secret is used for encryption, while all secrets are used for decryption to support key rotation. |
+
+_Appears in:_
+
+- [AIGatewayMCPServerWithUpstreamConfigServerSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversession)
 
 #### AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig
 
@@ -4858,6 +4880,7 @@ _Appears in:_
 
 - [AIGatewayMCPServerServerConfigBaseSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverserverconfigbasesession)
 - [AIGatewayMCPServerUpstreamServerServerConfigSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverserverconfigsession)
+- [AIGatewayMCPServerWithUpstreamConfigServerSession](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfigserversession)
 
 #### AIGatewayRedisCloudConfigurationCloudAuthentication
 
@@ -5893,9 +5916,9 @@ service, including authentication.
 _Appears in:_
 
 - [AIGatewayAgentConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayagentconfig)
+- [AIGatewayMCPServerConversionListenerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverconversionlistenerconfig)
 - [AIGatewayMCPServerUpstreamServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverupstreamserverconfig)
 - [AIGatewayMCPServerWithUpstreamConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamconfig)
-- [AIGatewayMCPServerWithUpstreamNoProxyConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfig)
 - [AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymcpserverwithupstreamnoproxyconfignoserverconfig)
 
 #### AIGatewayUpstreamConfigAuth

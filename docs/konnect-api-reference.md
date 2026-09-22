@@ -1447,6 +1447,31 @@ _Appears in:_
 
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
 
+#### KonnectManaged
+
+_Underlying type:_ `string`
+
+KonnectManaged Whether the team's membership is managed by Konnect instead of
+being synced from an identity provider's team mappings.
+Set to `false` (default) to let identity provider team mappings keep syncing
+members into this team.
+Set to `true` to manage membership directly in Konnect and prevent identity
+provider team mappings from syncing to this team.
+
+
+
+
+_Appears in:_
+
+- [PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | KonnectManagedEnabled sets KonnectManaged as enabled.<br /> |
+| `Disabled` | KonnectManagedDisabled sets KonnectManaged as disabled.<br /> |
+
 #### KonnectTransitGatewayAPISpec
 
 
@@ -2267,6 +2292,7 @@ PortalTeamAPISpec defines the API spec fields for PortalTeam.
 | --- | --- |
 | `canOwnApplications` _string_ | Whether the team is allowed to own applications |
 | `description` _string_ | The description of the team. |
+| `konnectManaged` _[KonnectManaged](#konnect-konghq-com-v1alpha1-types-konnectmanaged)_ | Whether the team's membership is managed by Konnect instead of being synced from an identity provider's team mappings. Set to `false` (default) to let identity provider team mappings keep syncing members into this team. Set to `true` to manage membership directly in Konnect and prevent identity provider team mappings from syncing to this team. |
 | `name` _string_ | The name of the team. |
 
 _Appears in:_
@@ -2433,7 +2459,6 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
-| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 
