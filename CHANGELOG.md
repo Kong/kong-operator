@@ -167,6 +167,19 @@
   the cluster's IP family from the `default/kubernetes` Service at startup. If
   detection failed, please set `--ip-family` manually.
   [#5499](https://github.com/Kong/kong-operator/pull/5499)
+- Hybrid Gateway: Support `konghq.com/cp-labels` and `konghq.com/dp-labels`
+  annotations in `Gateway`s and `GatewayClass`es to configure Konnect labels of
+  control planes and dataplanes. The key and value in the label are separated by
+  `=` and multiple labels in an annotation are separated by `,`.
+  For example: `konghq.com/cp-labels:k1=v1,k2=v2`.
+  The maximum number of labels is limited to 5. If the number of labels in
+  `konghq.com/cp-labels` or `konghq.com/dp-labels` annotation is over 5 in
+  `Gateway` or `GatewayClass`, the controller rejects the `Gateway` and stops
+  reconciliation.
+  The labels from annotations of `Gateway`s take precedence over the labels from
+  `GatewayClass`es. When they have different values on the same key, the value
+  from annotation of `Gateway` is used.
+  [#5808](https://github.com/Kong/kong-operator/pull/5808)
 
 ### Breaking changes
 
