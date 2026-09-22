@@ -15,6 +15,9 @@ import (
 // maxKonnectLabels is the maximum number of Konnect labels allowed on a
 // KonnectGatewayControlPlane or a KonnectExtension's DataPlane, once the
 // Gateway and GatewayClass annotation values are merged.
+// As mentioned in https://developer.konghq.com/konnect-platform/konnect-labels/,
+// A maximum of 5 user-defined labels are allowed on each resource.
+// So although we can attach more labels on Konnect gateway control planes, only 5 user-defined labels will be considered.
 const maxKonnectLabels = 5
 
 // konnectLabelMaxLen is the maximum length (in bytes) of a Konnect label key
@@ -63,7 +66,7 @@ func parseLabelsAnnotationValue(value string) (map[string]string, error) {
 // result - until the merged map fits. If override alone already exceeds
 // maxItems, an error is returned since there's nothing left to drop.
 func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[string]string, error) {
-	if len(override) > maxItems {
+	if len(override) > maxItems || len(base) > maxItems {
 		return nil, fmt.Errorf("too many labels: %d exceeds the maximum of %d", len(override), maxItems)
 	}
 
@@ -103,12 +106,19 @@ func resolveKonnectLabels(gateway *gwtypes.Gateway, gatewayClass *gatewayv1.Gate
 	if err != nil {
 		return nil, fmt.Errorf("Gateway %s/%s: %w", gateway.Namespace, gateway.Name, err)
 	}
+	if len(gatewayLabels) > maxKonnectLabels {
+		return nil, fmt.Errorf("Gateway %s/%s: too many labels: %d exceeds the maximum of %d", gateway.Namespace, gateway.Name, len(gatewayLabels), maxKonnectLabels)
+	}
 
 	var gatewayClassLabels map[string]string
 	if gatewayClass != nil {
 		gatewayClassLabels, err = parseLabelsAnnotationValue(gatewayClass.GetAnnotations()[annotationKey])
 		if err != nil {
 			return nil, fmt.Errorf("GatewayClass %s: %w", gatewayClass.Name, err)
+		}
+
+		if len(gatewayClassLabels) > maxKonnectLabels {
+			return nil, fmt.Errorf("GatewayClass %s: too many labels: %d exceeds the maximum of %d", gatewayClass.Name, len(gatewayClassLabels), maxKonnectLabels)
 		}
 	}
 
