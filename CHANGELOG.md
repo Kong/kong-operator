@@ -76,7 +76,6 @@
   This aligns with choosing ID of the translated certificate.
   [#5657](https://github.com/Kong/kong-operator/pull/5657)
   [#5735](https://github.com/Kong/kong-operator/pull/5735)
-
 - Konnect-hybrid gateways: resolve `spec.configFrom` and `spec.configPatches` of a
   `KongPlugin` attached to an `HTTPRoute` through an `ExtensionRef`
   filter. Both fields were previously ignored, so a plugin whose configuration came
@@ -84,6 +83,9 @@
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
   [#5600](https://github.com/Kong/kong-operator/pull/5600)
+- Fix unnecessary reconciliations caused by incorrect status conditions updates.
+  [#5820](https://github.com/Kong/kong-operator/pull/5820)
+  [#5823](https://github.com/Kong/kong-operator/pull/5823)
 
 ## [v2.2.5]
 
