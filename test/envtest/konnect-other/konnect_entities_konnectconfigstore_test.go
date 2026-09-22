@@ -258,10 +258,9 @@ func TestKonnectConfigStore(t *testing.T) {
 			configStore.Annotations["gateway-operator.konghq.com/reconcile-after-secret-removal"] = "true"
 			if err := clientNamespaced.Update(ctx, configStore); err != nil {
 				if apierrors.IsNotFound(err) {
-					// A concurrent reconcile (the blocked-deletion requeue racing
-					// with this trigger) already finished the deletion; the cached
-					// Get above can still return the object after it is gone from
-					// the API server. That is the goal state, so stop poking it.
+					// The cached Get above can still return the object
+					// after it is gone from the API server, so the
+					// Update can still hit NotFound.
 					return nil
 				}
 				return err
