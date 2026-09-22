@@ -4934,6 +4934,7 @@ func TestGenerateEntityOpsFile_GetForUIDUsesConfiguredMatchFields(t *testing.T) 
 				{
 					ObjectField:   "Spec.APISpec.Description",
 					ResponseField: "Description",
+					SkipWhenUnset: true,
 				},
 			},
 		},
@@ -4950,10 +4951,94 @@ func TestGenerateEntityOpsFile_GetForUIDUsesConfiguredMatchFields(t *testing.T) 
 
 	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Certificate, entry.Certificate)")
 	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Name, entry.Name)")
-	assert.Contains(t, res.File.Content, "if !matchStringField(obj.Spec.APISpec.Description, entry.Description)")
+	assert.Contains(t, res.File.Content, "if !matchOptionalStringField(obj.Spec.APISpec.Description, entry.Description)")
+	// Mandatory match fields remain, so no degenerate-match guard is emitted.
+	assert.NotContains(t, res.File.Content, "stringValueGeneric(obj.Spec.APISpec.Description)")
 	assert.Contains(t, res.File.Content, "switch id := any(entry.GetID()).(type)")
 	assert.NotContains(t, res.File.Content, "entry.GetLabels()[KubernetesUIDLabelKey]")
 	assert.NotContains(t, res.File.Content, "entry.GetName()")
+}
+
+func TestGenerateEntityOpsFile_GetForUIDAllOptionalFlatMatchFieldsEmitGuard(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: new(false), ParentEntityType: "KonnectEventGateway"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "list-event-gateway-data-plane-certificates",
+		ListTags:               []string{"EventGatewayDataPlaneCertificates"},
+		ListSuccessResponseRef: "ListEventGatewayDataPlaneCertificatesResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{ObjectField: "Spec.APISpec.Name", ResponseField: "Name", SkipWhenUnset: true},
+				{ObjectField: "Spec.APISpec.Description", ResponseField: "Description", SkipWhenUnset: true},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	_, err = format.Source([]byte(res.File.Content))
+	require.NoError(t, err)
+
+	assert.Contains(t, res.File.Content,
+		`if stringValueGeneric(obj.Spec.APISpec.Name) == "" && stringValueGeneric(obj.Spec.APISpec.Description) == "" {`)
+}
+
+func TestGenerateEntityOpsFile_GetForUIDSkipWhenUnsetRejectsNonStringFields(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"KonnectEventDataPlaneCertificate": {IsRoot: new(false), ParentEntityType: "KonnectEventGateway"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "list-event-gateway-data-plane-certificates",
+		ListTags:               []string{"EventGatewayDataPlaneCertificates"},
+		ListSuccessResponseRef: "ListEventGatewayDataPlaneCertificatesResponse",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "gatewayId", EntityName: "KonnectEventGateway"},
+		},
+		Properties: []*parser.Property{
+			{Name: "allowed_ips", Type: "array"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		GetForUID: &config.GetForUIDConfig{
+			MatchFields: []config.GetForUIDMatchField{
+				{
+					ObjectField:   "Spec.APISpec.AllowedIps",
+					ResponseField: "AllowedIps",
+					SkipWhenUnset: true,
+				},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.EventGatewayDataPlaneCertificatesSDK",
+			FieldName: "EventGatewayDataPlaneCertificates",
+		},
+	}
+
+	_, err := g.generateEntityOpsFile("KonnectEventDataPlaneCertificate", schema, opsConfig)
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "skipWhenUnset")
 }
 
 func TestGenerateEntityOpsFile_GetForUIDUsesRootUnionCases(t *testing.T) {
@@ -5070,6 +5155,7 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 						ResponseVariantField: "PortalSAMLIdentityProviderConfig",
 						MatchFields: []config.GetForUIDMatchField{
 							{ObjectField: "IdpMetadataURL", ResponseField: "GetIdpMetadataURL()"},
+							{ObjectField: "IdpMetadataXML", ResponseField: "GetIdpMetadataXML()", SkipWhenUnset: true},
 						},
 					},
 				},
@@ -5105,6 +5191,71 @@ func TestGenerateEntityOpsFile_GetForUIDPositionalWithParentAndResponseVariant(t
 	assert.Contains(t, content, "entryVariant := entryContainer.PortalSAMLIdentityProviderConfig")
 	assert.Contains(t, content, "if !matchStringField(selected.IssuerURL, entryVariant.GetIssuerURL()) {")
 	assert.Contains(t, content, "if !matchStringField(selected.IdpMetadataURL, entryVariant.GetIdpMetadataURL()) {")
+	// skipWhenUnset match fields fall back to the tolerant helper so an unset
+	// optional spec field does not block the match.
+	assert.Contains(t, content, "if !matchOptionalStringField(selected.IdpMetadataXML, entryVariant.GetIdpMetadataXML()) {")
+	// The SAML case still has one mandatory match field, so no degenerate-match
+	// guard is needed.
+	assert.NotContains(t, content, "stringValueGeneric(selected.IdpMetadataURL)")
+}
+
+func TestGenerateEntityOpsFile_GetForUIDAllOptionalMatchFieldsEmitGuard(t *testing.T) {
+	g := NewGenerator(Config{
+		APIGroupPackagePath:  "github.com/kong/kong-operator/v2/api/konnect/v1alpha1",
+		APIGroupPackageAlias: "konnectv1alpha1",
+		ReconcilerConfig: map[string]*config.ReconcilerConfig{
+			"PortalIdentityProviderRequest": {IsRoot: new(false), ParentEntityType: "Portal"},
+		},
+	})
+
+	schema := &parser.Schema{
+		ListOperationID:        "get-portal-identity-providers",
+		ListTags:               []string{"Portal Auth Settings"},
+		ListSuccessResponseRef: "PortalIdentityProviders",
+		Dependencies: []*parser.Dependency{
+			{ParamName: "portalId", EntityName: "Portal"},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		ListCallStylePositional: true,
+		GetForUID: &config.GetForUIDConfig{
+			ListItemsSource: config.GetForUIDListItemsSourceSlice,
+			RootUnion: &config.GetForUIDRootUnionConfig{
+				UnionField:               "Spec.APISpec.Config",
+				ResponseTypePointer:      true,
+				ResponseVariantContainer: "GetConfig()",
+				Cases: []config.GetForUIDRootUnionCase{
+					{
+						TypeValue:            "portalSAML",
+						VariantField:         "PortalSAML",
+						ResponseTypeValue:    "saml",
+						ResponseVariantField: "PortalSAMLIdentityProviderConfig",
+						MatchFields: []config.GetForUIDMatchField{
+							{ObjectField: "IdpMetadataURL", ResponseField: "GetIdpMetadataURL()", SkipWhenUnset: true},
+							{ObjectField: "IdpMetadataXML", ResponseField: "GetIdpMetadataXML()", SkipWhenUnset: true},
+						},
+					},
+				},
+			},
+		},
+		SDK: &config.OpSDKConfig{
+			Interface: "github.com/Kong/sdk-konnect-go.PortalAuthSettingsSDK",
+			FieldName: "PortalAuthSettings",
+		},
+	}
+
+	res, err := g.generateEntityOpsFile("PortalIdentityProviderRequest", schema, opsConfig)
+	require.NoError(t, err)
+	require.NotNil(t, res.File)
+
+	content := res.File.Content
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	// With every match field optional, an object that sets none of them must
+	// report not-found instead of adopting an arbitrary list entry.
+	assert.Contains(t, content,
+		`if stringValueGeneric(selected.IdpMetadataURL) == "" && stringValueGeneric(selected.IdpMetadataXML) == "" {`)
 }
 
 func TestGenerateEntityOpsFile_ManualGetForUIDStillEmitsDispatcherInfo(t *testing.T) {

@@ -148,6 +148,11 @@ func getPortalIdentityProviderRequestForUID(
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}
+		// Every configured match field is optional, so a variant that sets none
+		// of them would compare nothing and match an arbitrary entry.
+		if stringValueGeneric(selected.IdpMetadataURL) == "" && stringValueGeneric(selected.IdpMetadataXML) == "" {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
 		for _, entry := range resp.PortalIdentityProviders {
 			if responseType := entry.GetType(); responseType == nil || string(*responseType) != "saml" {
 				continue
@@ -160,10 +165,10 @@ func getPortalIdentityProviderRequestForUID(
 			if entryVariant == nil {
 				continue
 			}
-			if !matchStringField(selected.IdpMetadataURL, entryVariant.GetIdpMetadataURL()) {
+			if !matchOptionalStringField(selected.IdpMetadataURL, entryVariant.GetIdpMetadataURL()) {
 				continue
 			}
-			if !matchStringField(selected.IdpMetadataXML, entryVariant.GetIdpMetadataXML()) {
+			if !matchOptionalStringField(selected.IdpMetadataXML, entryVariant.GetIdpMetadataXML()) {
 				continue
 			}
 			switch id := any(entry.GetID()).(type) {

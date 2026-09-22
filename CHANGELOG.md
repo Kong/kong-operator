@@ -68,8 +68,8 @@
 
 - `PortalIdentityProviderRequest`: support adopting existing Konnect portal
   identity provider configurations by matching the spec against the remote
-  configuration (OIDC: issuer URL and client ID; SAML: IdP metadata URL and XML)
-  when the Konnect ID is not set.
+  configuration (OIDC: issuer URL and client ID; SAML: whichever of the IdP
+  metadata URL and XML the spec sets) when the Konnect ID is not set.
   [#3956](https://github.com/Kong/kong-operator/pull/3956)
 - `AIGatewayDataPlane`: add management of admin API service, admin server cert and
   admin listener to AIGatewayDataPlane reconciler.

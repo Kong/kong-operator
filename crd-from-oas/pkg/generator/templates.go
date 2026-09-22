@@ -3093,8 +3093,15 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 	entry := resp.{{.ListResponseField}}
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 {{- range .MatchFields}}
-	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
@@ -3198,13 +3205,21 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
+
 	// TODO: only the first page of results is scanned. When the parent has more
 	// entries than the SDK's default page size, a matching entry on a later
 	// page is missed and getForUID returns NotFound. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
-		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 			continue
 		}
 		{{- end}}
@@ -3259,6 +3274,13 @@ func get{{.Entity}}ForUID(
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}
+		{{- if .AllMatchFieldsSkipWhenUnset}}
+		// Every configured match field is optional, so a variant that sets none
+		// of them would compare nothing and match an arbitrary entry.
+		if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(selected.{{$f.ObjectField}}) == ""{{end}} {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		{{- end}}
 		for _, entry := range {{$.ListResponseItemsExpr}} {
 			{{- if $.RootUnion.ResponseTypePointer}}
 			if responseType := entry.{{$.RootUnion.ResponseTypeField}}; responseType == nil || string(*responseType) != "{{.ResponseTypeValue}}" {
@@ -3284,6 +3306,8 @@ func get{{.Entity}}ForUID(
 			{{- range .MatchFields}}
 			{{- if .SliceMatch}}
 			if !matchSliceField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
+			{{- else if .SkipWhenUnset}}
+			if !matchOptionalStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- else}}
 			if !matchStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- end}}

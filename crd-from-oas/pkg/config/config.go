@@ -445,6 +445,14 @@ type GetForUIDMatchField struct {
 	// ResponseField is the Go field path relative to the list entry, e.g.
 	// "Certificate" or "GetName()".
 	ResponseField string `yaml:"responseField"`
+	// SkipWhenUnset makes the generated comparison a no-op when the object-side
+	// value is empty, instead of requiring the response field to be empty too.
+	// Use it for optional spec fields that the API may populate server-side
+	// (for example a SAML identity provider's metadata XML resolved from the
+	// metadata URL), where requiring exact equality would break conflict
+	// recovery for specs that legitimately leave the field unset.
+	// Only supported for plain string-like fields.
+	SkipWhenUnset bool `yaml:"skipWhenUnset,omitempty"`
 }
 
 // GetForUIDListItemsSource controls how list response items are extracted in
