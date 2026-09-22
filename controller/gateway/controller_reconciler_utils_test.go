@@ -31,6 +31,7 @@ import (
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/ipfamily"
+	"github.com/kong/kong-operator/v2/pkg/metadata"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 	"github.com/kong/kong-operator/v2/test/helpers"
 	referencegranthelpers "github.com/kong/kong-operator/v2/test/helpers/referencegrant"
@@ -5399,7 +5400,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec(t *testing.T) {
 			reconciler := &Reconciler{Client: fakeClient}
 			ctx := t.Context()
 
-			patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, tt.kgcp, tt.gatewayConfig)
+			patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, &gwtypes.Gateway{}, nil, tt.kgcp, tt.gatewayConfig)
 			require.NoError(t, err)
 			require.Equal(t, tt.wantPatched, patched)
 
@@ -5541,4 +5542,207 @@ func TestKonnectControlPlaneName(t *testing.T) {
 				"the dynamic Konnect name must not be qualified with the namespace")
 		})
 	}
+}
+
+func TestEnforceKonnectGatewayControlPlaneSpec_Labels(t *testing.T) {
+	const (
+		gwName      = "my-gateway"
+		gwNamespace = "default"
+	)
+
+	makeGateway := func(annotations map[string]string) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			Namespace:   gwNamespace,
+			Name:        gwName,
+			Annotations: annotations,
+		}
+	}
+
+	makeKGCP := func(currentLabels map[string]string) *konnectv1alpha2.KonnectGatewayControlPlane {
+		return &konnectv1alpha2.KonnectGatewayControlPlane{
+			Namespace: gwNamespace,
+			Name:      "test-kgcp",
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				CreateControlPlaneRequest: &sdkkonnectcomp.CreateControlPlaneRequest{
+					Name:   "test-kgcp",
+					Labels: currentLabels,
+				},
+			},
+		}
+	}
+
+	makeMirrorKGCP := func() *konnectv1alpha2.KonnectGatewayControlPlane {
+		return &konnectv1alpha2.KonnectGatewayControlPlane{
+			Namespace: gwNamespace,
+			Name:      "test-kgcp-mirror",
+			Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+				Mirror: &konnectv1alpha2.MirrorSpec{
+					Konnect: konnectv1alpha2.MirrorKonnect{ID: "mirror-id"},
+				},
+			},
+		}
+	}
+
+	gatewayConfig := &GatewayConfiguration{
+		Spec: operatorv2beta1.GatewayConfigurationSpec{
+			Konnect: &operatorv2beta1.KonnectOptions{},
+		},
+	}
+
+	t.Run("labels patched when annotation differs from current", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		kgcp := makeKGCP(map[string]string{"team": "platform"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, nil, kgcp, gatewayConfig)
+		require.NoError(t, err)
+		assert.True(t, patched)
+
+		var got konnectv1alpha2.KonnectGatewayControlPlane
+		require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(kgcp), &got))
+		assert.Equal(t, map[string]string{"team": "payments"}, got.Spec.CreateControlPlaneRequest.Labels)
+	})
+
+	t.Run("no patch when labels already match", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		kgcp := makeKGCP(map[string]string{"team": "payments"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, nil, kgcp, gatewayConfig)
+		require.NoError(t, err)
+		assert.False(t, patched)
+	})
+
+	t.Run("mirror-mode KGCP is never touched", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		kgcp := makeMirrorKGCP()
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, nil, kgcp, gatewayConfig)
+		require.NoError(t, err)
+		assert.False(t, patched)
+	})
+
+	t.Run("invalid annotation returns error without mutating the object", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "not-a-valid-label"})
+		kgcp := makeKGCP(map[string]string{"team": "platform"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, nil, kgcp, gatewayConfig)
+		require.Error(t, err)
+		assert.False(t, patched)
+
+		var got konnectv1alpha2.KonnectGatewayControlPlane
+		require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(kgcp), &got))
+		assert.Equal(t, map[string]string{"team": "platform"}, got.Spec.CreateControlPlaneRequest.Labels)
+	})
+}
+
+func TestEnforceKonnectExtensionSpec(t *testing.T) {
+	const (
+		gwName      = "my-gateway"
+		gwNamespace = "default"
+	)
+
+	makeGateway := func(annotations map[string]string) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			Namespace:   gwNamespace,
+			Name:        gwName,
+			Annotations: annotations,
+		}
+	}
+
+	makeKonnectExtension := func(currentLabels map[string]konnectv1alpha2.DataPlaneLabelValue) *konnectv1alpha2.KonnectExtension {
+		konnectExt := &konnectv1alpha2.KonnectExtension{
+			Namespace: gwNamespace,
+			Name:      "test-konnect-ext",
+			Spec: konnectv1alpha2.KonnectExtensionSpec{
+				Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+					ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+						Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+							Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+							KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+								Name:      "test-kgcp",
+								Namespace: gwNamespace,
+							},
+						},
+					},
+				},
+			},
+		}
+		if len(currentLabels) > 0 {
+			konnectExt.Spec.Konnect.DataPlane = &konnectv1alpha2.KonnectExtensionDataPlane{Labels: currentLabels}
+		}
+		return konnectExt
+	}
+
+	t.Run("labels patched when annotation differs from current", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "team=payments"})
+		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectExtensionSpec(ctx, gateway, nil, konnectExt)
+		require.NoError(t, err)
+		assert.True(t, patched)
+
+		var got konnectv1alpha2.KonnectExtension
+		require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(konnectExt), &got))
+		require.NotNil(t, got.Spec.Konnect.DataPlane)
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"}, got.Spec.Konnect.DataPlane.Labels)
+	})
+
+	t.Run("no patch when labels already match", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "team=payments"})
+		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectExtensionSpec(ctx, gateway, nil, konnectExt)
+		require.NoError(t, err)
+		assert.False(t, patched)
+	})
+
+	t.Run("labels cleared when annotation is removed", func(t *testing.T) {
+		gateway := makeGateway(nil)
+		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectExtensionSpec(ctx, gateway, nil, konnectExt)
+		require.NoError(t, err)
+		assert.True(t, patched)
+
+		var got konnectv1alpha2.KonnectExtension
+		require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(konnectExt), &got))
+		assert.Nil(t, got.Spec.Konnect.DataPlane)
+	})
+
+	t.Run("invalid annotation returns error without mutating the object", func(t *testing.T) {
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "not-a-valid-label"})
+		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"})
+		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
+		reconciler := &Reconciler{Client: fakeClient}
+		ctx := t.Context()
+
+		patched, err := reconciler.enforceKonnectExtensionSpec(ctx, gateway, nil, konnectExt)
+		require.Error(t, err)
+		assert.False(t, patched)
+
+		var got konnectv1alpha2.KonnectExtension
+		require.NoError(t, fakeClient.Get(ctx, client.ObjectKeyFromObject(konnectExt), &got))
+		require.NotNil(t, got.Spec.Konnect.DataPlane)
+		assert.Equal(t, map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"}, got.Spec.Konnect.DataPlane.Labels)
+	})
 }
