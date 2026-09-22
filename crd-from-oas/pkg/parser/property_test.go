@@ -531,3 +531,126 @@ func TestParseProperty_AllValidations(t *testing.T) {
 	assert.InEpsilon(t, 1.0, *prop.Minimum, 0.001)
 	assert.InEpsilon(t, 100.0, *prop.Maximum, 0.001)
 }
+
+func TestParseProperty_AllOfMergesProperties(t *testing.T) {
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/BaseConfig",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"object"},
+						Properties: openapi3.Schemas{
+							"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+					},
+				},
+				{
+					// A validation-only sibling (e.g. an "at least one of" anyOf)
+					// with no properties of its own contributes no fields.
+					Value: &openapi3.Schema{},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "object", prop.Type)
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "hosts", prop.Properties[0].Name)
+}
+
+func TestParseProperty_AllOfTypelessWrapperInfersObject(t *testing.T) {
+	// The wrapper itself declares no "type: object", relying entirely on its
+	// allOf members. getSchemaType can't infer "object" from allOf alone, so
+	// without the fix this falls through to the single-ref-plus-override
+	// handling below and silently drops "hosts".
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/BaseConfig",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"object"},
+						Properties: openapi3.Schemas{
+							"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+					},
+				},
+				{
+					Value: &openapi3.Schema{},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "object", prop.Type)
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "hosts", prop.Properties[0].Name)
+}
+
+func TestParseProperty_AllOfFirstEntryWinsOnCollision(t *testing.T) {
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+						},
+					},
+				},
+				{
+					// Same field name, different type: the first entry's
+					// version must win, matching the schema-level merge in
+					// parseSchema.
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"integer"}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("wrapper", schemaRef, 0, make(map[string]bool))
+
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "string", prop.Properties[0].Type)
+}
+
+func TestParseProperty_AllOfSingleRefWithDefaultOverride(t *testing.T) {
+	// allOf: [{$ref: X}, {default: Y}] attaches a default to a shared enum
+	// without redeclaring it: the ref supplies type/enum, the sibling
+	// fragment (no $ref, no properties) supplies the default.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/Status",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"string"},
+						Enum: []any{"Enabled", "Disabled"},
+					},
+				},
+				{
+					Value: &openapi3.Schema{
+						Default: "Enabled",
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("status", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "string", prop.Type)
+	assert.Equal(t, []any{"Enabled", "Disabled"}, prop.Enum)
+	assert.Equal(t, "Enabled", prop.Default)
+}

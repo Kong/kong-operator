@@ -98,6 +98,53 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		})
 	}
 
+	// Handle an object property composed from allOf instead of its own
+	// properties (Kong's `x-flatten-allOf: true` convention: merge several
+	// object schemas, typically a $ref plus inline additions, into one flat
+	// object instead of nesting them). Also covers a type-less wrapper (no
+	// `type: object` of its own, e.g. a bare `allOf` composing a base $ref
+	// with a validation-only sibling): getSchemaType can't infer "object"
+	// from allOf members, so without this the wrapper stays type-less and
+	// falls through to the single-ref-plus-override handling below, which
+	// only copies the ref's scalar constraints, not its properties. First
+	// entry wins on name collisions, matching the schema-level merge in
+	// parseSchema. Without this, the property has no properties and no
+	// $ref, so it falls back to an untyped blob.
+	if (prop.Type == "object" || prop.Type == "") && len(prop.Properties) == 0 && len(schemaValue.AllOf) > 0 {
+		merged := make(map[string]*Property)
+		var order []string
+		for _, entry := range schemaValue.AllOf {
+			v := entry.Value
+			if v == nil {
+				continue
+			}
+			if prop.Description == "" && entry.Ref != "" {
+				prop.Description = v.Description
+			}
+			if len(v.Properties) == 0 {
+				continue
+			}
+			for nestedName, nestedRef := range v.Properties {
+				if _, exists := merged[nestedName]; exists {
+					continue
+				}
+				order = append(order, nestedName)
+				nestedProp := ParseProperty(nestedName, nestedRef, depth+1, visited)
+				nestedProp.Required = slices.Contains(v.Required, nestedName)
+				merged[nestedName] = nestedProp
+			}
+		}
+		if len(order) > 0 {
+			for _, nestedName := range order {
+				prop.Properties = append(prop.Properties, merged[nestedName])
+			}
+			sort.Slice(prop.Properties, func(i, j int) bool {
+				return prop.Properties[i].Name < prop.Properties[j].Name
+			})
+			prop.Type = "object"
+		}
+	}
+
 	// Handle maxProperties (map size constraint)
 	if schemaValue.MaxProps != nil {
 		maxProps := int64(*schemaValue.MaxProps)
@@ -130,6 +177,58 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 				}
 				if prop.Pattern == "" && v.Pattern != "" {
 					prop.Pattern = v.Pattern
+				}
+			}
+		}
+	}
+
+	// Handle allOf combining a single $ref with sibling override-only
+	// fragments (e.g. `allOf: [{$ref: X}, {default: Y}]`, used to attach a
+	// default to a shared enum without redeclaring it). Unlike the
+	// single-entry case above, inline the referenced schema's type/enum/
+	// constraints directly onto this property instead of pointing at the
+	// named type: the sibling fragment only tweaks this one usage, it
+	// doesn't turn every use of the shape into a shared type. Without this,
+	// the property resolves to neither a type nor a $ref and falls back to
+	// `any`.
+	if len(schemaValue.AllOf) > 1 && prop.RefName == "" && prop.Type == "" {
+		var refEntry *openapi3.SchemaRef
+		refCount := 0
+		for _, entry := range schemaValue.AllOf {
+			if entry.Ref != "" {
+				refCount++
+				refEntry = entry
+			}
+		}
+		if refCount == 1 && refEntry != nil && refEntry.Value != nil {
+			v := refEntry.Value
+			prop.Type = getSchemaType(v)
+			if prop.Description == "" {
+				prop.Description = v.Description
+			}
+			if len(prop.Enum) == 0 && len(v.Enum) > 0 {
+				prop.Enum = v.Enum
+			}
+			if prop.MinLength == nil && v.MinLength > 0 {
+				minLen := int64(v.MinLength)
+				prop.MinLength = &minLen
+			}
+			if prop.MaxLength == nil && v.MaxLength != nil {
+				maxLen := int64(*v.MaxLength)
+				prop.MaxLength = &maxLen
+			}
+			if prop.Pattern == "" && v.Pattern != "" {
+				prop.Pattern = v.Pattern
+			}
+			if prop.Default == nil {
+				for _, entry := range schemaValue.AllOf {
+					if entry.Ref != "" || entry.Value == nil {
+						continue
+					}
+					if entry.Value.Default != nil {
+						prop.Default = entry.Value.Default
+						break
+					}
 				}
 			}
 		}

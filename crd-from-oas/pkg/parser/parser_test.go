@@ -1083,3 +1083,90 @@ func TestGetRefEntityName(t *testing.T) {
 		})
 	}
 }
+
+func TestParseSchema_AllOfMergesProperties(t *testing.T) {
+	p := NewParser(&openapi3.T{})
+
+	schemaValue := &openapi3.Schema{
+		Type: &openapi3.Types{"object"},
+		AllOf: openapi3.SchemaRefs{
+			{
+				Ref: "#/components/schemas/BaseConfig",
+				Value: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+					},
+				},
+			},
+			{
+				// A validation-only sibling (e.g. an "at least one of" anyOf)
+				// with no properties of its own contributes no fields.
+				Value: &openapi3.Schema{},
+			},
+		},
+	}
+
+	schema := p.parseSchema("RouteMatcher", schemaValue)
+
+	require.Len(t, schema.Properties, 1)
+	assert.Equal(t, "hosts", schema.Properties[0].Name)
+}
+
+func TestParseSchema_AllOfDirectPropertiesWinOverAllOf(t *testing.T) {
+	p := NewParser(&openapi3.T{})
+
+	schemaValue := &openapi3.Schema{
+		Type: &openapi3.Types{"object"},
+		Properties: openapi3.Schemas{
+			"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+		},
+		AllOf: openapi3.SchemaRefs{
+			{
+				Value: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						// Same field name as a direct property, different
+						// type: the direct property must win.
+						"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"integer"}}},
+					},
+				},
+			},
+		},
+	}
+
+	schema := p.parseSchema("Widget", schemaValue)
+
+	require.Len(t, schema.Properties, 1)
+	assert.Equal(t, "string", schema.Properties[0].Type)
+}
+
+func TestParseSchema_AllOfFirstEntryWinsOnCollision(t *testing.T) {
+	p := NewParser(&openapi3.T{})
+
+	schemaValue := &openapi3.Schema{
+		Type: &openapi3.Types{"object"},
+		AllOf: openapi3.SchemaRefs{
+			{
+				Value: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+					},
+				},
+			},
+			{
+				// Same field name, different type: the first allOf entry's
+				// version must win, matching the property-level merge in
+				// ParseProperty.
+				Value: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"integer"}}},
+					},
+				},
+			},
+		},
+	}
+
+	schema := p.parseSchema("Widget", schemaValue)
+
+	require.Len(t, schema.Properties, 1)
+	assert.Equal(t, "string", schema.Properties[0].Type)
+}
