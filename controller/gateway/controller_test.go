@@ -1059,7 +1059,7 @@ func TestProvisionKonnectExtension_ControlPlaneRefNotValid(t *testing.T) {
 				Client: fakeClient,
 			}
 
-			result := reconciler.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
+			result := reconciler.provisionKonnectExtension(ctx, logger, gateway, nil, konnectControlPlane)
 
 			if tc.expectReturnNil {
 				assert.Nil(t, result, "provisionKonnectExtension should return nil")
