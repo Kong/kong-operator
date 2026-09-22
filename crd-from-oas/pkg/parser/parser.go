@@ -679,6 +679,37 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 		schema.Properties = append(schema.Properties, prop)
 	}
 
+	// Handle allOf: merge properties from every entry that declares its own,
+	// e.g. a route matcher composed from a base config schema (a $ref) plus a
+	// validation-only "at least one of X" anyOf sibling. Entries with no
+	// properties of their own, like that anyOf sibling, contribute no fields
+	// and are skipped; their require-at-least-one constraint isn't modeled.
+	// Direct properties win over allOf on a name collision, and among allOf
+	// entries the first one wins, matching the property-level merge in
+	// ParseProperty. Without this, an allOf-only schema has no direct
+	// Properties and falls back to map[string]string.
+	if len(schemaValue.AllOf) > 0 {
+		seen := make(map[string]bool, len(schema.Properties))
+		for _, prop := range schema.Properties {
+			seen[prop.Name] = true
+		}
+		for _, entry := range schemaValue.AllOf {
+			v := entry.Value
+			if v == nil || len(v.Properties) == 0 {
+				continue
+			}
+			for nestedName, nestedRef := range v.Properties {
+				if seen[nestedName] {
+					continue
+				}
+				seen[nestedName] = true
+				nestedProp := ParseProperty(nestedName, nestedRef, 0, p.visited)
+				nestedProp.Required = slices.Contains(v.Required, nestedName) || slices.Contains(schemaValue.Required, nestedName)
+				schema.Properties = append(schema.Properties, nestedProp)
+			}
+		}
+	}
+
 	// Sort properties for consistent output
 	sort.Slice(schema.Properties, func(i, j int) bool {
 		return schema.Properties[i].Name < schema.Properties[j].Name

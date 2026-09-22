@@ -2627,8 +2627,57 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              headers:
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             properties:
@@ -3086,8 +3135,57 @@ spec:
                           maxRequestBodySize:
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              headers:
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           upstream:
                             properties:
@@ -3459,8 +3557,57 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              headers:
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             properties:
@@ -3922,8 +4069,57 @@ spec:
                                 type: string
                             type: object
                           route:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              headers:
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             properties:
@@ -4291,8 +4487,57 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
+                            properties:
+                              headers:
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             properties:
