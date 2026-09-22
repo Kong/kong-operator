@@ -155,6 +155,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
@@ -182,9 +183,8 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-model",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-			// TODO: fix this when on prem ai gateway ref is added
-			// https://github.com/Kong/kong-operator/issues/5666
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: onprem.Name},
 			},
