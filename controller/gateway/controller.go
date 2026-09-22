@@ -927,7 +927,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
 	log.Trace(logger, "ensuring KonnectGatewayControlPlane spec is up to date")
-	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, konnectControlPlane, gatewayConfig)
+	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, gatewayClass, konnectControlPlane, gatewayConfig)
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectGatewayControlPlane spec - error: %v", err))
 		k8sutils.SetCondition(
@@ -1056,6 +1056,22 @@ func (r *Reconciler) provisionKonnectExtension(
 				"KonnectExtension", client.ObjectKeyFromObject(konnectExtension))
 		}
 		return nil
+	}
+
+	log.Trace(logger, "ensuring KonnectExtension spec is up to date")
+	if patched, err := r.enforceKonnectExtensionSpec(ctx, gateway, gatewayClass, konnectExtension); err != nil {
+		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectExtension spec - error: %v", err))
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return konnectExtension
+	} else if patched {
+		log.Debug(logger, "KonnectExtension spec updated")
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
 	}
 
 	log.Trace(logger, "waiting for KonnectExtension readiness")

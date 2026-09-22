@@ -78,6 +78,12 @@ func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[str
 		return merged, nil
 	}
 
+	// Drop base-only (e.g. GatewayClass) entries rather than erroring:
+	// GatewayClass is typically managed by cluster admins while Gateway is
+	// managed by individual teams, so erroring here could let a GatewayClass
+	// config the Gateway owner can't edit permanently block that Gateway's
+	// provisioning. Dropping guarantees override's (Gateway's) own labels
+	// always take effect.
 	baseOnlyKeys := make([]string, 0, len(base))
 	for k := range base {
 		if _, ok := override[k]; !ok {
