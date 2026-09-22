@@ -162,6 +162,10 @@ func StartReconciler(
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
+
+	// Wait for the manager's cache to finish its initial sync before returning.
+	// See the same wait in StartReconcilers() above for why this is needed.
+	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
 }
 
 // NewControllerClient returns a new controller-runtime Client for provided runtime.Scheme and rest.Config.
