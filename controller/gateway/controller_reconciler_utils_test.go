@@ -4803,7 +4803,7 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 				Konnect: &operatorv2beta1.KonnectOptions{},
 			},
 		}
-		kgcp, err := reconciler.createKonnectGatewayControlPlane(ctx, gateway, gatewayConfigWithKonnect)
+		kgcp, err := reconciler.createKonnectGatewayControlPlane(ctx, gateway, nil, gatewayConfigWithKonnect)
 		require.NoError(t, err)
 		require.Equal(t, gwName, kgcp.Labels[consts.GatewayNameLabel],
 			"KonnectGatewayControlPlane object must carry the GEP-1762 gateway-name label")
@@ -4814,7 +4814,7 @@ func TestGatewayManagedLabelOnCreatedResources(t *testing.T) {
 			Namespace: gwNamespace,
 			Name:      "fake-konnect-cp",
 		}
-		konnectExt, err := reconciler.createKonnectExtension(ctx, gateway, fakeKonnectCP)
+		konnectExt, err := reconciler.createKonnectExtension(ctx, gateway, nil, fakeKonnectCP)
 		require.NoError(t, err)
 		require.Equal(t, gwName, konnectExt.Labels[consts.GatewayNameLabel],
 			"KonnectExtension object must carry the GEP-1762 gateway-name label")
