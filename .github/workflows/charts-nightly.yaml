@@ -16,9 +16,6 @@ jobs:
   publish-nightly-chart:
     name: Publish nightly Helm chart
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write
     env:
       HELM_EXPERIMENTAL_OCI: 1
     steps:
@@ -114,48 +111,11 @@ jobs:
           echo "${DOCKERHUB_TOKEN}" | helm registry login registry-1.docker.io \
             --username "${DOCKERHUB_USERNAME}" --password-stdin
 
-      # helm writes its own registry config, which cosign does not read. Without
-      # this login cosign gets a 401 pushing the signature.
-      - name: Log in cosign to Docker Hub
-        env:
-          DOCKERHUB_USERNAME: ${{ vars.DOCKERHUB_PUSH_USERNAME_NIGHTLY }}
-          DOCKERHUB_TOKEN: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO_CHART_NIGHTLY }}
-        run: |
-          if [ -z "${DOCKERHUB_USERNAME}" ] || [ -z "${DOCKERHUB_TOKEN}" ]; then
-            echo "Docker Hub credentials are missing."
-            exit 1
-          fi
-          echo "${DOCKERHUB_TOKEN}" | cosign login registry-1.docker.io \
-            --username "${DOCKERHUB_USERNAME}" --password-stdin
-
       - name: Push nightly chart
-        id: push
         env:
           PACKAGE: ${{ steps.package.outputs.package_path }}
         run: |
-          PUSH_LOG="${RUNNER_TEMP}/helm-push.log"
-          helm push "${PACKAGE}" oci://registry-1.docker.io/kong | tee "${PUSH_LOG}"
-          DIGEST=$(grep -E '^Digest: ' "${PUSH_LOG}" | tail -n1 | awk '{print $2}')
-          if [ -z "${DIGEST}" ]; then
-            echo "Failed to parse a digest out of the helm push output." >&2
-            exit 1
-          fi
-          echo "digest=${DIGEST}" >> "${GITHUB_OUTPUT}"
-
-      - name: Sign nightly chart
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-        run: |
-          cosign sign --yes "registry-1.docker.io/kong/${NIGHTLY_CHART_NAME}@${DIGEST}"
-
-      - name: Verify nightly chart signature
-        env:
-          DIGEST: ${{ steps.push.outputs.digest }}
-        run: |
-          cosign verify \
-            --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/charts-nightly\.yaml@" \
-            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
-            "registry-1.docker.io/kong/${NIGHTLY_CHART_NAME}@${DIGEST}"
+          helm push "${PACKAGE}" oci://registry-1.docker.io/kong
 
       - name: Send slack notification if job fails.
         if: failure() && env.SEND_SLACK_NOTIFICATION == 'true'
