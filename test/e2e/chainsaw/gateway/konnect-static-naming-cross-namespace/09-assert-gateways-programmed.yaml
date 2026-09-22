@@ -1,0 +1,50 @@
+# Both Gateways must be fully programmed: same name, different namespaces, no conflict.
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($staging_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($production_namespace)
+status:
+  (conditions[?type == 'Accepted']):
+    - status: 'True'
+      reason: Accepted
+  (conditions[?type == 'KonnectGatewayControlPlaneProgrammed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (conditions[?type == 'DataPlaneReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'KonnectExtensionReady']):
+    - status: 'True'
+      reason: Ready
+  (conditions[?type == 'GatewayService']):
+    - status: 'True'
+      reason: Ready
