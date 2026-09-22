@@ -174,10 +174,15 @@ var testConfig = Config[
 		WaitingForAddressMessage: aigatewayv1alpha1.WaitingForAddressMessage,
 	},
 
-	CertificateLabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
-	CertificateKind:     "AIGatewayDataPlaneCertificate",
-	BuildCertificate:    buildTestCertificate,
-	EnsureCertificate:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
+	Certificate: CertificateConfig[
+		*aigatewayv1alpha1.AIGatewayDataPlane,
+		*aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate,
+	]{
+		LabelKey: consts.SecretAIGatewayDataPlaneCertificateLabel,
+		Kind:     "AIGatewayDataPlaneCertificate",
+		Build:    buildTestCertificate,
+		Ensure:   secrets.EnsureCertificate[*aigatewayv1alpha1.AIGatewayDataPlane],
+	},
 
 	Deployment: DeploymentConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
 		ContainerName:       consts.AIGatewayDataPlaneContainerName,
@@ -214,11 +219,12 @@ var testConfig = Config[
 		DefaultPort:         testDefaultIngressPort,
 		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
 		Options:             testServiceOptions,
+
+		SetStatusAddresses: testSetStatusAddresses,
 	},
 
-	HPAScalingSpec:     testHPAScalingSpec,
-	SetStatusReplicas:  testSetStatusReplicas,
-	SetStatusAddresses: testSetStatusAddresses,
+	HPAScalingSpec:    testHPAScalingSpec,
+	SetStatusReplicas: testSetStatusReplicas,
 }
 
 func testReplicas(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane) *int32 {
@@ -315,6 +321,7 @@ func buildTestContainer(
 	cp ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName
+	_ string, // adminCertSecretName
 ) (corev1.Container, []corev1.Volume, error) {
 	aigatewaycp, _ := cp.Object.(*konnectv1alpha1.KonnectAIGateway)
 	if aigatewaycp != nil && aigatewaycp.Status.Endpoints == nil {
@@ -527,3 +534,153 @@ func (s infoCountSink) Info(_ int, _ string, _ ...any)    { *s.count++ }
 func (s infoCountSink) Error(_ error, _ string, _ ...any) {}
 func (s infoCountSink) WithValues(_ ...any) logr.LogSink  { return s }
 func (s infoCountSink) WithName(_ string) logr.LogSink    { return s }
+
+// -----------------------------------------------------------------
+// validateConfig
+// -----------------------------------------------------------------
+
+// validAdminAPI returns a fully populated, valid AdminAPIConfig.
+func validAdminAPI() *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+	return &AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+		Enabled:             func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true },
+		ServiceNameSuffix:   "-admin",
+		ServicePortName:     "admin",
+		ServicePort:         8444,
+		ManagedByLabelValue: consts.AIGatewayDataPlaneManagedByLabelValue,
+		CertificateLabelKey: consts.SecretAIGatewayDataPlaneAdminCertificateLabel,
+	}
+}
+
+func Test_validateConfig(t *testing.T) {
+	// validService returns the primary Service config, fully valid.
+	validService := func() ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		return ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]{
+			Description:        "Ingress",
+			SetStatusAddresses: testSetStatusAddresses,
+		}
+	}
+	// serviceWithout returns the valid primary Service config with the given
+	// modification applied to it.
+	serviceWithout := func(mod func(*ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane])) ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		s := validService()
+		mod(&s)
+		return s
+	}
+	// adminAPIWith returns the valid AdminAPI config with the given
+	// modification applied to it.
+	adminAPIWith := func(mod func(*AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane])) *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane] {
+		a := validAdminAPI()
+		mod(a)
+		return a
+	}
+
+	tests := []struct {
+		name     string
+		service  ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		adminAPI *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]
+		wantErr  bool
+	}{
+		{
+			name:    "primary Service with SetStatusAddresses: valid",
+			service: validService(),
+		},
+		{
+			name: "primary Service without SetStatusAddresses: invalid (the DataPlane status would never be populated)",
+			service: serviceWithout(func(s *ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				s.SetStatusAddresses = nil
+			}),
+			wantErr: true,
+		},
+		{
+			name: "primary Service with Enabled: invalid (the status-feeding Service must never become deletable)",
+			service: serviceWithout(func(s *ServiceConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				s.Enabled = func(*aigatewayv1alpha1.AIGatewayDataPlane, ResolvedControlPlane) bool { return true }
+			}),
+			wantErr: true,
+		},
+		{
+			name:     "fully populated AdminAPI: valid",
+			service:  validService(),
+			adminAPI: validAdminAPI(),
+		},
+		{
+			name:    "AdminAPI with nil Enabled: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.Enabled = nil
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ServiceNameSuffix: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServiceNameSuffix = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with non-positive ServicePort: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServicePort = 0
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ServicePortName: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ServicePortName = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty ManagedByLabelValue: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.ManagedByLabelValue = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI with empty CertificateLabelKey: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.CertificateLabelKey = ""
+			}),
+			wantErr: true,
+		},
+		{
+			name:    "AdminAPI CertificateLabelKey equal to Certificate.LabelKey: invalid",
+			service: validService(),
+			adminAPI: adminAPIWith(func(a *AdminAPIConfig[*aigatewayv1alpha1.AIGatewayDataPlane]) {
+				a.CertificateLabelKey = consts.SecretAIGatewayDataPlaneCertificateLabel
+			}),
+			wantErr: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			r := &testReconciler{
+				Config: func() Config[*aigatewayv1alpha1.AIGatewayDataPlane, *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate] {
+					cfg := testConfig
+					cfg.Service = tc.service
+					cfg.AdminAPI = tc.adminAPI
+					cfg.Conditions = Conditions{
+						AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+						AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
+					}
+					return cfg
+				}(),
+			}
+			err := r.validateConfig()
+			if tc.wantErr {
+				require.Error(t, err)
+			} else {
+				require.NoError(t, err)
+			}
+		})
+	}
+}

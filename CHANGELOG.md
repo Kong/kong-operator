@@ -66,6 +66,9 @@
 
 ### Added
 
+- `AIGatewayDataPlane`: add management of admin API service, admin server cert and
+  admin listener to AIGatewayDataPlane reconciler.
+  [#5734](https://github.com/Kong/kong-operator/pull/5734)
 - Added `KonnectConfigStoreSync` CRD (`konnect.konghq.com/v1alpha1`): declares a
   one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
   only adds the API types, CEL validation and CRD; it is not reconciled yet.

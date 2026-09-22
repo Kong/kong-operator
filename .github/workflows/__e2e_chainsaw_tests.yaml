@@ -123,6 +123,23 @@ jobs:
         # Use CHAINSAW_TEST_DIR to target the specific test directory
         make test.e2e.chainsaw
 
+    - name: Dump cluster diagnostics on failure or cancellation
+      if: always() && steps.chainsaw-tests.outcome != 'success'
+      env:
+        SUITE: ${{ matrix.suite }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
+      run: |
+        # Chainsaw catch blocks never run when the job is cancelled (e.g. by the
+        # job timeout), so /tmp/chainsaw stays empty and the upload below is a
+        # no-op. Dump cluster state and operator logs at the workflow level too.
+        # We don't know which test namespace was active on cancellation, so
+        # capture every non-system namespace plus the operator namespace.
+        NAMESPACES=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
+          | grep -vE '^kube-(system|node-lease|public)$' | tr '\n' ' ')
+        TEST_NAME="${SUITE}" \
+        NAMESPACE="$(echo ${NAMESPACES} | awk '{print $1}')" \
+        ADDITIONAL_NAMESPACES="$(echo ${NAMESPACES} | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh
+
     - name: Upload debug snapshots as artifacts
       if: always() && steps.chainsaw-tests.outcome != 'success'
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
