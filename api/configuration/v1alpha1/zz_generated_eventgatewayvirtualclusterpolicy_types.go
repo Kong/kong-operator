@@ -103,13 +103,17 @@ type EventGatewayVirtualClusterPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=acls
+	// +kubebuilder:validation:Enum=acls;requestRuleValidator
 	Type EventGatewayVirtualClusterPolicyConfigType `json:"type,omitempty"`
 
-	// EventGatewayACLsPolicy configuration.
+	// ACLs configuration.
 	//
 	// +optional
-	EventGatewayACLsPolicy *EventGatewayACLsPolicy `json:"acls,omitempty"`
+	ACLs *EventGatewayACLsPolicy `json:"acls,omitempty"`
+	// RequestRuleValidator configuration.
+	//
+	// +optional
+	RequestRuleValidator *EventGatewayRequestRuleValidatorPolicy `json:"requestRuleValidator,omitempty"`
 }
 
 // EventGatewayVirtualClusterPolicyConfigType represents the type of EventGatewayVirtualClusterPolicyConfig.
@@ -117,7 +121,8 @@ type EventGatewayVirtualClusterPolicyConfigType string
 
 // EventGatewayVirtualClusterPolicyConfigType values.
 const (
-	EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy EventGatewayVirtualClusterPolicyConfigType = "acls"
+	EventGatewayVirtualClusterPolicyConfigTypeACLs                 EventGatewayVirtualClusterPolicyConfigType = "acls"
+	EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator EventGatewayVirtualClusterPolicyConfigType = "requestRuleValidator"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -129,13 +134,21 @@ func (u EventGatewayVirtualClusterPolicyConfig) MarshalJSON() ([]byte, error) {
 	}
 	m["type"] = typeBytes
 	switch u.Type {
-	case EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy:
-		if u.EventGatewayACLsPolicy != nil {
-			raw, err := json.Marshal(u.EventGatewayACLsPolicy)
+	case EventGatewayVirtualClusterPolicyConfigTypeACLs:
+		if u.ACLs != nil {
+			raw, err := json.Marshal(u.ACLs)
 			if err != nil {
 				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterPolicyConfig acls: %w", err)
 			}
 			m["acls"] = raw
+		}
+	case EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator:
+		if u.RequestRuleValidator != nil {
+			raw, err := json.Marshal(u.RequestRuleValidator)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayVirtualClusterPolicyConfig request_rule_validator: %w", err)
+			}
+			m["requestRuleValidator"] = raw
 		}
 	}
 	return json.Marshal(m)
@@ -167,7 +180,17 @@ func (u *EventGatewayVirtualClusterPolicyConfig) UnmarshalJSON(data []byte) erro
 		if err := json.Unmarshal(payload, &val); err != nil {
 			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterPolicyConfig acls: %w", err)
 		}
-		u.EventGatewayACLsPolicy = &val
+		u.ACLs = &val
+	case "requestRuleValidator":
+		payload, ok := raw["requestRuleValidator"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayRequestRuleValidatorPolicy
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayVirtualClusterPolicyConfig request_rule_validator: %w", err)
+		}
+		u.RequestRuleValidator = &val
 	}
 	return nil
 }
@@ -198,7 +221,7 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) UnmarshalJSON(data []byte) err
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayVirtualClusterPolicyAPISpec: %w", err)
 	}
-	if aux.EventGatewayVirtualClusterPolicyConfig != nil && aux.EventGatewayVirtualClusterPolicyConfig.Type == "" && aux.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy == nil {
+	if aux.EventGatewayVirtualClusterPolicyConfig != nil && aux.EventGatewayVirtualClusterPolicyConfig.Type == "" && aux.EventGatewayVirtualClusterPolicyConfig.ACLs == nil && aux.EventGatewayVirtualClusterPolicyConfig.RequestRuleValidator == nil {
 		aux.EventGatewayVirtualClusterPolicyConfig = nil
 	}
 	*s = EventGatewayVirtualClusterPolicyAPISpec(aux)

@@ -320,6 +320,61 @@ spec:
                                 maxLength: 253
                                 type: string
                             type: object
+                          inlineSchema:
+                            properties:
+                              failureMode:
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                type: string
+                              keyValidationAction:
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
+                              schemaRegistry:
+                                properties:
+                                  id:
+                                    type: object
+                                  name:
+                                    properties:
+                                      name:
+                                        maxLength: 255
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - name
+                                    type: object
+                                  type:
+                                    enum:
+                                    - id
+                                    - name
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              validateKey:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              validateValue:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              valueValidationAction:
+                                enum:
+                                - mark
+                                - skip
+                                maxLength: 253
+                                type: string
+                            type: object
                           json:
                             properties:
                               failureMode:
@@ -371,6 +426,7 @@ spec:
                           type:
                             enum:
                             - confluentSchemaRegistry
+                            - inlineSchema
                             - json
                             minLength: 1
                             type: string

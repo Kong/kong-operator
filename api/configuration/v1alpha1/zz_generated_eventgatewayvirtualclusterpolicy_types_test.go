@@ -28,6 +28,7 @@ func TestEventGatewayVirtualClusterPolicyConfigUnmarshalJSON_NilReceiver(t *test
 		payload []byte
 	}{
 		{name: "acls", payload: []byte("{\"type\":\"acls\",\"acls\":{}}")},
+		{name: "request_rule_validator", payload: []byte("{\"type\":\"requestRuleValidator\",\"requestRuleValidator\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -79,11 +80,27 @@ func TestEventGatewayVirtualClusterPolicyAPISpecUnmarshalJSON_DecodesUnionFields
 				if target.EventGatewayVirtualClusterPolicyConfig == nil {
 					t.Fatalf("EventGatewayVirtualClusterPolicyConfig should be allocated")
 				}
-				if got, want := target.EventGatewayVirtualClusterPolicyConfig.Type, EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy; got != want {
+				if got, want := target.EventGatewayVirtualClusterPolicyConfig.Type, EventGatewayVirtualClusterPolicyConfigTypeACLs; got != want {
 					t.Fatalf("unexpected type: got %q want %q", got, want)
 				}
-				if target.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy == nil {
-					t.Fatalf("EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy should be allocated")
+				if target.EventGatewayVirtualClusterPolicyConfig.ACLs == nil {
+					t.Fatalf("EventGatewayVirtualClusterPolicyConfig.ACLs should be allocated")
+				}
+			},
+		},
+		{
+			name:    "EventGatewayVirtualClusterPolicyConfig/request_rule_validator",
+			payload: []byte("{\"type\":\"requestRuleValidator\",\"requestRuleValidator\":{}}"),
+			assert: func(t *testing.T, target EventGatewayVirtualClusterPolicyAPISpec) {
+				t.Helper()
+				if target.EventGatewayVirtualClusterPolicyConfig == nil {
+					t.Fatalf("EventGatewayVirtualClusterPolicyConfig should be allocated")
+				}
+				if got, want := target.EventGatewayVirtualClusterPolicyConfig.Type, EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EventGatewayVirtualClusterPolicyConfig.RequestRuleValidator == nil {
+					t.Fatalf("EventGatewayVirtualClusterPolicyConfig.RequestRuleValidator should be allocated")
 				}
 			},
 		},
