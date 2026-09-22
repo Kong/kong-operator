@@ -130,7 +130,7 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 				}
 				order = append(order, nestedName)
 				nestedProp := ParseProperty(nestedName, nestedRef, depth+1, visited)
-				nestedProp.Required = slices.Contains(v.Required, nestedName)
+				nestedProp.Required = slices.Contains(v.Required, nestedName) || slices.Contains(schemaValue.Required, nestedName)
 				merged[nestedName] = nestedProp
 			}
 		}
@@ -219,6 +219,15 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 			}
 			if prop.Pattern == "" && v.Pattern != "" {
 				prop.Pattern = v.Pattern
+			}
+			if prop.Minimum == nil && v.Min != nil {
+				prop.Minimum = v.Min
+			}
+			if prop.Maximum == nil && v.Max != nil {
+				prop.Maximum = v.Max
+			}
+			if prop.Format == "" && v.Format != "" {
+				prop.Format = v.Format
 			}
 			if prop.Default == nil {
 				for _, entry := range schemaValue.AllOf {

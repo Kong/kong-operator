@@ -1139,6 +1139,33 @@ func TestParseSchema_AllOfDirectPropertiesWinOverAllOf(t *testing.T) {
 	assert.Equal(t, "string", schema.Properties[0].Type)
 }
 
+func TestParseSchema_AllOfMergeHonorsWrapperRequired(t *testing.T) {
+	p := NewParser(&openapi3.T{})
+
+	// OAS allows `required` beside `allOf`, applying to the flattened
+	// object, not just each allOf entry's own required list.
+	schemaValue := &openapi3.Schema{
+		Type: &openapi3.Types{"object"},
+		AllOf: openapi3.SchemaRefs{
+			{
+				Value: &openapi3.Schema{
+					Properties: openapi3.Schemas{
+						"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+					},
+					// Note: no Required here.
+				},
+			},
+		},
+		Required: []string{"hosts"},
+	}
+
+	schema := p.parseSchema("RouteMatcher", schemaValue)
+
+	require.Len(t, schema.Properties, 1)
+	assert.Equal(t, "hosts", schema.Properties[0].Name)
+	assert.True(t, schema.Properties[0].Required)
+}
+
 func TestParseSchema_AllOfFirstEntryWinsOnCollision(t *testing.T) {
 	p := NewParser(&openapi3.T{})
 

@@ -704,7 +704,7 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 				}
 				seen[nestedName] = true
 				nestedProp := ParseProperty(nestedName, nestedRef, 0, p.visited)
-				nestedProp.Required = slices.Contains(v.Required, nestedName)
+				nestedProp.Required = slices.Contains(v.Required, nestedName) || slices.Contains(schemaValue.Required, nestedName)
 				schema.Properties = append(schema.Properties, nestedProp)
 			}
 		}

@@ -654,3 +654,68 @@ func TestParseProperty_AllOfSingleRefWithDefaultOverride(t *testing.T) {
 	assert.Equal(t, []any{"Enabled", "Disabled"}, prop.Enum)
 	assert.Equal(t, "Enabled", prop.Default)
 }
+
+func TestParseProperty_AllOfMergeHonorsWrapperRequired(t *testing.T) {
+	// OAS allows `required` beside `allOf`, applying to the flattened
+	// object - not just each allOf entry's own required list.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"paths": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+						// Note: no Required here.
+					},
+				},
+			},
+			Required: []string{"paths"},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "paths", prop.Properties[0].Name)
+	assert.True(t, prop.Properties[0].Required)
+}
+
+func TestParseProperty_AllOfSingleRefWithNumericAndFormatOverride(t *testing.T) {
+	// The single-ref-plus-override block must copy every scalar facet the
+	// ref carries, not just type/enum/string constraints - minimum/maximum
+	// and format are validation/codegen-relevant too.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/Port",
+					Value: &openapi3.Schema{
+						Type:   &openapi3.Types{"integer"},
+						Format: "int64",
+						Min:    new(float64(1)),
+						Max:    new(float64(65535)),
+					},
+				},
+				{
+					Value: &openapi3.Schema{
+						Default: float64(8080),
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("port", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "integer", prop.Type)
+	assert.Equal(t, "int64", prop.Format)
+	require.NotNil(t, prop.Minimum)
+	assert.InEpsilon(t, 1.0, *prop.Minimum, 0.001)
+	require.NotNil(t, prop.Maximum)
+	assert.InEpsilon(t, 65535.0, *prop.Maximum, 0.001)
+	defaultFloat, ok := prop.Default.(float64)
+	require.True(t, ok)
+	assert.InEpsilon(t, 8080.0, defaultFloat, 0.001)
+}
