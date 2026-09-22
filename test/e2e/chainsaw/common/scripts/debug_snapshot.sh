@@ -62,7 +62,9 @@ echo ""
 safe_kubectl() {
   local output_file=$1
   shift
-  echo "Running: kc $*" >> "${output_file}"
+  # Log the real command: `kc` is an internal wrapper, artifact readers can
+  # only re-run `kubectl`.
+  echo "Running: kubectl $*" >> "${output_file}"
   echo "---" >> "${output_file}"
   if kc "$@" >> "${output_file}" 2>&1; then
     echo "" >> "${output_file}"
@@ -409,11 +411,14 @@ if [ "${SKIP_RESOURCE_COUNTS}" != "1" ]; then
 
     # Count resources by type
     kc api-resources --verbs=list --namespaced -o name | while read -r resource; do
-      count=$(kc get "${resource}" -n "${ns}" --ignore-not-found 2>/dev/null | tail -n +2 | wc -l | tr -d ' ')
+      # `|| continue`: a timed-out kc get (exit 124) must not trip errexit
+      # and abort the whole summary.
+      count=$(kc get "${resource}" -n "${ns}" --ignore-not-found 2>/dev/null | tail -n +2 | wc -l | tr -d ' ') || continue
       if [ "${count}" != "0" ]; then
         echo "  - ${resource}: ${count}" >> "${SUMMARY_FILE}"
       fi
-    done
+    # `|| true`: pipefail on the pipeline above must not kill the script.
+    done || true
 
     echo "" >> "${SUMMARY_FILE}"
   done
