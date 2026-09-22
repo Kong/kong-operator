@@ -509,8 +509,9 @@ func TestHardenContainerWithSecurityContext(t *testing.T) {
 
 			container, volumes := HardenContainerWithSecurityContext(input, tt.dpType)
 
-			expectedSecurityContext.Capabilities.Add = tt.expectedAddCapabilities
-			require.Equal(t, expectedSecurityContext, container.SecurityContext)
+			exsc := expectedSecurityContext.DeepCopy()
+			exsc.Capabilities.Add = tt.expectedAddCapabilities
+			require.Equal(t, exsc, container.SecurityContext)
 			require.Equal(t, tt.expectedVolumeMounts, container.VolumeMounts)
 			require.Equal(t, tt.expectedVolumes, volumes)
 
