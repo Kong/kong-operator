@@ -102,6 +102,18 @@ spec:
                       Keys must be of length 1-63 characters, and cannot start with "kong",
                       "konnect", "mesh", "kic", or "_".
                     type: object
+                  minRuntimeVersion:
+                    description: |-
+                      The minimum AI Gateway runtime version supported by this AI Gateway.
+                      This is the lowest data plane version that may receive configuration from
+                      it, and it controls which features the API accepts.
+
+                      Data planes older than this version still connect for topology visibility.
+
+                      When not specified, the latest generally available runtime version is used.
+                    maxLength: 253
+                    pattern: ^\d+\.\d+$
+                    type: string
                   name:
                     description: The name for this AI Gateway. This value is immutable
                       after creation.
@@ -137,6 +149,14 @@ spec:
                       - protocol
                       type: object
                     type: array
+                  runtimeAutoUpgrade:
+                    description: |-
+                      Whether the control plane should automatically raise min_runtime_version as
+                      connected data planes report a newer AI Gateway runtime version.
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                 required:
                 - displayName
                 - name
