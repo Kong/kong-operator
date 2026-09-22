@@ -21,14 +21,8 @@ type entityType interface {
 // Unlike the failure counterpart, the condition is upserted even when its content is
 // unchanged, so LastTransitionTime advances on every successful Konnect operation.
 // shouldUpdate uses that timestamp as the last-sync time to enforce the sync period,
-// so it has to be refreshed on each success.
-// Cost of this design: each success changes the status content, so every entity is
-// written once per sync period (consts.DefaultKonnectSyncPeriod, 1m by default),
-// emitting a watch event to every watcher of the type. LastTransitionTime therefore
-// records the last successful sync, not the last status transition. If that cost ever
-// matters, replace the marker with a dedicated last-sync status field (same write
-// volume, cleaner semantics) or a timer-driven RequeueAfter (no writes, but the
-// cadence is lost on controller restart).
+// so it has to be refreshed on each success. LastTransitionTime therefore records the
+// last successful sync, not the last status transition.
 func SetKonnectEntityProgrammedConditionTrue(
 	obj entityType,
 ) {
