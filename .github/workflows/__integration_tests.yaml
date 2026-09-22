@@ -33,7 +33,7 @@ jobs:
   integration-tests:
     timeout-minutes: ${{ fromJSON(vars.GHA_EXTENDED_TIMEOUT_MINUTES || 60) }}
     runs-on: ubuntu-latest
-    name: ${{ format('{0} {1} {2} {3} - {4}', matrix.suite, matrix.kong-variant, matrix.router_flavor, matrix.ip_family, inputs.cluster_version) }}
+    name: ${{ matrix.suite }}${{ matrix.kong-variant && format(' {0}', matrix.kong-variant) || '' }}${{ matrix.router_flavor && format(' {0}', matrix.router_flavor) || '' }}${{ matrix.ip_family && format(' {0}', matrix.ip_family) || '' }} - ${{ inputs.cluster_version }}
     strategy:
       matrix:
         include:
@@ -187,7 +187,7 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: pcap-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}-${{ matrix.ip_family }}
+        name: pcap-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/capture-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.pcap
         if-no-files-found: ignore
 
@@ -195,19 +195,19 @@ jobs:
       if: always()
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: diagnostics-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}
+        name: diagnostics-integration-${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}
         path: /tmp/ktf-diag*
         if-no-files-found: ignore
 
     - name: collect test coverage
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}-coverage-integration
+        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-coverage-integration
         path: coverage.integration.${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.out
 
     - name: collect test report
       if: ${{ always() }}
       uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
       with:
-        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.ip_family }}-tests-report-integration
+        name: ${{ matrix.suite }}-${{ matrix.kong-variant }}${{ matrix.ip_family && format('-{0}', matrix.ip_family) || '' }}-tests-report-integration
         path: integration-tests-${{ matrix.suite }}-${{ matrix.kong-variant }}-${{ matrix.router_flavor }}.xml

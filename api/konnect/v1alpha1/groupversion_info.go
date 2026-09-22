@@ -57,6 +57,8 @@ func addKnownTypes(scheme *runtime.Scheme) error {
 		&KonnectCloudGatewayNetworkList{},
 		&KonnectCloudGatewayTransitGateway{},
 		&KonnectCloudGatewayTransitGatewayList{},
+		&KonnectConfigStoreSync{},
+		&KonnectConfigStoreSyncList{},
 		&KonnectExtension{},
 		&KonnectExtensionList{},
 		&KonnectGatewayControlPlane{},

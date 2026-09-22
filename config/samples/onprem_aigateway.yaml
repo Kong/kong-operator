@@ -9,3 +9,14 @@ metadata:
   name: ai-gw-cp-onprem-1
   namespace: default
 spec: {}
+---
+apiVersion: aigateway.konghq.com/v1alpha1
+kind: AIGatewayDataPlane
+metadata:
+  name: ai-gw-dp-onprem-1
+  namespace: default
+spec:
+  controlPlaneRef:
+    type: onpremNamespacedRef
+    onpremNamespacedRef:
+      name: ai-gw-cp-onprem-1

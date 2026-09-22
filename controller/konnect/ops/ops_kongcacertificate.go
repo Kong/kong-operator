@@ -215,11 +215,14 @@ func kongCACertificateToCACertificateInput(ctx context.Context, cl client.Client
 		certData = cert.Spec.Cert
 	}
 
-	return sdkkonnectcomp.CACertificate{
+	konnectCACertificate := sdkkonnectcomp.CACertificate{
 		Cert: certData,
+		ID:   cert.Spec.ID,
 		// Deduplicate tags to avoid rejection by Konnect.
 		Tags: GenerateTagsForObject(cert, cert.Spec.Tags...),
-	}, nil
+	}
+
+	return konnectCACertificate, nil
 }
 
 func getKongCACertificateForUID(

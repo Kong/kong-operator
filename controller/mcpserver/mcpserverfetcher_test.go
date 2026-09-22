@@ -5,10 +5,15 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
+	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -25,6 +30,7 @@ import (
 	"github.com/kong/kong-operator/v2/internal/utils/index"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/test/mocks/sdkmocks"
 )
 
 func TestGenerateMCPServerName(t *testing.T) {
@@ -425,4 +431,314 @@ func TestSyncMCPServers(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestPageAfterCursorFromNextPageURL(t *testing.T) {
+	tests := []struct {
+		name      string
+		next      string
+		expected  string
+		expectErr bool
+	}{
+		{
+			name:     "next URI carrying a page[after] cursor",
+			next:     "https://us.api.konghq.com/v1/mcp-cp/cp-id/mcp-servers?page%5Bafter%5D=cursor-1&page%5Bsize%5D=10",
+			expected: "cursor-1",
+		},
+		{
+			name:     "relative next URI carrying a page[after] cursor",
+			next:     "/v1/mcp-cp/cp-id/mcp-servers?page%5Bafter%5D=cursor-1",
+			expected: "cursor-1",
+		},
+		{
+			name:      "next URI without a page[after] parameter",
+			next:      "https://us.api.konghq.com/v1/mcp-cp/cp-id/mcp-servers",
+			expectErr: true,
+		},
+		{
+			name:      "next URI with an empty page[after] parameter",
+			next:      "https://us.api.konghq.com/v1/mcp-cp/cp-id/mcp-servers?page%5Bafter%5D=",
+			expectErr: true,
+		},
+		{
+			name:      "unparseable next URI",
+			next:      "https://example.com/%zz",
+			expectErr: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got, err := pageAfterCursorFromNextPageURL(tt.next)
+			if tt.expectErr {
+				require.Error(t, err)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, got)
+		})
+	}
+}
+
+func TestFetchAllPagination(t *testing.T) {
+	const (
+		cpID      = "cp-konnect-id"
+		namespace = "default"
+	)
+
+	controlPlane := &konnectv1alpha2.KonnectGatewayControlPlane{
+		Name:      "test-cp",
+		Namespace: namespace,
+		Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+			KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{
+				ID: cpID,
+			},
+		},
+	}
+
+	serverJSON := func(id string) string {
+		return fmt.Sprintf(`{"id":%q,"name":%q,"version":"1","created_at":"2025-01-01T00:00:00Z","updated_at":"2025-01-01T00:00:00Z"}`, id, id)
+	}
+	pageJSON := func(nextURI *string, ids ...string) string {
+		servers := make([]string, 0, len(ids))
+		for _, id := range ids {
+			servers = append(servers, serverJSON(id))
+		}
+		next := "null"
+		if nextURI != nil {
+			next = fmt.Sprintf("%q", *nextURI)
+		}
+		return fmt.Sprintf(`{"data":[%s],"meta":{"page":{"size":%d,"next":%s}}}`,
+			strings.Join(servers, ","), len(ids), next)
+	}
+	nextURI := func(baseURL, cursor string) *string {
+		return new(baseURL + "/v1/mcp-cp/" + cpID + "/mcp-servers?page%5Bafter%5D=" + cursor)
+	}
+
+	// setup stubs the Konnect list endpoint with httptest and returns a fetcher
+	// backed by a real SDK pointed at it, plus a recorder of the page[after]
+	// cursors each request carried ("" for the first page).
+	setup := func(t *testing.T, respond func(baseURL, cursor string) (int, string)) (*MCPServersFetcher, func() []string) {
+		t.Helper()
+
+		var (
+			mu      sync.Mutex
+			cursors []string
+		)
+		var srv *httptest.Server
+		srv = httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			cursor := r.URL.Query().Get("page[after]")
+			mu.Lock()
+			cursors = append(cursors, cursor)
+			mu.Unlock()
+
+			status, body := respond(srv.URL, cursor)
+			w.Header().Set("Content-Type", "application/json")
+			w.WriteHeader(status)
+			fmt.Fprint(w, body)
+		}))
+		t.Cleanup(srv.Close)
+
+		sdk := sdkkonnectgo.New(
+			sdkkonnectgo.WithServerURL(srv.URL),
+			sdkkonnectgo.WithSecurity(sdkkonnectcomp.Security{PersonalAccessToken: new("test-token")}),
+		)
+		f := NewMCPServersFetcher(logging.DevelopmentMode, nil,
+			sdkmocks.MockSDKWrapper{MCPServersSDK: sdk.MCPServers},
+			make(chan struct{}, 1), nil, controlPlane, nil)
+
+		return f, func() []string {
+			mu.Lock()
+			defer mu.Unlock()
+			return append([]string{}, cursors...)
+		}
+	}
+
+	t.Run("multi-page fetch follows the page[after] cursor from next-page URIs", func(t *testing.T) {
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			switch cursor {
+			case "":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
+			case "cursor-1":
+				return http.StatusOK, pageJSON(nil, "srv-2")
+			default:
+				return http.StatusInternalServerError, `{}`
+			}
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.NoError(t, err)
+
+		ids := make([]string, 0, len(servers))
+		for _, s := range servers {
+			ids = append(ids, s.ID)
+		}
+		assert.Equal(t, []string{"srv-1", "srv-2"}, ids)
+		// The second request must carry only the extracted item cursor, not the
+		// full next-page URI.
+		assert.Equal(t, []string{"", "cursor-1"}, cursors())
+	})
+
+	t.Run("absent next URI stops after the first page", func(t *testing.T) {
+		f, cursors := setup(t, func(_, cursor string) (int, string) {
+			if cursor != "" {
+				return http.StatusInternalServerError, `{}`
+			}
+			return http.StatusOK, pageJSON(nil, "srv-1")
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.NoError(t, err)
+		assert.Len(t, servers, 1)
+		assert.Equal(t, []string{""}, cursors())
+	})
+
+	t.Run("empty next URI stops after the first page", func(t *testing.T) {
+		f, cursors := setup(t, func(_, cursor string) (int, string) {
+			if cursor != "" {
+				return http.StatusInternalServerError, `{}`
+			}
+			return http.StatusOK, pageJSON(new(""), "srv-1")
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.NoError(t, err)
+		assert.Len(t, servers, 1)
+		assert.Equal(t, []string{""}, cursors())
+	})
+
+	// A fetch that cannot follow pagination to the end must fail rather than
+	// return a truncated list: syncMCPServers treats the list as authoritative
+	// and would delete the in-cluster MCPServers missing from it.
+	t.Run("non-advancing cursor fails instead of re-fetching the same page", func(t *testing.T) {
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			switch cursor {
+			case "":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "same-cursor"), "srv-1")
+			case "same-cursor":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "same-cursor"), "srv-2")
+			default:
+				// Guard against a regression looping forever: any further page
+				// request fails and ends the loop.
+				return http.StatusInternalServerError, `{}`
+			}
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.ErrorContains(t, err, `cursor "same-cursor" repeated`)
+		assert.Nil(t, servers)
+		assert.Equal(t, []string{"", "same-cursor"}, cursors())
+	})
+
+	t.Run("cursor cycle longer than one page fails", func(t *testing.T) {
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			switch cursor {
+			case "":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-a"), "srv-1")
+			case "cursor-a":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-b"), "srv-2")
+			case "cursor-b":
+				// Back to cursor-a: a cycle the previous-cursor-only check
+				// would have followed forever.
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-a"), "srv-3")
+			default:
+				return http.StatusInternalServerError, `{}`
+			}
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.ErrorContains(t, err, `cursor "cursor-a" repeated`)
+		assert.Nil(t, servers)
+		assert.Equal(t, []string{"", "cursor-a", "cursor-b"}, cursors())
+	})
+
+	t.Run("unparseable next URI fails instead of truncating the list", func(t *testing.T) {
+		f, cursors := setup(t, func(_, cursor string) (int, string) {
+			if cursor != "" {
+				return http.StatusInternalServerError, `{}`
+			}
+			return http.StatusOK, pageJSON(new("https://example.com/%zz"), "srv-1")
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.ErrorContains(t, err, "failed to parse next page URI")
+		assert.Nil(t, servers)
+		assert.Equal(t, []string{""}, cursors())
+	})
+
+	// The SDK returns every non-200 response as an error rather than as a
+	// response, so a failed page is retried with a backoff rather than ending
+	// the fetch. The retry must resume at the cursor that failed: restarting
+	// from the first page would list its servers twice.
+	t.Run("non-200 page is retried at the same cursor", func(t *testing.T) {
+		// attempts is atomic so that the subtest does not rely on the client
+		// reusing one keep-alive connection, which is what has every request
+		// land on the same server goroutine today.
+		var attempts atomic.Int64
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			switch cursor {
+			case "":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
+			case "cursor-1":
+				if attempts.Add(1) == 1 {
+					return http.StatusForbidden, `{"error":"forbidden"}`
+				}
+				return http.StatusOK, pageJSON(nil, "srv-2")
+			default:
+				return http.StatusInternalServerError, `{}`
+			}
+		})
+		f.pageRetryBackoffMin = time.Millisecond
+
+		servers, err := f.fetchAll(t.Context())
+		require.NoError(t, err)
+
+		ids := make([]string, 0, len(servers))
+		for _, s := range servers {
+			ids = append(ids, s.ID)
+		}
+		assert.Equal(t, []string{"srv-1", "srv-2"}, ids)
+		assert.Equal(t, []string{"", "cursor-1", "cursor-1"}, cursors())
+	})
+
+	// While a page keeps failing, the pages fetched before it must never be
+	// returned as an authoritative list.
+	t.Run("page that keeps failing never yields a truncated list", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		var attempts atomic.Int64
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			if cursor == "" {
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
+			}
+			// Cancel once the failing page has been retried: the fetch then
+			// ends deterministically, with no timing dependence on how fast a
+			// loaded CI runner dispatches the requests.
+			if attempts.Add(1) > 1 {
+				cancel()
+			}
+			return http.StatusForbidden, `{"error":"forbidden"}`
+		})
+		f.pageRetryBackoffMin = time.Millisecond
+
+		servers, err := f.fetchAll(ctx)
+		require.ErrorIs(t, err, context.Canceled)
+		assert.Nil(t, servers, "the first page must not be returned as a complete list")
+		assert.Equal(t, []string{"", "cursor-1", "cursor-1"}, cursors())
+	})
+
+	t.Run("next URI without a cursor fails instead of truncating the list", func(t *testing.T) {
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			if cursor != "" {
+				return http.StatusInternalServerError, `{}`
+			}
+			return http.StatusOK, pageJSON(new(baseURL+"/v1/mcp-cp/"+cpID+"/mcp-servers"), "srv-1")
+		})
+
+		servers, err := f.fetchAll(t.Context())
+		require.ErrorContains(t, err, "carries no page[after] cursor")
+		assert.Nil(t, servers)
+		assert.Equal(t, []string{""}, cursors())
+	})
 }

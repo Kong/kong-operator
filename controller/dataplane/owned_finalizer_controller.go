@@ -181,11 +181,19 @@ func (r DataPlaneOwnedResourceFinalizerReconciler[T, PT]) Reconcile(ctx context.
 	obj.SetFinalizers(lo.Reject(finalizers, func(f string, _ int) bool {
 		return f == consts.DataPlaneOwnedWaitForOwnerFinalizer
 	}))
-	if err := r.Client.Patch(ctx, obj, client.MergeFrom(old)); err != nil {
+	// Optimistic lock ensures the patch is applied only if the object hasn't changed
+	// since it was read, so a stale copy cannot drop a finalizer that another
+	// controller added in the meantime (a merge patch replaces the whole list).
+	if err := r.Client.Patch(ctx, obj, client.MergeFromWithOptions(old, client.MergeFromWithOptimisticLock{})); err != nil {
 		if apierrors.IsNotFound(err) {
 			// If the object is already gone, we don't need to do anything.
 			log.Debug(logger, "object is already gone")
 			return ctrl.Result{}, nil
+		}
+		if apierrors.IsConflict(err) {
+			// The cached copy was stale; retry with a fresh one.
+			log.Debug(logger, "conflict when removing finalizer, requeueing")
+			return ctrl.Result{Requeue: true}, nil
 		}
 		return ctrl.Result{}, fmt.Errorf("failed to remove finalizer from %s %s: %w", obj.GetObjectKind().GroupVersionKind().Kind, obj.GetName(), err)
 	}

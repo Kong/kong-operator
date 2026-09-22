@@ -3,6 +3,8 @@ package configuration_test
 import (
 	"testing"
 
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
@@ -230,6 +232,83 @@ func TestKongCACertificate(t *testing.T) {
 		}
 
 		common.NewCRDValidationTestCasesGroupCPRefChange(t, cfg, obj, common.NotSupportedByKIC, common.ControlPlaneRefRequired).
+			RunWithConfig(t, cfg, scheme)
+	})
+
+	t.Run("spec.id mutability", func(t *testing.T) {
+		programmedTrue := metav1.Condition{
+			Type:               "Programmed",
+			Status:             metav1.ConditionTrue,
+			Reason:             "Valid",
+			LastTransitionTime: metav1.Now(),
+		}
+
+		existingID := "11111111-1111-1111-1111-111111111111"
+		newID := "22222222-2222-2222-2222-222222222222"
+
+		baseSpec := func(id *string) configurationv1alpha1.KongCACertificateSpec {
+			return configurationv1alpha1.KongCACertificateSpec{
+				ID: id,
+				ControlPlaneRef: &commonv1alpha1.ControlPlaneRef{
+					Type: configurationv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+					KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+						Name: "test-konnect-control-plane",
+					},
+				},
+				Cert: "test-cert",
+			}
+		}
+
+		common.TestCasesGroup[*configurationv1alpha1.KongCACertificate]{
+			{
+				Name: "spec.id can be set before Programmed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       baseSpec(nil),
+				},
+				Update: func(obj *configurationv1alpha1.KongCACertificate) {
+					obj.Spec.ID = &existingID
+				},
+			},
+			{
+				Name: "spec.id can be changed before Programmed",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       baseSpec(&existingID),
+				},
+				Update: func(obj *configurationv1alpha1.KongCACertificate) {
+					obj.Spec.ID = &newID
+				},
+			},
+			{
+				Name: "spec.id cannot be set after Programmed=True",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       baseSpec(nil),
+					Status: configurationv1alpha1.KongCACertificateStatus{
+						Conditions: []metav1.Condition{programmedTrue},
+					},
+				},
+				Update: func(obj *configurationv1alpha1.KongCACertificate) {
+					obj.Spec.ID = &existingID
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable when an entity is already Programmed"),
+			},
+			{
+				Name: "spec.id cannot be changed after Programmed=True",
+				TestObject: &configurationv1alpha1.KongCACertificate{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec:       baseSpec(&existingID),
+					Status: configurationv1alpha1.KongCACertificateStatus{
+						Conditions: []metav1.Condition{programmedTrue},
+					},
+				},
+				Update: func(obj *configurationv1alpha1.KongCACertificate) {
+					obj.Spec.ID = &newID
+				},
+				ExpectedUpdateErrorMessage: new("spec.id is immutable when an entity is already Programmed"),
+			},
+		}.
 			RunWithConfig(t, cfg, scheme)
 	})
 }

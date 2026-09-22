@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"sync/atomic"
 	"time"
 
@@ -50,7 +51,16 @@ type MCPServersFetcher struct {
 	// NotifySignal, or nil if none has arrived yet. It is consumed and
 	// propagated to mirrored MCPServers on the next fetch/sync pass.
 	lastSignal atomic.Pointer[mcpSignal]
+
+	// pageRetryBackoffMin is the initial delay between retries of a failed
+	// page request in fetchAll. Zero means defaultPageRetryBackoffMin; tests
+	// shorten it so the retry path can be exercised without sleeping.
+	pageRetryBackoffMin time.Duration
 }
+
+// defaultPageRetryBackoffMin is the initial delay fetchAll waits before
+// retrying a page request that failed.
+const defaultPageRetryBackoffMin = time.Second
 
 // mcpSignal carries the last-seen offset/version pair from a Konnect MCP
 // signal (see signal.go), to be stamped onto mirrored MCPServer objects so
@@ -100,7 +110,8 @@ func (f *MCPServersFetcher) wake() {
 // run starts the background goroutine that waits for wakeup signals and fetches
 // all MCP servers for the configured control plane.
 // It returns when ctx is cancelled or the wakeup channel is closed.
-// On a sync failure the wakeup is requeued after an exponential backoff delay.
+// On a fetch or sync failure the wakeup is requeued after an exponential
+// backoff delay.
 func (f *MCPServersFetcher) run(ctx context.Context) {
 	go func() {
 		logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
@@ -108,6 +119,17 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 			Min:    time.Second,
 			Max:    time.Minute,
 			Factor: 2,
+		}
+		waitForBackoff := func() bool {
+			timer := time.NewTimer(b.Duration())
+			defer timer.Stop()
+
+			select {
+			case <-timer.C:
+				return true
+			case <-ctx.Done():
+				return false
+			}
 		}
 
 		cpID := f.controlPlane.GetKonnectID()
@@ -121,14 +143,27 @@ func (f *MCPServersFetcher) run(ctx context.Context) {
 				}
 				servers, err := f.fetchAll(ctx)
 				if err != nil {
-					log.Error(logger, err, "failed to fetch MCP servers", "controlPlaneID", cpID)
+					if ctx.Err() != nil {
+						return
+					}
+					// Requeue: a failed fetch yields an incomplete list, and
+					// syncing one would delete in-cluster MCPServers whose
+					// Konnect counterparts simply were not listed.
+					log.Error(logger, err, "failed to fetch MCP servers, retrying", "controlPlaneID", cpID)
+					if !waitForBackoff() {
+						return
+					}
+					f.wake()
 					continue
 				}
 				log.Debug(logger, "fetched MCP servers", "controlPlaneID", cpID, "count", len(servers))
 				sig := f.lastSignal.Load()
 				if err := f.syncMCPServers(ctx, servers, sig); err != nil {
 					log.Error(logger, err, "failed to sync MCP servers", "controlPlaneID", cpID)
-					time.AfterFunc(b.Duration(), f.wake)
+					if !waitForBackoff() {
+						return
+					}
+					f.wake()
 				} else {
 					b.Reset()
 				}
@@ -210,8 +245,12 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 // backoff on transient errors.
 func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPServerCPInfo, error) {
 	logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
+	minBackoff := f.pageRetryBackoffMin
+	if minBackoff <= 0 {
+		minBackoff = defaultPageRetryBackoffMin
+	}
 	b := &backoff.Backoff{
-		Min:    time.Second,
+		Min:    minBackoff,
 		Max:    time.Minute,
 		Factor: 2,
 	}
@@ -221,6 +260,9 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 	var (
 		servers   []sdkkonnectcomp.MCPServerCPInfo
 		pageAfter *string
+		// Cursors already requested, to detect a next-page cursor that does
+		// not advance (directly or through a longer cycle).
+		seenCursors = map[string]struct{}{}
 	)
 
 	for {
@@ -247,20 +289,64 @@ func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPS
 
 		b.Reset()
 
-		if resp.StatusCode != http.StatusOK || resp.ListMCPServersCPInfoResponse == nil {
-			break
+		// The SDK maps every non-200 response - and every body it cannot
+		// decode - to a non-nil error, so a non-nil resp implies a 200 with a
+		// populated body and the two checks below are defensive. They are kept
+		// so that the fetch keeps failing closed, rather than returning a
+		// truncated list, if a future SDK version hands such responses back to
+		// the caller instead.
+		if resp.StatusCode != http.StatusOK {
+			return nil, fmt.Errorf("unexpected status listing MCP servers for control plane %s: %d",
+				cpID, resp.StatusCode)
+		}
+		if resp.ListMCPServersCPInfoResponse == nil {
+			return nil, fmt.Errorf("empty response body listing MCP servers for control plane %s", cpID)
 		}
 
 		servers = append(servers, resp.ListMCPServersCPInfoResponse.Data...)
 
 		next := resp.ListMCPServersCPInfoResponse.Meta.Page.GetNext()
-		if next == nil {
+		if next == nil || *next == "" {
+			// Last page.
 			break
 		}
-		pageAfter = next
+
+		cursor, err := pageAfterCursorFromNextPageURL(*next)
+		if err != nil {
+			return nil, err
+		}
+		if _, ok := seenCursors[cursor]; ok {
+			// The cursor does not advance: stop instead of fetching the same
+			// pages forever.
+			return nil, fmt.Errorf("next page cursor %q repeated while listing MCP servers for control plane %s",
+				cursor, cpID)
+		}
+		seenCursors[cursor] = struct{}{}
+		pageAfter = &cursor
 	}
 
 	return servers, nil
+}
+
+// pageAfterCursorFromNextPageURL extracts the page[after] item cursor from a
+// next-page URI as returned in Konnect list responses' meta.page.next. The SDK
+// models Next as a full URI while the list requests' PageAfter parameter
+// expects only the item cursor, so the URI must be parsed.
+//
+// next must be non-empty: callers treat an absent or empty meta.page.next as
+// the last page. A next-page URI carrying no cursor is reported as an error
+// rather than as the last page, so that an unfollowable page never passes for
+// a complete listing.
+func pageAfterCursorFromNextPageURL(next string) (string, error) {
+	u, err := url.Parse(next)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse next page URI %q: %w", next, err)
+	}
+	cursor := u.Query().Get("page[after]")
+	if cursor == "" {
+		return "", fmt.Errorf("next page URI %q carries no page[after] cursor", next)
+	}
+	return cursor, nil
 }
 
 // syncMCPServer syncs a single Konnect MCP server to Kubernetes: if a

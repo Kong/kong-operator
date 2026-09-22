@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: ollama
-          image: ollama/ollama:0.31.2
+          image: ollama/ollama:0.34.2
           command: ["/bin/sh", "-c"]
           args:
             - |
@@ -23,15 +23,28 @@ spec:
               until ollama ls >/dev/null 2>&1; do sleep 1; done
               ollama pull qwen2.5:0.5b
               ollama pull gemma3:270m
+              # llama-server can crash during CPU model load (e.g. the ollama
+              # <0.32.7 GCC-11/AMX backend bug); retry until a real
+              # completion succeeds, then gate readiness on it.
+              for model in qwen2.5:0.5b gemma3:270m; do
+                until ollama run "$model" "hi" >/dev/null 2>&1; do
+                  echo "ollama run $model failed; retrying in 5s" >&2
+                  sleep 5
+                done
+              done
+              touch /tmp/ready
               wait $pid
+          env:
+            - name: OLLAMA_KEEP_ALIVE
+              value: 2h
           ports:
             - containerPort: 11434
           readinessProbe:
             exec:
               command:
-                - /bin/sh
-                - -c
-                - "ollama ls | grep -q 'qwen2.5:0.5b' && ollama ls | grep -q 'gemma3:270m'"
+                - test
+                - -f
+                - /tmp/ready
             initialDelaySeconds: 10
             periodSeconds: 10
             failureThreshold: 90

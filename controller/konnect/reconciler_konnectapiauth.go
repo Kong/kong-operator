@@ -117,9 +117,13 @@ func (r *KonnectAPIAuthConfigurationReconciler) Reconcile(
 		logger         = log.GetLogger(ctx, entityTypeName, r.loggingMode)
 	)
 
-	updated, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, r.client, apiAuth)
+	updated, result, err := EnsureFinalizerOnKonnectAPIAuthConfiguration(ctx, r.client, apiAuth)
 	if err != nil {
 		return ctrl.Result{}, fmt.Errorf("failed to ensure finalizer on KonnectAPIAuthConfiguration %s: %w", client.ObjectKeyFromObject(apiAuth), err)
+	}
+	if !result.IsZero() {
+		// Conflict with a concurrent modification: retry with a fresh copy.
+		return result, nil
 	}
 	if updated {
 		// update will requeue
@@ -390,12 +394,14 @@ func (r *KonnectAPIAuthConfigurationReconciler) reconcileSecretRefResolvedRefs(
 //
 // Returns:
 //   - patched: true if the KonnectAPIAuthConfiguration was modified (finalizer added or removed), false otherwise
+//   - result: a non-zero ctrl.Result if the caller should requeue (e.g. a conflict with a concurrent
+//     modification of the object), zero otherwise
 //   - err: An error if the operation failed, nil otherwise
 func EnsureFinalizerOnKonnectAPIAuthConfiguration(
 	ctx context.Context,
 	cl client.Client,
 	apiAuth *konnectv1alpha1.KonnectAPIAuthConfiguration,
-) (patched bool, err error) {
+) (patched bool, result ctrl.Result, err error) {
 	var needsFinalizer bool
 	for t, i := range konnectAPIAuthReferencingTypeListsWithIndexes {
 		list := t.DeepCopyObject().(client.ObjectList)
@@ -406,12 +412,12 @@ func EnsureFinalizerOnKonnectAPIAuthConfiguration(
 			},
 		)
 		if err != nil {
-			return false, fmt.Errorf("failed to list objects of type %T referencing KonnectAPIAuthConfiguration %s: %w", t, apiAuth.Name, err)
+			return false, ctrl.Result{}, fmt.Errorf("failed to list objects of type %T referencing KonnectAPIAuthConfiguration %s: %w", t, apiAuth.Name, err)
 		}
 
 		items, err := meta.ExtractList(list)
 		if err != nil {
-			return false, fmt.Errorf("failed to extract items from list: %w", err)
+			return false, ctrl.Result{}, fmt.Errorf("failed to extract items from list: %w", err)
 		}
 		if len(items) > 0 {
 			needsFinalizer = true
@@ -422,16 +428,13 @@ func EnsureFinalizerOnKonnectAPIAuthConfiguration(
 	var updated bool
 	// Add or remove finalizer based on whether there are referencing resources
 	if needsFinalizer {
-		updated, _, err = patch.WithFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
-		if err != nil {
-			return false, err
-		}
+		updated, result, err = patch.WithFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
 	} else {
-		updated, _, err = patch.WithoutFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
-		if err != nil {
-			return false, err
-		}
+		updated, result, err = patch.WithoutFinalizer(ctx, cl, client.Object(apiAuth), APIAuthInUseFinalizer)
+	}
+	if err != nil {
+		return false, ctrl.Result{}, err
 	}
 
-	return updated, nil
+	return updated, result, nil
 }

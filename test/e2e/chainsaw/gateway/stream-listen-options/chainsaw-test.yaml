@@ -8,10 +8,10 @@ spec:
     DataPlane proxy Deployment for a TLS listener:
     1. Default: with no user value, the operator generates a listen bound to
        the wildcard address(es) of the cluster's detected IP family
-       (--ip-family=auto). This test runs against an IPv4-only
-       cluster, so the default is IPv4-only ("0.0.0.0:<port> ssl reuseport");
-       a dual-stack or IPv6-only cluster would additionally/instead get the
-       IPv6 wildcard bind.
+       (--ip-family=auto). The suite runs against both IPv4-only and IPv6-only
+       clusters, so the default is IPv4-only ("0.0.0.0:<port> ssl reuseport")
+       or IPv6-only ("[::]:<port> ssl reuseport") respectively; a dual-stack
+       cluster would get both wildcard binds.
     2. Custom options: a user-set IPv6 address and extra options
        ("[::]:<port> ssl reuseport backlog=16384") are preserved; the operator
        only enforces the port and the ssl token.
@@ -61,15 +61,16 @@ spec:
             file: 02-assert-gateway.yaml
 
     - name: Assert-default-stream-listen
-      description: The generated DataPlane proxy uses the default KONG_STREAM_LISTEN
-        for the cluster's detected IP family; on this IPv4-only test cluster
-        that is the IPv4 wildcard address only.
+      description: The generated DataPlane proxy uses the default KONG_STREAM_LISTEN,
+        which binds the wildcard address(es) of the cluster's detected IP family.
       try:
         - assert:
             file: assert-dataplane-stream-listen.yaml
       bindings:
         - name: expected_stream_listen
-          value: "0.0.0.0:8899 ssl reuseport"
+          # EXPECTED_DEFAULT_STREAM_LISTEN is set by the e2e workflow per cluster
+          # IP family; it falls back to the IPv4 default for local (IPv4 kind) runs.
+          value: (env('EXPECTED_DEFAULT_STREAM_LISTEN') || '0.0.0.0:8899 ssl reuseport')
 
     - name: Set-custom-stream-listen-options
       description: Set an IPv6 address and extra options; verify they are preserved.
