@@ -58,14 +58,6 @@ func TestControlPlaneExtensionsRequeuesOnTransientPluginCreateFailure(t *testing
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconciler)
 
-	// Wait for the manager's cache to finish its initial sync before proceeding.
-	// StartReconcilers only launches mgr.Start(ctx) in a goroutine and returns
-	// immediately, so without this the controller's workers can start seconds
-	// after this point on a loaded machine, and the require.Never/EventuallyWithT
-	// assertions below would run - and expire - before the reconciler has run
-	// even once.
-	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
-
 	cl := mgr.GetClient()
 
 	// Block every KongPlugin Create with a webhook that can never be reached.

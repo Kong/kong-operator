@@ -33,6 +33,13 @@ import (
 func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	t.Parallel()
 
+	// After the manager's cache sync (waited for below), readiness has been
+	// observed to take ~16s in CI under -race + parallel envtest load, so keep
+	// this window generous - same as assertExpectedEvents in
+	// configerrorevent_envtest_test.go. This const also sets the reconciler's
+	// CacheSyncTimeout, raising it from the package-default 20s.
+	const waitTime = time.Minute
+
 	ctx := t.Context()
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
@@ -107,6 +114,12 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 // that the reconciler stored in its cache.
 func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Parallel()
+
+	// After the manager's cache sync (waited for below), readiness has been
+	// observed to take ~16s in CI under -race + parallel envtest load, so keep
+	// this window generous - same as assertExpectedEvents in
+	// configerrorevent_envtest_test.go.
+	const waitTime = time.Minute
 
 	ctx := t.Context()
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
