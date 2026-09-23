@@ -223,6 +223,7 @@ by the operator's semver:
   items fail schema validation and fail typed decode in the controller cache.
   Re-apply each affected `AIGatewayMCPServer` with the new object syntax
   (`- name: <metadata.name-of-referenced-CR>`) to repair it.
+  [#5737](https://github.com/Kong/kong-operator/pull/5737)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
   This corrects a bug where a certificate was previously always auto-provisioned
