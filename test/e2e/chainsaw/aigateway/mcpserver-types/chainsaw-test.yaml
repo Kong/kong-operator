@@ -1,0 +1,136 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-mcpserver-types
+spec:
+  description: |
+    Stands up a Konnect AIGateway control plane and creates one AIGatewayMCPServer
+    per supported apiSpec.type variant (conversion-only, upstream-server,
+    passthrough-listener, listener, conversion-listener). Between them, the 5
+    variants' route matchers cover every field the route type used to be
+    unable to express (paths and hosts and methods as multi-value lists,
+    headers as a map of header name to list of values), with the
+    conversion-listener variant combining all four at once - the exact shape
+    from the original bug report. Verifies every variant reaches
+    Programmed=True with a real Konnect ID - this exercises the real Konnect
+    SDK request marshaling, not just CRD schema validation.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: mcp_conversion_only_name
+      value: (join('-', [($test_name), 'mcp-conversion-only']))
+    - name: mcp_upstream_server_name
+      value: (join('-', [($test_name), 'mcp-upstream-server']))
+    - name: mcp_passthrough_listener_name
+      value: (join('-', [($test_name), 'mcp-passthrough-listener']))
+    - name: mcp_listener_name
+      value: (join('-', [($test_name), 'mcp-listener']))
+    - name: mcp_conversion_listener_name
+      value: (join('-', [($test_name), 'mcp-conversion-listener']))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Create-aigateway-mcpservers
+      description: |
+        Apply all 5 apiSpec.type variants in one go and assert each becomes
+        Programmed with a real Konnect ID. A route.paths/hosts/methods value
+        that the operator can't marshal into the Konnect SDK's request shape
+        (the bug this test guards against) would leave every one of these
+        stuck at Programmed=False/FailedToCreate.
+      try:
+        - apply:
+            file: 01-aigatewaymcpservers.yaml
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_conversion_only_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_upstream_server_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_passthrough_listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+        - assert:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayMCPServer
+              metadata:
+                name: ($mcp_conversion_listener_name)
+                namespace: ($namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
+   
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-mcpserver-types
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh
