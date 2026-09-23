@@ -288,7 +288,11 @@ func (i *Instance) Run(ctx context.Context) error {
 		Discoverer: discoverer,
 		Log:        i.logger.WithName(ControllerNameAdminAPIEndpoints),
 		OnDiscovery: func(ctx context.Context, adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]) {
+			prev := i.AdminAPIs()
 			i.setAdminAPIs(adminAPIs)
+			if prev.Equal(adminAPIs) {
+				return
+			}
 			if adminAPIs.Len() == 0 {
 				// No endpoints discovered: there is nothing to (re)configure.
 				return
