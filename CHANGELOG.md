@@ -63,6 +63,20 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
+## Unreleased
+
+### Added
+
+- Added the `KonnectConfigStoreSync` controller to continuously sync selected
+  data from a Kubernetes `Secret` into a Konnect Config Store. It supports
+  combined certificate/key and split-entry modes, validates data before
+  writing, resolves contested store keys deterministically, and provides
+  `Orphan` and `Delete` lifecycle policies without exposing Secret plaintext in
+  status, logs, or events.
+  [#5773](https://github.com/Kong/kong-operator/pull/5773),
+  [#5779](https://github.com/Kong/kong-operator/pull/5779),
+  [#5785](https://github.com/Kong/kong-operator/pull/5785)
+
 ## [v2.4.0-rapid.1]
 
 > Release date: 2026-09-23

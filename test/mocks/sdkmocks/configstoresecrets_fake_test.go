@@ -206,7 +206,7 @@ func TestFakeConfigStoreSecretsUpdatedAtAdvancesOnIdenticalWrite(t *testing.T) {
 	assert.NotEqual(t, before, after, "updated_at must advance even on identical-value writes")
 }
 
-func TestFakeConfigStoreSecretsMissingKeyOperationsReturn404(t *testing.T) {
+func TestFakeConfigStoreSecretsMissingKeyOperations(t *testing.T) {
 	f := NewFakeConfigStoreSecrets()
 
 	_, err := f.GetConfigStoreSecret(context.Background(), sdkkonnectops.GetConfigStoreSecretRequest{
@@ -217,7 +217,7 @@ func TestFakeConfigStoreSecretsMissingKeyOperationsReturn404(t *testing.T) {
 	require.Error(t, err)
 	assert.Equal(t, http.StatusNotFound, sdkErrorStatusCode(t, err))
 
-	_, err = f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
+	updateResp, err := f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
 		ControlPlaneID: fakeTestCPID,
 		ConfigStoreID:  fakeTestStoreID,
 		Key:            "missing",
@@ -225,13 +225,16 @@ func TestFakeConfigStoreSecretsMissingKeyOperationsReturn404(t *testing.T) {
 			Value: "v",
 		},
 	})
-	require.Error(t, err)
-	assert.Equal(t, http.StatusNotFound, sdkErrorStatusCode(t, err))
+	require.NoError(t, err)
+	assert.Equal(t, http.StatusCreated, updateResp.StatusCode)
+	stored, ok := f.Value(fakeTestCPID, fakeTestStoreID, "missing")
+	require.True(t, ok)
+	assert.Equal(t, "v", stored)
 
 	_, err = f.DeleteConfigStoreSecret(context.Background(), sdkkonnectops.DeleteConfigStoreSecretRequest{
 		ControlPlaneID: fakeTestCPID,
 		ConfigStoreID:  fakeTestStoreID,
-		Key:            "missing",
+		Key:            "still-missing",
 	})
 	require.Error(t, err)
 	assert.Equal(t, http.StatusNotFound, sdkErrorStatusCode(t, err))

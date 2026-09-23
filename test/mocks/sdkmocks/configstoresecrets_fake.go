@@ -26,6 +26,7 @@ import (
 //
 //   - Reads (Get/List) are metadata-only: secret values are never returned.
 //   - Create on an existing key fails with 409 Conflict.
+//   - Update is an upsert: it returns 201 for a new key and 200 otherwise.
 //   - Keys are capped at 512 bytes, values at 5120 bytes (400 Bad Request).
 //   - There is NO key-character validation on create: keys containing '#',
 //     '%' or '/' are accepted, but subsequent reads/updates/deletes of such
@@ -265,8 +266,9 @@ func (f *FakeConfigStoreSecrets) GetConfigStoreSecret(
 	}, nil
 }
 
-// UpdateConfigStoreSecret updates a secret's value. updated_at advances even
-// when the new value is identical to the stored one, matching the real API.
+// UpdateConfigStoreSecret upserts a secret's value. It returns 201 when the
+// key is created and 200 when it is updated. updated_at advances even when the
+// new value is identical to the stored one, matching the real API.
 func (f *FakeConfigStoreSecrets) UpdateConfigStoreSecret(
 	_ context.Context,
 	request sdkkonnectops.UpdateConfigStoreSecretRequest,
@@ -291,9 +293,24 @@ func (f *FakeConfigStoreSecrets) UpdateConfigStoreSecret(
 	if err := validateKeyValueCaps(request.Key, request.UpdateConfigStoreSecret.Value); err != nil {
 		return nil, err
 	}
-	entry, exists := f.store(request.ControlPlaneID, request.ConfigStoreID)[request.Key]
+	store := f.store(request.ControlPlaneID, request.ConfigStoreID)
+	entry, exists := store[request.Key]
 	if !exists {
-		return nil, newFakeSDKError(http.StatusNotFound, "secret %q not found", request.Key)
+		now := f.nextTimestamp()
+		store[request.Key] = &fakeConfigStoreSecretEntry{
+			value:     request.UpdateConfigStoreSecret.Value,
+			createdAt: now,
+			updatedAt: now,
+		}
+		key := request.Key
+		return &sdkkonnectops.UpdateConfigStoreSecretResponse{
+			StatusCode: http.StatusCreated,
+			ConfigStoreSecret: &sdkkonnectcomp.ConfigStoreSecret{
+				Key:       &key,
+				CreatedAt: new(now),
+				UpdatedAt: new(now),
+			},
+		}, nil
 	}
 
 	entry.value = request.UpdateConfigStoreSecret.Value

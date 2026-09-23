@@ -42805,7 +42805,7 @@ spec:
                   - sourceFields
                   - storeKey
                   type: object
-                maxItems: 64
+                maxItems: 128
                 type: array
                 x-kubernetes-list-map-keys:
                 - storeKey
@@ -42848,8 +42848,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.mode is immutable
           rule: self.spec.mode == oldSelf.spec.mode
-        - message: spec.configStoreRef.name is immutable
-          rule: self.spec.configStoreRef.name == oldSelf.spec.configStoreRef.name
+        - message: spec.configStoreRef is immutable
+          rule: self.spec.configStoreRef == oldSelf.spec.configStoreRef
     served: true
     storage: true
     subresources:
@@ -65069,6 +65069,7 @@ rules:
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
   - konnectconfigstores
+  - konnectconfigstoresyncs
   - konnecteventgateways
   - portalcustomdomains
   - portalcustomizations
@@ -65099,6 +65100,7 @@ rules:
   - konnectcloudgatewaytransitgateways/status
   - konnectconfigstores/finalizers
   - konnectconfigstores/status
+  - konnectconfigstoresyncs/finalizers
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers
@@ -65123,6 +65125,14 @@ rules:
   - portalteams/finalizers
   - portalteams/status
   verbs:
+  - patch
+  - update
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectconfigstoresyncs/status
+  verbs:
+  - get
   - patch
   - update
 - apiGroups:

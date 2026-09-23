@@ -27,7 +27,7 @@ import (
 // +kubebuilder:printcolumn:name="Synced",description="The entries are synced to the Config Store",type=string,JSONPath=`.status.conditions[?(@.type=='Synced')].status`
 // +kubebuilder:printcolumn:name="Age",type=date,JSONPath=`.metadata.creationTimestamp`,description="Age"
 // +kubebuilder:validation:XValidation:rule="self.spec.mode == oldSelf.spec.mode",message="spec.mode is immutable"
-// +kubebuilder:validation:XValidation:rule="self.spec.configStoreRef.name == oldSelf.spec.configStoreRef.name",message="spec.configStoreRef.name is immutable"
+// +kubebuilder:validation:XValidation:rule="self.spec.configStoreRef == oldSelf.spec.configStoreRef",message="spec.configStoreRef is immutable"
 // +kong:channels=kong-operator
 type KonnectConfigStoreSync struct {
 	metav1.TypeMeta   `json:",inline"`
@@ -91,10 +91,11 @@ type KonnectConfigStoreSyncSpec struct {
 	// to. The sync reads the store's Konnect ID and Control Plane ID from the
 	// referenced store's status and never resolves a Control Plane itself.
 	//
-	// The name is immutable; the namespace may be changed. Referencing a store
-	// in another namespace requires a KongReferenceGrant in the referenced
-	// namespace allowing it; that is enforced by the controller, not by CRD
-	// validation.
+	// The reference is immutable. Moving synchronization to another store
+	// requires creating a new KonnectConfigStoreSync and explicitly migrating
+	// consumers before removing this one. Referencing a store in another
+	// namespace requires a KongReferenceGrant in the referenced namespace
+	// allowing it; that is enforced by the controller, not by CRD validation.
 	//
 	// +required
 	ConfigStoreRef commonv1alpha1.NamespacedRef `json:"configStoreRef"`
@@ -268,10 +269,13 @@ type KonnectConfigStoreSyncStatus struct {
 	// +kubebuilder:validation:MaxLength=64
 	ObservedSecretResourceVersion string `json:"observedSecretResourceVersion,omitempty"`
 
-	// Entries reports the state of each Config Store entry owned by this sync.
+	// Entries reports durable state for desired Config Store entries this sync
+	// has written, including entries currently lost in per-key conflict
+	// election, plus entries retained while cleanup is blocked. The limit
+	// accommodates one full desired set and one full set awaiting cleanup.
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=64
+	// +kubebuilder:validation:MaxItems=128
 	// +listType=map
 	// +listMapKey=storeKey
 	Entries []KonnectConfigStoreSyncEntryStatus `json:"entries,omitempty"`
@@ -286,8 +290,8 @@ type KonnectConfigStoreSyncStatus struct {
 	// +listMapKey=suffix
 	References []KonnectConfigStoreSyncReference `json:"references,omitempty"`
 
-	// EntriesSynced is the number of entries currently synced to the Config
-	// Store.
+	// EntriesSynced is the number of desired entries this sync currently wins
+	// and has synced to the Config Store.
 	//
 	// +optional
 	EntriesSynced int32 `json:"entriesSynced,omitempty"`
@@ -298,8 +302,8 @@ type KonnectConfigStoreSyncStatus struct {
 	EntriesTotal int32 `json:"entriesTotal,omitempty"`
 }
 
-// KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
-// entry owned by the sync.
+// KonnectConfigStoreSyncEntryStatus reports durable state for one Config Store
+// entry written by the sync.
 type KonnectConfigStoreSyncEntryStatus struct {
 	// StoreKey is the resolved key of the Config Store entry.
 	//

@@ -10990,8 +10990,8 @@ Allowed values:
 #### KonnectConfigStoreSyncEntryStatus
 
 
-KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
-entry owned by the sync.
+KonnectConfigStoreSyncEntryStatus reports durable state for one Config Store
+entry written by the sync.
 
 
 
@@ -11059,7 +11059,7 @@ KonnectConfigStoreSyncSpec defines the desired state of KonnectConfigStoreSync.
 
 | Field | Description |
 | --- | --- |
-| `configStoreRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ConfigStoreRef is a reference to the KonnectConfigStore this sync writes to. The sync reads the store's Konnect ID and Control Plane ID from the referenced store's status and never resolves a Control Plane itself.<br /><br />The name is immutable; the namespace may be changed. Referencing a store in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
+| `configStoreRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ConfigStoreRef is a reference to the KonnectConfigStore this sync writes to. The sync reads the store's Konnect ID and Control Plane ID from the referenced store's status and never resolves a Control Plane itself.<br /><br />The reference is immutable. Moving synchronization to another store requires creating a new KonnectConfigStoreSync and explicitly migrating consumers before removing this one. Referencing a store in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
 | `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to the Secret whose data is synced to the Config Store. It is mutable: repointing at another Secret changes only the synced value, not the entry key.<br /><br />Referencing a Secret in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
 | `mode` _[KonnectConfigStoreSyncMode](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncmode)_ | Mode selects how Secret data is mapped to Config Store entries. It is immutable: re-keying is an explicit create-new-sync-and-migrate procedure because the reference string itself changes with the key. |
 | `combined` _[KonnectConfigStoreSyncCombined](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresynccombined)_ | Combined configures the single-entry mapping. It must be set if and only if mode is Combined. |
@@ -11117,9 +11117,9 @@ their hashes and sizes.
 | `storeID` _string_ | StoreID is the Konnect ID of the referenced Config Store, observed from the store's status. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the Control Plane the referenced Config Store belongs to, observed from the store's status. A sync never resolves a Control Plane itself. |
 | `observedSecretResourceVersion` _string_ | ObservedSecretResourceVersion is the resourceVersion of the Secret at the last successful sync. It is an observation aid only and is never an input to a push decision. |
-| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports the state of each Config Store entry owned by this sync. |
+| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports durable state for desired Config Store entries this sync has written, including entries currently lost in per-key conflict election, plus entries retained while cleanup is blocked. The limit accommodates one full desired set and one full set awaiting cleanup. |
 | `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References publishes the reference suffixes consumers need to build vault reference strings. A full reference is {vault://<KongVault prefix>/<suffix>}. |
-| `entriesSynced` _int32_ | EntriesSynced is the number of entries currently synced to the Config Store. |
+| `entriesSynced` _int32_ | EntriesSynced is the number of desired entries this sync currently wins and has synced to the Config Store. |
 | `entriesTotal` _int32_ | EntriesTotal is the total number of entries this sync manages. |
 
 _Appears in:_
