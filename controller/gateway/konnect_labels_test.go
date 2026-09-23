@@ -309,7 +309,7 @@ func TestValidateCPLabels(t *testing.T) {
 }
 
 func TestResolveKonnectLabels(t *testing.T) {
-	const annotationKey = metadata.AnnotationKeyCPLabels
+	const annotationKey = metadata.AnnotationKeyKonnectCPLabels
 
 	testcases := []struct {
 		name         string

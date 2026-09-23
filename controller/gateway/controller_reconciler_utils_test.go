@@ -5590,7 +5590,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec_Labels(t *testing.T) {
 	}
 
 	t.Run("labels patched when annotation differs from current", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "team=payments"})
 		kgcp := makeKGCP(map[string]string{"team": "platform"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5606,7 +5606,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec_Labels(t *testing.T) {
 	})
 
 	t.Run("no patch when labels already match", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "team=payments"})
 		kgcp := makeKGCP(map[string]string{"team": "payments"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5618,7 +5618,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec_Labels(t *testing.T) {
 	})
 
 	t.Run("mirror-mode KGCP is never touched", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "team=payments"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "team=payments"})
 		kgcp := makeMirrorKGCP()
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5630,7 +5630,7 @@ func TestEnforceKonnectGatewayControlPlaneSpec_Labels(t *testing.T) {
 	})
 
 	t.Run("invalid annotation returns error without mutating the object", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyCPLabels: "not-a-valid-label"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectCPLabels: "not-a-valid-label"})
 		kgcp := makeKGCP(map[string]string{"team": "platform"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(kgcp).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5685,7 +5685,7 @@ func TestEnforceKonnectExtensionSpec(t *testing.T) {
 	}
 
 	t.Run("labels patched when annotation differs from current", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "team=payments"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectDPLabels: "team=payments"})
 		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5702,7 +5702,7 @@ func TestEnforceKonnectExtensionSpec(t *testing.T) {
 	})
 
 	t.Run("no patch when labels already match", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "team=payments"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectDPLabels: "team=payments"})
 		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "payments"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
 		reconciler := &Reconciler{Client: fakeClient}
@@ -5730,7 +5730,7 @@ func TestEnforceKonnectExtensionSpec(t *testing.T) {
 	})
 
 	t.Run("invalid annotation returns error without mutating the object", func(t *testing.T) {
-		gateway := makeGateway(map[string]string{metadata.AnnotationKeyDPLabels: "not-a-valid-label"})
+		gateway := makeGateway(map[string]string{metadata.AnnotationKeyKonnectDPLabels: "not-a-valid-label"})
 		konnectExt := makeKonnectExtension(map[string]konnectv1alpha2.DataPlaneLabelValue{"team": "platform"})
 		fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(konnectExt).Build()
 		reconciler := &Reconciler{Client: fakeClient}

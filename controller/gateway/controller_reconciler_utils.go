@@ -140,12 +140,12 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 	}
 
 	if gatewayConfig.Spec.Konnect.Mirror == nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyCPLabels)
+		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
 		if err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyCPLabels, err)
+			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
 		}
 		if err := validateCPLabels(cpLabels); err != nil {
-			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyCPLabels, err)
+			return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
 		}
 
 		kgcp.Spec.CreateControlPlaneRequest = &sdkkonnectcomp.CreateControlPlaneRequest{
@@ -179,7 +179,7 @@ func (r *Reconciler) createKonnectGatewayControlPlane(
 // Programmed, as the field becomes immutable once Programmed is True.
 // spec.createControlPlaneRequest.clusterType and .source are immutable on the
 // KonnectGatewayControlPlane itself and are never re-enforced here. .labels is
-// mutable and is kept in sync with the Gateway/GatewayClass cp-labels annotation
+// mutable and is kept in sync with the Gateway/GatewayClass konnect-cp-labels annotation
 // on every reconcile.
 func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	ctx context.Context,
@@ -208,12 +208,12 @@ func (r *Reconciler) enforceKonnectGatewayControlPlaneSpec(
 	}
 
 	if kgcp.Spec.CreateControlPlaneRequest != nil {
-		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyCPLabels)
+		cpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectCPLabels)
 		if err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyCPLabels, err)
+			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
 		}
 		if err := validateCPLabels(cpLabels); err != nil {
-			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyCPLabels, err)
+			return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectCPLabels, err)
 		}
 		if !maps.Equal(kgcp.Spec.CreateControlPlaneRequest.Labels, cpLabels) {
 			kgcp.Spec.CreateControlPlaneRequest.Labels = cpLabels
@@ -237,12 +237,12 @@ func (r *Reconciler) createKonnectExtension(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) (*konnectv1alpha2.KonnectExtension, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyDPLabels)
+	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
 	if err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyDPLabels, err)
+		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
 	}
 	if err := validateDPLabels(dpLabels); err != nil {
-		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyDPLabels, err)
+		return nil, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
 	}
 
 	konnectExt := &konnectv1alpha2.KonnectExtension{
@@ -285,7 +285,7 @@ func (r *Reconciler) createKonnectExtension(
 
 // enforceKonnectExtensionSpec ensures that the provided KonnectExtension's
 // spec.konnect.dataPlane.labels matches the desired state derived from the
-// Gateway/GatewayClass dp-labels annotation. Returns true if the resource was
+// Gateway/GatewayClass konnect-dp-labels annotation. Returns true if the resource was
 // patched.
 func (r *Reconciler) enforceKonnectExtensionSpec(
 	ctx context.Context,
@@ -293,12 +293,12 @@ func (r *Reconciler) enforceKonnectExtensionSpec(
 	gatewayClass *gatewayv1.GatewayClass,
 	konnectExt *konnectv1alpha2.KonnectExtension,
 ) (bool, error) {
-	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyDPLabels)
+	dpLabels, err := resolveKonnectLabels(gateway, gatewayClass, metadata.AnnotationKeyKonnectDPLabels)
 	if err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyDPLabels, err)
+		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
 	}
 	if err := validateDPLabels(dpLabels); err != nil {
-		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyDPLabels, err)
+		return false, fmt.Errorf("invalid %s annotation: %w", metadata.AnnotationKeyKonnectDPLabels, err)
 	}
 
 	desired := make(map[string]konnectv1alpha2.DataPlaneLabelValue, len(dpLabels))
