@@ -293,9 +293,9 @@ func (i *Instance) Run(ctx context.Context) error {
 				// No endpoints discovered: there is nothing to (re)configure.
 				return
 			}
-			// Notify the sync loop so the rendered configuration gets (re)pushed to the
-			// discovered endpoints. The notified object is only used for logging by the
-			// sync loop.
+			// Notify the sync loop so the configuration is re-rendered for the
+			// discovered endpoints. The notified object is only used for logging
+			// by the sync loop.
 			i.cn.NotifyChange(ctx, &i.env.GatewayNN, &aigatewayv1alpha1.OnPremAIGateway{
 				Namespace: i.env.GatewayNN.Namespace,
 				Name:      i.env.GatewayNN.Name,
