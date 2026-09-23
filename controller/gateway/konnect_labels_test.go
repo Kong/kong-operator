@@ -369,6 +369,23 @@ func TestResolveKonnectLabels(t *testing.T) {
 			},
 			expectErr: true,
 		},
+		{
+			name: "gateway annotation alone exceeds cap",
+			gateway: &gwtypes.Gateway{
+				Annotations: map[string]string{annotationKey: "a=1,b=2,c=3,d=4,e=5,f=6"},
+			},
+			expectErr: true,
+		},
+		{
+			name: "gatewayclass annotation alone exceeds cap",
+			gateway: &gwtypes.Gateway{
+				ObjectMeta: metav1.ObjectMeta{},
+			},
+			gatewayClass: &gatewayv1.GatewayClass{
+				Annotations: map[string]string{annotationKey: "a=1,b=2,c=3,d=4,e=5,f=6"},
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testcases {

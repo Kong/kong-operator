@@ -76,7 +76,6 @@ func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[str
 		return merged, nil
 	}
 
-	// Return an error if the merged map still exceeds maxItems.
 	return nil, fmt.Errorf("too many labels after merging: %d exceeds the maximum of %d", len(merged), maxItems)
 }
 
