@@ -641,6 +641,122 @@ func resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx context.Context, cl client.C
 	return resolved, nil
 }
 
+// RefsAtAIGatewayModelModelAccessAclsAllowAllow returns the references at spec.apiSpec.model.access.acls.allow.allow,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelModelAccessAclsAllowAllow(obj *AIGatewayModel) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls.Allow == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls.Allow.Allow
+}
+
+// resolveAIGatewayModelModelAccessAclsAllowAllow resolves the CR references in spec.apiSpec.model.access.acls.allow.allow
+// to Konnect names.
+func resolveAIGatewayModelModelAccessAclsAllowAllow(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelModelAccessAclsAllowAllow(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
+// RefsAtAIGatewayModelModelAccessAclsDenyDeny returns the references at spec.apiSpec.model.access.acls.deny.deny,
+// or nil when any ancestor is unset.
+func RefsAtAIGatewayModelModelAccessAclsDenyDeny(obj *AIGatewayModel) []AIGatewayACLRef {
+	if obj.Spec.APISpec.AIGatewayModelConfig == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls == nil {
+		return nil
+	}
+	if obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls.Deny == nil {
+		return nil
+	}
+	return obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls.Deny.Deny
+}
+
+// resolveAIGatewayModelModelAccessAclsDenyDeny resolves the CR references in spec.apiSpec.model.access.acls.deny.deny
+// to Konnect names.
+func resolveAIGatewayModelModelAccessAclsDenyDeny(ctx context.Context, cl client.Client, obj *AIGatewayModel) ([]string, error) {
+	refs := RefsAtAIGatewayModelModelAccessAclsDenyDeny(obj)
+	resolved := make([]string, 0, len(refs))
+	var errs []error
+	for _, ref := range refs {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		var referenced AIGatewayConsumerGroup
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				errs = append(errs, ReferenceNotFoundError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, Err: err})
+				continue
+			}
+			errs = append(errs, fmt.Errorf("failed to get referenced AIGatewayConsumerGroup %s/%s: %w", ns, ref.Name, err))
+			continue
+		}
+		if obj.GetGatewayID() != "" && referenced.GetGatewayID() != "" && referenced.GetGatewayID() != obj.GetGatewayID() {
+			errs = append(errs, ReferenceDifferentGatewayError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
+			continue
+		}
+		if referenced.GetKonnectID() == "" {
+			errs = append(errs, ReferenceNotProgrammedError{Kind: "AIGatewayConsumerGroup", Namespace: ns, Name: ref.Name})
+			continue
+		}
+		resolved = append(resolved, referenced.GetKonnectName())
+	}
+	if err := errors.Join(errs...); err != nil {
+		return nil, err
+	}
+	return resolved, nil
+}
+
 // RefsAtAIGatewayModelAPITargetsProvider returns the references at spec.apiSpec.api.targets.provider,
 // or nil when any ancestor is unset.
 func RefsAtAIGatewayModelAPITargetsProvider(obj *AIGatewayModel) []AIGatewayModelProviderRef {
@@ -889,6 +1005,12 @@ func (obj *AIGatewayModel) ResolveKonnectReferences(ctx context.Context, cl clie
 	if _, err := resolveAIGatewayModelAPIAccessAclsDenyDeny(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
+	if _, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
+	if _, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj); err != nil {
+		errs = append(errs, err)
+	}
 	if _, err := resolveAIGatewayModelAPITargetsProvider(ctx, cl, obj); err != nil {
 		errs = append(errs, err)
 	}
@@ -950,6 +1072,46 @@ func (obj *AIGatewayModel) CrossNamespaceSiblingReferences() []CrossNamespaceRef
 			ToName:        ref.Name,
 		})
 	}
+	for _, ref := range RefsAtAIGatewayModelModelAccessAclsAllowAllow(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayModel"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
+	for _, ref := range RefsAtAIGatewayModelModelAccessAclsDenyDeny(obj) {
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		if ns == obj.GetNamespace() {
+			continue
+		}
+		kind := ref.Kind
+		if kind == "" {
+			kind = "AIGatewayConsumerGroup"
+		}
+		checks = append(checks, CrossNamespaceReferenceCheck{
+			FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "AIGatewayModel"},
+			ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: kind},
+			FromNamespace: obj.GetNamespace(),
+			ToNamespace:   ns,
+			ToName:        ref.Name,
+		})
+	}
 	return checks
 }
 
@@ -991,6 +1153,37 @@ func (obj *AIGatewayModel) ToCreateAIGatewayModelRequest(ctx context.Context, cl
 		}
 		api["access"] = access
 		payload["api"] = api
+	}
+	// spec.apiSpec.model.access.acls carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls != nil {
+		acls2 := obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls
+		model, _ := payload["model"].(map[string]any)
+		if model == nil {
+			model = map[string]any{}
+		}
+		access2, _ := model["access"].(map[string]any)
+		if access2 == nil {
+			access2 = map[string]any{}
+		}
+		switch {
+		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
+			}
+			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
+		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)
+			}
+			access2["acls"] = map[string]any{"deny": resolvedModelAccessAclsDenyDeny}
+		}
+		model["access"] = access2
+		payload["model"] = model
 	}
 	// spec.apiSpec.api.policies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD
@@ -1169,6 +1362,37 @@ func (obj *AIGatewayModel) ToUpdateAIGatewayModelRequest(ctx context.Context, cl
 		}
 		api["access"] = access
 		payload["api"] = api
+	}
+	// spec.apiSpec.model.access.acls carries CR references: rebuild the "acls" union
+	// value in the SDK payload from the CRD ACL union's selected variant with the
+	// resolved Konnect values, preserving sibling keys of its ancestors. A nil
+	// CRD union leaves the payload untouched.
+	if obj.Spec.APISpec.AIGatewayModelConfig != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model != nil && obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls != nil {
+		acls2 := obj.Spec.APISpec.AIGatewayModelConfig.Model.Access.Acls
+		model, _ := payload["model"].(map[string]any)
+		if model == nil {
+			model = map[string]any{}
+		}
+		access2, _ := model["access"].(map[string]any)
+		if access2 == nil {
+			access2 = map[string]any{}
+		}
+		switch {
+		case acls2.Type == AIGatewayModelAccessAclsTypeAllow:
+			resolvedModelAccessAclsAllowAllow, err := resolveAIGatewayModelModelAccessAclsAllowAllow(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.allow.allow references: %w", err)
+			}
+			access2["acls"] = map[string]any{"allow": resolvedModelAccessAclsAllowAllow}
+		case acls2.Type == AIGatewayModelAccessAclsTypeDeny:
+			resolvedModelAccessAclsDenyDeny, err := resolveAIGatewayModelModelAccessAclsDenyDeny(ctx, cl, obj)
+			if err != nil {
+				return nil, fmt.Errorf("resolving spec.apiSpec.model.access.acls.deny.deny references: %w", err)
+			}
+			access2["acls"] = map[string]any{"deny": resolvedModelAccessAclsDenyDeny}
+		}
+		model["access"] = access2
+		payload["model"] = model
 	}
 	// spec.apiSpec.api.policies carries a CR reference: overwrite its resolved Konnect values in
 	// the SDK payload, preserving sibling keys of its ancestors. A nil CRD

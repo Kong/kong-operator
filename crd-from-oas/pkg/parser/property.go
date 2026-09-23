@@ -96,6 +96,11 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 		sort.Slice(prop.Properties, func(i, j int) bool {
 			return prop.Properties[i].Name < prop.Properties[j].Name
 		})
+	} else if prop.Type == "object" && len(schemaValue.AllOf) > 1 {
+		// Composite allOf (e.g. a base schema $ref combined with an anyOf of
+		// matcher variants): flatten the members' properties so the schema
+		// generates a plain struct instead of degrading to map[string]string.
+		prop.Properties = flattenAllOfProperties(schemaValue, depth+1, visited)
 	}
 
 	// Handle an object property composed from allOf instead of its own
@@ -280,4 +285,103 @@ func ParseProperty(name string, schemaRef *openapi3.SchemaRef, depth int, visite
 	}
 
 	return prop
+}
+
+// flattenAllOfProperties flattens a composite allOf schema (e.g. a base schema
+// $ref combined with an anyOf of matcher variants) into a single property list,
+// so composite schemas generate plain structs instead of degrading to
+// map[string]string.
+//
+// Members are processed in declaration order and properties dedupe by name with
+// the first declaration winning (base members carry the full descriptions).
+// A property is required only if it is required in every allOf member that
+// declares it; within an anyOf/oneOf member it must additionally be declared
+// and required in every variant.
+func flattenAllOfProperties(schemaValue *openapi3.Schema, depth int, visited map[string]bool) []*Property {
+	if depth > 10 {
+		return nil
+	}
+
+	var (
+		props []*Property
+		seen  = map[string]int{} // property name -> index into props
+	)
+	// addProp keeps the first declaration of a property and narrows
+	// required-ness on later declarations.
+	addProp := func(prop *Property, required bool) {
+		if prop == nil {
+			return
+		}
+		if idx, ok := seen[prop.Name]; ok {
+			if !required {
+				props[idx].Required = false
+			}
+			return
+		}
+		prop.Required = required
+		seen[prop.Name] = len(props)
+		props = append(props, prop)
+	}
+
+	for _, member := range schemaValue.AllOf {
+		memberValue := member.Value
+		if memberValue == nil {
+			continue
+		}
+		switch {
+		case len(memberValue.Properties) > 0:
+			for name, nestedRef := range memberValue.Properties {
+				// OAS allows `required` beside `allOf`, applying to the
+				// flattened object, not just each member's own required list.
+				addProp(ParseProperty(name, nestedRef, depth+1, visited),
+					slices.Contains(memberValue.Required, name) || slices.Contains(schemaValue.Required, name))
+			}
+		case len(memberValue.AllOf) > 0:
+			for _, nested := range flattenAllOfProperties(memberValue, depth+1, visited) {
+				addProp(nested, nested.Required)
+			}
+		case len(memberValue.AnyOf) > 0 || len(memberValue.OneOf) > 0:
+			variants := memberValue.AnyOf
+			if len(variants) == 0 {
+				variants = memberValue.OneOf
+			}
+			parsed := make([][]*Property, 0, len(variants))
+			for _, variantRef := range variants {
+				if variantRef.Value == nil {
+					continue
+				}
+				variant := ParseProperty("variant", variantRef, depth+1, visited)
+				if len(variant.Properties) == 0 && len(variantRef.Value.AllOf) > 0 {
+					variant.Properties = flattenAllOfProperties(variantRef.Value, depth+1, visited)
+				}
+				parsed = append(parsed, variant.Properties)
+			}
+			// A property is required only if declared and required in every
+			// variant.
+			declCount := map[string]int{}
+			reqCount := map[string]int{}
+			for _, variantProps := range parsed {
+				for _, vp := range variantProps {
+					declCount[vp.Name]++
+					if vp.Required {
+						reqCount[vp.Name]++
+					}
+				}
+			}
+			requiredByName := map[string]bool{}
+			for name, count := range declCount {
+				requiredByName[name] = count == len(parsed) && reqCount[name] == len(parsed)
+			}
+			for _, variantProps := range parsed {
+				for _, vp := range variantProps {
+					addProp(vp, requiredByName[vp.Name])
+				}
+			}
+		}
+	}
+
+	sort.Slice(props, func(i, j int) bool {
+		return props[i].Name < props[j].Name
+	})
+	return props
 }

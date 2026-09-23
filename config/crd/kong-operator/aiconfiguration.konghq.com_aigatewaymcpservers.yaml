@@ -154,13 +154,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -169,9 +215,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -192,13 +257,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -280,13 +391,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -295,9 +452,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -319,13 +495,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -1152,13 +1374,59 @@ spec:
                                       description: List of consumer groups that are
                                         permitted access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                     deny:
                                       description: List of consumer groups that are
                                         denied access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                   type: object
                               type: object
@@ -1717,13 +1985,59 @@ spec:
                                       description: List of consumer groups that are
                                         permitted access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                     deny:
                                       description: List of consumer groups that are
                                         denied access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                   type: object
                               type: object
@@ -1976,13 +2290,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -1991,9 +2351,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -2014,13 +2393,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -2102,13 +2527,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -2117,9 +2588,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -2141,13 +2631,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -2863,9 +3399,26 @@ spec:
                           All of the referenced source's tools are exposed.
                         items:
                           description: |-
-                            AIGatewayEntityIdentifier Identifier for an AI Gateway entity.
-                            In some cases, this may be the entity name or ID.
-                          type: string
+                            AIGatewayMCPServerRef references an AIGatewayMCPServer in the cluster. The referenced
+                            object's Konnect name is used where the Konnect API accepts it.
+                          properties:
+                            kind:
+                              default: AIGatewayMCPServer
+                              description: Kind is the kind of the referenced object.
+                              enum:
+                              - AIGatewayMCPServer
+                              type: string
+                            name:
+                              description: Name is the name of the referenced object.
+                              minLength: 1
+                              type: string
+                            namespace:
+                              description: Namespace is reserved for future cross-namespace
+                                support.
+                              type: string
+                          required:
+                          - name
+                          type: object
                         type: array
                     required:
                     - config
@@ -2908,13 +3461,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -2923,9 +3522,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -2946,13 +3564,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -3034,13 +3698,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               authStrategies:
@@ -3049,9 +3759,28 @@ spec:
                                   At most 1 auth strategy of each auth strategy type can be referenced.
                                 items:
                                   description: |-
-                                    AIGatewayAuthStrategyReference Reference to an auth strategy instance by
-                                    name.
-                                  type: string
+                                    AIGatewayAuthStrategyRef references an AIGatewayAuthStrategy in the cluster. The referenced
+                                    object's Konnect name is used where the Konnect API accepts it.
+                                  properties:
+                                    kind:
+                                      default: AIGatewayAuthStrategy
+                                      description: Kind is the kind of the referenced
+                                        object.
+                                      enum:
+                                      - AIGatewayAuthStrategy
+                                      type: string
+                                    name:
+                                      description: Name is the name of the referenced
+                                        object.
+                                      minLength: 1
+                                      type: string
+                                    namespace:
+                                      description: Namespace is reserved for future
+                                        cross-namespace support.
+                                      type: string
+                                  required:
+                                  - name
+                                  type: object
                                 maxItems: 1
                                 type: array
                               defaultToolAcls:
@@ -3073,13 +3802,59 @@ spec:
                                     description: List of consumer groups that are
                                       permitted access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                   deny:
                                     description: List of consumer groups that are
                                       denied access.
                                     items:
-                                      type: string
+                                      description: |-
+                                        AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                        object's Konnect name is used where the Konnect API accepts it.
+                                      properties:
+                                        kind:
+                                          default: AIGatewayConsumerGroup
+                                          description: Kind is the kind of the referenced
+                                            object.
+                                          enum:
+                                          - AIGatewayConsumerGroup
+                                          type: string
+                                        name:
+                                          description: Name is the name of the referenced
+                                            object.
+                                          minLength: 1
+                                          type: string
+                                        namespace:
+                                          description: |-
+                                            Namespace, if set to a namespace other than the referrer's, must be
+                                            permitted by a KongReferenceGrant in that namespace.
+                                          type: string
+                                      required:
+                                      - name
+                                      type: object
                                     type: array
                                 type: object
                               identityProviders:
@@ -3977,13 +4752,59 @@ spec:
                                       description: List of consumer groups that are
                                         permitted access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                     deny:
                                       description: List of consumer groups that are
                                         denied access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                   type: object
                               type: object
@@ -4904,13 +5725,59 @@ spec:
                                       description: List of consumer groups that are
                                         permitted access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                     deny:
                                       description: List of consumer groups that are
                                         denied access.
                                       items:
-                                        type: string
+                                        description: |-
+                                          AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+                                          object's Konnect name is used where the Konnect API accepts it.
+                                        properties:
+                                          kind:
+                                            default: AIGatewayConsumerGroup
+                                            description: Kind is the kind of the referenced
+                                              object.
+                                            enum:
+                                            - AIGatewayConsumerGroup
+                                            type: string
+                                          name:
+                                            description: Name is the name of the referenced
+                                              object.
+                                            minLength: 1
+                                            type: string
+                                          namespace:
+                                            description: |-
+                                              Namespace, if set to a namespace other than the referrer's, must be
+                                              permitted by a KongReferenceGrant in that namespace.
+                                            type: string
+                                        required:
+                                        - name
+                                        type: object
                                       type: array
                                   type: object
                               type: object
