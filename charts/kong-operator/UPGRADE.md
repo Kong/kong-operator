@@ -64,7 +64,7 @@ kustomize build github.com/kubernetes-sigs/gateway-api/config/crd\?ref=v1.5.1 | 
 ## CRD field descriptions
 
 Starting with chart version 1.5.0, the Kong Operator CRDs shipped with this
-chart (`ko-crds`) no longer carry per-field `description` doc strings. Without them the Helm release manifest
+chart (`ko-crds`) no longer carry per-field `description` doc strings. With them the Helm release manifest
 grows past the 1MiB `Secret` size limit, which makes `helm install`/`helm upgrade`
 fail. As a result, `kubectl explain` does not print field documentation for
 these CRDs.
