@@ -674,7 +674,8 @@ spec:
                                 type: object
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: AIGatewayMCPServerConversionListenerConfigLogging
+                              is a type alias.
                             properties:
                               audits:
                                 enum:
@@ -2773,7 +2774,8 @@ spec:
                                 type: object
                             type: object
                           logging:
-                            description: Configuration for AI Gateway logging.
+                            description: AIGatewayMCPServerListenerConfigLogging is
+                              a type alias.
                             properties:
                               audits:
                                 enum:

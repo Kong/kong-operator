@@ -1215,7 +1215,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
-	// Configuration for AI Gateway logging.
+	//
 	//
 	// +optional
 	Logging AIGatewayMCPServerConversionListenerConfigLogging `json:"logging,omitzero"`
@@ -1272,8 +1272,7 @@ type AIGatewayMCPServerConversionListenerConfigCache struct {
 	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
-// AIGatewayMCPServerConversionListenerConfigLogging Configuration for AI
-// Gateway logging.
+// AIGatewayMCPServerConversionListenerConfigLogging is a type alias.
 type AIGatewayMCPServerConversionListenerConfigLogging struct {
 	//
 	//
@@ -1553,7 +1552,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerListenerConfigCache `json:"cache,omitzero"`
-	// Configuration for AI Gateway logging.
+	//
 	//
 	// +optional
 	Logging AIGatewayMCPServerListenerConfigLogging `json:"logging,omitzero"`
@@ -1595,7 +1594,7 @@ type AIGatewayMCPServerListenerConfigCache struct {
 	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
-// AIGatewayMCPServerListenerConfigLogging Configuration for AI Gateway logging.
+// AIGatewayMCPServerListenerConfigLogging is a type alias.
 type AIGatewayMCPServerListenerConfigLogging struct {
 	//
 	//
