@@ -16,12 +16,13 @@ jobs:
   look_for_release:
     # NOTE: create-release-branch (below) pushes the release branch with the App
     # token, and that push re-enters this workflow on the new branch. Without
-    # skipping it, it matches the same release commit again and publish-release
-    # fails because the GitHub release already exists. The echo is detected in
-    # commit_parser against the App's own login, since a ref pushed by an App
-    # token reports github.actor as "<app-slug>[bot]". Gated on the actor too
-    # (not just `created`) so a manually created release/X.Y.x branch whose tip
-    # already carries a real release commit is not silently skipped.
+    # skipping it, it matches the same release commit again and the run fails in
+    # semver ("fail if tag already exists" - the tag was created by publish-release
+    # moments before; publish-release is skipped here because it needs semver). The
+    # echo is detected in commit_parser against the App's own login, since a ref
+    # pushed by an App token reports github.actor as "<app-slug>[bot]". Gated on the
+    # actor too (not just `created`) so a manually created release/X.Y.x branch whose
+    # tip already carries a real release commit is not silently skipped.
     outputs:
       release_found: ${{ steps.commit_parser.outputs.release_found }}
       release_type: ${{ steps.commit_parser.outputs.release_type }}
@@ -55,7 +56,8 @@ jobs:
           script: |
             // Skip the echo push of the release branch that create-release-branch
             // makes below: it carries the same release commit, and matching it again
-            // makes publish-release fail because the release already exists.
+            // fails the run in semver, where the tag created by publish-release
+            // already exists.
             if (context.payload.created && process.env.APP_SLUG
                 && context.actor === `${process.env.APP_SLUG}[bot]`) {
               core.setOutput('release_found', 'false')
