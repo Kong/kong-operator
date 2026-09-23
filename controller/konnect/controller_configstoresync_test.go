@@ -704,6 +704,68 @@ func TestKonnectConfigStoreSyncConflictOwnershipRequiresDurableEntry(t *testing.
 			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
 	})
+
+	t.Run("re-created store does not inherit ownership from the old store ID", func(t *testing.T) {
+		const newStoreID = "config-store-recreated"
+		secret := newConfigStoreSyncTestSecret(nil, nil)
+		secret.Data = map[string][]byte{
+			"owner":     []byte("old-store-value"),
+			"contender": []byte("new-store-value"),
+		}
+		owner := newConfigStoreSync("owner",
+			withConfigStoreSyncFinalizer(),
+			withConfigStoreSyncCreationTimestamp(older),
+			withConfigStoreSyncSplit(konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{
+				Field:    "owner",
+				StoreKey: new("shared-key"),
+			}),
+		)
+		contender := newConfigStoreSync("contender",
+			withConfigStoreSyncFinalizer(),
+			withConfigStoreSyncCreationTimestamp(newer),
+			withConfigStoreSyncSplit(konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{
+				Field:    "contender",
+				StoreKey: new("shared-key"),
+			}),
+		)
+		objs := append(configStoreSyncBaseObjects(), secret, owner, contender)
+		env := newConfigStoreSyncTestEnv(t, objs...)
+
+		_, err := env.reconcile(t, configStoreSyncNN("owner"))
+		require.NoError(t, err)
+		require.Len(t, env.getSync(t, configStoreSyncNN("owner")).Status.Entries, 1)
+
+		var store konnectv1alpha1.KonnectConfigStore
+		require.NoError(t, env.cl.Get(context.Background(), configStoreSyncNN("config-store"), &store))
+		store.Status.ID = newStoreID
+		require.NoError(t, env.cl.Update(context.Background(), &store))
+
+		secret = new(corev1.Secret)
+		require.NoError(t, env.cl.Get(context.Background(), configStoreSyncNN("tls-secret"), secret))
+		secret.Data["owner"] = make([]byte, configstoresync.MaxValueBytes+1)
+		require.NoError(t, env.cl.Update(context.Background(), secret))
+
+		_, err = env.reconcile(t, configStoreSyncNN("owner"))
+		require.NoError(t, err)
+		gotOwner := env.getSync(t, configStoreSyncNN("owner"))
+		assert.Equal(t, newStoreID, gotOwner.Status.StoreID)
+		assert.Empty(t, gotOwner.Status.Entries, "old-store entries must not claim keys in the re-created store")
+		assert.Empty(t, gotOwner.Status.References)
+		assert.Zero(t, gotOwner.Status.EntriesSynced)
+		assert.Empty(t, gotOwner.Status.ObservedSecretResourceVersion)
+		requireConfigStoreSyncCondition(t, gotOwner,
+			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonValueTooLarge)
+
+		_, err = env.reconcile(t, configStoreSyncNN("contender"))
+		require.NoError(t, err)
+		value, ok := env.fake.Value(testConfigStoreSyncCPID, newStoreID, "shared-key")
+		require.True(t, ok)
+		assert.Equal(t, "new-store-value", value)
+		requireConfigStoreSyncCondition(t, env.getSync(t, configStoreSyncNN("contender")),
+			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+			metav1.ConditionTrue, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonAllEntriesUpToDate)
+	})
 }
 
 func TestKonnectConfigStoreSyncConflictOrderIndependence(t *testing.T) {
@@ -835,6 +897,44 @@ func TestKonnectConfigStoreSyncConflictOrderIndependence(t *testing.T) {
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionTrue, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonAllEntriesUpToDate)
 	})
+
+	t.Run("all-losing sync reports conflict without credentials", func(t *testing.T) {
+		secret := newConfigStoreSyncTestSecret(certPEM, keyPEM)
+		winner := newConfigStoreSync("winner",
+			withConfigStoreSyncFinalizer(),
+			withConfigStoreSyncSharedStoreKey(),
+			withConfigStoreSyncCreationTimestamp(older),
+		)
+		loser := newConfigStoreSync("loser",
+			withConfigStoreSyncFinalizer(),
+			withConfigStoreSyncSharedStoreKey(),
+			withConfigStoreSyncCreationTimestamp(newer),
+		)
+		objs := append(configStoreSyncBaseObjects(), secret, winner, loser)
+		env := newConfigStoreSyncTestEnv(t, objs...)
+
+		// Let the eventual loser write first so this also proves that stale
+		// references are removed while its durable entry record is retained.
+		_, err := env.reconcile(t, configStoreSyncNN("loser"))
+		require.NoError(t, err)
+		_, err = env.reconcile(t, configStoreSyncNN("winner"))
+		require.NoError(t, err)
+
+		var apiAuth konnectv1alpha1.KonnectAPIAuthConfiguration
+		require.NoError(t, env.cl.Get(context.Background(), configStoreSyncNN("api-auth"), &apiAuth))
+		require.NoError(t, env.cl.Delete(context.Background(), &apiAuth))
+		env.fake.ResetCalls()
+
+		_, err = env.reconcile(t, configStoreSyncNN("loser"))
+		require.NoError(t, err)
+		assert.Empty(t, env.fake.Calls())
+		got := env.getSync(t, configStoreSyncNN("loser"))
+		require.Len(t, got.Status.Entries, 1, "the previous write remains durable election evidence")
+		assert.Zero(t, got.Status.EntriesSynced)
+		assert.Empty(t, got.Status.References, "a losing key must not publish a synced reference")
+		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
+	})
 }
 
 func TestKonnectConfigStoreSyncConflictsAreResolvedPerKey(t *testing.T) {
@@ -898,6 +998,10 @@ func TestKonnectConfigStoreSyncConflictsAreResolvedPerKey(t *testing.T) {
 		assert.Equal(t, int32(1), got.Status.EntriesSynced)
 		require.Len(t, got.Status.Entries, 1, "never-written losing key must not gain ownership")
 		assert.Equal(t, "key-2", got.Status.Entries[0].StoreKey)
+		require.Equal(t,
+			[]konnectv1alpha1.KonnectConfigStoreSyncReference{{Suffix: "key-2"}},
+			got.Status.References,
+		)
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
 		condition := findConfigStoreSyncCondition(got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType)
@@ -917,6 +1021,10 @@ func TestKonnectConfigStoreSyncConflictsAreResolvedPerKey(t *testing.T) {
 		got = env.getSync(t, configStoreSyncNN("sync"))
 		assert.Equal(t, int32(2), got.Status.EntriesSynced)
 		require.Len(t, got.Status.Entries, 2)
+		require.ElementsMatch(t,
+			[]konnectv1alpha1.KonnectConfigStoreSyncReference{{Suffix: "key-1"}, {Suffix: "key-2"}},
+			got.Status.References,
+		)
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionTrue, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonAllEntriesUpToDate)
 	})
@@ -974,12 +1082,17 @@ func TestKonnectConfigStoreSyncConflictsAreResolvedPerKey(t *testing.T) {
 		assert.Equal(t, int32(1), gotA.Status.EntriesSynced)
 		require.Len(t, gotA.Status.Entries, 1)
 		assert.Equal(t, "key-2", gotA.Status.Entries[0].StoreKey)
+		require.Equal(t,
+			[]konnectv1alpha1.KonnectConfigStoreSyncReference{{Suffix: "key-2"}},
+			gotA.Status.References,
+		)
 		requireConfigStoreSyncCondition(t, gotA, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
 
 		gotC := env.getSync(t, configStoreSyncNN("sync-c"))
 		assert.Zero(t, gotC.Status.EntriesSynced)
 		assert.Empty(t, gotC.Status.Entries)
+		assert.Empty(t, gotC.Status.References)
 		requireConfigStoreSyncCondition(t, gotC, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonKeyConflict)
 	})

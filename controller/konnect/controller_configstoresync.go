@@ -211,6 +211,15 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	if store.Status.ControlPlaneID != nil {
 		controlPlaneID = store.Status.ControlPlaneID.ID
 	}
+	if (sync.Status.StoreID != "" && sync.Status.StoreID != storeID) ||
+		(sync.Status.ControlPlaneID != "" && sync.Status.ControlPlaneID != controlPlaneID) {
+		// Entry observations are valid only for the remote target where they
+		// were recorded. A re-created store has a new ID and starts empty.
+		sync.Status.Entries = nil
+		sync.Status.References = nil
+		sync.Status.EntriesSynced = 0
+		sync.Status.ObservedSecretResourceVersion = ""
+	}
 	sync.Status.StoreID = storeID
 	sync.Status.ControlPlaneID = controlPlaneID
 
@@ -300,19 +309,29 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	if err != nil {
 		return ctrl.Result{}, err
 	}
+	sync.Status.References = referencesWithoutKeyConflicts(sync.Status.References, entries, keyConflicts)
 
-	// 9. Resolve the SDK along the credential chain documented on the
-	// reconciler type.
-	secretsSDK, err := r.configStoreSecretsSDK(ctx, store)
-	if err != nil {
-		return ctrl.Result{}, err
+	// 9. Resolve the SDK lazily. An all-losing sync, or cleanup that can be
+	// resolved locally, must still report its Kubernetes-side state when
+	// Konnect credentials are temporarily unavailable.
+	var secretsSDK sdkkonnectgo.ConfigStoreSecretsSDK
+	resolveSecretsSDK := func() (sdkkonnectgo.ConfigStoreSecretsSDK, error) {
+		if secretsSDK != nil {
+			return secretsSDK, nil
+		}
+		resolved, err := r.configStoreSecretsSDK(ctx, store)
+		if err != nil {
+			return nil, err
+		}
+		secretsSDK = resolved
+		return secretsSDK, nil
 	}
 
 	// 10. Prune entries removed from the spec before writing additions. This
 	// frees status capacity first and prevents an old owner from deleting a
 	// value after another active sync has taken over the key.
 	pendingCleanup, pruneBlocked, err := r.pruneRemovedEntries(
-		ctx, sync, storeID, controlPlaneID, secretsSDK, entries,
+		ctx, sync, storeID, controlPlaneID, resolveSecretsSDK, entries,
 	)
 	if err != nil {
 		return ctrl.Result{}, err
@@ -329,7 +348,11 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 			}
 		}
 		sync.Status.EntriesSynced = entriesSynced
-		sync.Status.References = retainedReferences(sync.Status.References, sync.Status.Entries)
+		sync.Status.References = referencesWithoutKeyConflicts(
+			retainedReferences(sync.Status.References, sync.Status.Entries),
+			entries,
+			keyConflicts,
+		)
 		message := fmt.Sprintf(
 			"%d desired entries plus %d entries awaiting cleanup exceed the status capacity of %d; remove references to old entries before adding more",
 			len(entries), len(pendingCleanup), konnectConfigStoreSyncMaxStatusEntries,
@@ -347,6 +370,7 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	var (
 		newEntries      = make([]konnectv1alpha1.KonnectConfigStoreSyncEntryStatus, 0, len(values)+len(pendingCleanup))
 		entriesSynced   int32
+		syncedKeys      = make(map[string]struct{}, len(values)-len(keyConflicts))
 		writesCompleted int
 	)
 	for _, ev := range values {
@@ -357,6 +381,10 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 			continue
 		}
 
+		secretsSDK, err := resolveSecretsSDK()
+		if err != nil {
+			return ctrl.Result{}, err
+		}
 		entryStatus := konnectv1alpha1.KonnectConfigStoreSyncEntryStatus{
 			StoreKey:     ev.resolved.StoreKey,
 			SourceFields: ev.resolved.SourceFields,
@@ -426,6 +454,7 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 		}
 		if entryStatus.Hash == ev.hash {
 			entriesSynced++
+			syncedKeys[ev.resolved.StoreKey] = struct{}{}
 		}
 		newEntries = append(newEntries, entryStatus)
 	}
@@ -438,7 +467,9 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	sync.Status.ObservedSecretResourceVersion = secret.ResourceVersion
 	var references []konnectv1alpha1.KonnectConfigStoreSyncReference
 	for _, e := range entries {
-		references = append(references, configstoresync.ReferenceSuffixes(e)...)
+		if _, synced := syncedKeys[e.StoreKey]; synced {
+			references = append(references, configstoresync.ReferenceSuffixes(e)...)
+		}
 	}
 	sync.Status.References = references
 
@@ -527,6 +558,32 @@ func retainedReferences(
 	return retained
 }
 
+func referencesWithoutKeyConflicts(
+	references []konnectv1alpha1.KonnectConfigStoreSyncReference,
+	entries []configstoresync.ResolvedEntry,
+	conflicts map[string]types.NamespacedName,
+) []konnectv1alpha1.KonnectConfigStoreSyncReference {
+	if len(conflicts) == 0 {
+		return references
+	}
+	conflictingSuffixes := make(map[string]struct{}, len(conflicts))
+	for _, entry := range entries {
+		if _, conflict := conflicts[entry.StoreKey]; !conflict {
+			continue
+		}
+		for _, reference := range configstoresync.ReferenceSuffixes(entry) {
+			conflictingSuffixes[reference.Suffix] = struct{}{}
+		}
+	}
+	retained := make([]konnectv1alpha1.KonnectConfigStoreSyncReference, 0, len(references))
+	for _, reference := range references {
+		if _, conflict := conflictingSuffixes[reference.Suffix]; !conflict {
+			retained = append(retained, reference)
+		}
+	}
+	return retained
+}
+
 // pruneRemovedEntries deletes spec-removed entries independently. An entry
 // claimed by another active sync is relinquished without a DELETE; an entry
 // still referenced by Konnect configuration remains in status for retry.
@@ -534,7 +591,7 @@ func (r *KonnectConfigStoreSyncReconciler) pruneRemovedEntries(
 	ctx context.Context,
 	sync *konnectv1alpha1.KonnectConfigStoreSync,
 	storeID, controlPlaneID string,
-	secretsSDK sdkkonnectgo.ConfigStoreSecretsSDK,
+	resolveSecretsSDK func() (sdkkonnectgo.ConfigStoreSecretsSDK, error),
 	entries []configstoresync.ResolvedEntry,
 ) ([]konnectv1alpha1.KonnectConfigStoreSyncEntryStatus, []string, error) {
 	removed := removedEntryKeys(sync.Status.Entries, entries)
@@ -579,6 +636,10 @@ func (r *KonnectConfigStoreSyncReconciler) pruneRemovedEntries(
 				pendingCleanup = append(pendingCleanup, *prev)
 			}
 			continue
+		}
+		secretsSDK, err := resolveSecretsSDK()
+		if err != nil {
+			return nil, nil, err
 		}
 		if err := ops.DeleteConfigStoreSecret(ctx, secretsSDK, controlPlaneID, storeID, key); err != nil {
 			r.setConditionSynced(sync, metav1.ConditionFalse,
