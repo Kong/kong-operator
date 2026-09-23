@@ -174,7 +174,7 @@
   For example: `konghq.com/konnect-cp-labels: "k1=v1,k2=v2"`.
   The maximum number of labels is limited to 5. If the number of labels in
   `konghq.com/konnect-cp-labels` or `konghq.com/konnect-dp-labels` annotation is
-  over 5 in `Gateway` or `GatewayClass`, or the number of combeined labels from
+  over 5 in `Gateway` or `GatewayClass`, or the number of combined labels from
   the two parts is over 5, the controller rejects the `Gateway` and stops
   reconciliation.
   The labels from annotations of `Gateway`s take precedence over the labels from
