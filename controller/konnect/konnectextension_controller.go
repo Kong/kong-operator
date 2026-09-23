@@ -329,6 +329,13 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 	// below, after the certificate provisioning steps), the Secret would be orphaned
 	// with unreleasable finalizers in a Terminating namespace.
 	if !cleanup {
+		// The extension is marked for deletion (dependents still present): adding a
+		// finalizer to a deleting object is rejected by the API server, so skip
+		// provisioning. The cleanup path takes over once the dependents are gone.
+		if !ext.DeletionTimestamp.IsZero() {
+			log.Debug(logger, "KonnectExtension deleted before acquiring the cleanup finalizer, skipping provisioning")
+			return ctrl.Result{}, nil
+		}
 		updated, res, err := patch.WithFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
 		if err != nil || !res.IsZero() {
 			return res, err
@@ -629,15 +636,6 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 				log.Info(logger, "konnect-cleanup finalizer on the referenced secret updated")
 				return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 			}
-		}
-
-		updated, res, err := patch.WithFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
-		if err != nil || !res.IsZero() {
-			return res, err
-		}
-		if updated {
-			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
-			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 		}
 	case cleanup:
 		if certFound {
