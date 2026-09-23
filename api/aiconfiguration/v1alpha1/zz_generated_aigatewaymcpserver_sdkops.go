@@ -1894,10 +1894,6 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsAllow(ctx context.Contex
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -1951,10 +1947,6 @@ func resolveAIGatewayMCPServerListenerAccessConsumerAclsDeny(ctx context.Context
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2010,10 +2002,6 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsAllow(ctx con
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2067,10 +2055,6 @@ func resolveAIGatewayMCPServerListenerAccessConsumerDefaultToolAclsDeny(ctx cont
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2126,10 +2110,6 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsAllow(ctx contex
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2183,10 +2163,6 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenAclsDeny(ctx context
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2242,10 +2218,6 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsAllow
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2299,10 +2271,6 @@ func resolveAIGatewayMCPServerListenerAccessOauthAccessTokenDefaultToolAclsDeny(
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2358,10 +2326,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsAllow(ctx cont
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2415,10 +2379,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerAclsDeny(ctx conte
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2474,10 +2434,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsAll
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2531,10 +2487,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessConsumerDefaultToolAclsDen
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2590,10 +2542,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsAllow(
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2647,10 +2595,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenAclsDeny(c
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2706,10 +2650,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2763,10 +2703,6 @@ func resolveAIGatewayMCPServerConversionListenerAccessOauthAccessTokenDefaultToo
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2822,10 +2758,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsAllow(ctx con
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2879,10 +2811,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerAclsDeny(ctx cont
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -2938,10 +2866,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsAl
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -2995,10 +2919,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessConsumerDefaultToolAclsDe
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3054,10 +2974,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsAllow
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -3111,10 +3027,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenAclsDeny(
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3170,10 +3082,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -3227,10 +3135,6 @@ func resolveAIGatewayMCPServerPassthroughListenerAccessOauthAccessTokenDefaultTo
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3288,10 +3192,6 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsAllow(ctx context
 			ns := ref.Namespace
 			if ns == "" {
 				ns = obj.GetNamespace()
-			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
 			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3352,10 +3252,6 @@ func resolveAIGatewayMCPServerConversionListenerToolsAccessAclsDeny(ctx context.
 			if ns == "" {
 				ns = obj.GetNamespace()
 			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
-			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -3414,10 +3310,6 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsAllow(ctx context.Con
 			ns := ref.Namespace
 			if ns == "" {
 				ns = obj.GetNamespace()
-			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
 			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3478,10 +3370,6 @@ func resolveAIGatewayMCPServerConversionOnlyToolsAccessAclsDeny(ctx context.Cont
 			if ns == "" {
 				ns = obj.GetNamespace()
 			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
-			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -3540,10 +3428,6 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsAllow(ctx contex
 			ns := ref.Namespace
 			if ns == "" {
 				ns = obj.GetNamespace()
-			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
 			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -3604,10 +3488,6 @@ func resolveAIGatewayMCPServerPassthroughListenerToolsAccessAclsDeny(ctx context
 			if ns == "" {
 				ns = obj.GetNamespace()
 			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
-			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -3667,10 +3547,6 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsAllow(ctx context.Con
 			if ns == "" {
 				ns = obj.GetNamespace()
 			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
-			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 				if apierrors.IsNotFound(err) {
@@ -3729,10 +3605,6 @@ func resolveAIGatewayMCPServerUpstreamServerToolsAccessAclsDeny(ctx context.Cont
 			ns := ref.Namespace
 			if ns == "" {
 				ns = obj.GetNamespace()
-			}
-			kind := ref.Kind
-			if kind == "" {
-				kind = "AIGatewayConsumerGroup"
 			}
 			var referenced AIGatewayConsumerGroup
 			if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {

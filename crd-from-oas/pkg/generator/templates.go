@@ -1054,10 +1054,12 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
+{{- if or (not .SupportCrossNamespaceReference) .MultiKind}}
 		kind := ref.Kind
 		if kind == "" {
 			kind = "{{.DefaultKind}}"
 		}
+{{- end}}
 {{- if not .SupportCrossNamespaceReference}}
 		if ns != obj.GetNamespace() {
 			errs = append(errs, ReferenceCrossNamespaceError{Kind: kind, Namespace: ns, Name: ref.Name, ReferrerNamespace: obj.GetNamespace()})
