@@ -55,7 +55,7 @@ type portalRefAccessor interface {
 
 type konnectAIGatewayRefAccessor interface {
 	objectWithParentRef
-	GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef
+	GetKonnectAIGatewayRef() aiconfigurationv1alpha1.AIGatewayRef
 }
 
 type aiGatewayConsumerRefAccessor interface {

@@ -203,6 +203,12 @@
   This change enforces patching of `Deployment`s, which causes
   a rolling restart of the underlying `Pod`s when updating operator to this version.
   [#5771](https://github.com/Kong/kong-operator/pull/5771)
+- AI Gateway configuration entities (`AIGatewayModel`, `AIGatewayPolicy`,
+  `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds):
+  `spec.aiGatewayRef` now uses a dedicated `AIGatewayRef` type instead of the
+  shared `commonv1alpha1.ObjectRef`. And configuration entities can target an
+  on-prem `OnPremAIGateway` in addition to a `KonnectAIGateway`.
+  [#5788](https://github.com/Kong/kong-operator/pull/5788)
 
 ### Fixes
 
