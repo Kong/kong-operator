@@ -122,6 +122,15 @@ spec:
           headers:
             accept:
               - application/json
+        allowedVersions:
+          - "2025-06-18"
+        cache:
+          discover:
+            cacheScope: public
+            ttlMs: 60000
+          toolsList:
+            cacheScope: private
+            ttlMs: 30000
         logging:
           audits: Enabled
           payloads: Disabled
@@ -163,6 +172,15 @@ spec:
               - flights-e2e-v2
             accept:
               - application/json
+        allowedVersions:
+          - "2025-06-18"
+        cache:
+          discover:
+            cacheScope: public
+            ttlMs: 60000
+          toolsList:
+            cacheScope: private
+            ttlMs: 30000
         logging:
           audits: Disabled
           payloads: Enabled
