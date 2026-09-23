@@ -38,7 +38,7 @@ func TestAIGatewayMCPServer_MixedToolAclsInjection(t *testing.T) {
 					ConversionListener: &AIGatewayMCPServerConversionListener{
 						Name:        "mcp",
 						DisplayName: "MCP",
-						Config: AIGatewayMCPServerWithUpstreamNoProxyConfig{
+						Config: AIGatewayMCPServerConversionListenerConfig{
 							URL: "https://example.com/mcp",
 						},
 						Access: &AIGatewayMCPServerConversionListenerAccess{
