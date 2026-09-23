@@ -167,7 +167,6 @@
 
 ### Breaking changes
 
-<<<<<<< HEAD
 The following APIs have breaking changes below. All are alpha (`v1alpha1`)
 APIs, which carry no backward-compatibility guarantee and are not covered
 by the operator's semver:
