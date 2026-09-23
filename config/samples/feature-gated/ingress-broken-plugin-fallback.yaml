@@ -1,6 +1,51 @@
 # This configuration file presents fallback configuration (feature gate FallbackConfiguration=true),
 # it contains a plugin that is misconfigured and will not work. The whole route /for-auth-users won't
 # be configured. Only the route /ingress-testing will be configured.
+#
+# See this directory's README.md: the gate is enabled on the ControlPlane
+# below, and the operator's KongPlugin validating webhook rejects the broken
+# plugin at admission when it is active — disable it to exercise this path.
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-fallback
+  namespace: default
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.16
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-fallback
+  namespace: default
+spec:
+  # Required when dataplane.type is ref, and only Ingress is supported in that mode.
+  ingressClass: kong
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-fallback
+  featureGates:
+  # Off by default. Without it a single broken entity fails the whole sync.
+  - name: FallbackConfiguration
+    state: enabled
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,14 +63,14 @@ spec:
     spec:
       containers:
       - name: echo-1
-        image: kong/go-echo:0.3.0
+        image: kong/go-echo:0.5.0
         env:
           - name: POD_NAME
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
         ports:
-        - containerPort: 80
+        - containerPort: 1027
         resources:
           limits:
             memory: "64Mi"

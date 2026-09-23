@@ -1,6 +1,10 @@
-# NOTE The Gateway APIs are not yet available by default in Kubernetes.
-# Follow these instructions to install them before using this example:
-# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
+# TLSRoute: SNI-based TLS passthrough. Kong does not terminate the connection,
+# it only reads the SNI and forwards the encrypted stream to the backend, which
+# serves TLS itself — so the listener needs no certificateRefs.
+#
+# A route only gets the hostnames it shares with its listener: had the listener
+# below used `*.kong.example` and the route `*.example`, Kong would be
+# programmed with the narrower `*.kong.example` only.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -19,7 +23,7 @@ spec:
     spec:
       containers:
       - name: tlsecho
-        image: kong/go-echo:0.3.0
+        image: kong/go-echo:0.5.0
         ports:
         - containerPort: 1030
         env:
@@ -54,6 +58,8 @@ spec:
     app: tlsecho
   type: ClusterIP
 ---
+# Self-signed certificate for `example-tlsroute.kong.example`, mounted by the
+# backend Pod. Kong never reads it, so it needs no `konghq.com/secret` label.
 apiVersion: v1
 kind: Secret
 metadata:
@@ -63,14 +69,35 @@ data:
   tls.key: LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2UUlCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktjd2dnU2pBZ0VBQW9JQkFRRG9EOTNSMERWVkxkMDkKMTYzTjBlR0pFWFdsZVJXdC9kSGViU2V1N1dRMG5CYTR2c2x1bExBTDZKT2ptMGZqcmJ2bXk1bzhUTUJ1Y2g3bQpWaDZTMXVMM1VySTVZK0FFdmpOOXQzNUhuR0NTdHN4N3pEOStWOGZIR21BSHJBdGJ6Q0VEOE96RXhBZHBUd1Z4CnRIWG9IQ3p1emtycWhlc0tmSFRRcURRbmtlMVBLR0VqNlVIWkFMWWw3T09VUFdHTFZ2M25NZnNwL2libXU5QmYKYVdZbkJSV2hRRUo0R3hsTjFMMjZZWUFoYlZQWFN6WUtLQWFmUjlCQVFZTUZHcEduYkhwdzlQeHVxeUMwVUtyUQp4MmFOODltYWdaV0tYa2ZwZk5XNG0wOWdkRTFZTTc2Q3UwOENYeW4wVGJkNlp5SGN3V25zTlJvQjkxeWwwMzJ6Cm9yMk9aOXh6QWdNQkFBRUNnZ0VBREErZHR1OXNMaS85alRRZCtqeXhJa3pGZ1dNQWhQUC9DZUZBekQ4clU1bFUKakZLTTArZFNHbDhDcEF0ZDJrLzlIRVdJWlIrVXdCNFo5ckpvSnJmdUZrT2hOQWxrVmNBYThLcnVSY09JdUx5eApJUWdMRHNKNk1DSWNvVVFkclFPTmZicHlXOWNDWkVTYitGTys3YldLZ2s0M2ZPYVdsNHR1RGlyZExHZFJ0Rk9WCmF0dHZmVEZMYUp0WFZGbXJSb1NuaHc3UDkxY3RhNDBKbkE3SlZpeG90UExuQmUvaUJxV2dwUEtMZnVkT3pMSHkKL2pMbWNDM0ZMUWhSQkNSSVg1dUdJdjBGZEdoL1RjZmxGQ2Z5MStoSUlQWStYYi9MRzk2Q2Q2dGg1ZHJWbXpEWQp4WmUreCtLeTVqOTRuY3Y3UjRLNTZ6Wm1jR0NxVlcvdDZTUDBtZG5jOFFLQmdRRDhlektQUGlIN1BmVHVhb1dCClFwSFlqMjg2cmQ5Y2tVSTNYZ05YSXUzdXlrOXFwcTlBVm5GYmZnNldTRC9UWUEyaUorelVDbWFqYm5VR0xmZTAKbWI0bEdYZTNEQStmeHJhYVgzeitkVm5wSFU1Vng1dy91RWtDWDEzbzkwdFdZQkxzOXY3N2NoS3AvSzNnNllUYgpBSmpSeXljSWk2bTZnK2JoWE9jSE5KZFB3d0tCZ1FEclM5RXdtTzZrdDRraE4xSnFpUlhjcGpaa2xKWDd5NjBrCjFGTUcwSE42dzVSV29rUk9CYnRZdVBpdG8yZVNMWUVyQUoyVTFQazVWZW9MeXkwWXFXMmQzanhEaVY0UEI5ZU4KeWhabzlXNDdnTmVvT3d4c2dNeFZRZ2NCZXlmSEZFMnFYajBrMUtzOWEwYmk5Wm03TkhHS1Nzc3R6UUNoZkdneApyMFJFdHRtbGtRS0JnQWNhb0UyUGZmMUh2UUNJVnNGUVVqSTV0dk43dVBFdDFTTWhyZzVobVRoQzBRRTdOMnNrCkE0U0RnMzJQQXR5N3N5YUE0UlVHUmVVTFVwZWQ2MzVWWlJnK0l6UXZUckU4TWg4ZDJMS0FNc3R3VzZmbU9ldEIKRUN6VTZodUgrY0t3YVZmcGl6c2Y5bzU1NFpxV2QzcUNCY3JCWUpQSStqbVpSSUhLejJWUWdZRnBBb0dBRFY3RgppRWxvWmh1M3d4ZHRxM2dXc2U4UDhDOHhScG1RUVNOL2hFZWNDRUhNMEE5d2FpNlJNcjF3QkEzZytNRjFNWWhiCmEvV2VJOC9wK0xtVzJtdm1PcTVDSm1STDMvYkdITng2NFlQd3U1amFxRWlTc0NleGRMYkh4eUhFWk4rV2VqUFkKclpzWUQrbGtvY2pxNzJSUGYxZzRxMldXdjVaZUpWU2NRSHRUYXNFQ2dZRUEwUHRyd1lQblNjcURzc0pmMkU3cQo5cDBaTHJ0S1pvTVI4NlFYN1ZvZDVGamhEOEdCS2U0aXZBNHZ4QmZQanBKVXBIZTB5M1FjMlhCcUVrMnRwMWtpClpxbjlQcGdIcWQycHlvSzhGSVdETm1ycGptOUU4WXZtQ3NoSENIQU04Z0JjQXRRbnI2TUxZTVZvanZFd3preDUKSjBOUlRqRzYreGwwSC9yNHU4ZlF3K3M9Ci0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K
 type: kubernetes.io/tls
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: example-tlsroute
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: example-tlsroute
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: example-tlsroute
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -88,8 +115,6 @@ spec:
     hostname: example-tlsroute.kong.example
     tls:
       mode: Passthrough
-      certificateRefs:
-      - name: example-tlsroute
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: TLSRoute
@@ -98,6 +123,7 @@ metadata:
 spec:
   parentRefs:
   - name: example-tlsroute
+    sectionName: tls
   hostnames:
   - example-tlsroute.kong.example
   rules:

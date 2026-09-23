@@ -942,6 +942,10 @@ test.samples: kustomize
 	@$(KUSTOMIZE) build config/crd | kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f -
 	@kubectl apply --server-side --force-conflicts --field-manager=kong-operator-tests -f charts/kong-operator/charts/gwapi-standard-crds/crds/gwapi-crds.yaml || true
 	@kubectl get crd -ojsonpath='{.items[*].metadata.name}' | xargs -n1 kubectl wait --for condition=established crd
+	# NOTE: the glob is intentionally non-recursive. Samples that need setup
+	# beyond a stock install (an extra CRD channel, a feature gate that is off
+	# by default) live in subdirectories such as config/samples/feature-gated
+	# and are skipped here. See that directory's README.md.
 	@set -e; \
 	for file in config/samples/*.yaml; do \
 		[ "$$(basename "$$file")" = "kustomization.yaml" ] && continue; \

@@ -1,6 +1,7 @@
-# NOTE The Gateway APIs are not yet available by default in Kubernetes.
-# Follow these instructions to install them before using this example:
-# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
+# Gateway API ReferenceGrant: an HTTPRoute in `default` routing to a Service in
+# the `http` namespace. Cross-namespace backendRefs are denied by default; the
+# grant lives in the target namespace and names who may reference into it.
+# Without it the route's ResolvedRefs condition turns False (RefNotPermitted).
 ---
 apiVersion: v1
 kind: Namespace
@@ -59,14 +60,35 @@ spec:
   - group: ""
     kind: Service
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway

@@ -1,3 +1,6 @@
+# Apply ingress.yaml first: it provides the IngressClass, DataPlane and
+# ControlPlane that serve the Ingresses below.
+#
 # Service A, Consumer 1 in Namespace Foo, Service B in Namespace Bar (KongPlugin)
 # With the original behavior, KIC provided no means for the Service in Bar to use the KongPlugin in Foo.
 # With the modified behavior, the Service in Bar can use namespace:plugin_name to request another
@@ -18,6 +21,16 @@
 # configuration, though it may make sense to choose one or the other based other resources in the from
 # namespace. Note that you can still vary configuration if you choose the consumer namespace, you just
 # need multiple KongPlugins to do so.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: pwuh
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: fwuh
 ---
 apiVersion: v1
 kind: Service
@@ -73,6 +86,7 @@ config:
   host: example.com
   port: 80
 ---
+apiVersion: gateway.networking.k8s.io/v1beta1
 kind: ReferenceGrant
 metadata:
   name: example
@@ -103,7 +117,7 @@ spec:
         app: httpbin
     spec:
       containers:
-      - image: docker.io/kennethreitz/httpbin
+      - image: kong/httpbin:0.1.0
         name: httpbin
         ports:
         - containerPort: 80
@@ -142,7 +156,7 @@ spec:
         app: httpbin
     spec:
       containers:
-      - image: docker.io/kennethreitz/httpbin
+      - image: kong/httpbin:0.1.0
         name: httpbin
         ports:
         - containerPort: 80

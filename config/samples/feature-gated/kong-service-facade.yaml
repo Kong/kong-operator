@@ -4,31 +4,23 @@
 #
 # To verify the example:
 #
-# 1. Install the KongServiceFacade CRD:
-#    $ kubectl apply -k "github.com/kong/kong-operator/config/crd/ingress-controller-incubator?ref=main"
+# 1. Install the KongServiceFacade CRD, which `make install.crds` does not include:
+#    $ kubectl apply --server-side -k config/crd/ingress-controller-incubator
 #
-# 2. Install the Kong Ingress Controller with KongServiceFacade feature gate enabled:
-#    $ helm upgrade --install kong -n kong --create-namespace --repo https://charts.konghq.com ingress \
-#     --set controller.ingressController.env.feature_gates=KongServiceFacade=true \
-#     --set controller.ingressController.image.repository=kong/nightly-ingress-controller \
-#     --set controller.ingressController.image.tag=2023-12-07 \
-#     --set controller.ingressController.image.effectiveSemver=3.1.0
+# 2. Apply this manifest. It brings its own DataPlane and ControlPlane, with the
+#    `KongServiceFacade` feature gate enabled (see this directory's README.md).
 #
-# 3. Apply the example manifest:
-#
-#    $ kubectl apply -f https://raw.githubusercontent.com/Kong/kong-operator/refs/heads/main/ingress-controller/examples/kong-service-facade.yaml
-#
-# 4. Wait for KongServiceFacades to be configured in Kong:
+# 3. Wait for KongServiceFacades to be configured in Kong:
 #
 #    $ kubectl wait --for=condition=Programmed=True kongservicefacade/svc-facade-alpha kongservicefacade/svc-facade-beta
 #
-# 5. Get Proxy's Service external IP:
+# 4. Get Proxy's Service external IP:
 #
-#    $ export PROXY_IP=$(kubectl get service -n kong kong-gateway-proxy -o=jsonpath='{.status.loadBalancer.ingress[0].ip}')
+#    $ export PROXY_IP=$(kubectl get svc -l gateway-operator.konghq.com/dataplane-service-type=ingress -o=jsonpath='{.items[0].status.loadBalancer.ingress[0].ip}')
 #    $ echo $PROXY_IP # To ensure that the variable is set.
 #    198.19.249.2
 #
-# 6. Verify that paths /alpha and /beta are secured with key-auth and basic-auth respectively (we're using httpie here):
+# 5. Verify that paths /alpha and /beta are secured with key-auth and basic-auth respectively (we're using httpie here):
 #
 #    $ http -h ${PROXY_IP}/alpha key:alice-password  # /alpha allows valid key.
 #    HTTP/1.1 200 OK
@@ -42,6 +34,48 @@
 #    HTTP/1.1 401 Unauthorized
 #    $ http -h ${PROXY_IP}/beta key:alice-password   # /beta doesn't allow valid key.
 #    HTTP/1.1 401 Unauthorized
+---
+apiVersion: networking.k8s.io/v1
+kind: IngressClass
+metadata:
+  name: kong
+spec:
+  controller: ingress-controllers.konghq.com/kong
+---
+apiVersion: gateway-operator.konghq.com/v1beta1
+kind: DataPlane
+metadata:
+  name: dataplane-service-facade
+  namespace: default
+spec:
+  deployment:
+    podTemplateSpec:
+      spec:
+        containers:
+        - name: proxy
+          # renovate: datasource=docker versioning=docker
+          image: kong/kong-gateway:3.16
+          readinessProbe:
+            initialDelaySeconds: 1
+            periodSeconds: 1
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: ControlPlane
+metadata:
+  name: controlplane-service-facade
+  namespace: default
+spec:
+  # Required when dataplane.type is ref, and only Ingress is supported in that mode.
+  ingressClass: kong
+  dataplane:
+    type: ref
+    ref:
+      name: dataplane-service-facade
+  featureGates:
+  # Off by default; without it the KongServiceFacade controller does not run
+  # and the facades below never reach Programmed.
+  - name: KongServiceFacade
+    state: enabled
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -149,6 +183,10 @@ spec:
 #
 # For basic-auth it sets up a KongConsumer `bob` that can be authenticated by
 # setting the `Authorization` header to `Basic <base64("bob:bob-password")>`.
+#
+# The `konghq.com/secret` label is required on credential Secrets: the operator
+# runs the ControlPlane with `--secret-label-selector=konghq.com/secret`, so
+# unlabelled Secrets are never ingested.
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
@@ -167,6 +205,7 @@ metadata:
     kubernetes.io/ingress.class: kong
   labels:
     konghq.com/credential: key-auth
+    konghq.com/secret: "true"
 type: Opaque
 stringData:
   key: "alice-password"
@@ -198,6 +237,7 @@ metadata:
     kubernetes.io/ingress.class: kong
   labels:
     konghq.com/credential: basic-auth
+    konghq.com/secret: "true"
 type: Opaque
 stringData:
   username: "bob"
