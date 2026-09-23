@@ -32,7 +32,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/source"
 {{- end}}
 
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 {{- if .ProgrammedCondition.UpdatesEnabled }}
@@ -110,6 +109,21 @@ func (r *{{.Kind}}Reconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
+// SetCommonFields sets the shared controller dependencies.
+func (r *{{.Kind}}Reconciler) SetCommonFields(
+	client client.Client,
+	scheme *runtime.Scheme,
+	log logr.Logger,
+	cacheSyncTimeout time.Duration,
+	changeNotifier *changenotifier.ChangeNotifier,
+) {
+	r.Client = client
+	r.Scheme = scheme
+	r.Log = log
+	r.CacheSyncTimeout = cacheSyncTimeout
+	r.ChangeNotifier = changeNotifier
+}
+
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}},verbs={{ .RBACVerbs | join ";" }}
 {{- if .NeedsStatusPermissions}}
 //+kubebuilder:rbac:groups={{.Group}},resources={{.Plural}}/status,verbs=get;update;patch
@@ -148,14 +162,40 @@ func (r *{{.Kind}}Reconciler) Reconcile(ctx context.Context, req ctrl.Request) (
 	}
 
 	parent := types.NamespacedName{}
-	if parentRef := obj.GetParentRef(); parentRef.Type == commonv1alpha1.ObjectRefTypeNamespacedRef {
+	targetsOnPrem := false
+	if ref := obj.GetAIGatewayRef(); ref.TargetsOnPremAIGateway() && ref.NamespacedRef != nil {
+		targetsOnPrem = true
 		parent.Namespace = obj.Namespace
-		if parentRef.NamespacedRef.Namespace != nil {
-			parent.Namespace = *parentRef.NamespacedRef.Namespace
+		if ref.NamespacedRef.Namespace != nil {
+			parent.Namespace = *ref.NamespacedRef.Namespace
 		}
-		parent.Name = parentRef.NamespacedRef.Name
+		parent.Name = ref.NamespacedRef.Name
 	}
-	r.Cache[req.NamespacedName] = parent
+
+	previous, hadPrevious := r.Cache[req.NamespacedName]
+	if targetsOnPrem {
+		if hadPrevious && previous != parent {
+			// The entity was repointed at a different OnPremAIGateway: notify the
+			// previously referenced one so it re-renders without the entity.
+			if r.ChangeNotifier != nil {
+				r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
+			}
+		}
+		r.Cache[req.NamespacedName] = parent
+	} else {
+		if hadPrevious {
+			// The entity no longer targets an OnPremAIGateway (it was deleted or
+			// repointed at a KonnectAIGateway): notify the previously referenced
+			// gateway so it re-renders without the entity, then forget it.
+			delete(r.Cache, req.NamespacedName)
+			if r.ChangeNotifier != nil {
+				r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
+			}
+		}
+		// Entities referencing a KonnectAIGateway are owned by the Konnect
+		// reconciler, not the on-prem machinery.
+		return ctrl.Result{}, nil
+	}
 
 	if r.ChangeNotifier != nil {
 		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)

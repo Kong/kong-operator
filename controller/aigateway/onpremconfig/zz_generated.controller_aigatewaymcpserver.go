@@ -46,11 +46,11 @@ import (
 )
 
 // -----------------------------------------------------------------------------
-// aiconfigurationv1alpha1 AIGatewayModel - Reconciler
+// aiconfigurationv1alpha1 AIGatewayMCPServer - Reconciler
 // -----------------------------------------------------------------------------
 
-// AIGatewayModelReconciler reconciles AIGatewayModel resources
-type AIGatewayModelReconciler struct {
+// AIGatewayMCPServerReconciler reconciles AIGatewayMCPServer resources
+type AIGatewayMCPServerReconciler struct {
 	client.Client
 
 	Log              logr.Logger
@@ -62,13 +62,13 @@ type AIGatewayModelReconciler struct {
 	Cache            map[types.NamespacedName]types.NamespacedName
 }
 
-var _ controllers.Reconciler = &AIGatewayModelReconciler{}
+var _ controllers.Reconciler = &AIGatewayMCPServerReconciler{}
 
 // SetupWithManager sets up the controller with the Manager.
-func (r *AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
+func (r *AIGatewayMCPServerReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	blder := ctrl.NewControllerManagedBy(mgr).
 		// set the controller name
-		Named("aiconfigurationv1alpha1AIGatewayModel").
+		Named("aiconfigurationv1alpha1AIGatewayMCPServer").
 		WithOptions(controller.Options{
 			LogConstructor: func(_ *reconcile.Request) logr.Logger {
 				return r.Log
@@ -82,7 +82,7 @@ func (r *AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 				r.StatusQueue.Subscribe(schema.GroupVersionKind{
 					Group:   "aiconfiguration.konghq.com",
 					Version: "v1alpha1",
-					Kind:    "AIGatewayModel",
+					Kind:    "AIGatewayMCPServer",
 				}),
 				&handler.EnqueueRequestForObject{},
 			),
@@ -90,7 +90,7 @@ func (r *AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	}
 	return blder.
 		For(
-			&aiconfigurationv1alpha1.AIGatewayModel{},
+			&aiconfigurationv1alpha1.AIGatewayMCPServer{},
 			builder.WithPredicates(
 				GenerationChangedPredicate{},
 			),
@@ -99,12 +99,12 @@ func (r *AIGatewayModelReconciler) SetupWithManager(mgr ctrl.Manager) error {
 }
 
 // SetLogger sets the logger.
-func (r *AIGatewayModelReconciler) SetLogger(l logr.Logger) {
+func (r *AIGatewayMCPServerReconciler) SetLogger(l logr.Logger) {
 	r.Log = l
 }
 
 // SetCommonFields sets the shared controller dependencies.
-func (r *AIGatewayModelReconciler) SetCommonFields(
+func (r *AIGatewayMCPServerReconciler) SetCommonFields(
 	client client.Client,
 	scheme *runtime.Scheme,
 	log logr.Logger,
@@ -118,17 +118,17 @@ func (r *AIGatewayModelReconciler) SetCommonFields(
 	r.ChangeNotifier = changeNotifier
 }
 
-//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymodels,verbs=get;list;watch
-//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymodels/status,verbs=get;update;patch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymcpservers,verbs=get;list;watch
+//+kubebuilder:rbac:groups=aiconfiguration.konghq.com,resources=aigatewaymcpservers/status,verbs=get;update;patch
 
 // Reconcile processes the watched objects
-func (r *AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
+func (r *AIGatewayMCPServerReconciler) Reconcile(ctx context.Context, req ctrl.Request) (ctrl.Result, error) {
 	if r.Cache == nil {
 		r.Cache = make(map[types.NamespacedName]types.NamespacedName)
 	}
-	obj := new(aiconfigurationv1alpha1.AIGatewayModel)
+	obj := new(aiconfigurationv1alpha1.AIGatewayMCPServer)
 	logger := r.Log.
-		WithValues("aiconfigurationv1alpha1AIGatewayModel", req.NamespacedName).
+		WithValues("aiconfigurationv1alpha1AIGatewayMCPServer", req.NamespacedName).
 		WithValues("namespace", req.Namespace).
 		WithValues("name", req.Name).
 		V(logging.DebugLevel.Value())
@@ -142,7 +142,7 @@ func (r *AIGatewayModelReconciler) Reconcile(ctx context.Context, req ctrl.Reque
 			if parent, ok := r.Cache[req.NamespacedName]; ok {
 				obj.Namespace = req.Namespace
 				obj.Name = req.Name
-				obj.Kind = "AIGatewayModel"
+				obj.Kind = "AIGatewayMCPServer"
 				if r.ChangeNotifier != nil {
 					r.ChangeNotifier.NotifyChange(ctx, &parent, obj)
 				}

@@ -33,23 +33,21 @@ import (
 // BuildDocument assembles the aigw.Document for the given OnPremAIGateway: every AIGatewayModel
 // pointing at it, translated via AIGatewayModel.ToAIGWModel.
 //
-// This lists only AIGatewayModel today. The other nine aiconfiguration entity kinds join here as
+// This lists only AIGatewayModel today. The other aiconfiguration entity kinds join here as
 // they gain their own ToAIGW* conversion; until then the rendered Document (and the dbless
 // payload built from it) has dangling model_providers/policies/auth_strategies references and
 // ConvertDocumentToDBLessYAML reports them as warnings, not errors.
 //
-// Reusing IndexFieldAIGatewayModelOnKonnectAIGatewayRef - its extractor
-// (internal/utils/index/zz_generated_aigatewaymodel.go) keys purely on namespace/name; it
-// doesn't check group or kind. A KonnectAIGateway with the same namespace/name as this
-// OnPremAIGateway would collide. Resolves once aiGatewayRef gets group/kind,
-// until then the index name is a misnomer for this caller.
+// The OnOnPremAIGatewayRef index extractor only matches entities whose aiGatewayRef resolves
+// to an OnPremAIGateway, so a KonnectAIGateway sharing namespace/name with this
+// OnPremAIGateway never collides.
 //
 // NOTE: This will either stay here or be moved to a separate package where translation
 // (building the document) will happen asynchronously as it's done for ingress-controller.
 func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedName) (*aigw.Document, error) {
 	var list aiconfigurationv1alpha1.AIGatewayModelList
 	if err := cl.List(ctx, &list, client.MatchingFields{
-		index.IndexFieldAIGatewayModelOnKonnectAIGatewayRef: gw.String(),
+		index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef: gw.String(),
 	}); err != nil {
 		return nil, fmt.Errorf("listing AIGatewayModels for %s: %w", gw, err)
 	}

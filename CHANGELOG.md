@@ -181,6 +181,10 @@
   the cluster's IP family from the `default/kubernetes` Service at startup. If
   detection failed, please set `--ip-family` manually.
   [#5499](https://github.com/Kong/kong-operator/pull/5499)
+- AI Gateway configuration entities (`AIGatewayModel`, `AIGatewayPolicy`,
+  `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds) target an
+  `OnPremAIGateway` via `spec.aiGatewayRef`.
+  [#5834](https://github.com/Kong/kong-operator/pull/5834)
 
 ### Breaking changes
 

@@ -121,11 +121,25 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 			},
 			{
-				Name: "OnPremAIGateway kind with default (konnect) group is rejected",
+				Name: "OnPremAIGateway kind without group is accepted (group resolves to aigateway.konghq.com)",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
 						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "OnPremAIGateway kind with explicit konnect.konghq.com group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupKonnect,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},

@@ -37,6 +37,7 @@ func aiGatewayModelFixture(name string) *aiconfigurationv1alpha1.AIGatewayModel 
 		Name: name, Namespace: "default",
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{

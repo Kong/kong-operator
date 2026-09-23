@@ -59,7 +59,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -92,7 +91,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   access:
@@ -514,7 +513,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -547,7 +545,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   key-auth:
@@ -989,7 +987,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1022,7 +1019,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   cert:
@@ -1207,7 +1204,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1240,7 +1236,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   cert:
@@ -1762,7 +1758,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1795,7 +1790,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   displayName:
@@ -1967,7 +1962,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -2000,7 +1994,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   customID:
@@ -2194,7 +2188,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -2227,7 +2220,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   cert:
@@ -2400,7 +2393,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -2433,7 +2425,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   conversion-listener:
@@ -5627,7 +5619,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -5660,7 +5651,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   anthropic:
@@ -8669,7 +8660,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -8702,7 +8692,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   api:
@@ -16597,7 +16587,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -16630,7 +16619,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   condition:
@@ -16838,7 +16827,6 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
-                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -16871,7 +16859,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
+                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
               apiSpec:
                 properties:
                   certificate:
@@ -64547,31 +64535,39 @@ rules:
   - aiconfiguration.konghq.com
   resources:
   - aigatewayagents/finalizers
-  - aigatewayagents/status
   - aigatewayauthstrategies/finalizers
-  - aigatewayauthstrategies/status
   - aigatewaycacertificates/finalizers
-  - aigatewaycacertificates/status
   - aigatewaycertificates/finalizers
-  - aigatewaycertificates/status
   - aigatewayconsumercredentials/finalizers
   - aigatewayconsumercredentials/status
   - aigatewayconsumergroups/finalizers
-  - aigatewayconsumergroups/status
   - aigatewayconsumers/finalizers
-  - aigatewayconsumers/status
   - aigatewaydataplanecertificates/finalizers
-  - aigatewaydataplanecertificates/status
   - aigatewaymcpservers/finalizers
-  - aigatewaymcpservers/status
   - aigatewaymodelproviders/finalizers
-  - aigatewaymodelproviders/status
   - aigatewaymodels/finalizers
   - aigatewaypolicies/finalizers
-  - aigatewaypolicies/status
   - aigatewaysnis/finalizers
+  verbs:
+  - patch
+  - update
+- apiGroups:
+  - aiconfiguration.konghq.com
+  resources:
+  - aigatewayagents/status
+  - aigatewayauthstrategies/status
+  - aigatewaycacertificates/status
+  - aigatewaycertificates/status
+  - aigatewayconsumergroups/status
+  - aigatewayconsumers/status
+  - aigatewaydataplanecertificates/status
+  - aigatewaymcpservers/status
+  - aigatewaymodelproviders/status
+  - aigatewaymodels/status
+  - aigatewaypolicies/status
   - aigatewaysnis/status
   verbs:
+  - get
   - patch
   - update
 - apiGroups:
@@ -64586,14 +64582,6 @@ rules:
   - patch
   - update
   - watch
-- apiGroups:
-  - aiconfiguration.konghq.com
-  resources:
-  - aigatewaymodels/status
-  verbs:
-  - get
-  - patch
-  - update
 - apiGroups:
   - aigateway.konghq.com
   resources:

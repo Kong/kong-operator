@@ -391,6 +391,10 @@ import (
 const (
 	// IndexField{{.EntityName}}On{{.ParentEntityName}}Ref is the index field for {{.EntityName}} -> {{.ParentEntityName}}.
 	IndexField{{.EntityName}}On{{.ParentEntityName}}Ref = "{{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref"
+	{{- if .ParentRefCustomTypeName}}
+	// IndexField{{.EntityName}}OnOnPremAIGatewayRef is the index field for {{.EntityName}} -> OnPremAIGateway.
+	IndexField{{.EntityName}}OnOnPremAIGatewayRef = "{{.EntityNameLowerCamel}}OnOnPremAIGatewayRef"
+	{{- end}}
 	{{- range .CrossRefs}}
 	// IndexField{{$.EntityName}}On{{.RefKind}}Ref is the index field for {{$.EntityName}} -> {{.RefKind}}.
 	IndexField{{$.EntityName}}On{{.RefKind}}Ref = "{{$.EntityNameLowerCamel}}On{{.RefKind}}Ref"
@@ -405,6 +409,13 @@ func OptionsFor{{.EntityName}}() []Option {
 			Field:          IndexField{{.EntityName}}On{{.ParentEntityName}}Ref,
 			ExtractValueFn: {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref,
 		},
+		{{- if .ParentRefCustomTypeName}}
+		{
+			Object:         &{{.APIGroupPackageAlias}}.{{.EntityName}}{},
+			Field:          IndexField{{.EntityName}}OnOnPremAIGatewayRef,
+			ExtractValueFn: {{.EntityNameLowerCamel}}OnOnPremAIGatewayRef,
+		},
+		{{- end}}
 		{{- range .CrossRefs}}
 		{
 			Object:         &{{$.APIGroupPackageAlias}}.{{$.EntityName}}{},
@@ -423,6 +434,13 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef == nil {
 		return nil
 	}
+	{{- if .ParentRefCustomTypeName}}
+	// Only entities targeting a KonnectAIGateway are visible to the Konnect
+	// reconciler: on-prem-targeted ones are indexed separately.
+	if !ent.Spec.{{.ParentRefFieldName}}.TargetsKonnectAIGateway() {
+		return nil
+	}
+	{{- end}}
 
 	refNamespace := ent.GetNamespace()
 	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != nil && *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != "" {
@@ -431,6 +449,29 @@ func {{.EntityNameLowerCamel}}On{{.ParentEntityName}}Ref(object client.Object) [
 
 	return []string{refNamespace + "/" + ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
 }
+{{- if .ParentRefCustomTypeName}}
+func {{.EntityNameLowerCamel}}OnOnPremAIGatewayRef(object client.Object) []string {
+	ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+	if !ok {
+		return nil
+	}
+	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting an OnPremAIGateway are visible to the on-prem
+	// reconciler: Konnect-targeted ones stay in the KonnectAIGateway index.
+	if !ent.Spec.{{.ParentRefFieldName}}.TargetsOnPremAIGateway() {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != nil && *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.{{.ParentRefFieldName}}.NamespacedRef.Name}
+}
+{{- end}}
 {{range .CrossRefs}}
 func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string {
 	ent, ok := object.(*{{$.APIGroupPackageAlias}}.{{$.EntityName}})
@@ -800,18 +841,25 @@ func (g *Generator) generateIndex(metadata reconcilerEntityMetadata, rc *config.
 
 	var buf strings.Builder
 	data := struct {
-		EntityName           string
-		EntityNameLowerCamel string
-		ParentEntityName     string
-		ParentRefFieldName   string
-		APIGroupPackagePath  string
-		APIGroupPackageAlias string
-		CrossRefs            []crossRefWatchData
+		EntityName              string
+		EntityNameLowerCamel    string
+		ParentEntityName        string
+		ParentRefFieldName      string
+		ParentRefCustomTypeName string
+		APIGroupPackagePath     string
+		APIGroupPackageAlias    string
+		CrossRefs               []crossRefWatchData
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
 		ParentEntityName:     metadata.ParentEntityName,
 		ParentRefFieldName:   metadata.ParentRefFieldName,
+		ParentRefCustomTypeName: func() string {
+			if rc != nil && rc.ParentRef != nil {
+				return rc.ParentRef.TypeName
+			}
+			return ""
+		}(),
 		APIGroupPackagePath:  metadata.APIGroupPackagePath,
 		APIGroupPackageAlias: metadata.APIGroupPackageAlias,
 		CrossRefs:            crossRefs,
