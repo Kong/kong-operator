@@ -13,9 +13,23 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
-
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/builder"
 )
+
+// endpointPort returns a discoveryv1.EndpointPort with the given port and name.
+// An empty name produces an unnamed port (its Name stays nil).
+func endpointPort(port int32, name string) discoveryv1.EndpointPort {
+	ep := discoveryv1.EndpointPort{Port: new(port)}
+	if name != "" {
+		ep.Name = new(name)
+	}
+	return ep
+}
+
+// endpointPorts returns the Admin API port (8444) EndpointPort with the given
+// name in a one-element slice. An empty name produces an unnamed port.
+func endpointPorts(name string) []discoveryv1.EndpointPort {
+	return []discoveryv1.EndpointPort{endpointPort(8444, name)}
+}
 
 func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 	const (
@@ -63,7 +77,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -91,7 +105,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -120,7 +134,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -148,7 +162,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -178,7 +192,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want:      sets.New[DiscoveredAdminAPI](),
@@ -214,7 +228,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames:   sets.New("admin"),
 			expectedErr: errors.New("service name is empty for an endpoint with TargetRef ns/pod-1"),
@@ -250,7 +264,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want: sets.New(
@@ -303,7 +317,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-3"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("non-admin-port-name").IntoSlice(),
+				Ports: endpointPorts("non-admin-port-name"),
 			},
 			want:      sets.New[DiscoveredAdminAPI](),
 			portNames: sets.New("admin"),
@@ -323,7 +337,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: testPodReference(namespaceName, "pod-1"),
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).IntoSlice(),
+				Ports: endpointPorts(""),
 			},
 			portNames: sets.New("admin"),
 			want:      sets.New[DiscoveredAdminAPI](),
@@ -344,8 +358,8 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 					},
 				},
 				Ports: []discoveryv1.EndpointPort{
-					builder.NewEndpointPort(8443).WithName("admin-tls").Build(),
-					builder.NewEndpointPort(8444).WithName("admin").Build(),
+					endpointPort(8443, "admin-tls"),
+					endpointPort(8444, "admin"),
 				},
 			},
 			portNames: sets.New("admin", "admin-tls"),
@@ -383,7 +397,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: nil,
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want:      sets.New[DiscoveredAdminAPI](),
@@ -403,7 +417,7 @@ func TestDiscoverer_AddressesFromEndpointSlice(t *testing.T) {
 						TargetRef: &corev1.ObjectReference{Kind: "Node", Namespace: namespaceName, Name: "node-1"},
 					},
 				},
-				Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+				Ports: endpointPorts("admin"),
 			},
 			portNames: sets.New("admin"),
 			want:      sets.New[DiscoveredAdminAPI](),
@@ -477,7 +491,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+							Ports: endpointPorts("admin"),
 						},
 					},
 				},
@@ -496,7 +510,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									TargetRef: testPodReference(namespaceName, "pod-2"),
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+							Ports: endpointPorts("admin"),
 						},
 					},
 				},
@@ -515,7 +529,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									TargetRef: testPodReference(namespaceName, "pod-3"),
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+							Ports: endpointPorts("admin"),
 						},
 					},
 				},
@@ -561,7 +575,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("non-admin-port").IntoSlice(),
+							Ports: endpointPorts("non-admin-port"),
 						},
 					},
 				},
@@ -589,7 +603,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									},
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+							Ports: endpointPorts("admin"),
 						},
 					},
 				},
@@ -618,7 +632,7 @@ func TestDiscoverer_GetAdminAPIsForService(t *testing.T) {
 									TargetRef: testPodReference(namespaceName, "pod-1"),
 								},
 							},
-							Ports: builder.NewEndpointPort(8444).WithName("admin").IntoSlice(),
+							Ports: endpointPorts("admin"),
 						},
 					},
 				},

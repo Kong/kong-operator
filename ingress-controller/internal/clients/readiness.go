@@ -11,6 +11,7 @@ import (
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // ReadinessCheckResult represents the result of a readiness check.
@@ -18,7 +19,7 @@ type ReadinessCheckResult struct {
 	// ClientsTurnedReady are the clients that were pending and are now ready to be used.
 	ClientsTurnedReady []*adminapi.Client
 	// ClientsTurnedPending are the clients that were ready and are now pending to be created.
-	ClientsTurnedPending []adminapi.DiscoveredAdminAPI
+	ClientsTurnedPending []adminapidiscovery.DiscoveredAdminAPI
 }
 
 // HasChanges returns true if there are any changes in the readiness check result.
@@ -38,7 +39,7 @@ type ReadinessChecker interface {
 	CheckReadiness(
 		ctx context.Context,
 		alreadyCreatedClients []AlreadyCreatedClient,
-		pendingClients []adminapi.DiscoveredAdminAPI,
+		pendingClients []adminapidiscovery.DiscoveredAdminAPI,
 	) ReadinessCheckResult
 }
 
@@ -67,14 +68,14 @@ func NewDefaultReadinessChecker(factory ClientFactory, timeout time.Duration, lo
 func (c DefaultReadinessChecker) CheckReadiness(
 	ctx context.Context,
 	readyClients []AlreadyCreatedClient,
-	pendingClients []adminapi.DiscoveredAdminAPI,
+	pendingClients []adminapidiscovery.DiscoveredAdminAPI,
 ) ReadinessCheckResult {
 	var (
 		turnedReadyCh   = make(chan []*adminapi.Client)
-		turnedPendingCh = make(chan []adminapi.DiscoveredAdminAPI)
+		turnedPendingCh = make(chan []adminapidiscovery.DiscoveredAdminAPI)
 	)
 
-	go func(ctx context.Context, pendingClients []adminapi.DiscoveredAdminAPI) {
+	go func(ctx context.Context, pendingClients []adminapidiscovery.DiscoveredAdminAPI) {
 		turnedReadyCh <- c.checkPendingGatewayClients(ctx, pendingClients)
 		close(turnedReadyCh)
 	}(ctx, pendingClients)
@@ -91,14 +92,14 @@ func (c DefaultReadinessChecker) CheckReadiness(
 }
 
 // checkPendingGatewayClients checks if the pending clients are ready to be used and returns the ones that are.
-func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context, lastPending []adminapi.DiscoveredAdminAPI) (turnedReady []*adminapi.Client) {
+func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context, lastPending []adminapidiscovery.DiscoveredAdminAPI) (turnedReady []*adminapi.Client) {
 	var (
 		wg sync.WaitGroup
 		ch = make(chan *adminapi.Client)
 	)
 	for _, adminAPI := range lastPending {
 		wg.Add(1)
-		go func(adminAPI adminapi.DiscoveredAdminAPI) {
+		go func(adminAPI adminapidiscovery.DiscoveredAdminAPI) {
 			defer wg.Done()
 			if client := c.checkPendingClient(ctx, adminAPI); client != nil {
 				select {
@@ -126,7 +127,7 @@ func (c DefaultReadinessChecker) checkPendingGatewayClients(ctx context.Context,
 // nil is returned.
 func (c DefaultReadinessChecker) checkPendingClient(
 	ctx context.Context,
-	pendingClient adminapi.DiscoveredAdminAPI,
+	pendingClient adminapidiscovery.DiscoveredAdminAPI,
 ) (client *adminapi.Client) {
 	ctx, cancel := context.WithTimeout(ctx, c.readinessCheckTimeout)
 	defer cancel()
@@ -153,10 +154,10 @@ func (c DefaultReadinessChecker) checkPendingClient(
 
 // checkAlreadyExistingClients checks if the already existing clients are still ready to be used and returns the ones
 // that are not.
-func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, alreadyCreatedClients []AlreadyCreatedClient) (turnedPending []adminapi.DiscoveredAdminAPI) {
+func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context, alreadyCreatedClients []AlreadyCreatedClient) (turnedPending []adminapidiscovery.DiscoveredAdminAPI) {
 	var (
 		wg          sync.WaitGroup
-		pendingChan = make(chan adminapi.DiscoveredAdminAPI)
+		pendingChan = make(chan adminapidiscovery.DiscoveredAdminAPI)
 	)
 
 	for _, client := range alreadyCreatedClients {
@@ -178,7 +179,7 @@ func (c DefaultReadinessChecker) checkAlreadyExistingClients(ctx context.Context
 				}
 				select {
 				case <-ctx.Done():
-				case pendingChan <- adminapi.DiscoveredAdminAPI{
+				case pendingChan <- adminapidiscovery.DiscoveredAdminAPI{
 					Address:       client.BaseRootURL(),
 					TLSServerName: client.TLSServerName(),
 					PodRef:        podRef,

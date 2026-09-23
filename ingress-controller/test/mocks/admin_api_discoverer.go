@@ -9,19 +9,19 @@ import (
 	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
-// AdminAPIDiscoverer is a mock implementation of adminapi.Discoverer.
+// AdminAPIDiscoverer is a mock implementation of adminapidiscovery.Discoverer.
 type AdminAPIDiscoverer struct {
-	apisToReturn sets.Set[adminapi.DiscoveredAdminAPI]
+	apisToReturn sets.Set[adminapidiscovery.DiscoveredAdminAPI]
 	errToReturn  error
 
 	getAdminAPIsForServiceCalledTimes     atomic.Int32
 	adminAPIsFromEndpointSliceCalledTimes atomic.Int32
 }
 
-func NewAdminAPIDiscoverer(apisToReturn sets.Set[adminapi.DiscoveredAdminAPI], errToReturn error) *AdminAPIDiscoverer {
+func NewAdminAPIDiscoverer(apisToReturn sets.Set[adminapidiscovery.DiscoveredAdminAPI], errToReturn error) *AdminAPIDiscoverer {
 	return &AdminAPIDiscoverer{
 		apisToReturn: apisToReturn,
 		errToReturn:  errToReturn,
@@ -29,7 +29,7 @@ func NewAdminAPIDiscoverer(apisToReturn sets.Set[adminapi.DiscoveredAdminAPI], e
 }
 
 func (m *AdminAPIDiscoverer) GetAdminAPIsForService(context.Context, client.Client, k8stypes.NamespacedName) (
-	sets.Set[adminapi.DiscoveredAdminAPI],
+	sets.Set[adminapidiscovery.DiscoveredAdminAPI],
 	error,
 ) {
 	m.getAdminAPIsForServiceCalledTimes.Add(1)
@@ -40,7 +40,7 @@ func (m *AdminAPIDiscoverer) GetAdminAPIsForService(context.Context, client.Clie
 }
 
 func (m *AdminAPIDiscoverer) AdminAPIsFromEndpointSlice(discoveryv1.EndpointSlice) (
-	sets.Set[adminapi.DiscoveredAdminAPI],
+	sets.Set[adminapidiscovery.DiscoveredAdminAPI],
 	error,
 ) {
 	m.adminAPIsFromEndpointSliceCalledTimes.Add(1)

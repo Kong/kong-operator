@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // AdminAPIClientFactory is a mock implementation of adminapi.ClientFactory.
@@ -20,7 +21,7 @@ func NewAdminAPIClientFactory(errorsToReturn map[string]error) *AdminAPIClientFa
 	}
 }
 
-func (m *AdminAPIClientFactory) CreateAdminAPIClient(_ context.Context, api adminapi.DiscoveredAdminAPI) (*adminapi.Client, error) {
+func (m *AdminAPIClientFactory) CreateAdminAPIClient(_ context.Context, api adminapidiscovery.DiscoveredAdminAPI) (*adminapi.Client, error) {
 	err, ok := m.errorsToReturn[api.Address]
 	if !ok {
 		return adminapi.NewTestClient(api.Address)

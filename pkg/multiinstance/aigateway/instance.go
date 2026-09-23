@@ -6,21 +6,26 @@ import (
 	"encoding/hex"
 	"fmt"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrlmetricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
 
+	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	aigwonpremconfig "github.com/kong/kong-operator/v2/controller/aigateway/onpremconfig"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
+	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/changenotifier"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway/translator"
 	"github.com/kong/kong-operator/v2/pkg/multiinstance/instances"
@@ -52,6 +57,11 @@ type Env struct {
 
 	// CacheSyncTimeout is the cache sync timeout for the instance's controllers.
 	CacheSyncTimeout time.Duration
+
+	// GatewayNN is the reference to the OnPremAIGateway resource the instance
+	// serves. It is used to discover the AIGatewayDataPlanes referencing the
+	// gateway and their Admin API endpoints.
+	GatewayNN types.NamespacedName
 }
 
 // Instance is a single on-prem AI Gateway control plane instance. It runs its own
@@ -66,6 +76,13 @@ type Instance struct {
 	cn     *changenotifier.ChangeNotifier
 	// client is the instance's own manager client, set in Run once the manager is built.
 	client client.Client
+
+	// adminAPIsMu guards adminAPIs.
+	adminAPIsMu sync.RWMutex
+	// adminAPIs holds the Admin API endpoints discovered for the AIGatewayDataPlanes
+	// referencing the instance's OnPremAIGateway. They are kept up to date by the
+	// AdminAPIEndpointsReconciler running on the instance's own manager.
+	adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]
 }
 
 var _ instances.Instance = &Instance{}
@@ -116,6 +133,22 @@ func (i *Instance) DiagnosticsHandler() http.Handler {
 	return nil
 }
 
+// setAdminAPIs stores the Admin API endpoints discovered for the AIGatewayDataPlanes
+// referencing the instance's OnPremAIGateway.
+func (i *Instance) setAdminAPIs(adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]) {
+	i.adminAPIsMu.Lock()
+	defer i.adminAPIsMu.Unlock()
+	i.adminAPIs = adminAPIs
+}
+
+// AdminAPIs returns the Admin API endpoints discovered for the AIGatewayDataPlanes
+// referencing the instance's OnPremAIGateway.
+func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
+	i.adminAPIsMu.RLock()
+	defer i.adminAPIsMu.RUnlock()
+	return i.adminAPIs
+}
+
 // newCtrlManager builds the instance's own lightweight controller-runtime manager.
 func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 	// ponytail: every instance watches all AIGatewayModels with its own informers, unscoped.
@@ -151,6 +184,9 @@ func (i *Instance) sendConfig(
 	if err != nil {
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
+	// TODO: https://github.com/Kong/kong-operator/issues/5401
+	// push the payload to the Admin API endpoints discovered for this gateway's
+	// data planes (see Instance.AdminAPIs, populated by AdminAPIEndpointsReconciler).
 	_ = payload
 
 	for _, w := range warnings {
@@ -238,6 +274,36 @@ func (i *Instance) Run(ctx context.Context) error {
 		return fmt.Errorf("setting up configuration-entity controllers: %w", err)
 	}
 	i.client = mgr.GetClient()
+
+	// The Admin API endpoints discovery controller discovers the Admin API endpoints of
+	// the AIGatewayDataPlanes referencing this instance's OnPremAIGateway, so that the
+	// rendered configuration can be pushed to them.
+	discoverer, err := adminapi.NewDiscoverer(sets.New(consts.DataPlaneAdminServicePortName))
+	if err != nil {
+		return fmt.Errorf("creating Admin API endpoints discoverer: %w", err)
+	}
+	if err := (&AdminAPIEndpointsReconciler{
+		Client:     mgr.GetClient(),
+		GatewayNN:  i.env.GatewayNN,
+		Discoverer: discoverer,
+		Log:        i.logger.WithName(ControllerNameAdminAPIEndpoints),
+		OnDiscovery: func(ctx context.Context, adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]) {
+			i.setAdminAPIs(adminAPIs)
+			if adminAPIs.Len() == 0 {
+				// No endpoints discovered: there is nothing to (re)configure.
+				return
+			}
+			// Notify the sync loop so the rendered configuration gets (re)pushed to the
+			// discovered endpoints. The notified object is only used for logging by the
+			// sync loop.
+			i.cn.NotifyChange(ctx, &i.env.GatewayNN, &aigatewayv1alpha1.OnPremAIGateway{
+				Namespace: i.env.GatewayNN.Namespace,
+				Name:      i.env.GatewayNN.Name,
+			})
+		},
+	}).SetupWithManager(mgr); err != nil {
+		return fmt.Errorf("setting up Admin API endpoints discovery controller: %w", err)
+	}
 
 	mgrErrCh := make(chan error, 1)
 	go func() {
