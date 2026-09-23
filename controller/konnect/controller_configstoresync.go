@@ -137,6 +137,9 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	if updated, res, err := patch.WithFinalizer(ctx, r.Client, sync, KonnectCleanupFinalizer); err != nil || updated || !res.IsZero() {
 		return res, err
 	}
+	// A removed entry may remain in the store if cleanup is blocked, but its
+	// reference is no longer advertised, even if validation stops this pass.
+	sync.Status.References = referencesForDesiredEntries(sync.Status.References, configstoresync.ResolveEntries(sync))
 
 	// 1. Validate the Config Store reference.
 	res, store, stop, err := r.validateConfigStoreRef(ctx, sync, old)
@@ -339,20 +342,20 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	sync.Status.Entries = retainedEntryStatuses(sync.Status.Entries, entries, pendingCleanup)
 	if len(entries)+len(pendingCleanup) > konnectConfigStoreSyncMaxStatusEntries {
 		var entriesSynced int32
+		var references []konnectv1alpha1.KonnectConfigStoreSyncReference
 		for _, ev := range values {
 			if _, lost := keyConflicts[ev.resolved.StoreKey]; lost {
 				continue
 			}
 			if prev := findEntryStatus(sync.Status.Entries, ev.resolved.StoreKey); prev != nil && prev.Hash == ev.hash {
 				entriesSynced++
+				references = append(references, configstoresync.ReferenceSuffixes(ev.resolved)...)
 			}
 		}
 		sync.Status.EntriesSynced = entriesSynced
-		sync.Status.References = referencesWithoutKeyConflicts(
-			retainedReferences(sync.Status.References, sync.Status.Entries),
-			entries,
-			keyConflicts,
-		)
+		// Only publish desired entries last synced to the current value. Old
+		// entries awaiting cleanup still serve, but no longer rotate.
+		sync.Status.References = references
 		message := fmt.Sprintf(
 			"%d desired entries plus %d entries awaiting cleanup exceed the status capacity of %d; remove references to old entries before adding more",
 			len(entries), len(pendingCleanup), konnectConfigStoreSyncMaxStatusEntries,
@@ -474,7 +477,7 @@ func (r *KonnectConfigStoreSyncReconciler) reconcile(
 	sync.Status.References = references
 
 	if len(pruneBlocked) > 0 {
-		message := fmt.Sprintf("store entries removed from the spec are still referenced by Konnect configuration: %s",
+		message := fmt.Sprintf("store entries removed from the spec are still referenced by Konnect configuration and no longer updated from the Secret: %s",
 			strings.Join(pruneBlocked, ", "))
 		r.setConditionSynced(sync, metav1.ConditionFalse,
 			konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonEntryInUse, message)
@@ -538,21 +541,23 @@ func retainedEntryStatuses(
 	return append(retained, pendingCleanup...)
 }
 
-func retainedReferences(
+func referencesForDesiredEntries(
 	references []konnectv1alpha1.KonnectConfigStoreSyncReference,
-	status []konnectv1alpha1.KonnectConfigStoreSyncEntryStatus,
+	entries []configstoresync.ResolvedEntry,
 ) []konnectv1alpha1.KonnectConfigStoreSyncReference {
-	keys := make(map[string]struct{}, len(status))
-	for _, entryStatus := range status {
-		keys[entryStatus.StoreKey] = struct{}{}
+	if len(references) == 0 {
+		return references
+	}
+	desiredSuffixes := make(map[string]struct{}, len(entries))
+	for _, entry := range entries {
+		for _, reference := range configstoresync.ReferenceSuffixes(entry) {
+			desiredSuffixes[reference.Suffix] = struct{}{}
+		}
 	}
 	retained := make([]konnectv1alpha1.KonnectConfigStoreSyncReference, 0, len(references))
 	for _, reference := range references {
-		for key := range keys {
-			if reference.Suffix == key || strings.HasPrefix(reference.Suffix, key+"/") {
-				retained = append(retained, reference)
-				break
-			}
+		if _, desired := desiredSuffixes[reference.Suffix]; desired {
+			retained = append(retained, reference)
 		}
 	}
 	return retained

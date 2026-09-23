@@ -193,7 +193,10 @@ type KonnectConfigStoreSyncCombined struct {
 type KonnectConfigStoreSyncSplit struct {
 	// Entries lists the Secret data fields to sync. Fields may be added or
 	// removed freely; the storeKey of an existing entry (identified by its
-	// field) is immutable.
+	// field) is immutable. To replace a key safely, first sync its replacement
+	// (in this sync if capacity permits, otherwise in another sync), migrate
+	// consumers, then remove the old entry. A removed entry still in use is
+	// preserved in the store but no longer updated from the Secret.
 	//
 	// +required
 	// +kubebuilder:validation:MinItems=1
@@ -271,8 +274,9 @@ type KonnectConfigStoreSyncStatus struct {
 
 	// Entries reports durable state for desired Config Store entries this sync
 	// has written, including entries currently lost in per-key conflict
-	// election, plus entries retained while cleanup is blocked. The limit
-	// accommodates one full desired set and one full set awaiting cleanup.
+	// election, plus entries retained while cleanup is blocked. Removed entries
+	// awaiting cleanup are not published in References. The limit accommodates
+	// one full desired set and one full set awaiting cleanup.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=128
@@ -280,9 +284,14 @@ type KonnectConfigStoreSyncStatus struct {
 	// +listMapKey=storeKey
 	Entries []KonnectConfigStoreSyncEntryStatus `json:"entries,omitempty"`
 
-	// References publishes the reference suffixes consumers need to build
-	// vault reference strings. A full reference is
-	// {vault://<KongVault prefix>/<suffix>}.
+	// References advertises suffixes for entries still declared in the spec
+	// that this sync has successfully synced. Consumers can build a full
+	// reference as {vault://<KongVault prefix>/<suffix>}. A later failed update
+	// can leave the previous value serving; check Synced and EntriesSynced for
+	// current freshness. This is not an inventory of all remote entries: a
+	// spec-removed entry may still serve existing consumers while awaiting
+	// cleanup, but is no longer updated or advertised here. Such entries remain
+	// recorded in Entries.
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=64
@@ -362,7 +371,7 @@ type KonnectConfigStoreSyncEntryStatus struct {
 }
 
 // KonnectConfigStoreSyncReference publishes the reference suffix for one
-// synced entry (or one JSON subfield of it), so consumers can assemble a
+// desired, synced entry (or one JSON subfield of it), so consumers can assemble a
 // vault reference string as {vault://<KongVault prefix>/<suffix>} without
 // hand-assembling the store key and subfield fragments.
 type KonnectConfigStoreSyncReference struct {

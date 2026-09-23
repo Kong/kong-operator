@@ -1103,7 +1103,7 @@ Allowed values:
 
 
 KonnectConfigStoreSyncReference publishes the reference suffix for one
-synced entry (or one JSON subfield of it), so consumers can assemble a
+desired, synced entry (or one JSON subfield of it), so consumers can assemble a
 vault reference string as {vault://<KongVault prefix>/<suffix>} without
 hand-assembling the store key and subfield fragments.
 
@@ -1148,7 +1148,7 @@ field is written to its own Config Store entry.
 
 | Field | Description |
 | --- | --- |
-| `entries` _[][KonnectConfigStoreSyncSplitEntry](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplitentry)_ | Entries lists the Secret data fields to sync. Fields may be added or removed freely; the storeKey of an existing entry (identified by its field) is immutable. |
+| `entries` _[][KonnectConfigStoreSyncSplitEntry](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplitentry)_ | Entries lists the Secret data fields to sync. Fields may be added or removed freely; the storeKey of an existing entry (identified by its field) is immutable. To replace a key safely, first sync its replacement (in this sync if capacity permits, otherwise in another sync), migrate consumers, then remove the old entry. A removed entry still in use is preserved in the store but no longer updated from the Secret. |
 
 _Appears in:_
 
@@ -1185,8 +1185,8 @@ their hashes and sizes.
 | `storeID` _string_ | StoreID is the Konnect ID of the referenced Config Store, observed from the store's status. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the Control Plane the referenced Config Store belongs to, observed from the store's status. A sync never resolves a Control Plane itself. |
 | `observedSecretResourceVersion` _string_ | ObservedSecretResourceVersion is the resourceVersion of the Secret at the last successful sync. It is an observation aid only and is never an input to a push decision. |
-| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports durable state for desired Config Store entries this sync has written, including entries currently lost in per-key conflict election, plus entries retained while cleanup is blocked. The limit accommodates one full desired set and one full set awaiting cleanup. |
-| `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References publishes the reference suffixes consumers need to build vault reference strings. A full reference is {vault://<KongVault prefix>/<suffix>}. |
+| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports durable state for desired Config Store entries this sync has written, including entries currently lost in per-key conflict election, plus entries retained while cleanup is blocked. Removed entries awaiting cleanup are not published in References. The limit accommodates one full desired set and one full set awaiting cleanup. |
+| `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References advertises suffixes for entries still declared in the spec that this sync has successfully synced. Consumers can build a full reference as {vault://<KongVault prefix>/<suffix>}. A later failed update can leave the previous value serving; check Synced and EntriesSynced for current freshness. This is not an inventory of all remote entries: a spec-removed entry may still serve existing consumers while awaiting cleanup, but is no longer updated or advertised here. Such entries remain recorded in Entries. |
 | `entriesSynced` _int32_ | EntriesSynced is the number of desired entries this sync currently wins and has synced to the Config Store. |
 | `entriesTotal` _int32_ | EntriesTotal is the total number of entries this sync manages. |
 

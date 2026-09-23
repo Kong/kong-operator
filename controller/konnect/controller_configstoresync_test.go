@@ -1402,6 +1402,39 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 		assert.Empty(t, env.fake.MutatingCalls(), "steady state after prune makes no mutating calls")
 	})
 
+	t.Run("removed reference is withdrawn even when the Secret is missing", func(t *testing.T) {
+		secret := newConfigStoreSyncTestSecret(certPEM, keyPEM)
+		sync := splitSync()
+		env := newConfigStoreSyncTestEnv(t, append(configStoreSyncBaseObjects(), secret, sync)...)
+		nn := configStoreSyncNN("sync")
+		derived := configstoresync.DerivedKey(testConfigStoreSyncNamespace, "sync")
+		removedKey := derived + "-tls.key"
+
+		_, err := env.reconcile(t, nn)
+		require.NoError(t, err)
+		require.Len(t, env.getSync(t, nn).Status.References, 2)
+
+		got := env.getSync(t, nn)
+		got.Spec.Split.Entries = got.Spec.Split.Entries[:1]
+		require.NoError(t, env.cl.Update(context.Background(), got))
+		require.NoError(t, env.cl.Delete(context.Background(), secret))
+		env.fake.ResetCalls()
+
+		_, err = env.reconcile(t, nn)
+		require.NoError(t, err)
+		assert.Empty(t, env.fake.Calls(), "a missing Secret prevents remote cleanup")
+		got = env.getSync(t, nn)
+		require.Len(t, got.Status.Entries, 2, "the removed entry remains tracked for cleanup")
+		require.Equal(t,
+			[]konnectv1alpha1.KonnectConfigStoreSyncReference{{Suffix: derived + "-tls.crt"}},
+			got.Status.References,
+		)
+		_, stillServing := env.fake.Value(testConfigStoreSyncCPID, testConfigStoreSyncStoreID, removedKey)
+		assert.True(t, stillServing)
+		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonSecretRefInvalid)
+	})
+
 	t.Run("prune blocked while the removed entry is in use", func(t *testing.T) {
 		secret := newConfigStoreSyncTestSecret(certPEM, keyPEM)
 		sync := splitSync()
@@ -1434,8 +1467,17 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 		assert.True(t, ok, "in-use entry not deleted")
 		got = env.getSync(t, nn)
 		require.Len(t, got.Status.Entries, 2, "blocked entry record kept")
+		require.Equal(t,
+			[]konnectv1alpha1.KonnectConfigStoreSyncReference{{Suffix: derived + "-tls.crt"}},
+			got.Status.References,
+			"the retired entry must not be advertised to new consumers",
+		)
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonEntryInUse)
+		assert.Contains(t,
+			findConfigStoreSyncCondition(got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType).Message,
+			"no longer updated from the Secret",
+		)
 		events := env.drainEvents()
 		assert.True(t, eventsContain(events, "EntryInUse"), "expected EntryInUse event, got %v", events)
 
@@ -1553,6 +1595,9 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 		require.Len(t, got.Status.Entries, 65)
 		assert.NotNil(t, findEntryStatus(got.Status.Entries, "key-00"), "blocked old key remains tracked")
 		assert.NotNil(t, findEntryStatus(got.Status.Entries, "key-new"), "replacement key is tracked")
+		require.Len(t, got.Status.References, 64, "only current desired entries publish references")
+		assert.NotContains(t, got.Status.References, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: "key-00"})
+		assert.Contains(t, got.Status.References, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: "key-new"})
 		_, ok := env.fake.Value(testConfigStoreSyncCPID, testConfigStoreSyncStoreID, "key-new")
 		assert.True(t, ok, "replacement key is written")
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
@@ -1563,10 +1608,15 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 		secret := newConfigStoreSyncTestSecret(certPEM, keyPEM)
 		entries := make([]konnectv1alpha1.KonnectConfigStoreSyncSplitEntry, 0, 64)
 		statusEntries := make([]konnectv1alpha1.KonnectConfigStoreSyncEntryStatus, 0, 128)
+		statusReferences := make([]konnectv1alpha1.KonnectConfigStoreSyncReference, 0, 64)
 		for i := 1; i < 64; i++ {
 			field := fmt.Sprintf("field-%02d", i)
 			key := fmt.Sprintf("key-%02d", i)
 			secret.Data[field] = []byte("value-" + field)
+			hash := configstoresync.ValueHash(secret.Data[field])
+			if i == 2 {
+				hash = configstoresync.ValueHash([]byte("outdated-value"))
+			}
 			entries = append(entries, konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{
 				Field:    field,
 				StoreKey: new(key),
@@ -1574,7 +1624,9 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 			statusEntries = append(statusEntries, konnectv1alpha1.KonnectConfigStoreSyncEntryStatus{
 				StoreKey:     key,
 				SourceFields: []string{field},
+				Hash:         hash,
 			})
+			statusReferences = append(statusReferences, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: key})
 		}
 		secret.Data["field-new"] = []byte("value-field-new")
 		entries = append(entries, konnectv1alpha1.KonnectConfigStoreSyncSplitEntry{
@@ -1589,6 +1641,9 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 				StoreKey:     key,
 				SourceFields: []string{"old"},
 			})
+			if i == 0 {
+				statusReferences = append(statusReferences, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: key})
+			}
 			objects = append(objects, &configurationv1alpha1.KongCertificate{
 				Name: fmt.Sprintf("cert-%02d", i), Namespace: testConfigStoreSyncNamespace,
 				Spec: configurationv1alpha1.KongCertificateSpec{
@@ -1601,6 +1656,7 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 			withConfigStoreSyncSplit(entries...),
 		)
 		sync.Status.Entries = statusEntries
+		sync.Status.References = statusReferences
 		objects = append(objects, secret, sync)
 		env := newConfigStoreSyncTestEnv(t, objects...)
 
@@ -1612,6 +1668,12 @@ func TestKonnectConfigStoreSyncSpecEntryRemoval(t *testing.T) {
 		got := env.getSync(t, configStoreSyncNN("sync"))
 		require.Len(t, got.Status.Entries, konnectConfigStoreSyncMaxStatusEntries)
 		assert.Nil(t, findEntryStatus(got.Status.Entries, "key-new"), "deferred key is not reported as written")
+		assert.Equal(t, int32(62), got.Status.EntriesSynced)
+		require.Len(t, got.Status.References, 62, "only current values are advertised")
+		assert.Contains(t, got.Status.References, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: "key-01"})
+		for _, key := range []string{"old-00", "key-02", "key-new"} {
+			assert.NotContains(t, got.Status.References, konnectv1alpha1.KonnectConfigStoreSyncReference{Suffix: key})
+		}
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonEntryInUse)
 	})
