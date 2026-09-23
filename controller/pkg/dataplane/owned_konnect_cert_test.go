@@ -108,10 +108,8 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 			wantCondReason: string(aigatewayv1alpha1.KonnectCertificateNotProgrammedReason),
 			verifyCert: func(t *testing.T, cert aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate) {
 				t.Helper()
-				assert.Equal(t, commonv1alpha1.ObjectRefTypeNamespacedRef, cert.Spec.AIGatewayRef.Type)
 				require.NotNil(t, cert.Spec.AIGatewayRef.NamespacedRef)
 				assert.Equal(t, "test-aigwcp", cert.Spec.AIGatewayRef.NamespacedRef.Name)
-				assert.Nil(t, cert.Spec.AIGatewayRef.KonnectID)
 				assert.Equal(t, aiconfigurationv1alpha1.SensitiveDataSourceTypeSecretRef, cert.Spec.APISpec.Cert.Type)
 				require.NotNil(t, cert.Spec.APISpec.Cert.SecretRef)
 				assert.Equal(t, testCertSecretName, cert.Spec.APISpec.Cert.SecretRef.Name)
@@ -143,8 +141,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 					Kind:       "AIGatewayDataPlaneCertificate",
 					Name:       certName, Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-						AIGatewayRef: commonv1alpha1.ObjectRef{
-							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
 						},
 						APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
@@ -191,8 +188,7 @@ func TestEnsureKonnectCertificate(t *testing.T) {
 					Kind:       "AIGatewayDataPlaneCertificate",
 					Name:       certName, Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-						AIGatewayRef: commonv1alpha1.ObjectRef{
-							Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "test-aigwcp"},
 						},
 						APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{

@@ -189,7 +189,12 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	var out []string
 	{{- $cr := .}}
 	{{- range .AccessorExprs}}
-	for _, ref := range {{.}} {
+	{{- if .List}}
+	for _, refs := range {{.Expr}} {
+		for _, ref := range refs {
+	{{- else}}
+	for _, ref := range {{.Expr}} {
+	{{- end}}
 {{- if $cr.MultiKind}}
 		if ref.Kind != "{{$cr.RefKind}}" {
 			continue
@@ -204,6 +209,9 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 			ns = ent.GetNamespace()
 		}
 		out = append(out, ns+"/"+ref.Name)
+		{{- if .List}}
+		}
+		{{- end}}
 	}
 	{{- end}}
 	return out
@@ -432,7 +440,12 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	var out []string
 	{{- $cr := .}}
 	{{- range .AccessorExprs}}
-	for _, ref := range {{.}} {
+	{{- if .List}}
+	for _, refs := range {{.Expr}} {
+		for _, ref := range refs {
+	{{- else}}
+	for _, ref := range {{.Expr}} {
+	{{- end}}
 {{- if $cr.MultiKind}}
 		if ref.Kind != "{{$cr.RefKind}}" {
 			continue
@@ -447,6 +460,9 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 			ns = ent.GetNamespace()
 		}
 		out = append(out, ns+"/"+ref.Name)
+		{{- if .List}}
+		}
+		{{- end}}
 	}
 	{{- end}}
 	return out
@@ -485,16 +501,28 @@ const (
 type crossRefWatchData struct {
 	// RefKind is the referenced entity kind, e.g. "AIGatewayConsumer".
 	RefKind string
-	// AccessorExprs are the Go expressions yielding the []<RefType> slices to
-	// scan for this kind, evaluated against a receiver named "ent". Top-level
+	// AccessorExprs are the Go expressions yielding the ref slices to scan for
+	// this kind, evaluated against a receiver named "ent". Top-level
 	// references use direct field access ("ent.Spec.APISpec.Policies"); nested
 	// references use the exported, nil-guarded accessor from the API package
 	// ("konnectv1alpha1.RefsAtAIGatewayAgentAccessAclsAllowAllow(ent)"). The
 	// extractor unions the refs of the matching kind across all expressions.
-	AccessorExprs []string
+	AccessorExprs []crossRefAccessorExpr
 	// MultiKind is true when any contributing reference may point to more than
 	// one kind, in which case Kind is required and always populated on each ref.
 	MultiKind bool
+}
+
+// crossRefAccessorExpr is one accessor expression contributing refs to a
+// crossRefWatchData extractor.
+type crossRefAccessorExpr struct {
+	// Expr is the Go expression, evaluated against a receiver named "ent",
+	// yielding a []<RefType> — or a [][]<RefType> when List is true (one ref
+	// list per element of an enclosing array, e.g. per-tool ACLs).
+	Expr string
+	// List is true when Expr yields [][]<RefType>, so the extractor ranges the
+	// outer slice and then each element's ref list.
+	List bool
 }
 
 type reconcilerEntityMetadata struct {
@@ -834,7 +862,7 @@ func (g *Generator) buildCrossRefWatchData(entityName string) []crossRefWatchDat
 			if multiKind {
 				cr.MultiKind = true
 			}
-			cr.AccessorExprs = append(cr.AccessorExprs, expr)
+			cr.AccessorExprs = append(cr.AccessorExprs, crossRefAccessorExpr{Expr: expr, List: ref.NestedArrayList})
 		}
 	}
 	result := make([]crossRefWatchData, 0, len(order))

@@ -10,7 +10,6 @@ metadata:
   namespace: ($namespace)
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ($aigw_cp_name)
       namespace: ($namespace)

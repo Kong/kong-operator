@@ -167,8 +167,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-provider",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
@@ -196,12 +197,12 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-model",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-			// TODO: fix this when on prem ai gateway ref is added
-			// https://github.com/Kong/kong-operator/issues/5666
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: onprem.Name},
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				//nolint:staticcheck
+				Type:          aiconfigurationv1alpha1.AIGatewayRefTypeNamespacedRef,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{

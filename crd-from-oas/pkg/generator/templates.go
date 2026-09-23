@@ -99,7 +99,7 @@ type {{.EntityName}}Spec struct {
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
 	//
 	// +required
-	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
@@ -390,9 +390,25 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .ParentRef}}
 
 // Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
+{{- if .ParentRefCustomTypeName}}
+
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef representation, so only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
+	return obj.Get{{.SetParentIDEntityName}}Ref().ToObjectRef()
+}
+
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// (Konnect): only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
+}
+{{- else}}
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
@@ -403,6 +419,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = ref
 }
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
@@ -985,22 +1002,36 @@ const sdkOpsReferenceSharedDefines = `
 {{- if .NestedRef}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
-func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .NestedArrayList}}[][]{{else}}[]{{end}}{{.TypeName}} {
 {{- if .NestedArrayScalar}}
 {{- range .ArrayGuardExprs}}
 	if {{.}} == nil {
 		return nil
 	}
 {{- end}}
+{{- if .NestedArrayList}}
+	var refs [][]{{.TypeName}}
+{{- else}}
 	var refs []{{.TypeName}}
+{{- end}}
 	for i := range {{.ArrayPath}} {
-{{- if .ArrayLeafPointer}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafName}} == nil {
+{{- range .ElementGuardExprs}}
+		if {{$ref.ArrayPath}}[i].{{.}} == nil {
 			continue
 		}
-		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- end}}
+{{- if .NestedArrayList}}
+		if len({{.ArrayPath}}[i].{{.ArrayLeafPath}}) == 0 {
+			continue
+		}
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
+{{- else if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- else}}
-		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafName}})
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- end}}
 	}
 	return refs
@@ -1024,8 +1055,17 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 {{end}}
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
-func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
-{{- if or .NestedRef .DirectScalarRef}}
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ({{if .NestedArrayList}}[][]{{else}}[]{{end}}string, error) {
+{{- $collect := "resolved"}}
+{{- if .NestedArrayList}}
+	groups := {{.RefsExpr}}
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+{{- $collect = "group"}}
+{{- else if or .NestedRef .DirectScalarRef}}
 	refs := {{.RefsExpr}}
 	resolved := make([]string, 0, len(refs))
 	var errs []error
@@ -1086,7 +1126,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, resolvedValue)
+		{{$collect}} = append({{$collect}}, resolvedValue)
 {{- else}}
 		var referenced {{.DefaultKind}}
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -1106,17 +1146,21 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, referenced.GetKonnectName())
+		{{$collect}} = append({{$collect}}, referenced.GetKonnectName())
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, id)
+		{{$collect}} = append({{$collect}}, id)
 {{- end}}
 {{- end}}
 	}
+{{- if .NestedArrayList}}
+	resolved = append(resolved, group)
+	}
+{{- end}}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
@@ -1145,7 +1189,12 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	var checks []CrossNamespaceReferenceCheck
 	{{- range $.References}}
 	{{- if .SupportCrossNamespaceReference}}
+	{{- if .NestedArrayList}}
+	for _, refs := range {{.RefsExpr}} {
+		for _, ref := range refs {
+	{{- else}}
 	for _, ref := range {{.RefsExpr}} {
+	{{- end}}
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
@@ -1164,6 +1213,9 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			ToNamespace:   ns,
 			ToName:        ref.Name,
 		})
+		{{- if .NestedArrayList}}
+		}
+		{{- end}}
 	}
 	{{- end}}
 	{{- end}}
@@ -1231,11 +1283,19 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				if !ok {
 					continue
 				}
-				if _, has := el["{{.LeafSDKKey}}"]; !has {
+{{- $lp := "el"}}
+{{- range $inj.ElementNavs}}
+				{{.Var}}, ok := {{$lp}}["{{.Key}}"].(map[string]any)
+				if !ok {
+					continue
+				}
+{{- $lp = .Var}}
+{{- end}}
+				if _, has := {{$lp}}["{{.LeafSDKKey}}"]; !has {
 					continue
 				}
 				if ri < len(resolved{{.ResolverName}}) {
-					el["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
+					{{$lp}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
 					ri++
 				}
 			}

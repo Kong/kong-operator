@@ -32,7 +32,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -42,15 +41,38 @@ spec:
       displayName: KongAir Flights MCP Server (listener)
       enabled: Enabled
       # Names of conversion-only/upstream-server MCP Servers whose tools this
-      # listener exposes.
+      # listener exposes. Each entry references the AIGatewayMCPServer CR by its
+      # metadata.name; the operator resolves each reference to the referenced
+      # CR's Konnect name (its immutable arm name) at reconcile time.
       sources:
-        - flights-mcp-server-conversion-only
-        - flights-mcp-server-upstream-server
+        - name: flights-mcp-server-conversion-only
+        - name: flights-mcp-server-upstream-server
       access:
         aclAttributeType: consumer
+        consumer:
+          # References to AIGatewayAuthStrategy CRs (by metadata.name). The
+          # operator resolves each reference to the referenced CR's Konnect
+          # name at reconcile time. At most 1 auth strategy of each type can
+          # be referenced.
+          # authStrategies:
+          #   - name: my-auth-strategy
+          # Server-level consumer group ACLs (by metadata.name). The operator
+          # resolves each reference to the referenced AIGatewayConsumerGroup
+          # CR's Konnect name at reconcile time.
+          # acls:
+          #   allow:
+          #     - name: my-consumer-group
+          #   deny:
+          #     - name: another-consumer-group
+          # Default per-tool ACLs, applied to every tool without its own
+          # access.acls override.
+          # defaultToolAcls:
+          #   allow:
+          #     - name: my-consumer-group
       config:
         route:
-          paths: /mcp/flights
+          paths:
+            - /mcp/flights
         logging:
           payloads: Disabled
       labels:
@@ -63,7 +85,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -77,12 +98,24 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths: /mcp/flights
+          paths:
+            - /mcp/flights
+          methods:
+            - GET
+            - POST
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date
           method: GET
           path: /flights
+          # Per-tool consumer group ACLs (by metadata.name). The operator
+          # resolves each reference to the referenced AIGatewayConsumerGroup
+          # CR's Konnect name at reconcile time. Overrides the server-level
+          # defaultToolAcls.
+          # access:
+          #   acls:
+          #     allow:
+          #       - name: my-consumer-group
         - name: get_flight_status
           description: Get real-time status for a given flight number
           method: GET
@@ -102,7 +135,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -116,7 +148,20 @@ spec:
       config:
         url: https://flights-api.kongair.example/openapi.json
         route:
-          paths: /mcp/flights
+          # At least one of paths/hosts/methods/headers must be set; any
+          # combination is allowed. paths/hosts/methods are lists (a route
+          # can match several at once), headers is a map of header name to
+          # the list of values that match it.
+          paths:
+            - /mcp/flights
+          hosts:
+            - flights.mcp.example.com
+          methods:
+            - GET
+            - POST
+          headers:
+            x-mcp-client:
+              - kongair-app
       tools:
         - name: search_flights
           description: Search available flights by origin, destination, and date
@@ -136,7 +181,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -153,7 +197,8 @@ spec:
         # Upstream MCP server that requests are passed through to unmodified.
         url: https://flights-mcp.kongair.example
         route:
-          paths: /mcp/flights
+          paths:
+            - /mcp/flights
       labels:
         domain: flights
 ---
@@ -164,7 +209,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -176,7 +220,8 @@ spec:
       config:
         url: https://flights-mcp.kongair.example
         route:
-          paths: /mcp/flights
+          paths:
+            - /mcp/flights
         # Refresh the cached tools list every 5 minutes; set to 0 to refresh
         # on every client call.
         toolsCacheTtlSeconds: 300

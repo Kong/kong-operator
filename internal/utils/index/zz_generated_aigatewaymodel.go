@@ -124,6 +124,26 @@ func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
 		}
 		out = append(out, ns+"/"+ref.Name)
 	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAclsAllowAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAclsDenyDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
 	return out
 }
 

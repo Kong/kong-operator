@@ -199,13 +199,6 @@ spec:
                         - Enabled
                         - Disabled
                         type: string
-                      tryItUiAudience:
-                        enum:
-                        - all
-                        - authenticated
-                        - registered
-                        maxLength: 253
-                        type: string
                     type: object
                   theme:
                     properties:
