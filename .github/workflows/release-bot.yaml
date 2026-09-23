@@ -33,10 +33,8 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      # Mint a short-lived token in the job that uses it: app tokens do not survive
-      # being passed between jobs or through reusable-workflow boundaries. Here it
-      # is only needed to learn the App's own login, so it stays gated on `created`:
-      # a branch creation is the only push that can be the echo push described above.
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
         if: ${{ github.event.created }}
@@ -180,7 +178,7 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      # Mint a short-lived token in the job that uses it: app tokens do not survive
+      # Mint the token in the same job that uses it: app tokens do not survive
       # being passed between jobs or through reusable-workflow boundaries.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
@@ -250,7 +248,7 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
-      # Mint a short-lived token in the job that uses it: app tokens do not survive
+      # Mint the token in the same job that uses it: app tokens do not survive
       # being passed between jobs or through reusable-workflow boundaries.
       - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
         id: app-token
