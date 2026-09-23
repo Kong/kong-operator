@@ -86,13 +86,23 @@ func (r *AdminAPIEndpointsReconciler) SetupWithManager(mgr ctrl.Manager) error {
 // gatewayDataPlanePredicate filters AIGatewayDataPlane events to only those
 // referencing the Reconciler's OnPremAIGateway.
 func (r *AdminAPIEndpointsReconciler) gatewayDataPlanePredicate() predicate.Predicate {
-	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+	preds := predicate.NewPredicateFuncs(func(obj client.Object) bool {
 		dp, ok := obj.(*aigatewayv1alpha1.AIGatewayDataPlane)
 		if !ok {
 			return false
 		}
 		return referencesOnPremAIGateway(dp, r.GatewayNN)
 	})
+	// Accept updates where the old object referenced the gateway too: a data
+	// plane that stops referencing it must trigger rediscovery, or the
+	// discovered set keeps its stale endpoints.
+	preds.UpdateFunc = func(e event.UpdateEvent) bool {
+		oldDP, okOld := e.ObjectOld.(*aigatewayv1alpha1.AIGatewayDataPlane)
+		newDP, okNew := e.ObjectNew.(*aigatewayv1alpha1.AIGatewayDataPlane)
+		return (okOld && referencesOnPremAIGateway(oldDP, r.GatewayNN)) ||
+			(okNew && referencesOnPremAIGateway(newDP, r.GatewayNN))
+	}
+	return preds
 }
 
 // adminAPIEndpointSlicePredicate filters EndpointSlice events to only those
