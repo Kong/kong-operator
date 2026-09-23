@@ -96,6 +96,14 @@
   indexers (including the `(storeID, storeKey)` conflict index), and a
   semantics-accurate fake of the Konnect `ConfigStoreSecrets` SDK for tests.
   [#5710](https://github.com/Kong/kong-operator/issues/5710)
+- `AIGatewayMCPServer`: reference fields now carry the referenced CR's
+  `metadata.name` and the operator resolves them to the referenced entity's
+  Konnect name at reconcile time: `spec.apiSpec.listener.sources` now references
+  `AIGatewayMCPServer` CRs, `access.{consumer,oauthAccessToken}.authStrategies`
+  reference `AIGatewayAuthStrategy` CRs, and
+  `access.{consumer,oauthAccessToken}.{acls,defaultToolAcls}.{allow,deny}` as
+  well as `tools[].access.acls.{allow,deny}` reference `AIGatewayConsumerGroup`
+  CRs.
 - `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
   `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
   control plane in the same namespace.
@@ -201,6 +209,21 @@ by the operator's semver:
   `gateway.konghq.com/konnect-cleanup` finalizer from the CR manually, which
   leaves the config store and its entries orphaned in Konnect.
   [#5723](https://github.com/Kong/kong-operator/pull/5723)
+- `AIGatewayMCPServer`: reference fields changed from plain string items (holding
+  the referenced entity's Konnect name) to ref objects holding the referenced
+  CR's `metadata.name`; the operator now resolves them to the referenced
+  entity's Konnect name at reconcile time. Affected fields:
+  `spec.apiSpec.listener.sources` (now references `AIGatewayMCPServer` CRs),
+  `access.{consumer,oauthAccessToken}.authStrategies` (now references
+  `AIGatewayAuthStrategy` CRs), and
+  `access.{consumer,oauthAccessToken}.{acls,defaultToolAcls}.{allow,deny}` as
+  well as `tools[].access.acls.{allow,deny}` (now reference
+  `AIGatewayConsumerGroup` CRs).
+  On upgrade, existing `AIGatewayMCPServer` objects carrying the old string
+  items fail schema validation and fail typed decode in the controller cache.
+  Re-apply each affected `AIGatewayMCPServer` with the new object syntax
+  (`- name: <metadata.name-of-referenced-CR>`) to repair it.
+  [#5737](https://github.com/Kong/kong-operator/pull/5737)
 - `AIGatewayDataPlane`: the operator no longer provisions or mounts an mTLS
   client certificate for an `AIGatewayDataPlane` that has no `spec.controlPlaneRef`.
   This corrects a bug where a certificate was previously always auto-provisioned

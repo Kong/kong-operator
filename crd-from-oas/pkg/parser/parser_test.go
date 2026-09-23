@@ -1197,3 +1197,60 @@ func TestParseSchema_AllOfFirstEntryWinsOnCollision(t *testing.T) {
 	require.Len(t, schema.Properties, 1)
 	assert.Equal(t, "string", schema.Properties[0].Type)
 }
+
+func TestParseSchema_AllOfCompositeMergesProperties(t *testing.T) {
+	// A named schema that is a composite allOf (base properties + anyOf of
+	// matcher variants) must merge into a plain property list instead of being
+	// left without properties (which degrades to map[string]string).
+	schemaValue := &openapi3.Schema{
+		Type: &openapi3.Types{"object"},
+		AllOf: openapi3.SchemaRefs{
+			{Value: &openapi3.Schema{
+				Type:     &openapi3.Types{"object"},
+				Required: []string{"protocol"},
+				Properties: openapi3.Schemas{
+					"protocol": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+					"tags":     {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}, Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}}},
+				},
+			}},
+			{Value: &openapi3.Schema{
+				AnyOf: openapi3.SchemaRefs{
+					{Value: &openapi3.Schema{
+						Type:     &openapi3.Types{"object"},
+						Required: []string{"paths", "protocol"},
+						Properties: openapi3.Schemas{
+							"paths":    {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}, Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}}},
+							"protocol": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+						},
+					}},
+					{Value: &openapi3.Schema{
+						Type:     &openapi3.Types{"object"},
+						Required: []string{"hosts", "protocol"},
+						Properties: openapi3.Schemas{
+							"hosts":    {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}, Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}}},
+							"paths":    {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}, Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}}}},
+							"protocol": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+						},
+					}},
+				},
+			}},
+		},
+	}
+
+	parser := NewParser(&openapi3.T{Components: &openapi3.Components{Schemas: openapi3.Schemas{}}})
+	schema := parser.parseSchema("CompositeRoute", schemaValue)
+
+	require.Len(t, schema.Properties, 4)
+	byName := map[string]*Property{}
+	for _, p := range schema.Properties {
+		byName[p.Name] = p
+	}
+	// Required in the base member and in every variant -> required.
+	require.Contains(t, byName, "protocol")
+	assert.True(t, byName["protocol"].Required)
+	// Declared in both variants but required in only one -> optional.
+	assert.False(t, byName["paths"].Required)
+	// Declared in only one variant -> optional.
+	assert.False(t, byName["hosts"].Required)
+	assert.False(t, byName["tags"].Required)
+}

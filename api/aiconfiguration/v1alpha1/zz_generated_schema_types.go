@@ -977,11 +977,11 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
 	// +optional
-	Allow []string `json:"allow,omitempty"`
+	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
 	// List of consumer groups that are denied access.
 	//
 	// +optional
-	Deny []string `json:"deny,omitempty"`
+	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
 }
 
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
@@ -1215,7 +1215,7 @@ type AIGatewayMCPServerConversionListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
-	// Configuration for AI Gateway logging.
+	//
 	//
 	// +optional
 	Logging AIGatewayMCPServerConversionListenerConfigLogging `json:"logging,omitzero"`
@@ -1272,8 +1272,7 @@ type AIGatewayMCPServerConversionListenerConfigCache struct {
 	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
-// AIGatewayMCPServerConversionListenerConfigLogging Configuration for AI
-// Gateway logging.
+// AIGatewayMCPServerConversionListenerConfigLogging is a type alias.
 type AIGatewayMCPServerConversionListenerConfigLogging struct {
 	//
 	//
@@ -1527,7 +1526,7 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +required
-	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
+	Sources []AIGatewayMCPServerRef `json:"sources,omitempty"`
 }
 
 // AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
@@ -1553,7 +1552,7 @@ type AIGatewayMCPServerListenerConfig struct {
 	//
 	// +optional
 	Cache AIGatewayMCPServerListenerConfigCache `json:"cache,omitzero"`
-	// Configuration for AI Gateway logging.
+	//
 	//
 	// +optional
 	Logging AIGatewayMCPServerListenerConfigLogging `json:"logging,omitzero"`
@@ -1595,7 +1594,7 @@ type AIGatewayMCPServerListenerConfigCache struct {
 	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
 }
 
-// AIGatewayMCPServerListenerConfigLogging Configuration for AI Gateway logging.
+// AIGatewayMCPServerListenerConfigLogging is a type alias.
 type AIGatewayMCPServerListenerConfigLogging struct {
 	//
 	//
@@ -1747,7 +1746,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// Default per-tool access control rules for allowing or denying consumer
 	// groups access to
 	// tools.
@@ -1809,7 +1808,7 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// Default per-tool access control rules for allowing or denying callers access
 	// to tools,
 	// evaluated against the value of the configured `access_token_claim_field`.
