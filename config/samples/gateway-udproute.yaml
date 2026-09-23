@@ -1,6 +1,5 @@
-# NOTE The Gateway APIs are not yet available by default in Kubernetes.
-# Follow these instructions to install them before using this example:
-# https://gateway-api.sigs.k8s.io/guides/#install-experimental-channel
+# UDPRoute: plain L4 UDP proxying. The UDP listener makes the operator program
+# Kong's stream listen and expose the port on the DataPlane's ingress Service.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -19,7 +18,7 @@ spec:
     spec:
       containers:
       - name: udpecho
-        image: kong/go-echo:0.3.0
+        image: kong/go-echo:0.5.0
         ports:
         - containerPort: 1026
         env:
@@ -39,14 +38,35 @@ spec:
     app: udpecho
   type: ClusterIP
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: example-udproute
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: example-udproute
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: example-udproute
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -69,6 +89,7 @@ metadata:
 spec:
   parentRefs:
   - name: example-udproute
+    sectionName: udp
   rules:
   - backendRefs:
     - name: udpecho

@@ -1,14 +1,39 @@
+# KongUpstreamPolicy: load balancing and health checking for the Kong Upstreams
+# generated from a Service. The policy is attached with the
+# `konghq.com/upstream-policy` annotation on the Service, and applies to every
+# Upstream generated for it — here, one per HTTPRoute rule.
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
+apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: kong
@@ -94,10 +119,10 @@ spec:
       protocol: TCP
       targetPort: 80
   selector:
-    app: httpbin
+    app: httpbin-test
   type: ClusterIP
 ---
-apiVersion: gateway.networking.k8s.io/v1beta1
+apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
 metadata:
   name: httpbin
@@ -141,7 +166,7 @@ spec:
   slots: 100
   hashOn:
     cookie: session-id
-    cookiePath: cookie-path
+    cookiePath: /
   healthchecks:
     active:
       type: tcp

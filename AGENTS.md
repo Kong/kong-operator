@@ -169,6 +169,8 @@ Documentation generated from the API definitions and CLI args.
 Configuration files for deploying the operator (manifests, kustomize, etc).
 
 - `/config/samples`: Sample YAML manifests for deploying custom resources. These are tested in CI by applying against a real Kubernetes cluster.
+  Only the files directly in that directory, though: subdirectories such as `/config/samples/feature-gated` hold samples that need setup beyond a
+  stock install (an extra CRD channel, a feature gate that is off by default) and are deliberately left out of `make test.samples`.
 
 ### Embedded Ingress Controller (`ingress-controller/`)
 

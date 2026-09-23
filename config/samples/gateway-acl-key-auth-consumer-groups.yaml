@@ -1,13 +1,40 @@
-# It sets up an `/echo` HTTPRoute secured with an ACL plugin, allowing only consumers belonging to the `acl-group-1` ACL group (`consumer1`) to access it.
-# This is achieved by using additional `acl` credential on `KongConsumer` binding it to said ACL group.
+# It sets up an `/echo` HTTPRoute secured with an ACL plugin, allowing only consumers belonging to the `cg1` consumer group (`consumer2`) to access it.
+#
+# Verify with:
+#   ADDR=$(kubectl get gateway kong -o jsonpath='{.status.addresses[0].value}')
+#   curl -H 'apikey: password2' http://$ADDR/echo     # 200, consumer2 is in cg1
+#   curl -H 'apikey: password1' http://$ADDR/echo     # 403, consumer1 is not
+#   curl -H 'apikey: password1' http://$ADDR/httpbin  # 200, no ACL on this route
+---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -26,7 +53,7 @@ metadata:
   name: httproute-echo
   annotations:
     konghq.com/strip-path: "true"
-    konghq.com/plugins: key-auth,acl-group-1
+    konghq.com/plugins: key-auth,acl-consumer-group-1
 spec:
   parentRefs:
   - name: kong
@@ -47,7 +74,6 @@ metadata:
   name: httproute-httpbin
   annotations:
     konghq.com/strip-path: "true"
-    konghq.com/plugins: key-auth
 spec:
   parentRefs:
   - name: kong
@@ -144,22 +170,16 @@ spec:
     app: httpbin
   type: ClusterIP
 ---
-apiVersion: v1
-kind: Secret
-metadata:
-  name: consumer-acl-1
-  namespace: default
-  labels:
-    konghq.com/credential: acl
-stringData:
-  group: acl-group-1
----
+# The `konghq.com/secret` label is required on credential Secrets: the operator
+# runs the ControlPlane with `--secret-label-selector=konghq.com/secret`, so
+# unlabelled Secrets are never ingested.
 apiVersion: v1
 kind: Secret
 metadata:
   name: consumer-auth-1
   labels:
     konghq.com/credential: key-auth
+    konghq.com/secret: "true"
 type: Opaque
 stringData:
   key: password1
@@ -173,7 +193,6 @@ metadata:
 username: consumer1
 credentials:
 - consumer-auth-1
-- consumer-acl-1
 ---
 apiVersion: v1
 kind: Secret
@@ -181,6 +200,7 @@ metadata:
   name: consumer-auth-2
   labels:
     konghq.com/credential: key-auth
+    konghq.com/secret: "true"
 type: Opaque
 stringData:
   key: password2
@@ -194,6 +214,8 @@ metadata:
 username: consumer2
 credentials:
 - consumer-auth-2
+consumerGroups:
+- cg1
 ---
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
@@ -201,11 +223,19 @@ metadata:
   name: key-auth
 plugin: key-auth
 ---
+apiVersion: configuration.konghq.com/v1beta1
+kind: KongConsumerGroup
+metadata:
+  name: cg1
+  annotations:
+    kubernetes.io/ingress.class: kong
+---
 apiVersion: configuration.konghq.com/v1
 kind: KongPlugin
 metadata:
-  name: acl-group-1
+  name: acl-consumer-group-1
 plugin: acl
 config:
+  include_consumer_groups: true
   allow:
-  - acl-group-1
+  - cg1
