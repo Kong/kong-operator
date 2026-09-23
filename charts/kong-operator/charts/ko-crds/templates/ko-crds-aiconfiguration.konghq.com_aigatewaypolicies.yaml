@@ -90,6 +90,9 @@ spec:
                     : self.group == ''konnect.konghq.com'''
               apiSpec:
                 properties:
+                  condition:
+                    maxLength: 1024
+                    type: string
                   config:
                     properties:
                       secretRef:
@@ -156,7 +159,7 @@ spec:
                   name:
                     maxLength: 256
                     minLength: 1
-                    pattern: ^[A-Za-z0-9._:-]{1,256}$
+                    pattern: ^[A-Za-z0-9._:@-]{1,256}$
                     type: string
                   type:
                     maxLength: 253

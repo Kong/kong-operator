@@ -722,6 +722,153 @@ type EventGatewayACLsPolicy struct {
 type EventGatewayAWSKeySource struct {
 }
 
+// EventGatewayAlterClientQuotasRequestRules The rules to apply to Kafka
+// `AlterClientQuotas` requests.
+type EventGatewayAlterClientQuotasRequestRules struct {
+	// Every rule in this list is evaluated independently against each quota
+	// operation in the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayAlterClientQuotasRule `json:"rules,omitempty"`
+}
+
+// EventGatewayAlterClientQuotasRule is a type alias.
+type EventGatewayAlterClientQuotasRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayAlterConfigsRequestRules The rules to apply to Kafka
+// `AlterConfigs` requests.
+type EventGatewayAlterConfigsRequestRules struct {
+	// Every rule in this list is evaluated independently against each resource in
+	// the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayAlterConfigsRule `json:"rules,omitempty"`
+}
+
+// EventGatewayAlterConfigsRule is a type alias.
+type EventGatewayAlterConfigsRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayAlterUserScramCredentialsRequestRules The rules to apply to Kafka
+// `AlterUserScramCredentials` requests.
+type EventGatewayAlterUserScramCredentialsRequestRules struct {
+	// Every rule in this list is evaluated independently against each credential
+	// in the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayAlterUserScramCredentialsRule `json:"rules,omitempty"`
+}
+
+// EventGatewayAlterUserScramCredentialsRule is a type alias.
+type EventGatewayAlterUserScramCredentialsRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
 // EventGatewayConsumeSchemaValidationPolicy A policy that validates consume
 // messages against a schema registry.
 type EventGatewayConsumeSchemaValidationPolicy struct {
@@ -773,7 +920,7 @@ func (s *EventGatewayConsumeSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicy: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.SchemaRegistry == nil && aux.Config.JSON == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.SchemaRegistry == nil && aux.Config.InlineSchema == nil && aux.Config.JSON == nil {
 		aux.Config = nil
 	}
 	*s = EventGatewayConsumeSchemaValidationPolicy(aux)
@@ -787,13 +934,17 @@ type EventGatewayConsumeSchemaValidationPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=confluentSchemaRegistry;json
+	// +kubebuilder:validation:Enum=confluentSchemaRegistry;inlineSchema;json
 	Type EventGatewayConsumeSchemaValidationPolicyConfigType `json:"type,omitempty"`
 
 	// SchemaRegistry configuration.
 	//
 	// +optional
 	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig `json:"confluentSchemaRegistry,omitempty"`
+	// InlineSchema configuration.
+	//
+	// +optional
+	InlineSchema *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig `json:"inlineSchema,omitempty"`
 	// JSON configuration.
 	//
 	// +optional
@@ -806,6 +957,7 @@ type EventGatewayConsumeSchemaValidationPolicyConfigType string
 // EventGatewayConsumeSchemaValidationPolicyConfigType values.
 const (
 	EventGatewayConsumeSchemaValidationPolicyConfigTypeSchemaRegistry EventGatewayConsumeSchemaValidationPolicyConfigType = "confluentSchemaRegistry"
+	EventGatewayConsumeSchemaValidationPolicyConfigTypeInlineSchema   EventGatewayConsumeSchemaValidationPolicyConfigType = "inlineSchema"
 	EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON           EventGatewayConsumeSchemaValidationPolicyConfigType = "json"
 )
 
@@ -825,6 +977,14 @@ func (u EventGatewayConsumeSchemaValidationPolicyConfig) MarshalJSON() ([]byte, 
 				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
 			}
 			m["confluentSchemaRegistry"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicyConfigTypeInlineSchema:
+		if u.InlineSchema != nil {
+			raw, err := json.Marshal(u.InlineSchema)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyConfig inline_schema: %w", err)
+			}
+			m["inlineSchema"] = raw
 		}
 	case EventGatewayConsumeSchemaValidationPolicyConfigTypeJSON:
 		if u.JSON != nil {
@@ -865,6 +1025,16 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
 		}
 		u.SchemaRegistry = &val
+	case "inlineSchema":
+		payload, ok := raw["inlineSchema"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig inline_schema: %w", err)
+		}
+		u.InlineSchema = &val
 	case "json":
 		payload, ok := raw["json"]
 		if !ok || len(payload) == 0 {
@@ -876,6 +1046,189 @@ func (u *EventGatewayConsumeSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 		}
 		u.JSON = &val
 	}
+	return nil
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig The configuration
+// of the consume schema validation policy when using an inline schema.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
+	// Defines a behavior when record key is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	KeyValidationAction ConsumeKeyValidationAction `json:"keyValidationAction,omitzero"`
+	// A reference to a schema Registry.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
+	// Deprecated. Use `failure_mode`.
+	//
+	// Defines a behavior when record value is not valid.
+	// * mark - marks a record with kong/server header and client ID value
+	// to help to identify the clients violating schema.
+	// * skip - skips delivering a record.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=mark;skip
+	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
+// Only one of the fields should be set based on the Type.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=id;name
+	Type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType `json:"type,omitempty"`
+
+	// ID configuration.
+	//
+	// +optional
+	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
+	// Name configuration.
+	//
+	// +optional
+	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType string
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID   EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType = "id"
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType = "name"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID:
+		if u.ID != nil {
+			raw, err := json.Marshal(u.ID)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Id: %w", err)
+			}
+			m["id"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName:
+		if u.Name != nil {
+			raw, err := json.Marshal(u.Name)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Name: %w", err)
+			}
+			m["name"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType(probe.Type)
+	switch probe.Type {
+	case "id":
+		payload, ok := raw["id"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByID
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Id: %w", err)
+		}
+		u.ID = &val
+	case "name":
+		payload, ok := raw["name"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByName
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Name: %w", err)
+		}
+		u.Name = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig: nil receiver")
+	}
+	type alias EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
+	aux := alias{}
+	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig: %w", err)
+	}
+	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
+		aux.SchemaRegistry = nil
+	}
+	*s = EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig(aux)
 	return nil
 }
 
@@ -1006,6 +1359,152 @@ type EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayConsumerGroupHeartbeatRequestRules The rules to apply to Kafka
+// `ConsumerGroupHeartbeat` requests.
+type EventGatewayConsumerGroupHeartbeatRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayConsumerGroupHeartbeatRule `json:"rules,omitempty"`
+}
+
+// EventGatewayConsumerGroupHeartbeatRule is a type alias.
+type EventGatewayConsumerGroupHeartbeatRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayCreatePartitionsRequestRules The rules to apply to Kafka
+// `CreatePartitions` requests.
+type EventGatewayCreatePartitionsRequestRules struct {
+	// Every rule in this list is evaluated independently against each topic in the
+	// request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayCreatePartitionsRule `json:"rules,omitempty"`
+}
+
+// EventGatewayCreatePartitionsRule is a type alias.
+type EventGatewayCreatePartitionsRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayCreateTopicsRequestRules The rules to apply to Kafka
+// `CreateTopics` requests.
+type EventGatewayCreateTopicsRequestRules struct {
+	// Every rule in this list is evaluated independently against each topic in the
+	// request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayCreateTopicsRule `json:"rules,omitempty"`
+}
+
+// EventGatewayCreateTopicsRule is a type alias.
+type EventGatewayCreateTopicsRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
 }
 
 // EventGatewayDecryptPolicy Decrypts Kafka records or keys using AES_256_GCM.
@@ -1255,6 +1754,150 @@ type EventGatewayEncryptPolicy struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=255
 	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayFetchRequestRules The rules to apply to Kafka `Fetch` requests.
+type EventGatewayFetchRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayFetchRule `json:"rules,omitempty"`
+}
+
+// EventGatewayFetchRule is a type alias.
+type EventGatewayFetchRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayIncrementalAlterConfigsRequestRules The rules to apply to Kafka
+// `IncrementalAlterConfigs` requests.
+type EventGatewayIncrementalAlterConfigsRequestRules struct {
+	// Every rule in this list is evaluated independently against each
+	// configuration entry in the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayIncrementalAlterConfigsRule `json:"rules,omitempty"`
+}
+
+// EventGatewayIncrementalAlterConfigsRule is a type alias.
+type EventGatewayIncrementalAlterConfigsRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayJoinGroupRequestRules The rules to apply to Kafka `JoinGroup`
+// requests.
+type EventGatewayJoinGroupRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayJoinGroupRule `json:"rules,omitempty"`
+}
+
+// EventGatewayJoinGroupRule is a type alias.
+type EventGatewayJoinGroupRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
 }
 
 // EventGatewayKeySource represents a union type for EventGatewayKeySource.
@@ -1545,6 +2188,102 @@ type EventGatewayModifyHeadersPolicyCreateConfig struct {
 	//
 	// +optional
 	Actions []EventGatewayModifyHeaderAction `json:"actions,omitempty"`
+}
+
+// EventGatewayOffsetCommitRequestRules The rules to apply to Kafka
+// `OffsetCommit` requests.
+type EventGatewayOffsetCommitRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayOffsetCommitRule `json:"rules,omitempty"`
+}
+
+// EventGatewayOffsetCommitRule is a type alias.
+type EventGatewayOffsetCommitRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
+// EventGatewayOffsetFetchRequestRules The rules to apply to Kafka `OffsetFetch`
+// requests.
+type EventGatewayOffsetFetchRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayOffsetFetchRule `json:"rules,omitempty"`
+}
+
+// EventGatewayOffsetFetchRule is a type alias.
+type EventGatewayOffsetFetchRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
 }
 
 // EventGatewayParsedRecordDecryptFieldsConfig The configuration of the decrypt
@@ -2088,6 +2827,54 @@ type EventGatewayParsedRecordFieldPathsArray []EventGatewayParsedRecordFieldPath
 // equivalent to the `match` values in the array variant.
 type EventGatewayParsedRecordFieldPathsExpression string
 
+// EventGatewayProduceRequestRules The rules to apply to Kafka `Produce`
+// requests.
+type EventGatewayProduceRequestRules struct {
+	// Every rule in this list is evaluated independently against the request.
+	// A rule that evaluates to `false` runs its action.
+	//
+	//
+	// +required
+	Rules []EventGatewayProduceRule `json:"rules,omitempty"`
+}
+
+// EventGatewayProduceRule is a type alias.
+type EventGatewayProduceRule struct {
+	// What to do when a rule evaluates to `false`.
+	//
+	// `reject` fails the request with the `POLICY_VIOLATION` error code.
+	// `passthrough` lets the request continue, but logs the violation in the same
+	// way as `reject`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough
+	Action EventGatewayRequestRuleAction `json:"action,omitzero"`
+	// An explanation of the rule.
+	// Event Gateway writes this text to the logs when the request
+	// violates the rule, because the rule expression alone does not show the
+	// intent.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Description string `json:"description,omitzero"`
+	// A boolean expression that describes the valid state of the request.
+	// The action runs when the expression evaluates to `false`.
+	// An expression that cannot be evaluated, for example because a value has an
+	// unexpected
+	// format, also counts as `false`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=1000
+	Rule string `json:"rule,omitzero"`
+}
+
 // EventGatewayProduceSchemaValidationPolicy A policy that validates produce
 // messages against a schema registry.
 type EventGatewayProduceSchemaValidationPolicy struct {
@@ -2139,7 +2926,7 @@ func (s *EventGatewayProduceSchemaValidationPolicy) UnmarshalJSON(data []byte) e
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicy: %w", err)
 	}
-	if aux.Config != nil && aux.Config.Type == "" && aux.Config.SchemaRegistry == nil && aux.Config.JSON == nil {
+	if aux.Config != nil && aux.Config.Type == "" && aux.Config.SchemaRegistry == nil && aux.Config.InlineSchema == nil && aux.Config.JSON == nil {
 		aux.Config = nil
 	}
 	*s = EventGatewayProduceSchemaValidationPolicy(aux)
@@ -2153,13 +2940,17 @@ type EventGatewayProduceSchemaValidationPolicyConfig struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=confluentSchemaRegistry;json
+	// +kubebuilder:validation:Enum=confluentSchemaRegistry;inlineSchema;json
 	Type EventGatewayProduceSchemaValidationPolicyConfigType `json:"type,omitempty"`
 
 	// SchemaRegistry configuration.
 	//
 	// +optional
 	SchemaRegistry *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig `json:"confluentSchemaRegistry,omitempty"`
+	// InlineSchema configuration.
+	//
+	// +optional
+	InlineSchema *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig `json:"inlineSchema,omitempty"`
 	// JSON configuration.
 	//
 	// +optional
@@ -2172,6 +2963,7 @@ type EventGatewayProduceSchemaValidationPolicyConfigType string
 // EventGatewayProduceSchemaValidationPolicyConfigType values.
 const (
 	EventGatewayProduceSchemaValidationPolicyConfigTypeSchemaRegistry EventGatewayProduceSchemaValidationPolicyConfigType = "confluentSchemaRegistry"
+	EventGatewayProduceSchemaValidationPolicyConfigTypeInlineSchema   EventGatewayProduceSchemaValidationPolicyConfigType = "inlineSchema"
 	EventGatewayProduceSchemaValidationPolicyConfigTypeJSON           EventGatewayProduceSchemaValidationPolicyConfigType = "json"
 )
 
@@ -2191,6 +2983,14 @@ func (u EventGatewayProduceSchemaValidationPolicyConfig) MarshalJSON() ([]byte, 
 				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
 			}
 			m["confluentSchemaRegistry"] = raw
+		}
+	case EventGatewayProduceSchemaValidationPolicyConfigTypeInlineSchema:
+		if u.InlineSchema != nil {
+			raw, err := json.Marshal(u.InlineSchema)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyConfig inline_schema: %w", err)
+			}
+			m["inlineSchema"] = raw
 		}
 	case EventGatewayProduceSchemaValidationPolicyConfigTypeJSON:
 		if u.JSON != nil {
@@ -2231,6 +3031,16 @@ func (u *EventGatewayProduceSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyConfig confluent_schema_registry: %w", err)
 		}
 		u.SchemaRegistry = &val
+	case "inlineSchema":
+		payload, ok := raw["inlineSchema"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyConfig inline_schema: %w", err)
+		}
+		u.InlineSchema = &val
 	case "json":
 		payload, ok := raw["json"]
 		if !ok || len(payload) == 0 {
@@ -2242,6 +3052,186 @@ func (u *EventGatewayProduceSchemaValidationPolicyConfig) UnmarshalJSON(data []b
 		}
 		u.JSON = &val
 	}
+	return nil
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig The configuration
+// of the produce schema validation policy when using an inline schema.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+	// Defines a behavior when record key is not valid.
+	// * reject - rejects a batch for topic partition. Only available for produce.
+	// * mark - marks a record with kong/server header and client ID value
+	//
+	//
+	// to help to identify the clients violating schema.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;mark
+	KeyValidationAction ProduceKeyValidationAction `json:"keyValidationAction,omitzero"`
+	// A reference to a schema Registry.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// If true, validate the record key.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateKey string `json:"validateKey,omitzero"`
+	// If true, validate the record value.
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ValidateValue string `json:"validateValue,omitzero"`
+	// Defines a behavior when record value is not valid.
+	// * reject - rejects a batch for topic partition. Only available for produce.
+	// * mark - marks a record with kong/server header and client ID value
+	//
+	//
+	// to help to identify the clients violating schema.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;mark
+	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
+// Only one of the fields should be set based on the Type.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=id;name
+	Type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType `json:"type,omitempty"`
+
+	// ID configuration.
+	//
+	// +optional
+	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
+	// Name configuration.
+	//
+	// +optional
+	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType string
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType values.
+const (
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID   EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType = "id"
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType = "name"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID:
+		if u.ID != nil {
+			raw, err := json.Marshal(u.ID)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Id: %w", err)
+			}
+			m["id"] = raw
+		}
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName:
+		if u.Name != nil {
+			raw, err := json.Marshal(u.Name)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Name: %w", err)
+			}
+			m["name"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType(probe.Type)
+	switch probe.Type {
+	case "id":
+		payload, ok := raw["id"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByID
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Id: %w", err)
+		}
+		u.ID = &val
+	case "name":
+		payload, ok := raw["name"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByName
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry Name: %w", err)
+		}
+		u.Name = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig: nil receiver")
+	}
+	type alias EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
+	aux := alias{}
+	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig: %w", err)
+	}
+	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
+		aux.SchemaRegistry = nil
+	}
+	*s = EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig(aux)
 	return nil
 }
 
@@ -2599,6 +3589,408 @@ func (s *EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig) Unmarsha
 		aux.SchemaRegistry = nil
 	}
 	*s = EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig(aux)
+	return nil
+}
+
+// EventGatewayRequestRuleAction What to do when a rule evaluates to `false`.
+//
+// `reject` fails the request with the `POLICY_VIOLATION` error code.
+// `passthrough` lets the request continue, but logs the violation in the same
+// way as `reject`.
+type EventGatewayRequestRuleAction string
+
+// EventGatewayRequestRuleValidatorConfig The configuration of the request rule
+// validator policy.
+type EventGatewayRequestRuleValidatorConfig struct {
+	// The rules to apply, grouped by Kafka request type.
+	// A request type can occur more than
+	// once in this list. Every entry for the type applies, in list order.
+	// Requests of a type that is not in this list are not validated.
+	//
+	//
+	// +required
+	Requests []EventGatewayRequestRules `json:"requests,omitempty"`
+}
+
+// EventGatewayRequestRuleValidatorPolicy Validates the content of Kafka
+// requests against a list of rules.
+//
+// Use this policy to enforce conventions that Kafka ACLs cannot express,
+// because ACLs
+// cannot read the content of a request.
+// For example, a maximum number of partitions,
+// a topic naming convention, or a minimum number of acknowledgements on
+// produce.
+//
+// Each rule describes the valid state of the request.
+// The action of the rule runs when
+// the rule evaluates to `false`.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayRequestRuleValidatorPolicy struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayRequestRuleValidatorConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayRequestRules represents a union type for EventGatewayRequestRules.
+// Only one of the fields should be set based on the Type.
+type EventGatewayRequestRules struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=alterClientQuotas;alterConfigs;alterUserScramCredentials;consumerGroupHeartbeat;createPartitions;createTopics;fetch;incrementalAlterConfigs;joinGroup;offsetCommit;offsetFetch;produce
+	Type EventGatewayRequestRulesType `json:"type,omitempty"`
+
+	// AlterClientQuotas configuration.
+	//
+	// +optional
+	AlterClientQuotas *EventGatewayAlterClientQuotasRequestRules `json:"alterClientQuotas,omitempty"`
+	// AlterConfigs configuration.
+	//
+	// +optional
+	AlterConfigs *EventGatewayAlterConfigsRequestRules `json:"alterConfigs,omitempty"`
+	// AlterUserScramCredentials configuration.
+	//
+	// +optional
+	AlterUserScramCredentials *EventGatewayAlterUserScramCredentialsRequestRules `json:"alterUserScramCredentials,omitempty"`
+	// ConsumerGroupHeartbeat configuration.
+	//
+	// +optional
+	ConsumerGroupHeartbeat *EventGatewayConsumerGroupHeartbeatRequestRules `json:"consumerGroupHeartbeat,omitempty"`
+	// Partitions configuration.
+	//
+	// +optional
+	Partitions *EventGatewayCreatePartitionsRequestRules `json:"createPartitions,omitempty"`
+	// Topics configuration.
+	//
+	// +optional
+	Topics *EventGatewayCreateTopicsRequestRules `json:"createTopics,omitempty"`
+	// Fetch configuration.
+	//
+	// +optional
+	Fetch *EventGatewayFetchRequestRules `json:"fetch,omitempty"`
+	// IncrementalAlterConfigs configuration.
+	//
+	// +optional
+	IncrementalAlterConfigs *EventGatewayIncrementalAlterConfigsRequestRules `json:"incrementalAlterConfigs,omitempty"`
+	// JoinGroup configuration.
+	//
+	// +optional
+	JoinGroup *EventGatewayJoinGroupRequestRules `json:"joinGroup,omitempty"`
+	// OffsetCommit configuration.
+	//
+	// +optional
+	OffsetCommit *EventGatewayOffsetCommitRequestRules `json:"offsetCommit,omitempty"`
+	// OffsetFetch configuration.
+	//
+	// +optional
+	OffsetFetch *EventGatewayOffsetFetchRequestRules `json:"offsetFetch,omitempty"`
+	// Produce configuration.
+	//
+	// +optional
+	Produce *EventGatewayProduceRequestRules `json:"produce,omitempty"`
+}
+
+// EventGatewayRequestRulesType represents the type of EventGatewayRequestRules.
+type EventGatewayRequestRulesType string
+
+// EventGatewayRequestRulesType values.
+const (
+	EventGatewayRequestRulesTypeAlterClientQuotas         EventGatewayRequestRulesType = "alterClientQuotas"
+	EventGatewayRequestRulesTypeAlterConfigs              EventGatewayRequestRulesType = "alterConfigs"
+	EventGatewayRequestRulesTypeAlterUserScramCredentials EventGatewayRequestRulesType = "alterUserScramCredentials"
+	EventGatewayRequestRulesTypeConsumerGroupHeartbeat    EventGatewayRequestRulesType = "consumerGroupHeartbeat"
+	EventGatewayRequestRulesTypePartitions                EventGatewayRequestRulesType = "createPartitions"
+	EventGatewayRequestRulesTypeTopics                    EventGatewayRequestRulesType = "createTopics"
+	EventGatewayRequestRulesTypeFetch                     EventGatewayRequestRulesType = "fetch"
+	EventGatewayRequestRulesTypeIncrementalAlterConfigs   EventGatewayRequestRulesType = "incrementalAlterConfigs"
+	EventGatewayRequestRulesTypeJoinGroup                 EventGatewayRequestRulesType = "joinGroup"
+	EventGatewayRequestRulesTypeOffsetCommit              EventGatewayRequestRulesType = "offsetCommit"
+	EventGatewayRequestRulesTypeOffsetFetch               EventGatewayRequestRulesType = "offsetFetch"
+	EventGatewayRequestRulesTypeProduce                   EventGatewayRequestRulesType = "produce"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayRequestRules) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayRequestRules type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayRequestRulesTypeAlterClientQuotas:
+		if u.AlterClientQuotas != nil {
+			raw, err := json.Marshal(u.AlterClientQuotas)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules alter_client_quotas: %w", err)
+			}
+			m["alterClientQuotas"] = raw
+		}
+	case EventGatewayRequestRulesTypeAlterConfigs:
+		if u.AlterConfigs != nil {
+			raw, err := json.Marshal(u.AlterConfigs)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules alter_configs: %w", err)
+			}
+			m["alterConfigs"] = raw
+		}
+	case EventGatewayRequestRulesTypeAlterUserScramCredentials:
+		if u.AlterUserScramCredentials != nil {
+			raw, err := json.Marshal(u.AlterUserScramCredentials)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules alter_user_scram_credentials: %w", err)
+			}
+			m["alterUserScramCredentials"] = raw
+		}
+	case EventGatewayRequestRulesTypeConsumerGroupHeartbeat:
+		if u.ConsumerGroupHeartbeat != nil {
+			raw, err := json.Marshal(u.ConsumerGroupHeartbeat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules consumer_group_heartbeat: %w", err)
+			}
+			m["consumerGroupHeartbeat"] = raw
+		}
+	case EventGatewayRequestRulesTypePartitions:
+		if u.Partitions != nil {
+			raw, err := json.Marshal(u.Partitions)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules create_partitions: %w", err)
+			}
+			m["createPartitions"] = raw
+		}
+	case EventGatewayRequestRulesTypeTopics:
+		if u.Topics != nil {
+			raw, err := json.Marshal(u.Topics)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules create_topics: %w", err)
+			}
+			m["createTopics"] = raw
+		}
+	case EventGatewayRequestRulesTypeFetch:
+		if u.Fetch != nil {
+			raw, err := json.Marshal(u.Fetch)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules fetch: %w", err)
+			}
+			m["fetch"] = raw
+		}
+	case EventGatewayRequestRulesTypeIncrementalAlterConfigs:
+		if u.IncrementalAlterConfigs != nil {
+			raw, err := json.Marshal(u.IncrementalAlterConfigs)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules incremental_alter_configs: %w", err)
+			}
+			m["incrementalAlterConfigs"] = raw
+		}
+	case EventGatewayRequestRulesTypeJoinGroup:
+		if u.JoinGroup != nil {
+			raw, err := json.Marshal(u.JoinGroup)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules join_group: %w", err)
+			}
+			m["joinGroup"] = raw
+		}
+	case EventGatewayRequestRulesTypeOffsetCommit:
+		if u.OffsetCommit != nil {
+			raw, err := json.Marshal(u.OffsetCommit)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules offset_commit: %w", err)
+			}
+			m["offsetCommit"] = raw
+		}
+	case EventGatewayRequestRulesTypeOffsetFetch:
+		if u.OffsetFetch != nil {
+			raw, err := json.Marshal(u.OffsetFetch)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules offset_fetch: %w", err)
+			}
+			m["offsetFetch"] = raw
+		}
+	case EventGatewayRequestRulesTypeProduce:
+		if u.Produce != nil {
+			raw, err := json.Marshal(u.Produce)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayRequestRules produce: %w", err)
+			}
+			m["produce"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayRequestRules) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayRequestRules: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayRequestRulesType(probe.Type)
+	switch probe.Type {
+	case "alterClientQuotas":
+		payload, ok := raw["alterClientQuotas"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayAlterClientQuotasRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules alter_client_quotas: %w", err)
+		}
+		u.AlterClientQuotas = &val
+	case "alterConfigs":
+		payload, ok := raw["alterConfigs"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayAlterConfigsRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules alter_configs: %w", err)
+		}
+		u.AlterConfigs = &val
+	case "alterUserScramCredentials":
+		payload, ok := raw["alterUserScramCredentials"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayAlterUserScramCredentialsRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules alter_user_scram_credentials: %w", err)
+		}
+		u.AlterUserScramCredentials = &val
+	case "consumerGroupHeartbeat":
+		payload, ok := raw["consumerGroupHeartbeat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayConsumerGroupHeartbeatRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules consumer_group_heartbeat: %w", err)
+		}
+		u.ConsumerGroupHeartbeat = &val
+	case "createPartitions":
+		payload, ok := raw["createPartitions"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayCreatePartitionsRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules create_partitions: %w", err)
+		}
+		u.Partitions = &val
+	case "createTopics":
+		payload, ok := raw["createTopics"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayCreateTopicsRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules create_topics: %w", err)
+		}
+		u.Topics = &val
+	case "fetch":
+		payload, ok := raw["fetch"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayFetchRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules fetch: %w", err)
+		}
+		u.Fetch = &val
+	case "incrementalAlterConfigs":
+		payload, ok := raw["incrementalAlterConfigs"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayIncrementalAlterConfigsRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules incremental_alter_configs: %w", err)
+		}
+		u.IncrementalAlterConfigs = &val
+	case "joinGroup":
+		payload, ok := raw["joinGroup"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayJoinGroupRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules join_group: %w", err)
+		}
+		u.JoinGroup = &val
+	case "offsetCommit":
+		payload, ok := raw["offsetCommit"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayOffsetCommitRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules offset_commit: %w", err)
+		}
+		u.OffsetCommit = &val
+	case "offsetFetch":
+		payload, ok := raw["offsetFetch"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayOffsetFetchRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules offset_fetch: %w", err)
+		}
+		u.OffsetFetch = &val
+	case "produce":
+		payload, ok := raw["produce"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayProduceRequestRules
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayRequestRules produce: %w", err)
+		}
+		u.Produce = &val
+	}
 	return nil
 }
 

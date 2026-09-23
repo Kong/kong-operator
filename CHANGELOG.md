@@ -66,6 +66,19 @@
 
 ### Added
 
+- Added support for AI Gateway runtime `2.1`: `AIGatewayMCPServer`
+  `listener`/`conversion-listener` gain `config.allowedVersions` and
+  `config.cache.{discover,toolsList}` (cache hints with `cacheScope`/`ttlMs`);
+  `AIGatewayPolicy` gains `condition` for conditional plugin execution;
+  `KonnectAIGateway` gains `minRuntimeVersion` and `runtimeAutoUpgrade` to
+  control and report the control plane's runtime version. Also added:
+  `AIGatewayModel` per-modality cost overrides (`inputCostList`,
+  `outputCostList`, `cacheReadCostList`); `PortalTeam.konnectManaged`;
+  `EventGatewayVirtualClusterPolicy`'s new `requestRuleValidator` config
+  type; and `inlineSchema` as a new
+  `EventGatewayVirtualCluster{Consume,Produce}Policy` schema-validation
+  config type.
+  [#5825](https://github.com/Kong/kong-operator/pull/5825)
 - `PortalIdentityProviderRequest`: support adopting existing Konnect portal
   identity provider configurations by matching the spec against the remote
   configuration (OIDC: issuer URL and client ID; SAML: whichever of the IdP
@@ -146,6 +159,21 @@
 
 ### Breaking changes
 
+The following APIs have breaking changes below. All are alpha (`v1alpha1`)
+APIs, which carry no backward-compatibility guarantee and are not covered
+by the operator's semver:
+
+- `PortalCustomization` (`konnect.konghq.com`)
+- `AIGatewayMCPServer` (`aiconfiguration.konghq.com`)
+- `KonnectConfigStore` (`konnect.konghq.com`)
+- `AIGatewayDataPlane` (`aigateway.konghq.com`)
+
+- `PortalCustomization`: `spec.apiSpec.specRenderer.tryItUiAudience` is removed,
+  following its removal from Konnect's public API in this SDK version. Existing
+  objects with this field set will have it silently dropped on the next spec
+  update, or have `kubectl apply` rejected outright under strict client-side
+  validation, depending on tooling.
+  [#5825](https://github.com/Kong/kong-operator/pull/5825)
 - `AIGatewayMCPServer`: `route` (under the `conversion-listener`/`conversion-only`/
   `listener`/`passthrough-listener`/`upstream-server` `config`) changes from an
   untyped string map to a structured matcher object, with `paths`/`hosts`/`methods`

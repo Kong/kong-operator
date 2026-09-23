@@ -7,6 +7,11 @@ spec:
     Konnect AIGateway - Policy. Stands up the Konnect AIGateway control plane
     and creates policies to test the AIGatewayPolicy CRD. Then check for the policies
     on Konnect to validate that they were created successfully.
+
+    Also covers the runtime-2.1 `condition` field: after raising the control
+    plane's minRuntimeVersion to 2.1, creates a policy whose condition matches
+    the test traffic's request path and verifies its config is actually
+    applied (not just accepted at the schema level).
   bindings:
     - name: test_name
       value: ($namespace)
@@ -43,6 +48,43 @@ spec:
           value: ($konnect_auth_name)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Bump-aigateway-runtime-to-2.1
+      description: |
+        Raise the control plane's minRuntimeVersion to 2.1, required by the
+        AIGatewayPolicy `condition` field set below. runtimeAutoUpgrade is
+        also enabled so this floor keeps advancing as newer data planes
+        connect, instead of staying pinned at 2.1 once Konnect eventually
+        deprecates that baseline.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+              spec:
+                apiSpec:
+                  name: ($aigw_cp_name)
+                  displayName: ($aigw_cp_name)
+                  labels:
+                    test: ($test_name)
+                  minRuntimeVersion: "2.1"
+                  runtimeAutoUpgrade: Enabled
+                konnect:
+                  authRef:
+                    name: ($konnect_auth_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
     - name: Create-aigateway-dataplane
       bindings:
         - name: namespace
@@ -145,6 +187,40 @@ spec:
                 value: "Modified-By-Policy-Secretref-Updated"
             content: |
               bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
+    - name: Create-aigateway-policy-with-condition
+      description: Create an AIGatewayPolicy resource with a `condition` gating its response-transformer config on the request path.
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-condition']))
+      try:
+        - apply:
+            file: 05-aigateway-policy-with-condition.yaml
+        - assert:
+            file: 00-assert-aigateway-policy-programmed.yaml
+    - name: Update-aigateway-model-to-reference-the-policy-with-condition
+      bindings:
+        - name: aigw_policy_name
+          value: (join('-', [($test_name), 'policy-condition']))
+      try:
+        - apply:
+            file: 03-aigateway-model-referencing-the-policy.yaml
+    - name: Verify-aigateway-policy-with-condition-is-applied
+      description: Verify that the AIGatewayPolicy's condition matches the request path by checking for the custom header in the response of an API.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: DP_SVC
+                value: (join('', [($aigw_dp_name), '-ingress']))
+              - name: ROUTE_PATH
+                value: /aigw11/chat
+              - name: MODEL_ALIAS
+                value: qwen2.5:0.5b
+              - name: EXPECT_HEADER
+                value: "Modified-By-Policy-Condition"
+            content: |
+              bash ../../common/scripts/aigw_chat_completion_from_cluster.sh
     - name: Delete-aigateway-model-and-policies-and-wait-for-konnect-cleanup
       description: |
         Explicitly delete the AIGatewayModel first (it references both policies
@@ -186,6 +262,12 @@ spec:
               apiVersion: aiconfiguration.konghq.com/v1alpha1
               kind: AIGatewayPolicy
               name: (join('-', [($test_name), 'policy-secretref-config']))
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayPolicy
+              name: (join('-', [($test_name), 'policy-condition']))
               namespace: ($namespace)
         - error:
             resource:

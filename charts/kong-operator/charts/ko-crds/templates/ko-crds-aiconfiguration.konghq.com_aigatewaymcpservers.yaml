@@ -221,6 +221,37 @@ spec:
                         type: object
                       config:
                         properties:
+                          allowedVersions:
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            properties:
+                              discover:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             properties:
                               audits:
@@ -576,7 +607,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -869,7 +900,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -1151,6 +1182,37 @@ spec:
                         type: object
                       config:
                         properties:
+                          allowedVersions:
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            properties:
+                              discover:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                properties:
+                                  cacheScope:
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             properties:
                               audits:
@@ -1463,7 +1525,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -2018,7 +2080,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -2419,6 +2481,14 @@ spec:
                                 required:
                                 - type
                                 type: object
+                              upstreamProtocolVersion:
+                                enum:
+                                - "2026-07-28"
+                                - "2025-11-25"
+                                - "2025-06-18"
+                                - "2025-03-26"
+                                maxLength: 253
+                                type: string
                             type: object
                           toolsCacheTtlSeconds:
                             minimum: 0
@@ -2494,7 +2564,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:

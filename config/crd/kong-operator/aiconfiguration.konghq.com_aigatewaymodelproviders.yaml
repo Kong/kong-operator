@@ -346,7 +346,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -708,7 +708,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1056,7 +1056,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1280,7 +1280,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1504,7 +1504,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1728,7 +1728,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1952,7 +1952,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2176,7 +2176,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2592,7 +2592,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2816,7 +2816,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3040,7 +3040,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3264,7 +3264,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3488,7 +3488,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3712,7 +3712,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3936,7 +3936,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4202,7 +4202,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4450,7 +4450,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4674,7 +4674,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4898,7 +4898,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config

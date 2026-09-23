@@ -35,7 +35,7 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 							AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerListenerAccessTypeConsumer,
 							Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 						},
-						Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
+						Config: aiconfigurationv1alpha1.AIGatewayMCPServerListenerConfig{
 							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
 								Paths: []string{"/mcp"},
 							},
@@ -242,7 +242,7 @@ func validAIGatewayMCPServerConversionListener(ns string) *aiconfigurationv1alph
 				AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerAccessTypeConsumer,
 				Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
-			Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfig{
+			Config: aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig{
 				URL: "https://example.com/mcp",
 			},
 			Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{

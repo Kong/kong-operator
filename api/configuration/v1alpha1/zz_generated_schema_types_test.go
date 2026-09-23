@@ -215,10 +215,101 @@ func TestEventGatewayAWSKeySource_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayAlterClientQuotasRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterClientQuotasRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayAlterClientQuotasRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterClientQuotasRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayAlterConfigsRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterConfigsRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayAlterConfigsRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterConfigsRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayAlterUserScramCredentialsRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterUserScramCredentialsRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayAlterUserScramCredentialsRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayAlterUserScramCredentialsRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayConsumeSchemaValidationPolicy_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec EventGatewayConsumeSchemaValidationPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -245,6 +336,84 @@ func TestEventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig_MarshalEm
 	t.Parallel()
 
 	var spec EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayConsumerGroupHeartbeatRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayConsumerGroupHeartbeatRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayConsumerGroupHeartbeatRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayConsumerGroupHeartbeatRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayCreatePartitionsRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayCreatePartitionsRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayCreatePartitionsRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayCreatePartitionsRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayCreateTopicsRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayCreateTopicsRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayCreateTopicsRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayCreateTopicsRule
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -306,6 +475,84 @@ func TestEventGatewayEncryptPolicy_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayFetchRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayFetchRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayFetchRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayFetchRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayIncrementalAlterConfigsRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayIncrementalAlterConfigsRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayIncrementalAlterConfigsRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayIncrementalAlterConfigsRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayJoinGroupRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayJoinGroupRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayJoinGroupRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayJoinGroupRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayModifyHeaderRemoveAction_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -336,6 +583,58 @@ func TestEventGatewayModifyHeadersPolicyCreate_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec EventGatewayModifyHeadersPolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayOffsetCommitRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayOffsetCommitRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayOffsetCommitRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayOffsetCommitRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayOffsetFetchRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayOffsetFetchRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayOffsetFetchRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayOffsetFetchRule
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -423,10 +722,49 @@ func TestEventGatewayParsedRecordEncryptionSelector_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayProduceRequestRules_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayProduceRequestRules
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayProduceRule_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayProduceRule
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicy_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec EventGatewayProduceSchemaValidationPolicy
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -453,6 +791,32 @@ func TestEventGatewayProduceSchemaValidationPolicySchemaRegistryConfig_MarshalEm
 	t.Parallel()
 
 	var spec EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayRequestRuleValidatorConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayRequestRuleValidatorConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayRequestRuleValidatorPolicy_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayRequestRuleValidatorPolicy
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1062,6 +1426,7 @@ func TestEventGatewayConsumeSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 		payload []byte
 	}{
 		{name: "confluent_schema_registry", payload: []byte("{\"type\":\"confluentSchemaRegistry\",\"confluentSchemaRegistry\":{}}")},
+		{name: "inline_schema", payload: []byte("{\"type\":\"inlineSchema\",\"inlineSchema\":{}}")},
 		{name: "json", payload: []byte("{\"type\":\"json\",\"json\":{}}")},
 	}
 
@@ -1076,6 +1441,34 @@ func TestEventGatewayConsumeSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Id", payload: []byte("{\"type\":\"id\",\"id\":{}}")},
+		{name: "Name", payload: []byte("{\"type\":\"name\",\"name\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1258,6 +1651,7 @@ func TestEventGatewayProduceSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 		payload []byte
 	}{
 		{name: "confluent_schema_registry", payload: []byte("{\"type\":\"confluentSchemaRegistry\",\"confluentSchemaRegistry\":{}}")},
+		{name: "inline_schema", payload: []byte("{\"type\":\"inlineSchema\",\"inlineSchema\":{}}")},
 		{name: "json", payload: []byte("{\"type\":\"json\",\"json\":{}}")},
 	}
 
@@ -1272,6 +1666,34 @@ func TestEventGatewayProduceSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicyConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Id", payload: []byte("{\"type\":\"id\",\"id\":{}}")},
+		{name: "Name", payload: []byte("{\"type\":\"name\",\"name\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1328,6 +1750,44 @@ func TestEventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegi
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayRequestRulesUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "alter_client_quotas", payload: []byte("{\"type\":\"alterClientQuotas\",\"alterClientQuotas\":{}}")},
+		{name: "alter_configs", payload: []byte("{\"type\":\"alterConfigs\",\"alterConfigs\":{}}")},
+		{name: "alter_user_scram_credentials", payload: []byte("{\"type\":\"alterUserScramCredentials\",\"alterUserScramCredentials\":{}}")},
+		{name: "consumer_group_heartbeat", payload: []byte("{\"type\":\"consumerGroupHeartbeat\",\"consumerGroupHeartbeat\":{}}")},
+		{name: "create_partitions", payload: []byte("{\"type\":\"createPartitions\",\"createPartitions\":{}}")},
+		{name: "create_topics", payload: []byte("{\"type\":\"createTopics\",\"createTopics\":{}}")},
+		{name: "fetch", payload: []byte("{\"type\":\"fetch\",\"fetch\":{}}")},
+		{name: "incremental_alter_configs", payload: []byte("{\"type\":\"incrementalAlterConfigs\",\"incrementalAlterConfigs\":{}}")},
+		{name: "join_group", payload: []byte("{\"type\":\"joinGroup\",\"joinGroup\":{}}")},
+		{name: "offset_commit", payload: []byte("{\"type\":\"offsetCommit\",\"offsetCommit\":{}}")},
+		{name: "offset_fetch", payload: []byte("{\"type\":\"offsetFetch\",\"offsetFetch\":{}}")},
+		{name: "produce", payload: []byte("{\"type\":\"produce\",\"produce\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayRequestRules
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayRequestRules: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1584,6 +2044,22 @@ func TestEventGatewayConsumeSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			},
 		},
 		{
+			name:    "Config/inline_schema",
+			payload: []byte("{\"config\":{\"type\":\"inlineSchema\",\"inlineSchema\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicy) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, EventGatewayConsumeSchemaValidationPolicyConfigTypeInlineSchema; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.InlineSchema == nil {
+					t.Fatalf("Config.InlineSchema should be allocated")
+				}
+			},
+		},
+		{
 			name:    "Config/json",
 			payload: []byte("{\"config\":{\"type\":\"json\",\"json\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicy) {
@@ -1607,6 +2083,62 @@ func TestEventGatewayConsumeSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			t.Parallel()
 
 			var target EventGatewayConsumeSchemaValidationPolicy
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig)
+	}{
+		{
+			name:    "SchemaRegistry/Id",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.ID == nil {
+					t.Fatalf("SchemaRegistry.ID should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRegistry/Name",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.Name == nil {
+					t.Fatalf("SchemaRegistry.Name should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}
@@ -1840,6 +2372,22 @@ func TestEventGatewayProduceSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			},
 		},
 		{
+			name:    "Config/inline_schema",
+			payload: []byte("{\"config\":{\"type\":\"inlineSchema\",\"inlineSchema\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicy) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.Type, EventGatewayProduceSchemaValidationPolicyConfigTypeInlineSchema; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.InlineSchema == nil {
+					t.Fatalf("Config.InlineSchema should be allocated")
+				}
+			},
+		},
+		{
 			name:    "Config/json",
 			payload: []byte("{\"config\":{\"type\":\"json\",\"json\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicy) {
@@ -1863,6 +2411,62 @@ func TestEventGatewayProduceSchemaValidationPolicyUnmarshalJSON_DecodesUnionFiel
 			t.Parallel()
 
 			var target EventGatewayProduceSchemaValidationPolicy
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig)
+	}{
+		{
+			name:    "SchemaRegistry/Id",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeID; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.ID == nil {
+					t.Fatalf("SchemaRegistry.ID should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRegistry/Name",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryTypeName; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.Name == nil {
+					t.Fatalf("SchemaRegistry.Name should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
 			if err := json.Unmarshal(tt.payload, &target); err != nil {
 				t.Fatalf("json.Unmarshal() error = %v", err)
 			}

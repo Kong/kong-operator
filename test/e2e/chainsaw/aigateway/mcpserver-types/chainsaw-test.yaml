@@ -14,6 +14,11 @@ spec:
     from the original bug report. Verifies every variant reaches
     Programmed=True with a real Konnect ID - this exercises the real Konnect
     SDK request marshaling, not just CRD schema validation.
+
+    The listener and conversion-listener variants also set the runtime-2.1
+    `config.allowedVersions` and `config.cache.{discover,toolsList}` fields,
+    after raising the control plane's minRuntimeVersion to 2.1, since Konnect
+    rejects those fields below that runtime version.
   bindings:
     - name: test_name
       value: ($namespace)
@@ -56,6 +61,43 @@ spec:
           value: ($konnect_auth_name)
       use:
         template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+    - name: Bump-aigateway-runtime-to-2.1
+      description: |
+        Raise the control plane's minRuntimeVersion to 2.1, required by the
+        listener/conversion-listener config.allowedVersions and config.cache
+        fields set below. runtimeAutoUpgrade is also enabled so this floor
+        keeps advancing as newer data planes connect, instead of staying
+        pinned at 2.1 once Konnect eventually deprecates that baseline.
+      try:
+        - apply:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+              spec:
+                apiSpec:
+                  name: ($aigw_cp_name)
+                  displayName: ($aigw_cp_name)
+                  labels:
+                    test: ($test_name)
+                  minRuntimeVersion: "2.1"
+                  runtimeAutoUpgrade: Enabled
+                konnect:
+                  authRef:
+                    name: ($konnect_auth_name)
+        - assert:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha1
+              kind: KonnectAIGateway
+              metadata:
+                name: ($aigw_cp_name)
+                namespace: ($aigw_cp_namespace)
+              status:
+                (conditions[?type == 'Programmed']):
+                  - status: 'True'
+                (id != null): true
     - name: Create-aigateway-mcpservers
       description: |
         Apply all 5 apiSpec.type variants in one go and assert each becomes

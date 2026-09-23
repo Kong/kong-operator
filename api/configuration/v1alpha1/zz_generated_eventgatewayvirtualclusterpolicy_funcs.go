@@ -31,9 +31,13 @@ func (obj *EventGatewayVirtualClusterPolicy) GetKonnectName() string {
 		return ""
 	}
 	switch obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.Type {
-	case EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy:
-		if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy != nil {
-			return string(obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.EventGatewayACLsPolicy.Name)
+	case EventGatewayVirtualClusterPolicyConfigTypeACLs:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.ACLs != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.ACLs.Name)
+		}
+	case EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.RequestRuleValidator != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterPolicyConfig.RequestRuleValidator.Name)
 		}
 	}
 	return ""
