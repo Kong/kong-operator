@@ -37,7 +37,7 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 						},
 						Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
 							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
-								"paths": "/mcp",
+								Paths: []string{"/mcp"},
 							},
 						},
 					},

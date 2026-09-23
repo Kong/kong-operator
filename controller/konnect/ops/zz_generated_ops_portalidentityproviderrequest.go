@@ -83,3 +83,110 @@ func deletePortalIdentityProviderRequest(
 	}
 	return nil
 }
+
+func getPortalIdentityProviderRequestForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.PortalAuthSettingsSDK,
+	obj *konnectv1alpha1.PortalIdentityProviderRequest,
+) (string, error) {
+	parentID := obj.GetPortalID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: GetOp}
+	}
+	resp, err := sdk.GetPortalIdentityProviders(ctx, parentID, nil)
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	unionField := obj.Spec.APISpec.Config
+	if unionField == nil {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	switch unionField.Type {
+	case "oIDC":
+		selected := unionField.OIDC
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range resp.PortalIdentityProviders {
+			if responseType := entry.GetType(); responseType == nil || string(*responseType) != "oidc" {
+				continue
+			}
+			entryContainer := entry.GetConfig()
+			if entryContainer == nil {
+				continue
+			}
+			entryVariant := entryContainer.OIDCIdentityProviderConfigOutput
+			if entryVariant == nil {
+				continue
+			}
+			if !matchStringField(selected.IssuerURL, entryVariant.GetIssuerURL()) {
+				continue
+			}
+			if !matchStringField(selected.ClientID, entryVariant.GetClientID()) {
+				continue
+			}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+			}
+		}
+	case "portalSAML":
+		selected := unionField.PortalSAML
+		if selected == nil {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		// Every configured match field is optional, so a variant that sets none
+		// of them would compare nothing and match an arbitrary entry.
+		if stringValueGeneric(selected.IdpMetadataURL) == "" && stringValueGeneric(selected.IdpMetadataXML) == "" {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		for _, entry := range resp.PortalIdentityProviders {
+			if responseType := entry.GetType(); responseType == nil || string(*responseType) != "saml" {
+				continue
+			}
+			entryContainer := entry.GetConfig()
+			if entryContainer == nil {
+				continue
+			}
+			entryVariant := entryContainer.PortalSAMLIdentityProviderConfig
+			if entryVariant == nil {
+				continue
+			}
+			if !matchOptionalStringField(selected.IdpMetadataURL, entryVariant.GetIdpMetadataURL()) {
+				continue
+			}
+			if !matchOptionalStringField(selected.IdpMetadataXML, entryVariant.GetIdpMetadataXML()) {
+				continue
+			}
+			switch id := any(entry.GetID()).(type) {
+			case string:
+				if id != "" {
+					return id, nil
+				}
+			case *string:
+				if id != nil && *id != "" {
+					return *id, nil
+				}
+			default:
+				return "", fmt.Errorf("list %s: %w (got %T)", obj.GetTypeName(), ErrUnexpectedIDType, id)
+			}
+		}
+	default:
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+}

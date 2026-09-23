@@ -1,0 +1,179 @@
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_conversion_only_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: conversion-only
+    conversion-only:
+      name: ($mcp_conversion_only_name)
+      displayName: ($mcp_conversion_only_name)
+      enabled: Enabled
+      config:
+        url: https://flights-api.kongair.example/openapi.json
+        route:
+          paths:
+            - /mcp/flights-conversion-only
+            - /mcp/flights-conversion-only/v2
+          methods:
+            - GET
+            - POST
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_upstream_server_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: upstream-server
+    upstream-server:
+      name: ($mcp_upstream_server_name)
+      displayName: ($mcp_upstream_server_name)
+      enabled: Enabled
+      config:
+        url: https://flights-mcp.kongair.example
+        route:
+          paths:
+            - /mcp/flights-upstream-server
+          hosts:
+            - flights-upstream.mcp.example.com
+        toolsCacheTtlSeconds: 300
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_passthrough_listener_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: passthrough-listener
+    passthrough-listener:
+      name: ($mcp_passthrough_listener_name)
+      displayName: ($mcp_passthrough_listener_name)
+      enabled: Enabled
+      access:
+        aclAttributeType: oauthAccessToken
+        oauthAccessToken:
+          accessTokenClaimField: .user.email
+      config:
+        url: https://flights-mcp.kongair.example
+        route:
+          hosts:
+            - flights-passthrough.mcp.example.com
+          headers:
+            x-mcp-client:
+              - flights-e2e
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_listener_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: listener
+    listener:
+      name: ($mcp_listener_name)
+      displayName: ($mcp_listener_name)
+      enabled: Enabled
+      sources:
+        - ($mcp_conversion_only_name)
+        - ($mcp_upstream_server_name)
+      access:
+        aclAttributeType: consumer
+      config:
+        route:
+          methods:
+            - GET
+            - POST
+          headers:
+            accept:
+              - application/json
+        logging:
+          audits: Enabled
+          payloads: Disabled
+      labels:
+        domain: flights
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayMCPServer
+metadata:
+  name: ($mcp_conversion_listener_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: conversion-listener
+    conversion-listener:
+      name: ($mcp_conversion_listener_name)
+      displayName: ($mcp_conversion_listener_name)
+      enabled: Enabled
+      access:
+        aclAttributeType: consumer
+      config:
+        url: https://flights-api.kongair.example/openapi.json
+        route:
+          paths:
+            - /mcp/flights-conversion-listener
+            - /mcp/flights-conversion-listener/v2
+          hosts:
+            - flights-conversion.mcp.example.com
+          methods:
+            - GET
+            - POST
+          headers:
+            x-mcp-client:
+              - flights-e2e
+              - flights-e2e-v2
+            accept:
+              - application/json
+        logging:
+          audits: Disabled
+          payloads: Enabled
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights

@@ -280,6 +280,7 @@ apiGroupVersions:
                 responseField: Certificate
               - objectField: Spec.APISpec.Name
                 responseField: Name
+                skipWhenUnset: true
 `
 		path := filepath.Join(t.TempDir(), "config.yaml")
 		require.NoError(t, os.WriteFile(path, []byte(content), 0o600))
@@ -294,6 +295,8 @@ apiGroupVersions:
 		require.Len(t, konnect.Types[0].OpsGetForUID.MatchFields, 2)
 		assert.Equal(t, "Spec.APISpec.Certificate", konnect.Types[0].OpsGetForUID.MatchFields[0].ObjectField)
 		assert.Equal(t, "Certificate", konnect.Types[0].OpsGetForUID.MatchFields[0].ResponseField)
+		assert.False(t, konnect.Types[0].OpsGetForUID.MatchFields[0].SkipWhenUnset)
+		assert.True(t, konnect.Types[0].OpsGetForUID.MatchFields[1].SkipWhenUnset)
 	})
 
 	t.Run("valid config with getForUID root union", func(t *testing.T) {

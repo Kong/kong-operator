@@ -66,6 +66,23 @@
 
 ### Added
 
+- `PortalIdentityProviderRequest`: support adopting existing Konnect portal
+  identity provider configurations by matching the spec against the remote
+  configuration (OIDC: issuer URL and client ID; SAML: whichever of the IdP
+  metadata URL and XML the spec sets) when the Konnect ID is not set.
+  [#3956](https://github.com/Kong/kong-operator/pull/3956)
+- `AIGatewayDataPlane`: add management of admin API service, admin server cert and
+  admin listener to AIGatewayDataPlane reconciler.
+  [#5734](https://github.com/Kong/kong-operator/pull/5734)
+- Added `KonnectConfigStoreSync` CRD (`konnect.konghq.com/v1alpha1`): declares a
+  one-way sync from a Kubernetes `Secret` to a Konnect Config Store. This change
+  only adds the API types, CEL validation and CRD; it is not reconciled yet.
+  [#5773](https://github.com/Kong/kong-operator/pull/5773)
+- Added groundwork for the `KonnectConfigStoreSync` controller: key derivation,
+  entry resolution, x509 pair validation and value hashing helpers, field
+  indexers (including the `(storeID, storeKey)` conflict index), and a
+  semantics-accurate fake of the Konnect `ConfigStoreSecrets` SDK for tests.
+  [#5710](https://github.com/Kong/kong-operator/issues/5710)
 - `AIGatewayDataPlane`: `spec.controlPlaneRef` now supports the new
   `onpremNamespacedRef` type, letting a data plane reference an `OnPremAIGateway`
   control plane in the same namespace.
@@ -138,6 +155,17 @@
 
 ### Breaking changes
 
+- `AIGatewayMCPServer`: `route` (under the `conversion-listener`/`conversion-only`/
+  `listener`/`passthrough-listener`/`upstream-server` `config`) changes from an
+  untyped string map to a structured matcher object, with `paths`/`hosts`/`methods`
+  as proper lists and `headers` as a map of header name to list of values. The
+  previous shape could only hold scalar strings, so `paths`/`hosts`/`methods`
+  could never be expressed as the arrays Kong's route matching actually requires,
+  and every `AIGatewayMCPServer` with a non-empty `route` failed to reconcile
+  (`Programmed=False`/`FailedToCreate`) with an SDK unmarshal error.
+  Recovery: change `route.paths`/`route.hosts`/`route.methods` from a bare string
+  to a list, e.g. `paths: /mcp/foo` becomes `paths: [/mcp/foo]`.
+  [#5804](https://github.com/Kong/kong-operator/pull/5804)
 - `KonnectConfigStore`: deleting a `KonnectConfigStore` no longer force-deletes
   the Konnect config store together with all the secret entries it holds
   (previously the delete op passed `Force: true`, so one accidental CR deletion
@@ -186,6 +214,15 @@
   This change will delete the combined Kong routes created for the matches with
   these filters in their parent rules and create new distinct ones.
  [#5521](https://github.com/Kong/kong-operator/pull/5521)
+- Gateway: When using `gateway-operator.konghq.com/static-naming: "true"`, the name of
+  the Control Plane created in Konnect is now qualified with the Gateway's namespace
+  (`<namespace>_<gateway-name>`), preventing HTTP 409 conflicts between Gateways sharing
+  a name across namespaces in the same Konnect organization. The Kubernetes
+  `KonnectGatewayControlPlane` resource name is unchanged and still matches the Gateway's
+  name. Control Planes already created in Konnect are not renamed.
+  Note: Gateways with the same namespace and name deployed to multiple clusters sharing a
+  Konnect organization still conflict; use `spec.konnect.mirror` for that scenario.
+  [#4079](https://github.com/Kong/kong-operator/issues/4079)
 - Konnect-hybrid gateways: resolve `spec.configFrom` and `spec.configPatches` of a
   `KongPlugin` attached to an `HTTPRoute` or `GRPCRoute` through an `ExtensionRef`
   filter. Both fields were previously ignored, so a plugin whose configuration came

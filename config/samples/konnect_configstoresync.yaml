@@ -1,0 +1,12 @@
+apiVersion: konnect.konghq.com/v1alpha1
+kind: KonnectConfigStoreSync
+metadata:
+  name: tls-cert-sync
+  namespace: default
+spec:
+  configStoreRef:
+    name: tls-cert-keys
+  secretRef:
+    name: my-tls-secret
+  mode: Combined
+  combined: {}

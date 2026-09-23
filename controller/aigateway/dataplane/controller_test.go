@@ -18,6 +18,7 @@ package dataplane
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -219,6 +220,55 @@ func newNotReadyOnPremAIGateway() *aigatewayv1alpha1.OnPremAIGateway {
 	onprem := newReadyOnPremAIGateway()
 	onprem.Status.Conditions[0].Status = metav1.ConditionFalse
 	return onprem
+}
+
+// controllerOwnerReference returns the controller OwnerReference pointing to
+// the standard reconcile-test AIGatewayDataPlane.
+func controllerOwnerReference() metav1.OwnerReference {
+	return metav1.OwnerReference{
+		APIVersion: "aigateway.konghq.com/v1alpha1",
+		Kind:       "AIGatewayDataPlane",
+		Name:       reconcileTestDPName,
+		UID:        types.UID("aigwdp-uid"),
+		Controller: new(true),
+	}
+}
+
+// newOwnedAdminCertSecret builds an Admin API certificate Secret owned by the
+// standard reconcile-test AIGatewayDataPlane, simulating a leftover from an
+// earlier reconcile in which the DataPlane referenced an on-prem control plane.
+func newOwnedAdminCertSecret() *corev1.Secret {
+	return &corev1.Secret{
+		Namespace: reconcileTestNS,
+		Name:      reconcileTestDPName + "-admin-cert",
+		Labels: map[string]string{
+			pkgconsts.GatewayOperatorManagedByLabel:                 pkgconsts.AIGatewayDataPlaneManagedByLabelValue,
+			pkgconsts.SecretProvisioningLabelKey:                    pkgconsts.SecretProvisioningAutomaticLabelValue,
+			pkgconsts.SecretAIGatewayDataPlaneAdminCertificateLabel: "true",
+		},
+		OwnerReferences: []metav1.OwnerReference{controllerOwnerReference()},
+		Data: map[string][]byte{
+			corev1.TLSCertKey:       []byte("dummy-cert"),
+			corev1.TLSPrivateKeyKey: []byte("dummy-key"),
+		},
+	}
+}
+
+// newOwnedAdminService builds an admin Service owned by the standard
+// reconcile-test AIGatewayDataPlane, simulating a leftover from an earlier
+// reconcile in which the DataPlane referenced an on-prem control plane.
+func newOwnedAdminService() *corev1.Service {
+	return &corev1.Service{
+		Namespace:       reconcileTestNS,
+		Name:            reconcileTestDPName + AdminServiceNameSuffix,
+		OwnerReferences: []metav1.OwnerReference{controllerOwnerReference()},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{{
+				Name: "admin",
+				Port: DefaultAdminPort,
+			}},
+		},
+	}
 }
 
 // newTestReconciler builds a shared reconciler wired to cl and recorder.
@@ -478,47 +528,100 @@ func TestReconciler_Reconcile(t *testing.T) {
 			},
 		},
 		{
-			name: "on-prem happy path: Deployment and Service created without Konnect resolution or cert wiring",
+			name: "on-prem happy path: Deployment, admin listener wiring, admin Service and admin cert Secret created",
 			objects: []client.Object{
 				newReconcileAIGWDPOnPrem(),
 				newReadyOnPremAIGateway(),
+				caSecret(),
 			},
-			wantResult: ctrl.Result{},
-			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+			// 1st reconcile: admin cert Secret created → returns early (owned
+			// Secret watch triggers next reconcile). 2nd: Deployment and both
+			// Services created.
+			reconcileCount: 2,
+			wantResult:     ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
 				t.Helper()
 
-				// Deployment exists, without the Konnect endpoint env vars or any cert wiring.
+				// Deployment exists, without the Konnect endpoint env vars or
+				// Konnect cert wiring, but with the admin listener wired to the
+				// provisioned admin certificate.
 				deploy := &appsv1.Deployment{}
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
 					Namespace: reconcileTestNS, Name: reconcileTestDPName,
 				}, deploy))
 				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
-				var envNames []string
-				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
-					envNames = append(envNames, e.Name)
+				container := deploy.Spec.Template.Spec.Containers[0]
+
+				envs := map[string]string{}
+				for _, e := range container.Env {
+					envs[e.Name] = e.Value
 				}
-				assert.NotContains(t, envNames, EnvKongClusterControlPlane)
-				assert.NotContains(t, envNames, EnvKongClusterServerName)
-				assert.NotContains(t, envNames, EnvClientCertPath)
-				assert.NotContains(t, envNames, EnvKonnectClientCertKey)
-				for _, vm := range deploy.Spec.Template.Spec.Containers[0].VolumeMounts {
-					assert.NotEqual(t, KonnectCertVolumeName, vm.Name)
+				assert.NotContains(t, envs, EnvKongClusterControlPlane)
+				assert.NotContains(t, envs, EnvKongClusterServerName)
+				assert.NotContains(t, envs, EnvClientCertPath)
+				assert.NotContains(t, envs, EnvKonnectClientCertKey)
+				assert.NotContains(t, envs, "KONG_ROLE")
+				assert.Equal(t, "off", envs[EnvKongKonnectMode])
+				assert.Equal(t, fmt.Sprintf("0.0.0.0:%d ssl", DefaultAdminPort), envs[EnvKongAdminListen])
+				assert.Equal(t, AdminCertMountPath+"tls.crt", envs[EnvKongAdminSSLCert])
+				assert.Equal(t, AdminCertMountPath+"tls.key", envs[EnvKongAdminSSLCertKey])
+				// The pushing control plane authenticates with a client
+				// certificate signed by the cluster CA carried in the Secret.
+				assert.Equal(t, AdminCertMountPath+"ca.crt", envs[EnvKongNginxAdminSSLClientCertificate])
+				assert.Equal(t, "on", envs[EnvKongNginxAdminSSLVerifyClient])
+
+				var adminVolume *corev1.Volume
+				var adminMount *corev1.VolumeMount
+				for i := range deploy.Spec.Template.Spec.Volumes {
+					if deploy.Spec.Template.Spec.Volumes[i].Name == AdminCertVolumeName {
+						adminVolume = &deploy.Spec.Template.Spec.Volumes[i]
+					}
+					assert.NotEqual(t, KonnectCertVolumeName, deploy.Spec.Template.Spec.Volumes[i].Name)
 				}
-				for _, v := range deploy.Spec.Template.Spec.Volumes {
-					assert.NotEqual(t, KonnectCertVolumeName, v.Name)
+				for i := range container.VolumeMounts {
+					if container.VolumeMounts[i].Name == AdminCertVolumeName {
+						adminMount = &container.VolumeMounts[i]
+					}
+					assert.NotEqual(t, KonnectCertVolumeName, container.VolumeMounts[i].Name)
 				}
+				require.NotNil(t, adminVolume, "admin cert volume must be mounted")
+				require.NotNil(t, adminMount)
+				assert.Equal(t, AdminCertMountPath, adminMount.MountPath)
 				assert.NotContains(t, deploy.Spec.Template.Annotations, pkgconsts.AIGatewayDataPlaneCertificateChecksumAnnotation)
 
-				// Service exists.
+				// Exactly one certificate Secret is provisioned: the admin API
+				// server certificate, no Konnect mTLS client certificate.
+				adminSecrets := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), adminSecrets, client.InNamespace(reconcileTestNS),
+					client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneAdminCertificateLabel: "true"},
+				))
+				require.Len(t, adminSecrets.Items, 1)
+				adminSecret := adminSecrets.Items[0]
+				require.NotNil(t, adminVolume.Secret)
+				assert.Equal(t, adminSecret.Name, adminVolume.Secret.SecretName)
+				clientSecrets := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), clientSecrets, client.InNamespace(reconcileTestNS),
+					client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneCertificateLabel: "true"},
+				))
+				assert.Empty(t, clientSecrets.Items)
+
+				// Both Services exist: ingress and admin.
 				svc := &corev1.Service{}
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
 					Namespace: reconcileTestNS, Name: reconcileTestDPName + "-ingress",
 				}, svc))
+				adminSvc := &corev1.Service{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName + AdminServiceNameSuffix,
+				}, adminSvc))
+				require.Len(t, adminSvc.Spec.Ports, 1)
+				assert.Equal(t, DefaultAdminPort, adminSvc.Spec.Ports[0].Port)
+				assert.Equal(t, "admin", adminSvc.Spec.Ports[0].Name)
+				assert.Equal(t, pkgconsts.AIGatewayDataPlaneManagedByLabelValue, adminSvc.Spec.Selector[pkgconsts.GatewayOperatorManagedByLabel])
 
-				// No certificate Secret is provisioned for an on-prem control plane ref.
-				secretList := &corev1.SecretList{}
-				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
-				assert.Empty(t, secretList.Items)
+				// 2nd reconcile must emit the admin ServiceCreated event too.
+				events := drainEvents(recorder)
+				assert.Contains(t, events, fmt.Sprintf("Normal ServiceCreated Admin Service %s created", reconcileTestDPName+AdminServiceNameSuffix))
 
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
@@ -526,15 +629,20 @@ func TestReconciler_Reconcile(t *testing.T) {
 					metav1.ConditionTrue,
 					aigatewayv1alpha1.ControlPlaneResolvedReason,
 				)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.AdminCertificateProvisionedType,
+					metav1.ConditionTrue,
+					aigatewayv1alpha1.AdminCertificateProvisionedReason,
+				)
 				// Konnect-specific conditions are never set for an on-prem control plane ref.
 				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectAIGatewayResolvedType)))
 				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.KonnectCertificateRegisteredType)))
-				// No cert was requested, so no certificate is provisioned and no condition is set either.
+				// No Konnect mTLS client cert was requested, so no client cert condition is set either.
 				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.CertificateProvisionedType)))
 			},
 		},
 		{
-			name: "on-prem with certificateSecret configured: cert ignored, Deployment created",
+			name: "on-prem with certificateSecret configured: Konnect client cert ignored, admin cert still provisioned",
 			objects: []client.Object{
 				func() *aigatewayv1alpha1.AIGatewayDataPlane {
 					aigwdp := newReconcileAIGWDPOnPrem()
@@ -544,16 +652,26 @@ func TestReconciler_Reconcile(t *testing.T) {
 					return aigwdp
 				}(),
 				newReadyOnPremAIGateway(),
+				caSecret(),
 			},
-			wantResult: ctrl.Result{},
+			reconcileCount: 2,
+			wantResult:     ctrl.Result{},
 			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
 				t.Helper()
 
-				// The certificate path is skipped entirely for on-prem control plane
-				// refs: no Secret is provisioned and the Deployment is still created.
-				secretList := &corev1.SecretList{}
-				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS)))
-				assert.Empty(t, secretList.Items)
+				// The Konnect client certificate path is skipped entirely for
+				// on-prem control plane refs: no client cert Secret is
+				// provisioned, but the admin cert Secret is.
+				clientSecrets := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), clientSecrets, client.InNamespace(reconcileTestNS),
+					client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneCertificateLabel: "true"},
+				))
+				assert.Empty(t, clientSecrets.Items)
+				adminSecrets := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), adminSecrets, client.InNamespace(reconcileTestNS),
+					client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneAdminCertificateLabel: "true"},
+				))
+				assert.Len(t, adminSecrets.Items, 1)
 
 				deploy := &appsv1.Deployment{}
 				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
@@ -562,6 +680,88 @@ func TestReconciler_Reconcile(t *testing.T) {
 				for _, v := range deploy.Spec.Template.Spec.Volumes {
 					assert.NotEqual(t, KonnectCertVolumeName, v.Name)
 				}
+			},
+		},
+		{
+			name: "control plane ref removed: leftover admin Service and admin cert Secret are removed, condition cleared",
+			objects: []client.Object{
+				func() *aigatewayv1alpha1.AIGatewayDataPlane {
+					// Seeds a DataPlane with no controlPlaneRef alongside
+					// admin resources left behind by an earlier reconcile, to
+					// exercise the cleanup. Losing a controlPlaneRef is not
+					// reachable through the API: it is CEL-immutable once set,
+					// so this stays defence in depth.
+					aigwdp := newReconcileAIGWDPNoControlPlaneRef()
+					aigwdp.Status.Conditions = []metav1.Condition{{
+						Type:               string(aigatewayv1alpha1.AdminCertificateProvisionedType),
+						Status:             metav1.ConditionTrue,
+						Reason:             string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
+						Message:            "Admin API certificate Secret provisioned",
+						ObservedGeneration: aigwdp.Generation,
+					}}
+					return aigwdp
+				}(),
+				newOwnedAdminCertSecret(),
+				newOwnedAdminService(),
+			},
+			wantResult: ctrl.Result{},
+			assertFn: func(t *testing.T, cl client.Client, recorder *events.FakeRecorder) {
+				t.Helper()
+
+				// The leftover admin cert Secret is deleted.
+				secretList := &corev1.SecretList{}
+				require.NoError(t, cl.List(t.Context(), secretList, client.InNamespace(reconcileTestNS),
+					client.MatchingLabels{pkgconsts.SecretAIGatewayDataPlaneAdminCertificateLabel: "true"},
+				))
+				assert.Empty(t, secretList.Items)
+
+				// The leftover admin Service is deleted.
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName + AdminServiceNameSuffix,
+				}, &corev1.Service{})
+				assert.True(t, apierrors.IsNotFound(err))
+
+				// The stale AdminCertificateProvisioned condition is removed.
+				aigwdp := getAIGWDP(t, cl)
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.AdminCertificateProvisionedType)))
+
+				// The Deployment is rebuilt without any admin listener wiring.
+				deploy := &appsv1.Deployment{}
+				require.NoError(t, cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName,
+				}, deploy))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+					assert.NotEqual(t, EnvKongAdminListen, e.Name)
+					assert.NotEqual(t, EnvKongAdminSSLCert, e.Name)
+					assert.NotEqual(t, EnvKongAdminSSLCertKey, e.Name)
+					assert.NotEqual(t, EnvKongNginxAdminSSLClientCertificate, e.Name)
+					assert.NotEqual(t, EnvKongNginxAdminSSLVerifyClient, e.Name)
+				}
+				for _, v := range deploy.Spec.Template.Spec.Volumes {
+					assert.NotEqual(t, AdminCertVolumeName, v.Name)
+				}
+
+				events := drainEvents(recorder)
+				assert.Contains(t, events, fmt.Sprintf("Normal SecretDeleted Admin API certificate Secret %s deleted", reconcileTestDPName+"-admin-cert"))
+				assert.Contains(t, events, fmt.Sprintf("Normal ServiceDeleted Admin Service %s deleted", reconcileTestDPName+AdminServiceNameSuffix))
+			},
+		},
+		{
+			name: "on-prem CA secret missing: error returned, AdminCertificateProvisioned=False",
+			objects: []client.Object{
+				newReconcileAIGWDPOnPrem(),
+				newReadyOnPremAIGateway(),
+			},
+			wantErr: true,
+			assertFn: func(t *testing.T, cl client.Client, _ *events.FakeRecorder) {
+				t.Helper()
+				aigwdp := getAIGWDP(t, cl)
+				assertCondition(t, aigwdp,
+					aigatewayv1alpha1.AdminCertificateProvisionedType,
+					metav1.ConditionFalse,
+					aigatewayv1alpha1.UnableToProvisionReason,
+				)
 			},
 		},
 		{
@@ -632,6 +832,21 @@ func TestReconciler_Reconcile(t *testing.T) {
 					Namespace: reconcileTestNS, Name: reconcileTestDPName + "-ingress",
 				}, svc))
 
+				// The admin Service is not created for a Konnect-backed control
+				// plane, and no admin listener env vars are set.
+				err := cl.Get(t.Context(), types.NamespacedName{
+					Namespace: reconcileTestNS, Name: reconcileTestDPName + AdminServiceNameSuffix,
+				}, &corev1.Service{})
+				assert.True(t, apierrors.IsNotFound(err))
+				require.NotEmpty(t, deploy.Spec.Template.Spec.Containers)
+				for _, e := range deploy.Spec.Template.Spec.Containers[0].Env {
+					assert.NotEqual(t, EnvKongAdminListen, e.Name)
+					assert.NotEqual(t, EnvKongAdminSSLCert, e.Name)
+					assert.NotEqual(t, EnvKongAdminSSLCertKey, e.Name)
+					assert.NotEqual(t, EnvKongNginxAdminSSLClientCertificate, e.Name)
+					assert.NotEqual(t, EnvKongNginxAdminSSLVerifyClient, e.Name)
+				}
+
 				// All conditions set correctly.
 				aigwdp := getAIGWDP(t, cl)
 				assertCondition(t, aigwdp,
@@ -644,6 +859,9 @@ func TestReconciler_Reconcile(t *testing.T) {
 					metav1.ConditionTrue,
 					aigatewayv1alpha1.CertificateProvisionedReason,
 				)
+				// No admin certificate is provisioned for a Konnect-backed
+				// control plane, so no condition is set either.
+				assert.Nil(t, apimeta.FindStatusCondition(aigwdp.Status.Conditions, string(aigatewayv1alpha1.AdminCertificateProvisionedType)))
 				// Ready=False because the fake Deployment's rollout is not complete.
 				assertCondition(t, aigwdp,
 					aigatewayv1alpha1.ReadyType,
