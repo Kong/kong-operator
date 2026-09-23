@@ -99,7 +99,7 @@ type {{.EntityName}}Spec struct {
 	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
 	//
 	// +required
-	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
@@ -390,9 +390,25 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .ParentRef}}
 
 // Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
+{{- if .ParentRefCustomTypeName}}
+
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef representation, so only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
+	return obj.Get{{.SetParentIDEntityName}}Ref().ToObjectRef()
+}
+
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// (Konnect): only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
+}
+{{- else}}
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
@@ -403,6 +419,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = ref
 }
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {

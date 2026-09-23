@@ -308,6 +308,22 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGatewayMinRuntimeVersion
+
+_Underlying type:_ `string`
+
+AIGatewayMinRuntimeVersion The minimum AI Gateway runtime version supported
+by this AI Gateway.
+This is the lowest data plane version that may receive configuration from it,
+and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
 #### AIGatewayProxyURL
 
 
@@ -325,6 +341,28 @@ connected to a control-plane.
 _Appears in:_
 
 - [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+#### AIGatewayRuntimeAutoUpgrade
+
+_Underlying type:_ `string`
+
+AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
+raise min_runtime_version as connected data planes report a newer AI Gateway
+runtime version.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
+| `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
 
 
@@ -666,8 +704,10 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `runtimeAutoUpgrade` _[AIGatewayRuntimeAutoUpgrade](#konnect-konghq-com-v1alpha1-types-aigatewayruntimeautoupgrade)_ | Whether the control plane should automatically raise min_runtime_version as connected data planes report a newer AI Gateway runtime version. |
 
 _Appears in:_
 
@@ -688,6 +728,8 @@ KonnectAIGatewayEndpoints holds the Endpoints from the Konnect API response.
 _Appears in:_
 
 - [KonnectAIGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectaigatewaystatus)
+
+
 
 #### KonnectAIGatewaySpec
 
@@ -1446,6 +1488,31 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 _Appears in:_
 
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
+
+#### KonnectManaged
+
+_Underlying type:_ `string`
+
+KonnectManaged Whether the team's membership is managed by Konnect instead of
+being synced from an identity provider's team mappings.
+Set to `false` (default) to let identity provider team mappings keep syncing
+members into this team.
+Set to `true` to manage membership directly in Konnect and prevent identity
+provider team mappings from syncing to this team.
+
+
+
+
+_Appears in:_
+
+- [PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | KonnectManagedEnabled sets KonnectManaged as enabled.<br /> |
+| `Disabled` | KonnectManagedDisabled sets KonnectManaged as disabled.<br /> |
 
 #### KonnectTransitGatewayAPISpec
 
@@ -2267,6 +2334,7 @@ PortalTeamAPISpec defines the API spec fields for PortalTeam.
 | --- | --- |
 | `canOwnApplications` _string_ | Whether the team is allowed to own applications |
 | `description` _string_ | The description of the team. |
+| `konnectManaged` _[KonnectManaged](#konnect-konghq-com-v1alpha1-types-konnectmanaged)_ | Whether the team's membership is managed by Konnect instead of being synced from an identity provider's team mappings. Set to `false` (default) to let identity provider team mappings keep syncing members into this team. Set to `true` to manage membership directly in Konnect and prevent identity provider team mappings from syncing to this team. |
 | `name` _string_ | The name of the team. |
 
 _Appears in:_
@@ -2433,7 +2501,6 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
-| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 

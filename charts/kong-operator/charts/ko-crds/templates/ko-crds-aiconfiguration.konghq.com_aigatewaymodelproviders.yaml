@@ -51,8 +51,17 @@ spec:
             properties:
               aiGatewayRef:
                 properties:
-                  konnectID:
-                    maxLength: 36
+                  group:
+                    default: konnect.konghq.com
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
                     type: string
                   namespacedRef:
                     properties:
@@ -67,23 +76,18 @@ spec:
                     - name
                     type: object
                   type:
+                    default: namespacedRef
                     enum:
-                    - konnectID
                     - namespacedRef
                     type: string
                 required:
-                - type
+                - namespacedRef
                 type: object
                 x-kubernetes-validations:
-                - message: when type is namespacedRef, namespacedRef must be set
-                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                    : true'
-                - message: when type is namespacedRef, konnectID must not be set
-                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                - message: when type is konnectID, namespacedRef must not be set
-                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
               apiSpec:
                 properties:
                   anthropic:
@@ -219,7 +223,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -441,7 +445,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -649,7 +653,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -789,7 +793,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -929,7 +933,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1069,7 +1073,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1209,7 +1213,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1349,7 +1353,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1590,7 +1594,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1730,7 +1734,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1870,7 +1874,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2010,7 +2014,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2150,7 +2154,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2290,7 +2294,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2430,7 +2434,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2596,7 +2600,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2759,7 +2763,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2899,7 +2903,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3039,7 +3043,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config

@@ -63,16 +63,30 @@ spec:
                 description: AIGatewayRef is the reference to the parent KonnectAIGateway
                   object.
                 properties:
-                  konnectID:
+                  group:
+                    default: konnect.konghq.com
                     description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
+                      Group is the API group of the referenced AI Gateway (control plane).
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    description: |-
+                      Kind is the kind of the referenced AI Gateway (control plane):
+                      KonnectAIGateway (default) or OnPremAIGateway.
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
                     type: string
                   namespacedRef:
                     description: |-
-                      NamespacedRef is a reference to a KeySet entity inside the cluster.
-                      This field is required when the Type is namespacedRef.
+                      NamespacedRef references the AI Gateway (control plane) by namespaced
+                      name. When Namespace is unset, the namespace of the referencing entity
+                      is used.
                     properties:
                       name:
                         description: Name is the name of the referred resource.
@@ -93,28 +107,24 @@ spec:
                     - name
                     type: object
                   type:
+                    default: namespacedRef
                     description: |-
-                      Type defines type of the object which is referenced. It can be one of:
+                      Type is the type of the reference. Only namespacedRef is supported.
 
-                      - konnectID
-                      - namespacedRef
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
                     enum:
-                    - konnectID
                     - namespacedRef
                     type: string
                 required:
-                - type
+                - namespacedRef
                 type: object
                 x-kubernetes-validations:
-                - message: when type is namespacedRef, namespacedRef must be set
-                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                    : true'
-                - message: when type is namespacedRef, konnectID must not be set
-                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                - message: when type is konnectID, namespacedRef must not be set
-                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
@@ -336,7 +346,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -698,7 +708,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1046,7 +1056,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1270,7 +1280,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1494,7 +1504,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1718,7 +1728,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -1942,7 +1952,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2166,7 +2176,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2582,7 +2592,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -2806,7 +2816,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3030,7 +3040,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3254,7 +3264,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3478,7 +3488,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3702,7 +3712,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -3926,7 +3936,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4192,7 +4202,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4440,7 +4450,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4664,7 +4674,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config
@@ -4888,7 +4898,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                     required:
                     - config

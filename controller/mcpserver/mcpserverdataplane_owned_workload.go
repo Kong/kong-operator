@@ -300,8 +300,6 @@ func generateDeployment(
 		replicas = new(int32(1))
 	}
 
-	patEnvVar := patEnvVarFromAuth(tokenSecret)
-
 	const (
 		mcpServerVolumeName      = "mcp-server-code"
 		mcpServerVolumeMountPath = "/mcp-server"
@@ -338,67 +336,10 @@ func generateDeployment(
 				},
 				Spec: corev1.PodSpec{
 					InitContainers: []corev1.Container{
-						{
-							Name:            consts.MCPServerDataPlaneInitContainerName,
-							Image:           mcpMetadata.InitContainerImage,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Args: []string{
-								"-cp-url", apiURL,
-								"-cp-id", mcpMetadata.ControlPlaneID,
-								"-mcp-server-id", mcpMetadata.MCPServerID,
-								"-output-path", mcpServerVolumeMountPath + "/app.py",
-								"-pat", "$(PAT)",
-							},
-							Env: []corev1.EnvVar{
-								patEnvVar,
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      mcpServerVolumeName,
-									MountPath: mcpServerVolumeMountPath,
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("64Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("500m"),
-									corev1.ResourceMemory: resource.MustParse("256Mi"),
-								},
-							},
-						},
+						buildInitContainer(mcpMetadata, apiURL, tokenSecret, mcpServerVolumeName, mcpServerVolumeMountPath),
 					},
 					Containers: []corev1.Container{
-						{
-							Name:            consts.MCPServerDataPlaneContainerName,
-							Image:           mcpMetadata.ContainerImage,
-							ImagePullPolicy: corev1.PullIfNotPresent,
-							Ports: []corev1.ContainerPort{
-								{
-									Name:          "mcp",
-									ContainerPort: consts.MCPServerDefaultPort,
-									Protocol:      corev1.ProtocolTCP,
-								},
-							},
-							VolumeMounts: []corev1.VolumeMount{
-								{
-									Name:      mcpServerVolumeName,
-									MountPath: mcpServerVolumeMountPath,
-								},
-							},
-							Resources: corev1.ResourceRequirements{
-								Requests: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("100m"),
-									corev1.ResourceMemory: resource.MustParse("128Mi"),
-								},
-								Limits: corev1.ResourceList{
-									corev1.ResourceCPU:    resource.MustParse("1000m"),
-									corev1.ResourceMemory: resource.MustParse("512Mi"),
-								},
-							},
-						},
+						buildContainer(mcpMetadata, mcpServerVolumeName, mcpServerVolumeMountPath),
 					},
 					Volumes: []corev1.Volume{
 						{
@@ -420,6 +361,79 @@ func generateDeployment(
 	addContainerResourcesForMCPServerDataPlane(deployment, mcpDataPlane)
 
 	return deployment
+}
+
+func buildInitContainer(
+	mcpMetadata mcpServerMetadata, apiURL string, tokenSecret *corev1.Secret, mcpServerVolumeName, mcpServerVolumeMountPath string,
+) corev1.Container {
+	c := corev1.Container{
+		Name:            consts.MCPServerDataPlaneInitContainerName,
+		Image:           mcpMetadata.InitContainerImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Args: []string{
+			"-cp-url", apiURL,
+			"-cp-id", mcpMetadata.ControlPlaneID,
+			"-mcp-server-id", mcpMetadata.MCPServerID,
+			"-output-path", mcpServerVolumeMountPath + "/app.py",
+			"-pat", "$(PAT)",
+		},
+		Env: []corev1.EnvVar{
+			patEnvVarFromAuth(tokenSecret),
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      mcpServerVolumeName,
+				MountPath: mcpServerVolumeMountPath,
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("64Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("500m"),
+				corev1.ResourceMemory: resource.MustParse("256Mi"),
+			},
+		},
+	}
+	c, _ = k8sresources.HardenContainerWithSecurityContext(c, k8sresources.DataPlaneTypeMcpServer)
+	return c
+}
+
+func buildContainer(
+	mcpMetadata mcpServerMetadata, mcpServerVolumeName, mcpServerVolumeMountPath string,
+) corev1.Container {
+	c := corev1.Container{
+		Name:            consts.MCPServerDataPlaneContainerName,
+		Image:           mcpMetadata.ContainerImage,
+		ImagePullPolicy: corev1.PullIfNotPresent,
+		Ports: []corev1.ContainerPort{
+			{
+				Name:          "mcp",
+				ContainerPort: consts.MCPServerDefaultPort,
+				Protocol:      corev1.ProtocolTCP,
+			},
+		},
+		VolumeMounts: []corev1.VolumeMount{
+			{
+				Name:      mcpServerVolumeName,
+				MountPath: mcpServerVolumeMountPath,
+			},
+		},
+		Resources: corev1.ResourceRequirements{
+			Requests: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("100m"),
+				corev1.ResourceMemory: resource.MustParse("128Mi"),
+			},
+			Limits: corev1.ResourceList{
+				corev1.ResourceCPU:    resource.MustParse("1000m"),
+				corev1.ResourceMemory: resource.MustParse("512Mi"),
+			},
+		},
+	}
+	c, _ = k8sresources.HardenContainerWithSecurityContext(c, k8sresources.DataPlaneTypeMcpServer)
+	return c
 }
 
 // addContainerResourcesForMCPServerDataPlane overrides the Resources of

@@ -73,6 +73,10 @@ spec:
                       pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
                       type: string
                     type: object
+                  minRuntimeVersion:
+                    maxLength: 253
+                    pattern: ^\d+\.\d+$
+                    type: string
                   name:
                     maxLength: 256
                     minLength: 1
@@ -97,6 +101,11 @@ spec:
                       - protocol
                       type: object
                     type: array
+                  runtimeAutoUpgrade:
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                 required:
                 - displayName
                 - name

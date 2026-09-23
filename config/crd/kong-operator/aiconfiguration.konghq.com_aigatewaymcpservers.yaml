@@ -63,16 +63,30 @@ spec:
                 description: AIGatewayRef is the reference to the parent KonnectAIGateway
                   object.
                 properties:
-                  konnectID:
+                  group:
+                    default: konnect.konghq.com
                     description: |-
-                      KonnectID is the schema for the KonnectID type.
-                      This field is required when the Type is konnectID.
-                    maxLength: 36
+                      Group is the API group of the referenced AI Gateway (control plane).
+                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
+                      OnPremAIGateway lives in the aigateway.konghq.com group.
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    description: |-
+                      Kind is the kind of the referenced AI Gateway (control plane):
+                      KonnectAIGateway (default) or OnPremAIGateway.
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
                     type: string
                   namespacedRef:
                     description: |-
-                      NamespacedRef is a reference to a KeySet entity inside the cluster.
-                      This field is required when the Type is namespacedRef.
+                      NamespacedRef references the AI Gateway (control plane) by namespaced
+                      name. When Namespace is unset, the namespace of the referencing entity
+                      is used.
                     properties:
                       name:
                         description: Name is the name of the referred resource.
@@ -93,28 +107,24 @@ spec:
                     - name
                     type: object
                   type:
+                    default: namespacedRef
                     description: |-
-                      Type defines type of the object which is referenced. It can be one of:
+                      Type is the type of the reference. Only namespacedRef is supported.
 
-                      - konnectID
-                      - namespacedRef
+                      Deprecated: kept only for backward compatibility with objects written
+                      before the AIGatewayRef type was introduced; it defaults to
+                      namespacedRef and will be removed in a future release.
                     enum:
-                    - konnectID
                     - namespacedRef
                     type: string
                 required:
-                - type
+                - namespacedRef
                 type: object
                 x-kubernetes-validations:
-                - message: when type is namespacedRef, namespacedRef must be set
-                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                    : true'
-                - message: when type is namespacedRef, konnectID must not be set
-                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                - message: when type is konnectID, namespacedRef must not be set
-                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
@@ -370,9 +380,77 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          Server-side configuration specific to modes where Kong answers as the MCP
+                          server.
                         properties:
+                          allowedVersions:
+                            description: |-
+                              The MCP protocol revisions this server accepts.
+                              Leave unset to accept every revision Kong
+                              implements, which is the default.
+                              When set, `server/discover` advertises exactly this
+                              list and a request declaring anything else is rejected.
+                              Listing only per-request
+                              revisions refuses handshake clients.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            description: |-
+                              Cache hints Kong emits on the cacheable operations it serves.
+                              Only clients on a protocol
+                              revision that defines them receive them.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            properties:
+                              discover:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             description: Configuration for AI Gateway logging.
                             properties:
@@ -394,14 +472,116 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
                               match
                               incoming requests.
+                            properties:
+                              headers:
+                                description: |-
+                                  One or more lists of values indexed by header name that will cause this
+                                  route to match if present in the request.
+                                  The `Host` header cannot be used with this attribute: hosts should be
+                                  specified using the `hosts` attribute.
+                                  When `headers` contains only one value and that value starts with the
+                                  special prefix `~*`, the value is interpreted as a regular expression.
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                description: |-
+                                  A list of domain names that match this route.
+                                  Note that the hosts value is case sensitive.
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                description: |-
+                                  The status code Kong responds with when all properties of a route match
+                                  except the protocol i.e.
+                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
+                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
+                                  or 308.
+                                  Note: This config applies only if the route is configured to only accept the
+                                  `https` protocol.
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                description: A list of HTTP methods that match this
+                                  route.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: A list of paths that match this route.
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                description: |-
+                                  When matching a route via one of the `hosts` domain names, use the request
+                                  `Host` header in the upstream request headers.
+                                  If set to `false`, the upstream `Host` header will be that of the service's
+                                  `host`.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                description: |-
+                                  An array of the protocols this route should allow.
+                                  See the [route Object](#route-object) section for a list of accepted
+                                  protocols.
+                                  When set to only `https`, HTTP requests are answered with an upgrade error.
+                                  When set to only `http`, HTTPS requests are answered with an error.
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                description: |-
+                                  A number used to choose which route resolves a given request when several
+                                  routes match it using regexes simultaneously.
+                                  When two routes match the path and have the same `regex_priority`, the older
+                                  one (lowest `created_at`) is used.
+                                  Note that the priority for non-regex routes is different (longer non-regex
+                                  routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                description: |-
+                                  Whether to enable request body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that receive
+                                  data with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                description: |-
+                                  Whether to enable response body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that send data
+                                  with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                description: |-
+                                  When matching a route via one of the `paths`, strip the matching prefix from
+                                  the upstream request URL.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                description: |-
+                                  An optional set of strings associated with the route for grouping and
+                                  filtering.
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             description: Server-side configuration for the MCP Server.
@@ -952,7 +1132,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -1238,14 +1418,116 @@ spec:
                               to 0 for unlimited.
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
                               match
                               incoming requests.
+                            properties:
+                              headers:
+                                description: |-
+                                  One or more lists of values indexed by header name that will cause this
+                                  route to match if present in the request.
+                                  The `Host` header cannot be used with this attribute: hosts should be
+                                  specified using the `hosts` attribute.
+                                  When `headers` contains only one value and that value starts with the
+                                  special prefix `~*`, the value is interpreted as a regular expression.
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                description: |-
+                                  A list of domain names that match this route.
+                                  Note that the hosts value is case sensitive.
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                description: |-
+                                  The status code Kong responds with when all properties of a route match
+                                  except the protocol i.e.
+                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
+                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
+                                  or 308.
+                                  Note: This config applies only if the route is configured to only accept the
+                                  `https` protocol.
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                description: A list of HTTP methods that match this
+                                  route.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: A list of paths that match this route.
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                description: |-
+                                  When matching a route via one of the `hosts` domain names, use the request
+                                  `Host` header in the upstream request headers.
+                                  If set to `false`, the upstream `Host` header will be that of the service's
+                                  `host`.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                description: |-
+                                  An array of the protocols this route should allow.
+                                  See the [route Object](#route-object) section for a list of accepted
+                                  protocols.
+                                  When set to only `https`, HTTP requests are answered with an upgrade error.
+                                  When set to only `http`, HTTPS requests are answered with an error.
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                description: |-
+                                  A number used to choose which route resolves a given request when several
+                                  routes match it using regexes simultaneously.
+                                  When two routes match the path and have the same `regex_priority`, the older
+                                  one (lowest `created_at`) is used.
+                                  Note that the priority for non-regex routes is different (longer non-regex
+                                  routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                description: |-
+                                  Whether to enable request body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that receive
+                                  data with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                description: |-
+                                  Whether to enable response body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that send data
+                                  with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                description: |-
+                                  When matching a route via one of the `paths`, strip the matching prefix from
+                                  the upstream request URL.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                description: |-
+                                  An optional set of strings associated with the route for grouping and
+                                  filtering.
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           upstream:
                             description: |-
@@ -1377,7 +1659,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -1883,9 +2165,77 @@ spec:
                         - aclAttributeType
                         type: object
                       config:
-                        description: Routing, logging, and server configuration for
-                          the MCP Server.
+                        description: |-
+                          Server-side configuration specific to modes where Kong answers as the MCP
+                          server.
                         properties:
+                          allowedVersions:
+                            description: |-
+                              The MCP protocol revisions this server accepts.
+                              Leave unset to accept every revision Kong
+                              implements, which is the default.
+                              When set, `server/discover` advertises exactly this
+                              list and a request declaring anything else is rejected.
+                              Listing only per-request
+                              revisions refuses handshake clients.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            items:
+                              type: string
+                            type: array
+                          cache:
+                            description: |-
+                              Cache hints Kong emits on the cacheable operations it serves.
+                              Only clients on a protocol
+                              revision that defines them receive them.
+
+                              **Requires a minimum runtime version of `2.1`**.
+                            properties:
+                              discover:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                              toolsList:
+                                description: A cache hint Kong emits on a cacheable
+                                  operation it serves.
+                                properties:
+                                  cacheScope:
+                                    description: |-
+                                      Whether the result may be cached across authorization contexts.
+                                      `public` is rejected when
+                                      the server's tool list is filtered per subject by `default_tool_acls` or a
+                                      tool's own
+                                      `access.acls`.
+                                    enum:
+                                    - public
+                                    - private
+                                    maxLength: 253
+                                    type: string
+                                  ttlMs:
+                                    description: How long a client may treat the result
+                                      as fresh, in milliseconds.
+                                    minimum: 0
+                                    type: integer
+                                type: object
+                            type: object
                           logging:
                             description: Configuration for AI Gateway logging.
                             properties:
@@ -1907,14 +2257,116 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
                               match
                               incoming requests.
+                            properties:
+                              headers:
+                                description: |-
+                                  One or more lists of values indexed by header name that will cause this
+                                  route to match if present in the request.
+                                  The `Host` header cannot be used with this attribute: hosts should be
+                                  specified using the `hosts` attribute.
+                                  When `headers` contains only one value and that value starts with the
+                                  special prefix `~*`, the value is interpreted as a regular expression.
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                description: |-
+                                  A list of domain names that match this route.
+                                  Note that the hosts value is case sensitive.
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                description: |-
+                                  The status code Kong responds with when all properties of a route match
+                                  except the protocol i.e.
+                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
+                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
+                                  or 308.
+                                  Note: This config applies only if the route is configured to only accept the
+                                  `https` protocol.
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                description: A list of HTTP methods that match this
+                                  route.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: A list of paths that match this route.
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                description: |-
+                                  When matching a route via one of the `hosts` domain names, use the request
+                                  `Host` header in the upstream request headers.
+                                  If set to `false`, the upstream `Host` header will be that of the service's
+                                  `host`.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                description: |-
+                                  An array of the protocols this route should allow.
+                                  See the [route Object](#route-object) section for a list of accepted
+                                  protocols.
+                                  When set to only `https`, HTTP requests are answered with an upgrade error.
+                                  When set to only `http`, HTTPS requests are answered with an error.
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                description: |-
+                                  A number used to choose which route resolves a given request when several
+                                  routes match it using regexes simultaneously.
+                                  When two routes match the path and have the same `regex_priority`, the older
+                                  one (lowest `created_at`) is used.
+                                  Note that the priority for non-regex routes is different (longer non-regex
+                                  routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                description: |-
+                                  Whether to enable request body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that receive
+                                  data with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                description: |-
+                                  Whether to enable response body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that send data
+                                  with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                description: |-
+                                  When matching a route via one of the `paths`, strip the matching prefix from
+                                  the upstream request URL.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                description: |-
+                                  An optional set of strings associated with the route for grouping and
+                                  filtering.
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             description: Server-side configuration for the MCP Server.
@@ -2384,7 +2836,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -2774,14 +3226,116 @@ spec:
                                 type: string
                             type: object
                           route:
-                            additionalProperties:
-                              type: string
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
                               match
                               incoming requests.
+                            properties:
+                              headers:
+                                description: |-
+                                  One or more lists of values indexed by header name that will cause this
+                                  route to match if present in the request.
+                                  The `Host` header cannot be used with this attribute: hosts should be
+                                  specified using the `hosts` attribute.
+                                  When `headers` contains only one value and that value starts with the
+                                  special prefix `~*`, the value is interpreted as a regular expression.
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                description: |-
+                                  A list of domain names that match this route.
+                                  Note that the hosts value is case sensitive.
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                description: |-
+                                  The status code Kong responds with when all properties of a route match
+                                  except the protocol i.e.
+                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
+                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
+                                  or 308.
+                                  Note: This config applies only if the route is configured to only accept the
+                                  `https` protocol.
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                description: A list of HTTP methods that match this
+                                  route.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: A list of paths that match this route.
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                description: |-
+                                  When matching a route via one of the `hosts` domain names, use the request
+                                  `Host` header in the upstream request headers.
+                                  If set to `false`, the upstream `Host` header will be that of the service's
+                                  `host`.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                description: |-
+                                  An array of the protocols this route should allow.
+                                  See the [route Object](#route-object) section for a list of accepted
+                                  protocols.
+                                  When set to only `https`, HTTP requests are answered with an upgrade error.
+                                  When set to only `http`, HTTPS requests are answered with an error.
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                description: |-
+                                  A number used to choose which route resolves a given request when several
+                                  routes match it using regexes simultaneously.
+                                  When two routes match the path and have the same `regex_priority`, the older
+                                  one (lowest `created_at`) is used.
+                                  Note that the priority for non-regex routes is different (longer non-regex
+                                  routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                description: |-
+                                  Whether to enable request body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that receive
+                                  data with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                description: |-
+                                  Whether to enable response body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that send data
+                                  with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                description: |-
+                                  When matching a route via one of the `paths`, strip the matching prefix from
+                                  the upstream request URL.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                description: |-
+                                  An optional set of strings associated with the route for grouping and
+                                  filtering.
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             description: Server-side configuration for the MCP Server.
@@ -3332,7 +3886,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
@@ -3449,14 +4003,116 @@ spec:
                             minimum: 0
                             type: integer
                           route:
-                            additionalProperties:
-                              type: string
                             description: |-
                               Route configuration for an MCP Server that terminates its own listener.
                               At least one
                               of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
                               match
                               incoming requests.
+                            properties:
+                              headers:
+                                description: |-
+                                  One or more lists of values indexed by header name that will cause this
+                                  route to match if present in the request.
+                                  The `Host` header cannot be used with this attribute: hosts should be
+                                  specified using the `hosts` attribute.
+                                  When `headers` contains only one value and that value starts with the
+                                  special prefix `~*`, the value is interpreted as a regular expression.
+                                x-kubernetes-preserve-unknown-fields: true
+                              hosts:
+                                description: |-
+                                  A list of domain names that match this route.
+                                  Note that the hosts value is case sensitive.
+                                items:
+                                  type: string
+                                type: array
+                              httpsRedirectStatusCode:
+                                description: |-
+                                  The status code Kong responds with when all properties of a route match
+                                  except the protocol i.e.
+                                  if the protocol of the request is `HTTP` instead of `HTTPS`.
+                                  `Location` header is injected by Kong if the field is set to 301, 302, 307
+                                  or 308.
+                                  Note: This config applies only if the route is configured to only accept the
+                                  `https` protocol.
+                                maximum: 599
+                                minimum: 100
+                                type: integer
+                              methods:
+                                description: A list of HTTP methods that match this
+                                  route.
+                                items:
+                                  type: string
+                                type: array
+                              paths:
+                                description: A list of paths that match this route.
+                                items:
+                                  type: string
+                                type: array
+                              preserveHost:
+                                description: |-
+                                  When matching a route via one of the `hosts` domain names, use the request
+                                  `Host` header in the upstream request headers.
+                                  If set to `false`, the upstream `Host` header will be that of the service's
+                                  `host`.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              protocols:
+                                description: |-
+                                  An array of the protocols this route should allow.
+                                  See the [route Object](#route-object) section for a list of accepted
+                                  protocols.
+                                  When set to only `https`, HTTP requests are answered with an upgrade error.
+                                  When set to only `http`, HTTPS requests are answered with an error.
+                                items:
+                                  type: string
+                                type: array
+                              regexPriority:
+                                description: |-
+                                  A number used to choose which route resolves a given request when several
+                                  routes match it using regexes simultaneously.
+                                  When two routes match the path and have the same `regex_priority`, the older
+                                  one (lowest `created_at`) is used.
+                                  Note that the priority for non-regex routes is different (longer non-regex
+                                  routes are matched before shorter ones).
+                                maximum: 2147483647
+                                minimum: -2147483648
+                                type: integer
+                              requestBuffering:
+                                description: |-
+                                  Whether to enable request body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that receive
+                                  data with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              responseBuffering:
+                                description: |-
+                                  Whether to enable response body buffering or not.
+                                  With HTTP 1.1, it may make sense to turn this off on services that send data
+                                  with chunked transfer encoding.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              stripPath:
+                                description: |-
+                                  When matching a route via one of the `paths`, strip the matching prefix from
+                                  the upstream request URL.
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              tags:
+                                description: |-
+                                  An optional set of strings associated with the route for grouping and
+                                  filtering.
+                                items:
+                                  type: string
+                                type: array
                             type: object
                           server:
                             description: Server-side configuration specific to `upstream-server`
@@ -3985,6 +4641,24 @@ spec:
                                 required:
                                 - type
                                 type: object
+                              upstreamProtocolVersion:
+                                description: |-
+                                  The MCP protocol revision Kong speaks to the upstream MCP server.
+                                  Leave unset to
+                                  negotiate a handshake revision with an `initialize` exchange, which is the
+                                  default.
+                                  Set a
+                                  per-request revision to reach an upstream that answers no handshake and
+                                  mints no session.
+
+                                  **Requires a minimum runtime version of `2.1`**.
+                                enum:
+                                - "2026-07-28"
+                                - "2025-11-25"
+                                - "2025-06-18"
+                                - "2025-03-26"
+                                maxLength: 253
+                                type: string
                             type: object
                           toolsCacheTtlSeconds:
                             description: |-
@@ -4124,7 +4798,7 @@ spec:
                           This value is immutable after creation.
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         description: List of policy references.
