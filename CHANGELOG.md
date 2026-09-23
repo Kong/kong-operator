@@ -192,6 +192,18 @@
   every existing `AIGatewayDataPlane` Deployment that has a `spec.controlPlaneRef`.
   [#5548](https://github.com/Kong/kong-operator/pull/5548)
 
+### Changed
+
+- Security: harden containers for `MCPServerDataPlane`'s `Deployment` with
+  a tight security context:
+  - disallows privilege escalation
+  - drop all capabilities
+  - run as non-root user
+  - read-only root filesystem
+  This change enforces patching of `Deployment`s, which causes
+  a rolling restart of the underlying `Pod`s when updating operator to this version.
+  [#5771](https://github.com/Kong/kong-operator/pull/5771)
+
 ### Fixes
 
 - KonnectExtension: complete certificate cleanup when the referenced ControlPlane
