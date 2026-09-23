@@ -49,7 +49,6 @@ jobs:
     uses: ./.github/workflows/__build-workflow.yaml
     secrets:
       dockerhub-token: ${{ secrets.DOCKERHUB_PUSH_TOKEN_KO }}
-      gh-pat: ${{ secrets.PAT_GITHUB }}
       slack-webhook-url: ${{ secrets.SLACK_WEBHOOK_URL }}
       slack-team-id: ${{ secrets.SLACK_TEAM_ID }}
     with:

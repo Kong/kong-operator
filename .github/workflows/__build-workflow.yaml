@@ -6,9 +6,6 @@ on:
       dockerhub-token:
         description: Token to use for logging in to the registry when "push" input is set.
         required: false
-      gh-pat:
-        description: GitHub Personal Access Token (used to recursively checkout submodules).
-        required: false
       slack-webhook-url:
         description: Slack webhook URL to send notifications to in case of failures.
         required: false
@@ -168,11 +165,6 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        env:
-          GH_PAT: ${{ secrets.gh-pat }}
-        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
-
       - name: Cache Docker layers
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -268,8 +260,6 @@ jobs:
             REPO_INFO=https://github.com/${{ github.repository }}.git
             GOPATH=${{ env.GOPATH}}
             GOCACHE=${{ env.GOCACHE}}
-          secrets: |
-            pat-github=${{ secrets.gh-pat }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # Use outputs when push is set to false to allow subsequent steps to have
@@ -345,10 +335,6 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - name: Configure Git for private repositories (this is needed by repositories that include this workflow and have other private dependencies)
-        env:
-          GH_PAT: ${{ secrets.gh-pat }}
-        run: git config --global url."https://${GH_PAT}@github.com".insteadOf "https://github.com"
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
 
