@@ -7001,13 +7001,12 @@ type AIGatewayModelSelectorConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	PathParam string `json:"pathParam,omitzero"`
-	// An optional model alias. When omitted, the model name is used.
+	// Optional model aliases. When omitted, the model name is used.
 	// When no selector location is configured, the format default selector is
 	// used.
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=1
 	Values []string `json:"values,omitempty"`
 }
 

@@ -9107,7 +9107,6 @@ spec:
                                   values:
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:
@@ -12991,7 +12990,6 @@ spec:
                                   values:
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:

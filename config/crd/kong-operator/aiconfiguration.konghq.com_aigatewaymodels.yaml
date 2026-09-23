@@ -1573,12 +1573,11 @@ spec:
                                     type: string
                                   values:
                                     description: |-
-                                      An optional model alias. When omitted, the model name is used.
+                                      Optional model aliases. When omitted, the model name is used.
                                       When no selector location is configured, the format default selector is
                                       used.
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:
@@ -7978,12 +7977,11 @@ spec:
                                     type: string
                                   values:
                                     description: |-
-                                      An optional model alias. When omitted, the model name is used.
+                                      Optional model aliases. When omitted, the model name is used.
                                       When no selector location is configured, the format default selector is
                                       used.
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:
