@@ -78,30 +78,8 @@ func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[str
 		return merged, nil
 	}
 
-	// Drop base-only (e.g. GatewayClass) entries rather than erroring:
-	// GatewayClass is typically managed by cluster admins while Gateway is
-	// managed by individual teams, so erroring here could let a GatewayClass
-	// config the Gateway owner can't edit permanently block that Gateway's
-	// provisioning. Dropping guarantees override's (Gateway's) own labels
-	// always take effect.
-	baseOnlyKeys := make([]string, 0, len(base))
-	for k := range base {
-		if _, ok := override[k]; !ok {
-			baseOnlyKeys = append(baseOnlyKeys, k)
-		}
-	}
-	sort.Strings(baseOnlyKeys)
-
-	toDrop := len(merged) - maxItems
-	for _, k := range baseOnlyKeys {
-		if toDrop == 0 {
-			break
-		}
-		delete(merged, k)
-		toDrop--
-	}
-
-	return merged, nil
+	// Return an error if the merged map still exceeds maxItems.
+	return nil, fmt.Errorf("too many labels after merging: %d exceeds the maximum of %d", len(merged), maxItems)
 }
 
 // resolveKonnectLabels reads annotationKey off both gateway and gatewayClass

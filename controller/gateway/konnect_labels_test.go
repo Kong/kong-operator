@@ -135,44 +135,25 @@ func TestMergeLabelsWithCap(t *testing.T) {
 				"o3": "3",
 			},
 			maxItems: 5,
-			// 3 override + 3 base = 6, need to drop 1: ascending order of
-			// base-only keys is [a-base, m-base, z-base], drop the first one.
-			expected: map[string]string{
-				"o1":     "1",
-				"o2":     "2",
-				"o3":     "3",
-				"m-base": "3",
-				"z-base": "1",
-			},
-		},
-		{
-			name: "over cap - conflicting keys are not droppable",
-			base: map[string]string{
-				"shared": "from-base",
-				"extra1": "1",
-				"extra2": "2",
-			},
-			override: map[string]string{
-				"shared": "from-override",
-				"o1":     "1",
-				"o2":     "2",
-				"o3":     "3",
-			},
-			maxItems: 5,
-			// merged = {shared, o1, o2, o3, extra1, extra2} = 6 entries, need to
-			// drop 1 base-only entry: base-only keys are [extra1, extra2],
-			// ascending order drops extra1 first.
-			expected: map[string]string{
-				"shared": "from-override",
-				"o1":     "1",
-				"o2":     "2",
-				"o3":     "3",
-				"extra2": "2",
-			},
+			// 3 override + 3 base = 6, exceeds the maxItems of 5, so an error should be returned.
+			expectErr: true,
 		},
 		{
 			name: "override alone exceeds cap",
 			override: map[string]string{
+				"o1": "1",
+				"o2": "2",
+				"o3": "3",
+				"o4": "4",
+				"o5": "5",
+				"o6": "6",
+			},
+			maxItems:  5,
+			expectErr: true,
+		},
+		{
+			name: "base alone exceeds cap",
+			base: map[string]string{
 				"o1": "1",
 				"o2": "2",
 				"o3": "3",
