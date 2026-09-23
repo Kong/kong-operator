@@ -159,6 +159,15 @@
 
 ### Breaking changes
 
+The following APIs have breaking changes below. All are alpha (`v1alpha1`)
+APIs, which carry no backward-compatibility guarantee and are not covered
+by the operator's semver:
+
+- `PortalCustomization` (`konnect.konghq.com`)
+- `AIGatewayMCPServer` (`aiconfiguration.konghq.com`)
+- `KonnectConfigStore` (`konnect.konghq.com`)
+- `AIGatewayDataPlane` (`aigateway.konghq.com`)
+
 - `PortalCustomization`: `spec.apiSpec.specRenderer.tryItUiAudience` is removed,
   following its removal from Konnect's public API in this SDK version. Existing
   objects with this field set will have it silently dropped on the next spec
