@@ -255,7 +255,7 @@ for ns in ${ALL_NAMESPACES}; do
     echo ""
   } >> "${RESOURCES_FILE}"
   if ! kc get secrets -n "${ns}" -o json 2>/dev/null | \
-      jq 'del(.items[].data, .items[].stringData)' >> "${RESOURCES_FILE}" 2>&1; then
+      jq 'del(.items[].data, .items[].stringData, .items[].metadata.annotations["kubectl.kubernetes.io/last-applied-configuration"])' >> "${RESOURCES_FILE}" 2>&1; then
     echo "# No Secrets found or error occurred" >> "${RESOURCES_FILE}"
     echo "" >> "${RESOURCES_FILE}"
   fi
