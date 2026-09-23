@@ -11,11 +11,13 @@ import (
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
+	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/config"
 	ctrlmetricsserver "sigs.k8s.io/controller-runtime/pkg/metrics/server"
@@ -162,9 +164,27 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 		Controller:             config.Controller{SkipNameValidation: new(true)},
 		Metrics:                ctrlmetricsserver.Options{BindAddress: "0"},
 		HealthProbeBindAddress: "0",
+		Cache:                  i.cacheOpts(),
 		// No leader election and no webhooks: instances are ephemeral, one per OnPremAIGateway.
-		// No cache namespace scoping: AIGatewayModels may reference the gateway from any namespace.
 	})
+}
+
+// cacheOpts scopes the instance manager's per-object caches. AIGatewayModels stay
+// cluster-wide: they may reference the gateway from any namespace. EndpointSlices
+// and AIGatewayDataPlanes are scoped to the gateway's namespace: the
+// onpremNamespacedRef is same-namespace and the Admin API endpoints discovery
+// controller only reads them there.
+func (i *Instance) cacheOpts() cache.Options {
+	opts := cache.Options{}
+	if i.env.GatewayNN.Namespace == "" {
+		return opts
+	}
+	namespaces := map[string]cache.Config{i.env.GatewayNN.Namespace: {}}
+	opts.ByObject = map[client.Object]cache.ByObject{
+		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
+		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
+	}
+	return opts
 }
 
 func (i *Instance) sendConfig(
