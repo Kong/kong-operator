@@ -101,8 +101,9 @@
 - The on-prem AI Gateway control plane instances now dynamically discover the
   Admin API endpoints of all `AIGatewayDataPlane`s that reference the gateway
   via `spec.controlPlaneRef.type: onpremNamespacedRef` (through their Admin
-  API Services' EndpointSlices) and re-sync the configuration when the
-  discovered endpoint set changes. Multiple `AIGatewayDataPlane`s can now
+  API Services' EndpointSlices) and re-render the configuration when the
+  discovered endpoint set changes; the rendered configuration is not pushed
+  to the data planes yet. Multiple `AIGatewayDataPlane`s can now
   reference the same `OnPremAIGateway`.
   [#5740](https://github.com/Kong/kong-operator/issues/5740)
 - Added support for AI Gateway runtime `2.1`: `AIGatewayMCPServer`
