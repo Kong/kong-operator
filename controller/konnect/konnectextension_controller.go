@@ -322,6 +322,23 @@ func (r *KonnectExtensionReconciler) Reconcile(ctx context.Context, ext *konnect
 
 	log.Debug(logger, "DataPlane certificate validity checked")
 
+	// The extension must hold the Konnect cleanup finalizer before any finalizer is
+	// added to the certificate Secret: the Secret's finalizers are only ever released
+	// by this extension's reconcile, so if the extension could be garbage-collected
+	// after the Secret gained finalizers but before the extension got its own (added
+	// below, after the certificate provisioning steps), the Secret would be orphaned
+	// with unreleasable finalizers in a Terminating namespace.
+	if !cleanup {
+		updated, res, err := patch.WithFinalizer(ctx, r.Client, ext, KonnectCleanupFinalizer)
+		if err != nil || !res.IsZero() {
+			return res, err
+		}
+		if updated {
+			log.Info(logger, "KonnectExtension finalizer added", "finalizer", KonnectCleanupFinalizer)
+			return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
+		}
+	}
+
 	// Get the GatewayKonnectControlPlane and set conditions accordingly, also
 	// obtain valid ControlPlane ID or requeue. When KonnectExtension is during deletion,
 	// we proceed with the cleanup even if the ControlPlane is not found.
