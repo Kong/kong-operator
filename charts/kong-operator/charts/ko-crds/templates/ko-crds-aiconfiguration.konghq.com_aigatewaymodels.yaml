@@ -51,8 +51,17 @@ spec:
             properties:
               aiGatewayRef:
                 properties:
-                  konnectID:
-                    maxLength: 36
+                  group:
+                    default: konnect.konghq.com
+                    enum:
+                    - konnect.konghq.com
+                    - aigateway.konghq.com
+                    type: string
+                  kind:
+                    default: KonnectAIGateway
+                    enum:
+                    - KonnectAIGateway
+                    - OnPremAIGateway
                     type: string
                   namespacedRef:
                     properties:
@@ -67,23 +76,18 @@ spec:
                     - name
                     type: object
                   type:
+                    default: namespacedRef
                     enum:
-                    - konnectID
                     - namespacedRef
                     type: string
                 required:
-                - type
+                - namespacedRef
                 type: object
                 x-kubernetes-validations:
-                - message: when type is namespacedRef, namespacedRef must be set
-                  rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef)
-                    : true'
-                - message: when type is namespacedRef, konnectID must not be set
-                  rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
-                - message: when type is konnectID, konnectID must be set
-                  rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
-                - message: when type is konnectID, namespacedRef must not be set
-                  rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                - message: group must be aigateway.konghq.com when kind is OnPremAIGateway,
+                    and konnect.konghq.com when kind is KonnectAIGateway
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
+                    : self.group == ''konnect.konghq.com'''
               apiSpec:
                 properties:
                   api:
@@ -955,7 +959,6 @@ spec:
                                   values:
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:
@@ -1040,7 +1043,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -1073,6 +1076,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1117,12 +1140,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1160,6 +1223,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1213,12 +1296,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1253,6 +1376,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1302,12 +1445,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     performanceConfigLatency:
                                       maxLength: 253
                                       type: string
@@ -1348,6 +1531,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1392,12 +1595,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1435,6 +1678,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1488,12 +1751,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1530,6 +1833,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1574,6 +1897,26 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     international:
                                       enum:
                                       - Enabled
@@ -1585,6 +1928,26 @@ spec:
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1616,6 +1979,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1660,12 +2043,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1703,6 +2126,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1747,12 +2190,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1784,6 +2267,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1847,12 +2350,52 @@ spec:
                                       type: object
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1884,6 +2427,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -1928,12 +2491,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -1975,6 +2578,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2019,6 +2642,26 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     international:
                                       enum:
                                       - Enabled
@@ -2030,6 +2673,26 @@ spec:
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2061,6 +2724,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2113,12 +2796,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2154,6 +2877,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2205,12 +2948,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2244,6 +3027,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2288,12 +3091,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2325,6 +3168,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2369,12 +3232,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2421,6 +3324,26 @@ spec:
                                       type: object
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2465,12 +3388,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2537,6 +3500,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2581,12 +3564,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2618,6 +3641,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2662,12 +3705,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -2702,6 +3785,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -2746,12 +3849,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -3699,7 +4842,6 @@ spec:
                                   values:
                                     items:
                                       type: string
-                                    maxItems: 1
                                     type: array
                                 type: object
                               paths:
@@ -3784,7 +4926,7 @@ spec:
                       name:
                         maxLength: 256
                         minLength: 1
-                        pattern: ^[A-Za-z0-9._:-]{1,256}$
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
                         type: string
                       policies:
                         items:
@@ -3817,6 +4959,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -3861,12 +5023,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -3904,6 +5106,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -3957,12 +5179,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -3997,6 +5259,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4046,12 +5328,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     performanceConfigLatency:
                                       maxLength: 253
                                       type: string
@@ -4092,6 +5414,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4136,12 +5478,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4179,6 +5561,26 @@ spec:
                                       type: string
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4232,12 +5634,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4274,6 +5716,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4318,6 +5780,26 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     international:
                                       enum:
                                       - Enabled
@@ -4329,6 +5811,26 @@ spec:
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4360,6 +5862,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4404,12 +5926,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4447,6 +6009,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4491,12 +6073,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4528,6 +6150,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4591,12 +6233,52 @@ spec:
                                       type: object
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4628,6 +6310,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4672,12 +6374,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4719,6 +6461,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4763,6 +6525,26 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     international:
                                       enum:
                                       - Enabled
@@ -4774,6 +6556,26 @@ spec:
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4805,6 +6607,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4857,12 +6679,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4898,6 +6760,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -4949,12 +6831,52 @@ spec:
                                       type: string
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -4988,6 +6910,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5032,12 +6974,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -5069,6 +7051,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5113,12 +7115,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -5165,6 +7207,26 @@ spec:
                                       type: object
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5209,12 +7271,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -5281,6 +7383,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5325,12 +7447,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -5362,6 +7524,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5406,12 +7588,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:
@@ -5446,6 +7668,26 @@ spec:
                                   properties:
                                     cacheReadCost:
                                       type: number
+                                    cacheReadCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     cacheWriteCost:
                                       type: number
                                     cacheWriteCostList:
@@ -5490,12 +7732,52 @@ spec:
                                       type: integer
                                     inputCost:
                                       type: number
+                                    inputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     maxTokens:
                                       maximum: 2147483646
                                       minimum: 0
                                       type: integer
                                     outputCost:
                                       type: number
+                                    outputCostList:
+                                      items:
+                                        properties:
+                                          cost:
+                                            minimum: 0
+                                            type: number
+                                          modal:
+                                            enum:
+                                            - text
+                                            - audio
+                                            - image
+                                            - video
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - cost
+                                        - modal
+                                        type: object
+                                      type: array
                                     serviceTierFactor:
                                       items:
                                         properties:

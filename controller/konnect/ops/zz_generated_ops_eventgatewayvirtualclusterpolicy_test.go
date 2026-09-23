@@ -29,8 +29,8 @@ func testGeneratedEventGatewayVirtualClusterPolicyForSDKOps() *configurationv1al
 		Spec: configurationv1alpha1.EventGatewayVirtualClusterPolicySpec{
 			APISpec: configurationv1alpha1.EventGatewayVirtualClusterPolicyAPISpec{
 				EventGatewayVirtualClusterPolicyConfig: &configurationv1alpha1.EventGatewayVirtualClusterPolicyConfig{
-					Type:                   configurationv1alpha1.EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy,
-					EventGatewayACLsPolicy: &configurationv1alpha1.EventGatewayACLsPolicy{Config: configurationv1alpha1.EventGatewayACLPolicyConfig{Rules: []configurationv1alpha1.EventGatewayACLRule{{Action: "allow", ResourceType: "topic", Operations: []configurationv1alpha1.EventGatewayACLOperation{{Name: "read"}}, ResourceNames: &configurationv1alpha1.EventGatewayACLRuleResourceNames{Type: configurationv1alpha1.EventGatewayACLRuleResourceNamesTypeStat, Stat: &configurationv1alpha1.EventGatewayACLRuleResourceNamesStaticArray{{Match: "orders.*"}}}}}}},
+					Type: configurationv1alpha1.EventGatewayVirtualClusterPolicyConfigTypeACLs,
+					ACLs: &configurationv1alpha1.EventGatewayACLsPolicy{Config: configurationv1alpha1.EventGatewayACLPolicyConfig{Rules: []configurationv1alpha1.EventGatewayACLRule{{Action: "allow", ResourceType: "topic", Operations: []configurationv1alpha1.EventGatewayACLOperation{{Name: "read"}}, ResourceNames: &configurationv1alpha1.EventGatewayACLRuleResourceNames{Type: configurationv1alpha1.EventGatewayACLRuleResourceNamesTypeStat, Stat: &configurationv1alpha1.EventGatewayACLRuleResourceNamesStaticArray{{Match: "orders.*"}}}}}}},
 				},
 			},
 		},

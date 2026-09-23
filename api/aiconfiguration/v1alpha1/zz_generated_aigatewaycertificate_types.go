@@ -3,7 +3,6 @@
 package v1alpha1
 
 import (
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -45,7 +44,7 @@ type AIGatewayCertificateSpec struct {
 	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
 	//
 	// +required
-	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`
+	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -108,7 +107,7 @@ type AIGatewayCertificateAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 

@@ -130,8 +130,7 @@ func testAIGatewayModel() *aiconfigurationv1alpha1.AIGatewayModel {
 		UID:        "aigatewaymodel-uid",
 		Generation: 2,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "ai-gw-cp-1",
 				},

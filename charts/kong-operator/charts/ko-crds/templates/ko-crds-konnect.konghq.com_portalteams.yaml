@@ -61,6 +61,11 @@ spec:
                     maxLength: 250
                     minLength: 1
                     type: string
+                  konnectManaged:
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
                   name:
                     maxLength: 250
                     minLength: 1
