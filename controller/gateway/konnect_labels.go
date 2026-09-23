@@ -52,19 +52,17 @@ func parseLabelsAnnotationValue(value string) (map[string]string, error) {
 	result := make(map[string]string)
 	for entry := range strings.SplitSeq(value, ",") {
 		parts := strings.Split(entry, "=")
-		if len(parts) != 2 || parts[0] == "" {
+		if len(parts) != 2 || strings.TrimSpace(parts[0]) == "" {
 			return nil, fmt.Errorf("labels annotation malformed - expected format: key1=value1,key2=value2")
 		}
-		result[parts[0]] = parts[1]
+		result[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 	}
 	return result, nil
 }
 
 // mergeLabelsWithCap merges override on top of base, with override winning
-// on conflicting keys. If the merged result would exceed maxItems entries,
-// base-only entries are dropped - in ascending key order, for a deterministic
-// result - until the merged map fits. If override alone already exceeds
-// maxItems, an error is returned since there's nothing left to drop.
+// on conflicting keys. It returns an error when base alone, override alone,
+// or the merged result would exceed maxItems entries.
 func mergeLabelsWithCap(base, override map[string]string, maxItems int) (map[string]string, error) {
 	if len(override) > maxItems || len(base) > maxItems {
 		return nil, fmt.Errorf("too many labels: base has %d, override has %d; maximum is %d", len(base), len(override), maxItems)
