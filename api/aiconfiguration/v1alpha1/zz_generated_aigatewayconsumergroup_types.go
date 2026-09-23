@@ -41,7 +41,7 @@ type AIGatewayConsumerGroupList struct {
 
 // AIGatewayConsumerGroupSpec defines the desired state of AIGatewayConsumerGroup.
 type AIGatewayConsumerGroupSpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`

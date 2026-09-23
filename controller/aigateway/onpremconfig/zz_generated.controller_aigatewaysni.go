@@ -158,7 +158,7 @@ func (r *AIGatewaySNIReconciler) Reconcile(ctx context.Context, req ctrl.Request
 	if ref := obj.GetAIGatewayRef(); ref.TargetsOnPremAIGateway() && ref.NamespacedRef != nil {
 		targetsOnPrem = true
 		parent.Namespace = obj.Namespace
-		if ref.NamespacedRef.Namespace != nil {
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
 			parent.Namespace = *ref.NamespacedRef.Namespace
 		}
 		parent.Name = ref.NamespacedRef.Name

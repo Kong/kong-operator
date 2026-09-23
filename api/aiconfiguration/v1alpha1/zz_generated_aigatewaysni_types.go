@@ -41,7 +41,7 @@ type AIGatewaySNIList struct {
 
 // AIGatewaySNISpec defines the desired state of AIGatewaySNI.
 type AIGatewaySNISpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`

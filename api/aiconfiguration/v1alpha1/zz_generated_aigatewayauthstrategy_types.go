@@ -43,7 +43,7 @@ type AIGatewayAuthStrategyList struct {
 
 // AIGatewayAuthStrategySpec defines the desired state of AIGatewayAuthStrategy.
 type AIGatewayAuthStrategySpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`

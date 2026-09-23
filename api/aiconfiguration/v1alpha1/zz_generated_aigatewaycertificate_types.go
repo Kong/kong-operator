@@ -41,7 +41,7 @@ type AIGatewayCertificateList struct {
 
 // AIGatewayCertificateSpec defines the desired state of AIGatewayCertificate.
 type AIGatewayCertificateSpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
 	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`

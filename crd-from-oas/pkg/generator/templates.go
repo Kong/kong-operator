@@ -96,7 +96,7 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
 	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
