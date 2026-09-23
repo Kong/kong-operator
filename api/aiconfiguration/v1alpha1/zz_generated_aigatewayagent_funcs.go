@@ -101,18 +101,22 @@ func (obj *AIGatewayAgent) SetGatewayID(id string) {
 }
 
 // GetKonnectAIGatewayRef returns the reference to the parent KonnectAIGateway.
-func (obj *AIGatewayAgent) GetKonnectAIGatewayRef() commonv1alpha1.ObjectRef {
+func (obj *AIGatewayAgent) GetKonnectAIGatewayRef() AIGatewayRef {
 	return obj.Spec.AIGatewayRef
 }
 
-// GetParentRef returns the reference to the parent entity.
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef representation, so only the namespaced reference is carried over.
 func (obj *AIGatewayAgent) GetParentRef() commonv1alpha1.ObjectRef {
-	return obj.GetKonnectAIGatewayRef()
+	return obj.GetKonnectAIGatewayRef().ToObjectRef()
 }
 
-// SetParentRef sets the reference to the parent entity.
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// (Konnect): only the namespaced reference is carried over.
 func (obj *AIGatewayAgent) SetParentRef(ref commonv1alpha1.ObjectRef) {
-	obj.Spec.AIGatewayRef = ref
+	obj.Spec.AIGatewayRef = AIGatewayRefFromObjectRef(ref)
 }
 
 // SetParentID sets the Konnect ID of the immediate parent entity.

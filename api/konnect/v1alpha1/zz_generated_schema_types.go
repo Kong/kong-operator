@@ -2,6 +2,16 @@
 
 package v1alpha1
 
+// AIGatewayMinRuntimeVersion The minimum AI Gateway runtime version supported
+// by this AI Gateway.
+// This is the lowest data plane version that may receive configuration from it,
+// and it controls which features the API accepts.
+//
+// Data planes older than this version still connect for topology visibility.
+//
+// When not specified, the latest generally available runtime version is used.
+type AIGatewayMinRuntimeVersion string
+
 // AIGatewayProxyURL Proxy URL associated with reaching the data-planes
 // connected to a control-plane.
 type AIGatewayProxyURL struct {
@@ -22,6 +32,20 @@ type AIGatewayProxyURL struct {
 	// +kubebuilder:validation:MaxLength=253
 	Protocol string `json:"protocol,omitzero"`
 }
+
+// AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
+// raise min_runtime_version as connected data planes report a newer AI Gateway
+// runtime version.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type AIGatewayRuntimeAutoUpgrade string
+
+const (
+	// AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.
+	AIGatewayRuntimeAutoUpgradeEnabled AIGatewayRuntimeAutoUpgrade = "Enabled"
+	// AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.
+	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
+)
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string
@@ -80,6 +104,23 @@ type GatewayName string
 
 // IdentityProviderType Specifies the type of identity provider.
 type IdentityProviderType string
+
+// KonnectManaged Whether the team's membership is managed by Konnect instead of
+// being synced from an identity provider's team mappings.
+// Set to `false` (default) to let identity provider team mappings keep syncing
+// members into this team.
+// Set to `true` to manage membership directly in Konnect and prevent identity
+// provider team mappings from syncing to this team.
+//
+// +kubebuilder:validation:Enum=Enabled;Disabled
+type KonnectManaged string
+
+const (
+	// KonnectManagedEnabled sets KonnectManaged as enabled.
+	KonnectManagedEnabled KonnectManaged = "Enabled"
+	// KonnectManagedDisabled sets KonnectManaged as disabled.
+	KonnectManagedDisabled KonnectManaged = "Disabled"
+)
 
 // LabelsValue is the value type for Labels.
 //

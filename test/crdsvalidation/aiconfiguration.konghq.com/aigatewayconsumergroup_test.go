@@ -17,8 +17,7 @@ func validAIGatewayConsumerGroup(ns string) *aiconfigurationv1alpha1.AIGatewayCo
 	return &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "test-ai-gw-cp",
 				},

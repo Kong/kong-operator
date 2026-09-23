@@ -40,6 +40,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/auth-strategies
         name: AIGatewayAuthStrategy
@@ -66,6 +67,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/models
         name: AIGatewayModel
@@ -136,6 +138,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/model-providers
         name: AIGatewayModelProvider
@@ -182,6 +185,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/agents
         name: AIGatewayAgent
@@ -218,6 +222,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/consumers
         name: AIGatewayConsumer
@@ -252,6 +257,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/consumer-groups
         name: AIGatewayConsumerGroup
@@ -278,6 +284,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/mcp-servers
         name: AIGatewayMCPServer
@@ -319,6 +326,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       # AIGatewayConsumerCredential is a child of AIGatewayConsumer. Credentials
       # only obtain a Konnect ID once associated with a consumer, so they are
@@ -377,6 +385,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/ca-certificates
         name: AIGatewayCACertificate
@@ -398,6 +407,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       - path: /v1/ai-gateways/{gatewayId}/certificates
         name: AIGatewayCertificate
@@ -425,6 +435,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
       # The nested /certificates/{certificateId}/snis path is not modelled as
       # a separate CRD: it's the same underlying SNI object as /snis (just
@@ -452,6 +463,7 @@ apiGroupVersions:
             group: konnect.konghq.com
           parentRef:
             fieldName: aiGatewayRef
+            typeName: AIGatewayRef
 
   configuration.konghq.com/v1alpha1:
     categories:

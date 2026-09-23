@@ -154,9 +154,412 @@ spec:
                     required:
                     - config
                     type: object
+                  requestRuleValidator:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          requests:
+                            items:
+                              properties:
+                                alterClientQuotas:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                alterConfigs:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                alterUserScramCredentials:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                consumerGroupHeartbeat:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                createPartitions:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                createTopics:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                fetch:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                incrementalAlterConfigs:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                joinGroup:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                offsetCommit:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                offsetFetch:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                produce:
+                                  properties:
+                                    rules:
+                                      items:
+                                        properties:
+                                          action:
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                type:
+                                  enum:
+                                  - alterClientQuotas
+                                  - alterConfigs
+                                  - alterUserScramCredentials
+                                  - consumerGroupHeartbeat
+                                  - createPartitions
+                                  - createTopics
+                                  - fetch
+                                  - incrementalAlterConfigs
+                                  - joinGroup
+                                  - offsetCommit
+                                  - offsetFetch
+                                  - produce
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                            type: array
+                        required:
+                        - requests
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   type:
                     enum:
                     - acls
+                    - requestRuleValidator
                     minLength: 1
                     type: string
                 required:

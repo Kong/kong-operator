@@ -359,8 +359,7 @@ func markGeneratedCertProgrammed(t *testing.T, cl client.Client) {
 	cert := &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 		Namespace: reconcileTestNS, Name: certName,
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestAIGWCPName},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
@@ -402,8 +401,7 @@ func markManualCertProgrammed(t *testing.T, cl client.Client) {
 		cert = &aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate{
 			Namespace: reconcileTestNS, Name: certName,
 			Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-				AIGatewayRef: commonv1alpha1.ObjectRef{
-					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: reconcileTestAIGWCPName},
 				},
 				APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{

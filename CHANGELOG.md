@@ -66,6 +66,19 @@
 
 ### Added
 
+- Added support for AI Gateway runtime `2.1`: `AIGatewayMCPServer`
+  `listener`/`conversion-listener` gain `config.allowedVersions` and
+  `config.cache.{discover,toolsList}` (cache hints with `cacheScope`/`ttlMs`);
+  `AIGatewayPolicy` gains `condition` for conditional plugin execution;
+  `KonnectAIGateway` gains `minRuntimeVersion` and `runtimeAutoUpgrade` to
+  control and report the control plane's runtime version. Also added:
+  `AIGatewayModel` per-modality cost overrides (`inputCostList`,
+  `outputCostList`, `cacheReadCostList`); `PortalTeam.konnectManaged`;
+  `EventGatewayVirtualClusterPolicy`'s new `requestRuleValidator` config
+  type; and `inlineSchema` as a new
+  `EventGatewayVirtualCluster{Consume,Produce}Policy` schema-validation
+  config type.
+  [#5825](https://github.com/Kong/kong-operator/pull/5825)
 - `PortalIdentityProviderRequest`: support adopting existing Konnect portal
   identity provider configurations by matching the spec against the remote
   configuration (OIDC: issuer URL and client ID; SAML: whichever of the IdP
@@ -146,6 +159,32 @@
 
 ### Breaking changes
 
+The following APIs have breaking changes below. All are alpha (`v1alpha1`)
+APIs, which carry no backward-compatibility guarantee and are not covered
+by the operator's semver:
+
+- `PortalCustomization` (`konnect.konghq.com`)
+- `AIGatewayMCPServer` (`aiconfiguration.konghq.com`)
+- `KonnectConfigStore` (`konnect.konghq.com`)
+- `AIGatewayDataPlane` (`aigateway.konghq.com`)
+
+- `PortalCustomization`: `spec.apiSpec.specRenderer.tryItUiAudience` is removed,
+  following its removal from Konnect's public API in this SDK version. Existing
+  objects with this field set will have it silently dropped on the next spec
+  update, or have `kubectl apply` rejected outright under strict client-side
+  validation, depending on tooling.
+  [#5825](https://github.com/Kong/kong-operator/pull/5825)
+- `AIGatewayMCPServer`: `route` (under the `conversion-listener`/`conversion-only`/
+  `listener`/`passthrough-listener`/`upstream-server` `config`) changes from an
+  untyped string map to a structured matcher object, with `paths`/`hosts`/`methods`
+  as proper lists and `headers` as a map of header name to list of values. The
+  previous shape could only hold scalar strings, so `paths`/`hosts`/`methods`
+  could never be expressed as the arrays Kong's route matching actually requires,
+  and every `AIGatewayMCPServer` with a non-empty `route` failed to reconcile
+  (`Programmed=False`/`FailedToCreate`) with an SDK unmarshal error.
+  Recovery: change `route.paths`/`route.hosts`/`route.methods` from a bare string
+  to a list, e.g. `paths: /mcp/foo` becomes `paths: [/mcp/foo]`.
+  [#5804](https://github.com/Kong/kong-operator/pull/5804)
 - `KonnectConfigStore`: deleting a `KonnectConfigStore` no longer force-deletes
   the Konnect config store together with all the secret entries it holds
   (previously the delete op passed `Force: true`, so one accidental CR deletion
@@ -180,6 +219,24 @@
   checksum annotation. On upgrade, this causes a one-time rolling restart of
   every existing `AIGatewayDataPlane` Deployment that has a `spec.controlPlaneRef`.
   [#5548](https://github.com/Kong/kong-operator/pull/5548)
+
+### Changed
+
+- Security: harden containers for `MCPServerDataPlane`'s `Deployment` with
+  a tight security context:
+  - disallows privilege escalation
+  - drop all capabilities
+  - run as non-root user
+  - read-only root filesystem
+  This change enforces patching of `Deployment`s, which causes
+  a rolling restart of the underlying `Pod`s when updating operator to this version.
+  [#5771](https://github.com/Kong/kong-operator/pull/5771)
+- AI Gateway configuration entities (`AIGatewayModel`, `AIGatewayPolicy`,
+  `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds):
+  `spec.aiGatewayRef` now uses a dedicated `AIGatewayRef` type instead of the
+  shared `commonv1alpha1.ObjectRef`. And configuration entities can target an
+  on-prem `OnPremAIGateway` in addition to a `KonnectAIGateway`.
+  [#5788](https://github.com/Kong/kong-operator/pull/5788)
 
 ### Fixes
 
