@@ -679,6 +679,15 @@ func (p *Parser) parseSchema(name string, schemaValue *openapi3.Schema) *Schema 
 		schema.Properties = append(schema.Properties, prop)
 	}
 
+	// Composite allOf with no own properties (e.g. a base schema $ref combined
+	// with an anyOf of matcher variants): flatten the members' properties so
+	// the named schema generates a plain struct instead of degrading to
+	// map[string]string.
+	if len(schemaValue.AllOf) > 0 && len(schemaValue.OneOf) == 0 && len(schemaValue.AnyOf) == 0 &&
+		schemaValue.Discriminator == nil && len(schema.Properties) == 0 {
+		schema.Properties = flattenAllOfProperties(schemaValue, 0, p.visited)
+	}
+
 	// Handle allOf: merge properties from every entry that declares its own,
 	// e.g. a route matcher composed from a base config schema (a $ref) plus a
 	// validation-only "at least one of X" anyOf sibling. Entries with no

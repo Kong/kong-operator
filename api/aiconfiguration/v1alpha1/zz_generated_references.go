@@ -155,6 +155,51 @@ type AIGatewayAuthStrategyRef struct {
 	Namespace string `json:"namespace,omitempty"`
 }
 
+// AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayMCPACLRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayConsumerGroup
+	// +kubebuilder:default=AIGatewayConsumerGroup
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// AIGatewayMCPServerRef references an AIGatewayMCPServer in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayMCPServerRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayMCPServer
+	// +kubebuilder:default=AIGatewayMCPServer
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
 // AIGatewayModelProviderRef references an AIGatewayModelProvider in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayModelProviderRef struct {

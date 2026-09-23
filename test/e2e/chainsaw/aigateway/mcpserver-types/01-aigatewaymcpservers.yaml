@@ -110,8 +110,10 @@ spec:
       displayName: ($mcp_listener_name)
       enabled: Enabled
       sources:
-        - ($mcp_conversion_only_name)
-        - ($mcp_upstream_server_name)
+        - kind: AIGatewayMCPServer
+          name: ($mcp_conversion_only_name)
+        - kind: AIGatewayMCPServer
+          name: ($mcp_upstream_server_name)
       access:
         aclAttributeType: consumer
       config:

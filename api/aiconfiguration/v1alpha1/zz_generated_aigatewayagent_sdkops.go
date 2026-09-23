@@ -265,10 +265,6 @@ func resolveAIGatewayAgentAccessAclsAllowAllow(ctx context.Context, cl client.Cl
 		if ns == "" {
 			ns = obj.GetNamespace()
 		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
-		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
 			if apierrors.IsNotFound(err) {
@@ -316,10 +312,6 @@ func resolveAIGatewayAgentAccessAclsDenyDeny(ctx context.Context, cl client.Clie
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
-		}
-		kind := ref.Kind
-		if kind == "" {
-			kind = "AIGatewayConsumerGroup"
 		}
 		var referenced AIGatewayConsumerGroup
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {

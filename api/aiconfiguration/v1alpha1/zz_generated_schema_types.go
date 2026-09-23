@@ -1010,11 +1010,11 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
 	// +optional
-	Allow []string `json:"allow,omitempty"`
+	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
 	// List of consumer groups that are denied access.
 	//
 	// +optional
-	Deny []string `json:"deny,omitempty"`
+	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
 }
 
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
@@ -1487,7 +1487,7 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +required
-	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
+	Sources []AIGatewayMCPServerRef `json:"sources,omitempty"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -1632,7 +1632,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//
@@ -1700,7 +1700,7 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// **Pre-release Feature**
 	// This feature is currently in beta and is subject to change.
 	//

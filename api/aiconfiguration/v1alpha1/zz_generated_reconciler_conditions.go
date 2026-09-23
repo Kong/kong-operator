@@ -51,6 +51,22 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayConsumerGroupRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayMCPServerRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayMCPServer reference is valid and points to an existing
+	// AIGatewayMCPServer.
+	AIGatewayMCPServerRefValidConditionType = "AIGatewayMCPServerRefValid"
+
+	// AIGatewayMCPServerRefReasonValid is the reason used with the AIGatewayMCPServerRefValid
+	// condition type indicating that the AIGatewayMCPServer reference is valid.
+	AIGatewayMCPServerRefReasonValid = "Valid"
+	// AIGatewayMCPServerRefReasonInvalid is the reason used with the AIGatewayMCPServerRefValid
+	// condition type indicating that the AIGatewayMCPServer reference is invalid.
+	AIGatewayMCPServerRefReasonInvalid = "Invalid"
+	// AIGatewayMCPServerRefReasonNotProgrammed is the reason used with the AIGatewayMCPServerRefValid
+	// condition type indicating that the referenced AIGatewayMCPServer exists but is not
+	// yet programmed in Konnect.
+	AIGatewayMCPServerRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayModelProviderRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayModelProvider reference is valid and points to an existing
 	// AIGatewayModelProvider.

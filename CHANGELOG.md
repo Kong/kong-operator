@@ -75,6 +75,35 @@
   Recovery: change `route.paths`/`route.hosts`/`route.methods` from a bare string
   to a list, e.g. `paths: /mcp/foo` becomes `paths: [/mcp/foo]`.
   [#5804](https://github.com/Kong/kong-operator/pull/5804)
+- `AIGatewayMCPServer`: reference fields changed from plain string items (holding
+  the referenced entity's Konnect name) to ref objects holding the referenced
+  CR's `metadata.name`; the operator now resolves them to the referenced
+  entity's Konnect name at reconcile time. Affected fields:
+  `spec.apiSpec.listener.sources` (now references `AIGatewayMCPServer` CRs),
+  `access.{consumer,oauthAccessToken}.authStrategies` (now references
+  `AIGatewayAuthStrategy` CRs), and
+  `access.{consumer,oauthAccessToken}.{acls,defaultToolAcls}.{allow,deny}` as
+  well as `tools[].access.acls.{allow,deny}` (now reference
+  `AIGatewayConsumerGroup` CRs).
+  On upgrade, existing `AIGatewayMCPServer` objects carrying the old string
+  items fail schema validation and fail typed decode in the controller cache.
+  Re-apply each affected `AIGatewayMCPServer` with the new object syntax
+  (`- name: <metadata.name-of-referenced-CR>`) to repair it.
+  [#5737](https://github.com/Kong/kong-operator/pull/5737)
+  [#5838](https://github.com/Kong/kong-operator/pull/5838)
+
+### Added
+
+- `AIGatewayMCPServer`: reference fields now carry the referenced CR's
+  `metadata.name` and the operator resolves them to the referenced entity's
+  Konnect name at reconcile time: `spec.apiSpec.listener.sources` now references
+  `AIGatewayMCPServer` CRs, `access.{consumer,oauthAccessToken}.authStrategies`
+  reference `AIGatewayAuthStrategy` CRs, and
+  `access.{consumer,oauthAccessToken}.{acls,defaultToolAcls}.{allow,deny}` as
+  well as `tools[].access.acls.{allow,deny}` reference `AIGatewayConsumerGroup`
+  CRs.
+  [#5737](https://github.com/Kong/kong-operator/pull/5737)
+  [#5838](https://github.com/Kong/kong-operator/pull/5838)
 
 ### Fixes
 
