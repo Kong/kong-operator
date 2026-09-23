@@ -268,6 +268,16 @@ by the operator's semver:
   Secret finalizers while another extension still uses the Secret or has pending
   certificate cleanup.
   [#5774](https://github.com/Kong/kong-operator/pull/5774)
+- KonnectExtension: the extension now gets its `gateway.konghq.com/konnect-cleanup`
+  finalizer before the reconciler stamps any cleanup finalizer
+  (`gateway.konghq.com/secret-in-use`, `gateway.konghq.com/konnect-cleanup`) on the
+  auto-generated certificate Secret. Previously the Secret gained its finalizers on one
+  reconcile and the extension gained its own only on the next one, so a deletion in
+  between (for example a Gateway torn down mid-provisioning) garbage-collected the
+  extension while the Secret kept finalizers that only the extension's reconcile could
+  release. The orphaned Secret then kept the whole namespace stuck in `Terminating`,
+  and operations waiting for namespace deletion failed with a context deadline.
+  [#5837](https://github.com/Kong/kong-operator/pull/5837)
 - On-prem gateway: generate a distinct Kong route for each match when its parent
  `HTTPRoute` rule contains `ReplacePrefixMatch` typed `URLRewrite` filter or
  `requestRedirect` filter.
