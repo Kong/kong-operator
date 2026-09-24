@@ -91,6 +91,11 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+      # NOTE: true for final releases (no prerelease suffix) and for rapid releases
+      # (e.g. 2.4.0-rapid.1). Rapid releases are semver prereleases only by syntax:
+      # they are shipped like regular releases and follow the same release branch
+      # flow (release/N.M.x creation, cherry-picks to main).
+      branching_release: ${{ steps.release_kind.outputs.branching_release }}
     runs-on: ubuntu-latest
 
     steps:
@@ -111,6 +116,17 @@ jobs:
         with:
           input_string: ${{ env.VERSION }}
           version_extractor_regex: "(.*)$"
+
+      - name: Determine whether the release follows the release branch flow
+        id: release_kind
+        env:
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          if [[ -z "$PRERELEASE" || "$PRERELEASE" =~ ^-?rapid\.[0-9]+$ ]]; then
+            echo "branching_release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "branching_release=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: check if tag already exists
         uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
@@ -168,10 +184,11 @@ jobs:
       - publish-release
       - semver
     # NOTE: only create a release branch if the release is not a patch release
-    # or a prerelease.
+    # or a prerelease (rapid releases, e.g. 2.4.0-rapid.1, are not considered
+    # prereleases here - see semver.outputs.branching_release).
     # For patch releases, the release branch should already be in place.
     # For prereleases, we do not want to create a release branch.
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.branching_release == 'true' }}
     runs-on: ubuntu-latest
     env:
       RELEASE_BRANCH: "release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
@@ -191,6 +208,7 @@ jobs:
           repositories: |
             kong-operator
       - uses: peterjgrainger/action-create-branch@4b81ce657e255acd677cc6c55c9c763654be3aef # v4.0.0
+        id: create_branch
         env:
           # NOTE: the release-branches ruleset gates refs/heads/release/* with a
           # `creation` rule, and secrets.GITHUB_TOKEN (github-actions[bot]) is not a
@@ -204,8 +222,13 @@ jobs:
           branch: "refs/heads/${{ env.RELEASE_BRANCH }}"
           sha: "${{ github.sha }}"
 
+      # NOTE: subsequent rapid releases of the same minor (e.g. 2.4.0-rapid.2) find
+      # the release branch already in place: the charts sync workflow was already
+      # updated for it, so there is nothing left to do.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-      - env:
+        if: ${{ steps.create_branch.outputs.created == 'true' }}
+      - if: ${{ steps.create_branch.outputs.created == 'true' }}
+        env:
           CHARTS_SYNC_WORKFLOW_PATH: .github/workflows/charts-sync.yaml
         run: |
           git config --global user.name "Kong's Team k8s bot"
@@ -215,6 +238,7 @@ jobs:
           git commit -m "chore: update charts sync workflow to trigger on $RELEASE_BRANCH branch"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
+        if: ${{ steps.create_branch.outputs.created == 'true' }}
         with:
           # NOTE: use a dedicated head branch, not RELEASE_BRANCH itself - with
           # delete-branch: true, merging this PR would otherwise delete the
@@ -241,7 +265,7 @@ jobs:
       - look_for_release
       - publish-release
       - semver
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.branching_release == 'true' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
     env:
       CHERRYPICK_BRANCH: cherry-pick/${{ github.sha }}-to-main
     runs-on: ubuntu-latest
