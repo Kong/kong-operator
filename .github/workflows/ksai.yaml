@@ -85,7 +85,7 @@ jobs:
       attempt: ${{ inputs.attempt }}
       stall: ${{ inputs.stall }}
       prev_remaining: ${{ inputs.prev_remaining }}
-      allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
+      allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5-5,claude-sonnet-5,claude-haiku-4-5"
       client_id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
       anthropic_base_url: ${{ vars.KSAI_ANTHROPIC_BASE_URL }}
     secrets:
