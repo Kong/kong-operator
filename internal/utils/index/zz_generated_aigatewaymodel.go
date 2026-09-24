@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayModelOnKonnectAIGatewayRef is the index field for AIGatewayModel -> KonnectAIGateway.
 	IndexFieldAIGatewayModelOnKonnectAIGatewayRef = "aiGatewayModelOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayModelOnOnPremAIGatewayRef is the index field for AIGatewayModel -> OnPremAIGateway.
+	IndexFieldAIGatewayModelOnOnPremAIGatewayRef = "aiGatewayModelOnOnPremAIGatewayRef"
 	// IndexFieldAIGatewayModelOnAIGatewayPolicyRef is the index field for AIGatewayModel -> AIGatewayPolicy.
 	IndexFieldAIGatewayModelOnAIGatewayPolicyRef = "aiGatewayModelOnAIGatewayPolicyRef"
 	// IndexFieldAIGatewayModelOnAIGatewayConsumerGroupRef is the index field for AIGatewayModel -> AIGatewayConsumerGroup.
@@ -28,6 +30,11 @@ func OptionsForAIGatewayModel() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
 			Field:          IndexFieldAIGatewayModelOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayModelOnKonnectAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
+			Field:          IndexFieldAIGatewayModelOnOnPremAIGatewayRef,
+			ExtractValueFn: aiGatewayModelOnOnPremAIGatewayRef,
 		},
 		{
 			Object:         &aiconfigurationv1alpha1.AIGatewayModel{},
@@ -58,6 +65,32 @@ func aiGatewayModelOnKonnectAIGatewayRef(object client.Object) []string {
 		return nil
 	}
 	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting a KonnectAIGateway are visible to the Konnect
+	// reconciler: on-prem-targeted ones are indexed separately.
+	if !ent.Spec.AIGatewayRef.TargetsKonnectAIGateway() {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.AIGatewayRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+func aiGatewayModelOnOnPremAIGatewayRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayModel)
+	if !ok {
+		return nil
+	}
+	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting an OnPremAIGateway are visible to the on-prem
+	// reconciler: Konnect-targeted ones stay in the KonnectAIGateway index.
+	if !ent.Spec.AIGatewayRef.TargetsOnPremAIGateway() {
 		return nil
 	}
 
@@ -115,6 +148,26 @@ func aiGatewayModelOnAIGatewayConsumerGroupRef(object client.Object) []string {
 		out = append(out, ns+"/"+ref.Name)
 	}
 	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelAPIAccessAclsDenyDeny(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAclsAllowAllow(ent) {
+		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = ent.GetNamespace()
+		}
+		out = append(out, ns+"/"+ref.Name)
+	}
+	for _, ref := range aiconfigurationv1alpha1.RefsAtAIGatewayModelModelAccessAclsDenyDeny(ent) {
 		if ref.Kind != "" && ref.Kind != "AIGatewayConsumerGroup" {
 			continue
 		}

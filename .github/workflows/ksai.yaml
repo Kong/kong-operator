@@ -57,7 +57,7 @@ jobs:
       github.event.pull_request.draft == true &&
       github.event.pull_request.user.type == 'Bot' &&
       github.event.pull_request.head.repo.full_name == github.repository)
-    uses: Kong/ksai-public/.github/workflows/ksai.yml@bdb4a4473178b0210a9039ed2d9bc21675f7ac2e # v3.102.3
+    uses: Kong/ksai-public/.github/workflows/ksai.yml@1d0222cabcc3abba20322fbacefc17d8c1a76e16 # v3.105.5
     permissions:
       contents: write      # checked out by every command, and pushed by one that changes code
       issues: write        # every command answers with a comment, and reacts to the one that asked
@@ -85,7 +85,7 @@ jobs:
       attempt: ${{ inputs.attempt }}
       stall: ${{ inputs.stall }}
       prev_remaining: ${{ inputs.prev_remaining }}
-      allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5,claude-sonnet-5,claude-haiku-4-5"
+      allowed_models: "zai-org/GLM-5.3-Flash,claude-opus-5-5,claude-sonnet-5,claude-haiku-4-5"
       client_id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
       anthropic_base_url: ${{ vars.KSAI_ANTHROPIC_BASE_URL }}
     secrets:
@@ -107,7 +107,7 @@ jobs:
       (github.event_name == 'pull_request_review' &&
       github.event.sender.type != 'Bot' &&
       github.event.review.state != 'commented'))
-    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@bdb4a4473178b0210a9039ed2d9bc21675f7ac2e # v3.102.3
+    uses: Kong/ksai-public/.github/workflows/ksai-hold.yml@1d0222cabcc3abba20322fbacefc17d8c1a76e16 # v3.105.5
     permissions:
       contents: read       # download the action this call runs, which lives in a private repository
       pull-requests: write # dismiss an approval from somebody who contributed to the pull request

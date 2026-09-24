@@ -19,8 +19,7 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 		APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 		ObjectMeta: common.CommonObjectMeta(ns),
 		Spec: aiconfigurationv1alpha1.AIGatewayMCPServerSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: "test-ai-gateway",
 				},
@@ -31,14 +30,14 @@ func validAIGatewayMCPServer(ns string) *aiconfigurationv1alpha1.AIGatewayMCPSer
 					Listener: &aiconfigurationv1alpha1.AIGatewayMCPServerListener{
 						Name:        "test-mcp-server",
 						DisplayName: "Test MCP Server",
-						Sources:     []aiconfigurationv1alpha1.AIGatewayEntityIdentifier{"test-source"},
+						Sources:     []aiconfigurationv1alpha1.AIGatewayMCPServerRef{{Name: "test-source"}},
 						Access: &aiconfigurationv1alpha1.AIGatewayMCPServerListenerAccess{
 							AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerListenerAccessTypeConsumer,
 							Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 						},
-						Config: aiconfigurationv1alpha1.AIGatewayMCPServerNoUpstreamConfig{
+						Config: aiconfigurationv1alpha1.AIGatewayMCPServerListenerConfig{
 							Route: aiconfigurationv1alpha1.AIGatewayMCPServerRouteWithMatcher{
-								"paths": "/mcp",
+								Paths: []string{"/mcp"},
 							},
 						},
 					},
@@ -62,30 +61,174 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				TestObject: validAIGatewayMCPServer(ns.Name),
 			},
 			{
-				Name: "type namespacedRef without namespacedRef set is rejected",
+				Name: "deprecated type namespacedRef is accepted for backward compatibility",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
-					obj.Spec.AIGatewayRef = commonv1alpha1.ObjectRef{
-						Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-					}
+					//nolint:staticcheck // SA1019: deliberately set the deprecated field to verify backward compatibility.
+					obj.Spec.AIGatewayRef.Type = aiconfigurationv1alpha1.AIGatewayRefTypeNamespacedRef
 					return obj
 				}(),
-				ExpectedErrorMessage: new("when type is namespacedRef, namespacedRef must be set"),
 			},
 			{
-				Name: "type konnectID with namespacedRef set is rejected",
+				Name: "namespacedRef is required",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
-					obj.Spec.AIGatewayRef = commonv1alpha1.ObjectRef{
-						Type:      commonv1alpha1.ObjectRefTypeKonnectID,
-						KonnectID: new("12345678-1234-1234-1234-123456789abc"),
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.aiGatewayRef: Required value"),
+			},
+			{
+				Name: "unknown kind is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: "NotARealKind",
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},
 					}
 					return obj
 				}(),
-				ExpectedErrorMessage: new("when type is konnectID, namespacedRef must not be set"),
+				ExpectedErrorMessage: new("spec.aiGatewayRef.kind"),
+			},
+			{
+				Name: "unknown group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: "not-a-real-group",
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.aiGatewayRef.group"),
+			},
+			{
+				Name: "OnPremAIGateway kind with aigateway.konghq.com group is accepted",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+			},
+			{
+				Name: "OnPremAIGateway kind without group is rejected (group defaults to konnect.konghq.com)",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
+			},
+			{
+				Name: "OnPremAIGateway kind with explicit konnect.konghq.com group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupKonnect,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
+			},
+			{
+				Name: "KonnectAIGateway kind with aigateway.konghq.com group is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
+			},
+			{
+				Name: "repointing from KonnectAIGateway to OnPremAIGateway is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"),
+			},
+			{
+				Name: "repointing from OnPremAIGateway to KonnectAIGateway is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"),
+			},
+			{
+				Name: "repointing to a different OnPremAIGateway is accepted",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "another-ai-gateway",
+						},
+					}
+				},
 			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
@@ -181,7 +324,7 @@ func validAIGatewayMCPServerConversionListener(ns string) *aiconfigurationv1alph
 				AclAttributeType: aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerAccessTypeConsumer,
 				Consumer:         &aiconfigurationv1alpha1.AIGatewayMCPServerListenerConsumer{},
 			},
-			Config: aiconfigurationv1alpha1.AIGatewayMCPServerWithUpstreamNoProxyConfig{
+			Config: aiconfigurationv1alpha1.AIGatewayMCPServerConversionListenerConfig{
 				URL: "https://example.com/mcp",
 			},
 			Tools: []aiconfigurationv1alpha1.AIGatewayMCPConversionTool{

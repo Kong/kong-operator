@@ -11,6 +11,7 @@ import (
 
 func TestAIGatewayPolicyAPISpec_ToCreateAIGatewayPolicyRequest(t *testing.T) {
 	spec := &AIGatewayPolicyAPISpec{
+		Condition:   new("test-value"),
 		DisplayName: "test-value",
 		Enabled:     "Enabled",
 		Global:      "Enabled",
@@ -29,6 +30,7 @@ func TestAIGatewayPolicyAPISpec_ToCreateAIGatewayPolicyRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, "test-value", payload["condition"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, true, payload["enabled"])
 	require.Equal(t, true, payload["global"])
@@ -40,6 +42,7 @@ func TestAIGatewayPolicyAPISpec_ToCreateAIGatewayPolicyRequest(t *testing.T) {
 
 func TestAIGatewayPolicyAPISpec_ToUpdateAIGatewayPolicyRequest(t *testing.T) {
 	spec := &AIGatewayPolicyAPISpec{
+		Condition:   new("test-value"),
 		DisplayName: "test-value",
 		Enabled:     "Enabled",
 		Global:      "Enabled",
@@ -57,6 +60,7 @@ func TestAIGatewayPolicyAPISpec_ToUpdateAIGatewayPolicyRequest(t *testing.T) {
 	var payload map[string]any
 	err = json.Unmarshal(data, &payload)
 	require.NoError(t, err)
+	require.Equal(t, "test-value", payload["condition"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, true, payload["enabled"])
 	require.Equal(t, true, payload["global"])

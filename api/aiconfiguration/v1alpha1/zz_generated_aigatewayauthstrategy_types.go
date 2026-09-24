@@ -5,7 +5,6 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
@@ -21,7 +20,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 type AIGatewayAuthStrategy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -44,10 +43,10 @@ type AIGatewayAuthStrategyList struct {
 
 // AIGatewayAuthStrategySpec defines the desired state of AIGatewayAuthStrategy.
 type AIGatewayAuthStrategySpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
-	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`
+	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//

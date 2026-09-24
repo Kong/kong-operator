@@ -27,8 +27,7 @@ func TestAIGatewayConsumer(t *testing.T) {
 					Name: "consumer1",
 					Type: "api-key",
 				},
-				AIGatewayRef: commonv1alpha1.ObjectRef{
-					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name: "aigateway-1",
 					},

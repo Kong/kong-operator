@@ -57,9 +57,10 @@ jobs:
       with:
         install_args: github:Kong/kubernetes-testing-framework aqua:helm/helm kind
 
-    - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+    - uses: ./.github/actions/kong-license
       id: license
       with:
+        cached-license: ${{ secrets.KONG_LICENSE_DATA }}
         op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
 
     - uses: ./.github/actions/bump-inotify
@@ -132,13 +133,19 @@ jobs:
         # job timeout), so /tmp/chainsaw stays empty and the upload below is a
         # no-op. Dump cluster state and operator logs at the workflow level too.
         # We don't know which test namespace was active on cancellation, so
-        # capture every non-system namespace plus the operator namespace.
+        # capture every non-system, non-infra namespace plus the operator
+        # namespace. The runner only allows ~5 minutes of post-cancellation
+        # steps before killing them, so keep this dump fast: skip the slow
+        # resource-counting summary and infra namespaces we don't debug.
+        # `timeout 4m` caps the whole dump: the upload step below must start
+        # inside the runner's post-cancellation grace window.
         NAMESPACES=$(kubectl get namespaces -o jsonpath='{range .items[*]}{.metadata.name}{"\n"}{end}' \
-          | grep -vE '^kube-(system|node-lease|public)$' | tr '\n' ' ')
+          | grep -vE '^(kube-(system|node-lease|public)|cert-manager|metallb-system|local-path-storage)$' | tr '\n' ' ')
         TEST_NAME="${SUITE}" \
-        NAMESPACE="$(echo ${NAMESPACES} | awk '{print $1}')" \
-        ADDITIONAL_NAMESPACES="$(echo ${NAMESPACES} | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
-        bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh
+        NAMESPACE="$(echo "${NAMESPACES}" | awk '{print $1}')" \
+        ADDITIONAL_NAMESPACES="$(echo "${NAMESPACES}" | awk '{$1=""; print}' | tr -s ' ' ',' | sed 's/^,//')" \
+        SKIP_RESOURCE_COUNTS=1 \
+        timeout 4m bash test/e2e/chainsaw/common/scripts/debug_snapshot.sh || true
 
     - name: Upload debug snapshots as artifacts
       if: always() && steps.chainsaw-tests.outcome != 'success'

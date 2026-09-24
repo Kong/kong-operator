@@ -10,6 +10,9 @@ on:
       op-service-account-token:
         description: "1Password service account token used to fetch the Kong Enterprise License"
         required: false
+      kong-license-data:
+        description: "Cached Kong Enterprise License, used in preference to fetching it from 1Password"
+        required: false
 
     inputs:
       test-image:
@@ -72,8 +75,9 @@ jobs:
 
     - name: Get Kong Enterprise License
       id: license
-      uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      uses: ./.github/actions/kong-license
       with:
+        cached-license: ${{ secrets.kong-license-data }}
         op-token: ${{ secrets.op-service-account-token }}
 
     - name: run e2e tests

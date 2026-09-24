@@ -96,10 +96,10 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
-	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
@@ -389,10 +389,33 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .RootRefDependency}}
 {{- if .ParentRef}}
 
-// Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
+func (obj *{{.EntityName}}) Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}}() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
+{{- if .ParentRefCustomTypeName}}
+
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef representation, so only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
+	return obj.Get{{.ParentRefCustomTypeName}}().ToObjectRef()
+}
+
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// (Konnect): only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
+}
+
+// SkipKonnectReconciliation reports whether the entity's parent reference
+// resolves to a parent the Konnect reconciler does not manage (an
+// OnPremAIGateway): such entities are owned by the on-prem machinery.
+func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
+	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
+}
+{{- else}}
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
@@ -403,6 +426,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = ref
 }
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
@@ -444,11 +468,15 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
+{{- if .ParentRefCustomTypeName}}
+	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
+{{- else}}
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
 		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},
 		Kind:    "{{.ParentKind}}",
 	}
+{{- end}}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
@@ -985,22 +1013,36 @@ const sdkOpsReferenceSharedDefines = `
 {{- if .NestedRef}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
-func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .NestedArrayList}}[][]{{else}}[]{{end}}{{.TypeName}} {
 {{- if .NestedArrayScalar}}
 {{- range .ArrayGuardExprs}}
 	if {{.}} == nil {
 		return nil
 	}
 {{- end}}
+{{- if .NestedArrayList}}
+	var refs [][]{{.TypeName}}
+{{- else}}
 	var refs []{{.TypeName}}
+{{- end}}
 	for i := range {{.ArrayPath}} {
-{{- if .ArrayLeafPointer}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafName}} == nil {
+{{- range .ElementGuardExprs}}
+		if {{$ref.ArrayPath}}[i].{{.}} == nil {
 			continue
 		}
-		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- end}}
+{{- if .NestedArrayList}}
+		if len({{.ArrayPath}}[i].{{.ArrayLeafPath}}) == 0 {
+			continue
+		}
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
+{{- else if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- else}}
-		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafName}})
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- end}}
 	}
 	return refs
@@ -1024,8 +1066,17 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 {{end}}
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
-func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
-{{- if or .NestedRef .DirectScalarRef}}
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ({{if .NestedArrayList}}[][]{{else}}[]{{end}}string, error) {
+{{- $collect := "resolved"}}
+{{- if .NestedArrayList}}
+	groups := {{.RefsExpr}}
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+{{- $collect = "group"}}
+{{- else if or .NestedRef .DirectScalarRef}}
 	refs := {{.RefsExpr}}
 	resolved := make([]string, 0, len(refs))
 	var errs []error
@@ -1086,7 +1137,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, resolvedValue)
+		{{$collect}} = append({{$collect}}, resolvedValue)
 {{- else}}
 		var referenced {{.DefaultKind}}
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -1106,17 +1157,21 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, referenced.GetKonnectName())
+		{{$collect}} = append({{$collect}}, referenced.GetKonnectName())
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, id)
+		{{$collect}} = append({{$collect}}, id)
 {{- end}}
 {{- end}}
 	}
+{{- if .NestedArrayList}}
+	resolved = append(resolved, group)
+	}
+{{- end}}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
@@ -1145,7 +1200,12 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	var checks []CrossNamespaceReferenceCheck
 	{{- range $.References}}
 	{{- if .SupportCrossNamespaceReference}}
+	{{- if .NestedArrayList}}
+	for _, refs := range {{.RefsExpr}} {
+		for _, ref := range refs {
+	{{- else}}
 	for _, ref := range {{.RefsExpr}} {
+	{{- end}}
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
@@ -1164,6 +1224,9 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			ToNamespace:   ns,
 			ToName:        ref.Name,
 		})
+		{{- if .NestedArrayList}}
+		}
+		{{- end}}
 	}
 	{{- end}}
 	{{- end}}
@@ -1231,11 +1294,19 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				if !ok {
 					continue
 				}
-				if _, has := el["{{.LeafSDKKey}}"]; !has {
+{{- $lp := "el"}}
+{{- range $inj.ElementNavs}}
+				{{.Var}}, ok := {{$lp}}["{{.Key}}"].(map[string]any)
+				if !ok {
+					continue
+				}
+{{- $lp = .Var}}
+{{- end}}
+				if _, has := {{$lp}}["{{.LeafSDKKey}}"]; !has {
 					continue
 				}
 				if ri < len(resolved{{.ResolverName}}) {
-					el["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
+					{{$lp}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
 					ri++
 				}
 			}
@@ -3093,8 +3164,15 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 	entry := resp.{{.ListResponseField}}
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 {{- range .MatchFields}}
-	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
@@ -3180,6 +3258,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3196,13 +3276,21 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
+
 	// TODO: only the first page of results is scanned. When the parent has more
 	// entries than the SDK's default page size, a matching entry on a later
 	// page is missed and getForUID returns NotFound. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
-		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 			continue
 		}
 		{{- end}}
@@ -3227,6 +3315,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3255,15 +3345,42 @@ func get{{.Entity}}ForUID(
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}
+		{{- if .AllMatchFieldsSkipWhenUnset}}
+		// Every configured match field is optional, so a variant that sets none
+		// of them would compare nothing and match an arbitrary entry.
+		if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(selected.{{$f.ObjectField}}) == ""{{end}} {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		{{- end}}
 		for _, entry := range {{$.ListResponseItemsExpr}} {
+			{{- if $.RootUnion.ResponseTypePointer}}
+			if responseType := entry.{{$.RootUnion.ResponseTypeField}}; responseType == nil || string(*responseType) != "{{.ResponseTypeValue}}" {
+				continue
+			}
+			{{- else}}
 			if entry.{{$.RootUnion.ResponseTypeField}} != "{{.ResponseTypeValue}}" {
 				continue
 			}
+			{{- end}}
+			{{- $matchTarget := "entry"}}
+			{{- if and $.RootUnion.ResponseVariantContainer .ResponseVariantField}}
+			entryContainer := entry.{{$.RootUnion.ResponseVariantContainer}}
+			if entryContainer == nil {
+				continue
+			}
+			entryVariant := entryContainer.{{.ResponseVariantField}}
+			if entryVariant == nil {
+				continue
+			}
+			{{- $matchTarget = "entryVariant"}}
+			{{- end}}
 			{{- range .MatchFields}}
 			{{- if .SliceMatch}}
-			if !matchSliceField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchSliceField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
+			{{- else if .SkipWhenUnset}}
+			if !matchOptionalStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- else}}
-			if !matchStringField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- end}}
 				continue
 			}
@@ -3296,6 +3413,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3333,6 +3452,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},

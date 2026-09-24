@@ -439,7 +439,11 @@ func newTestAIGatewayConsumer(namespace, name, gatewayName string) *aiconfigurat
 		Name:      name,
 		Namespace: namespace,
 		Spec: aiconfigurationv1alpha1.AIGatewayConsumerSpec{
-			AIGatewayRef: testNamespacedObjectRef(gatewayName),
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				NamespacedRef: &commonv1alpha1.NamespacedRef{
+					Name: gatewayName,
+				},
+			},
 		},
 	}
 }

@@ -308,6 +308,22 @@ PortalTeam is the Schema for the portalteams API.
 ### Types
 
 In this section you will find types that the CRDs rely on.
+#### AIGatewayMinRuntimeVersion
+
+_Underlying type:_ `string`
+
+AIGatewayMinRuntimeVersion The minimum AI Gateway runtime version supported
+by this AI Gateway.
+This is the lowest data plane version that may receive configuration from it,
+and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
 #### AIGatewayProxyURL
 
 
@@ -325,6 +341,28 @@ connected to a control-plane.
 _Appears in:_
 
 - [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+#### AIGatewayRuntimeAutoUpgrade
+
+_Underlying type:_ `string`
+
+AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
+raise min_runtime_version as connected data planes report a newer AI Gateway
+runtime version.
+
+
+
+
+_Appears in:_
+
+- [KonnectAIGatewayAPISpec](#konnect-konghq-com-v1alpha1-types-konnectaigatewayapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | AIGatewayRuntimeAutoUpgradeEnabled sets AIGatewayRuntimeAutoUpgrade as enabled.<br /> |
+| `Disabled` | AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.<br /> |
 
 
 
@@ -666,8 +704,10 @@ KonnectAIGatewayAPISpec defines the API spec fields for KonnectAIGateway.
 | `description` _string_ | The description of the AI Gateway. |
 | `displayName` _string_ | The display name for this AI Gateway. |
 | `labels` _[PublicLabels](#konnect-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `minRuntimeVersion` _[AIGatewayMinRuntimeVersion](#konnect-konghq-com-v1alpha1-types-aigatewayminruntimeversion)_ | The minimum AI Gateway runtime version supported by this AI Gateway. This is the lowest data plane version that may receive configuration from it, and it controls which features the API accepts.<br /><br />Data planes older than this version still connect for topology visibility.<br /><br />When not specified, the latest generally available runtime version is used. |
 | `name` _string_ | The name for this AI Gateway. This value is immutable after creation. |
 | `proxyUrls` _[][AIGatewayProxyURL](#konnect-konghq-com-v1alpha1-types-aigatewayproxyurl)_ | Array of proxy URLs associated with reaching the data-planes connected to a control-plane. |
+| `runtimeAutoUpgrade` _[AIGatewayRuntimeAutoUpgrade](#konnect-konghq-com-v1alpha1-types-aigatewayruntimeautoupgrade)_ | Whether the control plane should automatically raise min_runtime_version as connected data planes report a newer AI Gateway runtime version. |
 
 _Appears in:_
 
@@ -688,6 +728,8 @@ KonnectAIGatewayEndpoints holds the Endpoints from the Konnect API response.
 _Appears in:_
 
 - [KonnectAIGatewayStatus](#konnect-konghq-com-v1alpha1-types-konnectaigatewaystatus)
+
+
 
 #### KonnectAIGatewaySpec
 
@@ -1016,8 +1058,8 @@ Allowed values:
 #### KonnectConfigStoreSyncEntryStatus
 
 
-KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
-entry owned by the sync.
+KonnectConfigStoreSyncEntryStatus reports durable state for one Config Store
+entry written by the sync.
 
 
 
@@ -1061,7 +1103,7 @@ Allowed values:
 
 
 KonnectConfigStoreSyncReference publishes the reference suffix for one
-synced entry (or one JSON subfield of it), so consumers can assemble a
+desired, synced entry (or one JSON subfield of it), so consumers can assemble a
 vault reference string as {vault://<KongVault prefix>/<suffix>} without
 hand-assembling the store key and subfield fragments.
 
@@ -1085,7 +1127,7 @@ KonnectConfigStoreSyncSpec defines the desired state of KonnectConfigStoreSync.
 
 | Field | Description |
 | --- | --- |
-| `configStoreRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ConfigStoreRef is a reference to the KonnectConfigStore this sync writes to. The sync reads the store's Konnect ID and Control Plane ID from the referenced store's status and never resolves a Control Plane itself.<br /><br />The name is immutable; the namespace may be changed. Referencing a store in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
+| `configStoreRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | ConfigStoreRef is a reference to the KonnectConfigStore this sync writes to. The sync reads the store's Konnect ID and Control Plane ID from the referenced store's status and never resolves a Control Plane itself.<br /><br />The reference is immutable. Moving synchronization to another store requires creating a new KonnectConfigStoreSync and explicitly migrating consumers before removing this one. Referencing a store in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
 | `secretRef` _[NamespacedRef](#common-konghq-com-v1alpha1-types-namespacedref)_ | SecretRef is a reference to the Secret whose data is synced to the Config Store. It is mutable: repointing at another Secret changes only the synced value, not the entry key.<br /><br />Referencing a Secret in another namespace requires a KongReferenceGrant in the referenced namespace allowing it; that is enforced by the controller, not by CRD validation. |
 | `mode` _[KonnectConfigStoreSyncMode](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncmode)_ | Mode selects how Secret data is mapped to Config Store entries. It is immutable: re-keying is an explicit create-new-sync-and-migrate procedure because the reference string itself changes with the key. |
 | `combined` _[KonnectConfigStoreSyncCombined](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresynccombined)_ | Combined configures the single-entry mapping. It must be set if and only if mode is Combined. |
@@ -1106,7 +1148,7 @@ field is written to its own Config Store entry.
 
 | Field | Description |
 | --- | --- |
-| `entries` _[][KonnectConfigStoreSyncSplitEntry](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplitentry)_ | Entries lists the Secret data fields to sync. Fields may be added or removed freely; the storeKey of an existing entry (identified by its field) is immutable. |
+| `entries` _[][KonnectConfigStoreSyncSplitEntry](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncsplitentry)_ | Entries lists the Secret data fields to sync. Fields may be added or removed freely; the storeKey of an existing entry (identified by its field) is immutable. To replace a key safely, first sync its replacement (in this sync if capacity permits, otherwise in another sync), migrate consumers, then remove the old entry. A removed entry still in use is preserved in the store but no longer updated from the Secret. |
 
 _Appears in:_
 
@@ -1143,9 +1185,9 @@ their hashes and sizes.
 | `storeID` _string_ | StoreID is the Konnect ID of the referenced Config Store, observed from the store's status. |
 | `controlPlaneID` _string_ | ControlPlaneID is the Konnect ID of the Control Plane the referenced Config Store belongs to, observed from the store's status. A sync never resolves a Control Plane itself. |
 | `observedSecretResourceVersion` _string_ | ObservedSecretResourceVersion is the resourceVersion of the Secret at the last successful sync. It is an observation aid only and is never an input to a push decision. |
-| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports the state of each Config Store entry owned by this sync. |
-| `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References publishes the reference suffixes consumers need to build vault reference strings. A full reference is {vault://<KongVault prefix>/<suffix>}. |
-| `entriesSynced` _int32_ | EntriesSynced is the number of entries currently synced to the Config Store. |
+| `entries` _[][KonnectConfigStoreSyncEntryStatus](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncentrystatus)_ | Entries reports durable state for desired Config Store entries this sync has written, including entries currently lost in per-key conflict election, plus entries retained while cleanup is blocked. Removed entries awaiting cleanup are not published in References. The limit accommodates one full desired set and one full set awaiting cleanup. |
+| `references` _[][KonnectConfigStoreSyncReference](#konnect-konghq-com-v1alpha1-types-konnectconfigstoresyncreference)_ | References advertises suffixes for entries still declared in the spec that this sync has successfully synced. Consumers can build a full reference as {vault://<KongVault prefix>/<suffix>}. A later failed update can leave the previous value serving; check Synced and EntriesSynced for current freshness. This is not an inventory of all remote entries: a spec-removed entry may still serve existing consumers while awaiting cleanup, but is no longer updated or advertised here. Such entries remain recorded in Entries. |
+| `entriesSynced` _int32_ | EntriesSynced is the number of desired entries this sync currently wins and has synced to the Config Store. |
 | `entriesTotal` _int32_ | EntriesTotal is the total number of entries this sync manages. |
 
 _Appears in:_
@@ -1446,6 +1488,31 @@ KonnectGatewayControlPlaneStatus defines the observed state of KonnectGatewayCon
 _Appears in:_
 
 - [KonnectGatewayControlPlane](#konnect-konghq-com-v1alpha1-konnectgatewaycontrolplane)
+
+#### KonnectManaged
+
+_Underlying type:_ `string`
+
+KonnectManaged Whether the team's membership is managed by Konnect instead of
+being synced from an identity provider's team mappings.
+Set to `false` (default) to let identity provider team mappings keep syncing
+members into this team.
+Set to `true` to manage membership directly in Konnect and prevent identity
+provider team mappings from syncing to this team.
+
+
+
+
+_Appears in:_
+
+- [PortalTeamAPISpec](#konnect-konghq-com-v1alpha1-types-portalteamapispec)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `Enabled` | KonnectManagedEnabled sets KonnectManaged as enabled.<br /> |
+| `Disabled` | KonnectManagedDisabled sets KonnectManaged as disabled.<br /> |
 
 #### KonnectTransitGatewayAPISpec
 
@@ -2267,6 +2334,7 @@ PortalTeamAPISpec defines the API spec fields for PortalTeam.
 | --- | --- |
 | `canOwnApplications` _string_ | Whether the team is allowed to own applications |
 | `description` _string_ | The description of the team. |
+| `konnectManaged` _[KonnectManaged](#konnect-konghq-com-v1alpha1-types-konnectmanaged)_ | Whether the team's membership is managed by Konnect instead of being synced from an identity provider's team mappings. Set to `false` (default) to let identity provider team mappings keep syncing members into this team. Set to `true` to manage membership directly in Konnect and prevent identity provider team mappings from syncing to this team. |
 | `name` _string_ | The name of the team. |
 
 _Appears in:_
@@ -2433,7 +2501,6 @@ SpecRenderer The spec renderer settings of this portal
 | `showSchemas` _string_ | Control whether schemas are visible in your API specs. When enabled, schemas appear in the side navigation below the endpoints. |
 | `tryItInsomnia` _string_ | Enables users to open API specifications in Insomnia to explore and send requests with the native client. Only public API specifications are supported. |
 | `tryItUi` _string_ | Enable in-browser testing for your APIs. All linked gateways must have the CORS plugin configured. |
-| `tryItUiAudience` _string_ | The audience for the Try It UI feature.<br /><br />`all` means that the Try It UI will be available to all users, including unauthenticated users.<br /><br />`authenticated` means that the Try It UI will only be available to authenticated users.<br /><br />`registered` means that the Try It UI will only be available to users who have registered for the API. |
 
 _Appears in:_
 

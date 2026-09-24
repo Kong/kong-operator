@@ -42,6 +42,7 @@ jobs:
       gh-app-private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
       konnect-pat: ${{ secrets.KONG_TEST_KONNECT_ACCESS_TOKEN }}
       op-service-account-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+      kong-license-data: ${{ secrets.KONG_LICENSE_DATA }}
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}

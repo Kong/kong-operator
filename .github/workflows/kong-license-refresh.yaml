@@ -1,0 +1,205 @@
+name: kong license refresh
+
+# Fetches the Kong Enterprise License from 1Password and caches it in the
+# KONG_LICENSE_DATA repository secret, which ./.github/actions/kong-license then
+# uses instead of calling 1Password on every job. The 1Password service account is
+# shared company-wide and rate limited, so this is the only place in the repo that
+# is expected to call it.
+
+on:
+  schedule:
+    # Daily, offset from this repo's other crons. Daily against a multi-day renewal
+    # window is deliberate: scheduled runs can be delayed or dropped, so a 7 day
+    # window gives seven chances to land before the cached license expires.
+    - cron: '23 5 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: Fetch from 1Password and overwrite the cached secret even if it is still valid
+        type: boolean
+        default: false
+      renew-before-days:
+        description: Refresh when the cached license expires within this many days
+        type: string
+        default: "7"
+
+# GITHUB_TOKEN needs nothing here: there is no checkout, and the secrets are written
+# with a GitHub App token, which is the only credential that can write them at all
+# (there is no `secrets` scope for GITHUB_TOKEN).
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}
+  # Must not cancel a run between the two secret writes, see "Order matters" below.
+  cancel-in-progress: false
+
+jobs:
+  refresh:
+    timeout-minutes: ${{ fromJSON(vars.GHA_DEFAULT_TIMEOUT) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      # Requires the "Secrets: read and write" repository permission on the App.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
+
+      # Decided from the secrets this workflow can already read, with no API call.
+      # Probing the secrets API for existence instead would be worse: `gh api` exits
+      # non-zero on 404, and a 403 from a missing App permission is indistinguishable
+      # from a 404, so a permission problem would masquerade as a permanently cold cache.
+      - name: Check whether the cached license needs refreshing
+        id: check
+        env:
+          CACHED_LICENSE: ${{ secrets.KONG_LICENSE_DATA }}
+          CACHED_EXPIRATION: ${{ secrets.KONG_LICENSE_EXPIRATION_DATE }}
+          # The `inputs` context is empty on `schedule` runs and the declared defaults
+          # are NOT applied there, so these fallbacks are what the cron actually uses.
+          FORCE: ${{ inputs.force || false }}
+          RENEW_BEFORE_DAYS: ${{ inputs.renew-before-days || '7' }}
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+
+          if [[ ! "${RENEW_BEFORE_DAYS}" =~ ^[0-9]+$ ]]; then
+            echo "::error::renew-before-days must be a non-negative integer, got '${RENEW_BEFORE_DAYS}'"
+            exit 1
+          fi
+
+          days_left=""
+          if [[ "${FORCE}" == "true" ]]; then
+            refresh=true
+            reason="forced via workflow_dispatch"
+          elif [[ -z "${CACHED_LICENSE}" ]]; then
+            refresh=true
+            reason="no license is cached"
+          elif [[ -z "${CACHED_EXPIRATION}" ]]; then
+            refresh=true
+            reason="no cached expiration date to check against"
+          elif ! expiration_epoch="$(date -u -d "${CACHED_EXPIRATION}" +%s 2>/dev/null)"; then
+            refresh=true
+            reason="cached expiration date is unparsable"
+          else
+            # Compare UTC midnights so the last day of validity never reads as negative.
+            today_epoch="$(date -u -d "$(date -u +%Y-%m-%d)" +%s)"
+            days_left=$(( (expiration_epoch - today_epoch) / 86400 ))
+            if (( days_left < 0 )); then
+              refresh=true
+              reason="cached license expired ${days_left#-} day(s) ago"
+            elif (( days_left <= RENEW_BEFORE_DAYS )); then
+              refresh=true
+              reason="cached license expires in ${days_left} day(s), inside the ${RENEW_BEFORE_DAYS} day renewal window"
+            else
+              refresh=false
+              reason="cached license is valid for ${days_left} more day(s)"
+            fi
+          fi
+
+          # The expiration date is a secret, so it would print as *** and tell nobody
+          # anything. Report the derived day count instead, which is not masked.
+          {
+            echo "refresh=${refresh}"
+            echo "reason=${reason}"
+            echo "days-left=${days_left}"
+          } >> "${GITHUB_OUTPUT}"
+          echo "${reason}"
+
+      # The only call to the rate-limited 1Password API in this repo's scheduled path.
+      - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+        id: license
+        if: steps.check.outputs.refresh == 'true'
+        with:
+          op-token: ${{ secrets.OP_SERVICE_ACCOUNT_TOKEN }}
+
+      - name: Store the license in repository secrets
+        id: store
+        if: steps.check.outputs.refresh == 'true'
+        env:
+          LICENSE: ${{ steps.license.outputs.license }}
+          PREVIOUS_EXPIRATION: ${{ secrets.KONG_LICENSE_EXPIRATION_DATE }}
+          RENEW_BEFORE_DAYS: ${{ inputs.renew-before-days || '7' }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+
+          # `gh secret set` reads the value from stdin, and an empty pipe stores an empty
+          # secret that then *exists* - every consumer would fall back to 1Password forever
+          # while this workflow kept reporting success. So validate before writing, and let
+          # each failure explain itself rather than aborting on a bare jq exit code.
+          if [[ -z "${LICENSE}" ]]; then
+            echo "::error::The license fetched from 1Password is empty"
+            exit 1
+          fi
+          if ! compact="$(jq -c . <<<"${LICENSE}" 2>/dev/null)"; then
+            echo "::error::The license fetched from 1Password is not valid JSON"
+            exit 1
+          fi
+          if ! expiration="$(jq -er '.license.payload.license_expiration_date' <<<"${LICENSE}" 2>/dev/null)"; then
+            echo "::error::The license fetched from 1Password has no .license.payload.license_expiration_date"
+            exit 1
+          fi
+          if [[ ! "${expiration}" =~ ^[0-9]{4}-[0-9]{2}-[0-9]{2}$ ]]; then
+            echo "::error::The license fetched from 1Password has an unexpected expiration date format"
+            exit 1
+          fi
+
+          # Order matters. Write the license first: if the second write then fails, the
+          # stale expiration still guards stale data and the next run retries. Reversed, a
+          # fresh expiration would guard a stale license and every test would fail on an
+          # expired one. Values go over stdin, never --body, to keep them out of the
+          # process table. Compact JSON keeps the secret single-line, which matters because
+          # multi-line secrets are masked line by line.
+          printf '%s' "${compact}" | gh secret set KONG_LICENSE_DATA --repo "${REPO}" --app actions
+          printf '%s' "${expiration}" | gh secret set KONG_LICENSE_EXPIRATION_DATE --repo "${REPO}" --app actions
+
+          today_epoch="$(date -u -d "$(date -u +%Y-%m-%d)" +%s)"
+          expiration_epoch="$(date -u -d "${expiration}" +%s)"
+          days_left=$(( (expiration_epoch - today_epoch) / 86400 ))
+          echo "days-left=${days_left}" >> "${GITHUB_OUTPUT}"
+
+          # Without these warnings the workflow silently degrades into a daily 1Password
+          # fetch - the exact problem the cache exists to solve - and stays green doing it.
+          if (( days_left <= RENEW_BEFORE_DAYS )); then
+            echo "::warning::The license just fetched from 1Password expires in ${days_left} day(s), still inside the ${RENEW_BEFORE_DAYS} day renewal window. The upstream 1Password item has not been renewed yet, so this workflow will keep re-fetching daily until it is."
+          fi
+          if [[ -n "${PREVIOUS_EXPIRATION}" && "${expiration}" == "${PREVIOUS_EXPIRATION}" ]]; then
+            echo "::warning::The license fetched from 1Password expires on the same date as the one already cached, so nothing was renewed upstream."
+          fi
+
+      - name: Summary
+        if: always()
+        env:
+          REFRESH: ${{ steps.check.outputs.refresh }}
+          REASON: ${{ steps.check.outputs.reason }}
+          DAYS_LEFT_AFTER: ${{ steps.store.outputs.days-left }}
+        run: |
+          set -o errexit
+          set -o nounset
+          set -o pipefail
+
+          if [[ "${REFRESH}" == "true" ]]; then
+            if [[ -n "${DAYS_LEFT_AFTER}" ]]; then
+              echo "Refreshed the cached Kong license (${REASON}); it now expires in ${DAYS_LEFT_AFTER} day(s)." >> "${GITHUB_STEP_SUMMARY}"
+            else
+              echo "Tried to refresh the cached Kong license (${REASON}) but it was not stored." >> "${GITHUB_STEP_SUMMARY}"
+            fi
+          elif [[ "${REFRESH}" == "false" ]]; then
+            echo "No refresh needed: ${REASON}. 1Password was not called." >> "${GITHUB_STEP_SUMMARY}"
+          else
+            echo "The refresh check did not complete." >> "${GITHUB_STEP_SUMMARY}"
+          fi

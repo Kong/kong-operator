@@ -25,6 +25,13 @@ var EventGatewayVirtualClusterPolicySDKOpsBoolFields = []EventGatewayVirtualClus
 			"enabled",
 		},
 	},
+	{
+		Label: "request_rule_validator.enabled",
+		Path: []string{
+			"request_rule_validator",
+			"enabled",
+		},
+	},
 }
 
 func normalizeEventGatewayVirtualClusterPolicySDKOpsBoolFields(payload map[string]any) error {
@@ -117,6 +124,12 @@ var EventGatewayVirtualClusterPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKe
 			"labels",
 		},
 	},
+	{
+		Path: []string{
+			"request_rule_validator",
+			"labels",
+		},
+	},
 }
 
 func (s *EventGatewayVirtualClusterPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
@@ -150,9 +163,12 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) selectedSDKOpsPayload(payload 
 	var selected any
 	var variant string
 	switch s.EventGatewayVirtualClusterPolicyConfig.Type {
-	case EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy:
+	case EventGatewayVirtualClusterPolicyConfigTypeACLs:
 		selected = payload["acls"]
-		variant = "EventGatewayACLsPolicy"
+		variant = "ACLs"
+	case EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator:
+		selected = payload["request_rule_validator"]
+		variant = "RequestRuleValidator"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterPolicy config type %q", s.EventGatewayVirtualClusterPolicyConfig.Type)
 	}
@@ -196,12 +212,21 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) ToCreateEventGatewayVirtualClu
 	}
 
 	switch variant {
-	case "EventGatewayACLsPolicy":
+	case "ACLs":
 		var member sdkkonnectcomp.EventGatewayACLsPolicy
 		if err := json.Unmarshal(data, &member); err != nil {
 			return nil, fmt.Errorf("failed to unmarshal into EventGatewayACLsPolicy: %w", err)
 		}
 		body := sdkkonnectcomp.CreateEventGatewayClusterPolicyModifyAcls(member)
+		return &sdkkonnectoper.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest{
+			EventGatewayClusterPolicyModify: &body,
+		}, nil
+	case "RequestRuleValidator":
+		var member sdkkonnectcomp.EventGatewayRequestRuleValidatorPolicy
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into EventGatewayRequestRuleValidatorPolicy: %w", err)
+		}
+		body := sdkkonnectcomp.CreateEventGatewayClusterPolicyModifyRequestRuleValidator(member)
 		return &sdkkonnectoper.CreateEventGatewayVirtualClusterClusterLevelPolicyRequest{
 			EventGatewayClusterPolicyModify: &body,
 		}, nil

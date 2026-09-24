@@ -23,6 +23,12 @@ var PortalTeamSDKOpsBoolFields = []PortalTeamSDKOpsBoolField{
 			"can_own_applications",
 		},
 	},
+	{
+		Label: "konnect_managed",
+		Path: []string{
+			"konnect_managed",
+		},
+	},
 }
 
 func normalizePortalTeamSDKOpsBoolFields(payload map[string]any) error {

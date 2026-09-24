@@ -392,8 +392,7 @@ func buildTestCertificate(
 			consts.GatewayOperatorManagedByNamespaceLabel: aigwdp.Namespace,
 		},
 		Spec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 				NamespacedRef: &commonv1alpha1.NamespacedRef{
 					Name: aigatewaycp.Name,
 				},

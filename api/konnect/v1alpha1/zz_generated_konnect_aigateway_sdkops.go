@@ -9,6 +9,102 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// KonnectAIGatewaySDKOpsBoolField describes a boolean enum field that must be normalized for SDK payloads.
+type KonnectAIGatewaySDKOpsBoolField struct {
+	Label string
+	Path  []string
+}
+
+// KonnectAIGatewaySDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
+var KonnectAIGatewaySDKOpsBoolFields = []KonnectAIGatewaySDKOpsBoolField{
+	{
+		Label: "runtime_auto_upgrade",
+		Path: []string{
+			"runtime_auto_upgrade",
+		},
+	},
+}
+
+func normalizeKonnectAIGatewaySDKOpsBoolFields(payload map[string]any) error {
+	for _, field := range KonnectAIGatewaySDKOpsBoolFields {
+		if _, err := normalizeKonnectAIGatewaySDKOpsBoolField(payload, field.Path); err != nil {
+			return fmt.Errorf("%s: %w", field.Label, err)
+		}
+	}
+	return nil
+}
+
+func normalizeKonnectAIGatewaySDKOpsBoolField(value any, path []string) (any, error) {
+	if len(path) == 0 {
+		switch typed := value.(type) {
+		case nil:
+			return nil, nil
+		case bool:
+			return typed, nil
+		case string:
+			switch typed {
+			case "Enabled":
+				return true, nil
+			case "Disabled":
+				return false, nil
+			default:
+				return nil, fmt.Errorf("unexpected boolean enum %q", typed)
+			}
+		default:
+			return nil, fmt.Errorf("expected string boolean enum, got %T", value)
+		}
+	}
+
+	if value == nil {
+		return nil, nil
+	}
+
+	segment := path[0]
+	switch segment {
+	case "[]":
+		items, ok := value.([]any)
+		if !ok {
+			return nil, fmt.Errorf("expected array, got %T", value)
+		}
+		for i, item := range items {
+			normalized, err := normalizeKonnectAIGatewaySDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			items[i] = normalized
+		}
+		return items, nil
+	case "{}":
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		for key, item := range object {
+			normalized, err := normalizeKonnectAIGatewaySDKOpsBoolField(item, path[1:])
+			if err != nil {
+				return nil, err
+			}
+			object[key] = normalized
+		}
+		return object, nil
+	default:
+		object, ok := value.(map[string]any)
+		if !ok {
+			return nil, fmt.Errorf("expected object, got %T", value)
+		}
+		child, ok := object[segment]
+		if !ok {
+			return value, nil
+		}
+		normalized, err := normalizeKonnectAIGatewaySDKOpsBoolField(child, path[1:])
+		if err != nil {
+			return nil, err
+		}
+		object[segment] = normalized
+		return object, nil
+	}
+}
+
 // KonnectAIGatewaySDKOpsFreeformKeyFields lists free-form / map data-keyed
 // subtrees whose keys are user data (e.g. an HTTP header name) and must be
 // preserved verbatim rather than camelCase→snake_case renamed.
@@ -33,6 +129,11 @@ func (s *KonnectAIGatewayAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, KonnectAIGatewaySDKOpsFreeformKeyFields)
+	if pm, ok := payload.(map[string]any); ok {
+		if err := normalizeKonnectAIGatewaySDKOpsBoolFields(pm); err != nil {
+			return nil, fmt.Errorf("failed to normalize KonnectAIGatewayAPISpec SDK payload: %w", err)
+		}
+	}
 	data, err = json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("failed to marshal normalized KonnectAIGatewayAPISpec: %w", err)

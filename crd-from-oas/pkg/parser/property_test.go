@@ -531,3 +531,275 @@ func TestParseProperty_AllValidations(t *testing.T) {
 	assert.InEpsilon(t, 1.0, *prop.Minimum, 0.001)
 	assert.InEpsilon(t, 100.0, *prop.Maximum, 0.001)
 }
+
+func TestParseProperty_AllOfMergesProperties(t *testing.T) {
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/BaseConfig",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"object"},
+						Properties: openapi3.Schemas{
+							"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+					},
+				},
+				{
+					// A validation-only sibling (e.g. an "at least one of" anyOf)
+					// with no properties of its own contributes no fields.
+					Value: &openapi3.Schema{},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "object", prop.Type)
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "hosts", prop.Properties[0].Name)
+}
+
+func TestParseProperty_AllOfCompositeInlinesProperties(t *testing.T) {
+	// Mirrors AIGatewayMCPServerRouteWithMatcher: a base schema combined with
+	// an anyOf of matcher variants, all wrapped in allOf.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{Value: &openapi3.Schema{
+					Type:        &openapi3.Types{"object"},
+					Description: "Route configuration",
+					Properties: openapi3.Schemas{
+						"hosts": {Value: &openapi3.Schema{
+							Type:        &openapi3.Types{"array"},
+							Items:       &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+							Description: "A list of hosts",
+						}},
+						"strip_path": {Value: &openapi3.Schema{Type: &openapi3.Types{"boolean"}}},
+					},
+				}},
+				{Value: &openapi3.Schema{
+					AnyOf: openapi3.SchemaRefs{
+						{Value: &openapi3.Schema{
+							Type:     &openapi3.Types{"object"},
+							Required: []string{"paths"},
+							Properties: openapi3.Schemas{
+								"paths": {Value: &openapi3.Schema{
+									Type:     &openapi3.Types{"array"},
+									Items:    &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+									MinItems: 1,
+								}},
+							},
+						}},
+						{Value: &openapi3.Schema{
+							Type:     &openapi3.Types{"object"},
+							Required: []string{"hosts"},
+							Properties: openapi3.Schemas{
+								"hosts": {Value: &openapi3.Schema{
+									Type:  &openapi3.Types{"array"},
+									Items: &openapi3.SchemaRef{Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+								}},
+							},
+						}},
+					},
+				}},
+			},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	require.Len(t, prop.Properties, 3)
+	byName := map[string]*Property{}
+	for _, p := range prop.Properties {
+		byName[p.Name] = p
+	}
+	// First declaration wins: the base member's descriptions survive.
+	require.Contains(t, byName, "hosts")
+	assert.Equal(t, "A list of hosts", byName["hosts"].Description)
+	assert.Equal(t, "array", byName["hosts"].Type)
+	require.NotNil(t, byName["hosts"].Items)
+	assert.Equal(t, "string", byName["hosts"].Items.Type)
+	// Nothing is required: each variant requires a different field.
+	assert.False(t, byName["hosts"].Required)
+	assert.False(t, byName["paths"].Required)
+	assert.False(t, byName["strip_path"].Required)
+}
+
+func TestParseProperty_AllOfSingleRefAliasStillResolves(t *testing.T) {
+	// The single-$ref allOf "typed alias" pattern must keep resolving to the
+	// named type rather than being flattened as a composite.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{Ref: "#/components/schemas/SomeNamedType"},
+			},
+		},
+	}
+
+	prop := ParseProperty("thing", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "SomeNamedType", prop.RefName)
+	assert.Empty(t, prop.Properties)
+}
+
+func TestParseProperty_AllOfTypelessWrapperInfersObject(t *testing.T) {
+	// The wrapper itself declares no "type: object", relying entirely on its
+	// allOf members. getSchemaType can't infer "object" from allOf alone, so
+	// without the fix this falls through to the single-ref-plus-override
+	// handling below and silently drops "hosts".
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/BaseConfig",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"object"},
+						Properties: openapi3.Schemas{
+							"hosts": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+					},
+				},
+				{
+					Value: &openapi3.Schema{},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "object", prop.Type)
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "hosts", prop.Properties[0].Name)
+}
+
+func TestParseProperty_AllOfFirstEntryWinsOnCollision(t *testing.T) {
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"string"}}},
+						},
+					},
+				},
+				{
+					// Same field name, different type: the first entry's
+					// version must win, matching the schema-level merge in
+					// parseSchema.
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"name": {Value: &openapi3.Schema{Type: &openapi3.Types{"integer"}}},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("wrapper", schemaRef, 0, make(map[string]bool))
+
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "string", prop.Properties[0].Type)
+}
+
+func TestParseProperty_AllOfSingleRefWithDefaultOverride(t *testing.T) {
+	// allOf: [{$ref: X}, {default: Y}] attaches a default to a shared enum
+	// without redeclaring it: the ref supplies type/enum, the sibling
+	// fragment (no $ref, no properties) supplies the default.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/Status",
+					Value: &openapi3.Schema{
+						Type: &openapi3.Types{"string"},
+						Enum: []any{"Enabled", "Disabled"},
+					},
+				},
+				{
+					Value: &openapi3.Schema{
+						Default: "Enabled",
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("status", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "string", prop.Type)
+	assert.Equal(t, []any{"Enabled", "Disabled"}, prop.Enum)
+	assert.Equal(t, "Enabled", prop.Default)
+}
+
+func TestParseProperty_AllOfMergeHonorsWrapperRequired(t *testing.T) {
+	// OAS allows `required` beside `allOf`, applying to the flattened
+	// object - not just each allOf entry's own required list.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			Type: &openapi3.Types{"object"},
+			AllOf: openapi3.SchemaRefs{
+				{
+					Value: &openapi3.Schema{
+						Properties: openapi3.Schemas{
+							"paths": {Value: &openapi3.Schema{Type: &openapi3.Types{"array"}}},
+						},
+						// Note: no Required here.
+					},
+				},
+			},
+			Required: []string{"paths"},
+		},
+	}
+
+	prop := ParseProperty("route", schemaRef, 0, make(map[string]bool))
+
+	require.Len(t, prop.Properties, 1)
+	assert.Equal(t, "paths", prop.Properties[0].Name)
+	assert.True(t, prop.Properties[0].Required)
+}
+
+func TestParseProperty_AllOfSingleRefWithNumericAndFormatOverride(t *testing.T) {
+	// The single-ref-plus-override block must copy every scalar facet the
+	// ref carries, not just type/enum/string constraints - minimum/maximum
+	// and format are validation/codegen-relevant too.
+	schemaRef := &openapi3.SchemaRef{
+		Value: &openapi3.Schema{
+			AllOf: openapi3.SchemaRefs{
+				{
+					Ref: "#/components/schemas/Port",
+					Value: &openapi3.Schema{
+						Type:   &openapi3.Types{"integer"},
+						Format: "int64",
+						Min:    new(float64(1)),
+						Max:    new(float64(65535)),
+					},
+				},
+				{
+					Value: &openapi3.Schema{
+						Default: float64(8080),
+					},
+				},
+			},
+		},
+	}
+
+	prop := ParseProperty("port", schemaRef, 0, make(map[string]bool))
+
+	assert.Equal(t, "integer", prop.Type)
+	assert.Equal(t, "int64", prop.Format)
+	require.NotNil(t, prop.Minimum)
+	assert.InEpsilon(t, 1.0, *prop.Minimum, 0.001)
+	require.NotNil(t, prop.Maximum)
+	assert.InEpsilon(t, 65535.0, *prop.Maximum, 0.001)
+	defaultFloat, ok := prop.Default.(float64)
+	require.True(t, ok)
+	assert.InEpsilon(t, 8080.0, defaultFloat, 0.001)
+}
