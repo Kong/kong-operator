@@ -56,6 +56,11 @@ jobs:
         with:
           go-version-file: go.mod
 
+      # NOTE: other places use ./.github/actions/kong-license, which prefers the cached
+      # KONG_LICENSE_DATA secret over calling 1Password. Local actions resolve against the
+      # checked-out tree and this workflow checks out arbitrary older refs, so it has to keep
+      # using the remote action. This workflow is manual and rare, so the cost is one
+      # 1Password call per invocation.
       - uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
         id: license
         with:

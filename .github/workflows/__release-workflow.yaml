@@ -22,6 +22,9 @@ on:
       op-service-account-token:
         required: false
         description: "The 1Password service account token to fetch the Kong Enterprise License. If left empty, no license will be fetched"
+      kong-license-data:
+        required: false
+        description: "The cached Kong Enterprise License, used in preference to fetching it from 1Password. Refreshed by the kong-license-refresh workflow"
     inputs:
       dockerhub-push-username:
         description: "The username to push images to Docker Hub"
@@ -208,26 +211,31 @@ jobs:
         with:
           install: false
 
-      # This step is required to check if the OP Service Account Token is available and export a boolean output
-      # to be used in the next step. It's because we cannot use a secret in a step's condition.
-      # See: https://github.com/actions/runner/issues/520
-      - name: Check OP Service Account Token available
-        id: check-op-service-account-token
+      # This step is required to check whether either license credential is available and export a
+      # boolean output to be used in the next step. It's because we cannot use a secret in a step's
+      # condition. See: https://github.com/actions/runner/issues/520
+      - name: Check Kong license credentials available
+        id: check-license-creds
         env:
           OP_SERVICE_ACCOUNT_TOKEN: ${{ secrets.op-service-account-token }}
+          CACHED_LICENSE: ${{ secrets.kong-license-data }}
         run: |
-          # If OP_SERVICE_ACCOUNT_TOKEN is set, return true.
-          if [ -n "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
+          # If either the cached license or the 1Password token is set, return true.
+          if [ -n "$CACHED_LICENSE" ] || [ -n "$OP_SERVICE_ACCOUNT_TOKEN" ]; then
               echo "provided=true" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Get Kong Enterprise License
-        if: steps.check-op-service-account-token.outputs.provided == 'true'
+        if: steps.check-license-creds.outputs.provided == 'true'
         id: get-license
-        uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+        uses: ./.github/actions/kong-license
         with:
-          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password.
+          cached-license: ${{ secrets.kong-license-data }}
+          # OP (1Password) token is used to fetch the Kong Enterprise License from 1Password
+          # when the cached license is missing or expired.
           op-token: ${{ secrets.op-service-account-token }}
+          # This workflow tolerates running without a license at all.
+          allow-empty: "true"
 
       - name: integration tests
         run: make test.integration-ko
@@ -257,6 +265,7 @@ jobs:
     secrets:
       konnect-pat: ${{ secrets.konnect-pat }}
       op-service-account-token: ${{ secrets.op-service-account-token }}
+      kong-license-data: ${{ secrets.kong-license-data }}
 
   create-release-pr:
     runs-on: ubuntu-latest

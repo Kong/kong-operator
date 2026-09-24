@@ -10,6 +10,9 @@ readonly SCRIPT_ROOT
 WORKFLOWS_DIR="${SCRIPT_ROOT}/.github/workflows"
 readonly WORKFLOWS_DIR
 
+ACTIONS_DIR="${SCRIPT_ROOT}/.github/actions"
+readonly ACTIONS_DIR
+
 YQ_BIN="${YQ_BIN:-yq}"
 readonly YQ_BIN
 
@@ -29,12 +32,28 @@ extract_run_bodies() {
 	' "${file}" 2>/dev/null || true
 }
 
+# Same as extract_run_bodies, but for composite actions, whose steps live under
+# `.runs.steps` rather than `.jobs.<job_id>.steps`.
+extract_action_run_bodies() {
+	local file="${1}"
+
+	"${YQ_BIN}" eval '
+		(.runs.steps // [])[]
+		| select(has("run"))
+		| "===STEP:step=\"" + (.name // .id // "<unnamed>") + "\"===\n" + .run
+	' "${file}" 2>/dev/null || true
+}
+
 status=0
 
-for file in "${WORKFLOWS_DIR}"/*; do
-	[[ -f "${file}" ]] || continue
+# Scans one file's run: bodies using the given extractor, reporting any that splice a
+# `${{ }}` expression straight into the shell script text.
+scan_file() {
+	local file="${1}"
+	local extractor="${2}"
+	local current_step=""
+	local line
 
-	current_step=""
 	while IFS= read -r line; do
 		if [[ "${line}" == ===STEP:*=== ]]; then
 			current_step="${line#===STEP:}"
@@ -50,8 +69,27 @@ for file in "${WORKFLOWS_DIR}"/*; do
 			echo
 			status=1
 		fi
-	done < <(extract_run_bodies "${file}")
+	done < <("${extractor}" "${file}")
+
+	return 0
+}
+
+for file in "${WORKFLOWS_DIR}"/*; do
+	[[ -f "${file}" ]] || continue
+
+	scan_file "${file}" extract_run_bodies
 done
+
+# Local composite actions get no coverage from `make lint.actions` otherwise: actionlint
+# only understands workflow files and rejects an action.yml outright, so this is the only
+# script-injection gate they have.
+shopt -s nullglob
+for file in "${ACTIONS_DIR}"/*/action.yml "${ACTIONS_DIR}"/*/action.yaml; do
+	[[ -f "${file}" ]] || continue
+
+	scan_file "${file}" extract_action_run_bodies
+done
+shopt -u nullglob
 
 if [[ "${status}" -ne 0 ]]; then
 	echo "One or more 'run:' steps interpolate a '\${{ ... }}' expression directly into"
