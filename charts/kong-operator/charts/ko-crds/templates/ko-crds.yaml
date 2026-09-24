@@ -56,7 +56,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: controlplanes.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -4598,7 +4598,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: gatewayconfigurations.gateway-operator.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
@@ -18106,7 +18106,7 @@ metadata:
     helm.sh/resource-policy: keep
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: konnectextensions.konnect.konghq.com
 spec:
   group: konnect.konghq.com
@@ -18658,7 +18658,7 @@ metadata:
 {{ end }}
 {{ end }}
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: konnectgatewaycontrolplanes.konnect.konghq.com
 spec:
 {{ if .Values.global.webhooks.conversion.enabled }}
