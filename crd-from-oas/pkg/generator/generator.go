@@ -2722,9 +2722,19 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// exclusive and emit the same spec field.
 	var typeXValidations []string
 	if fn := parentRefImmutableFieldName(parentRef, immediateParentDep); fn != "" {
+		// Entities whose parent reference may target an OnPremAIGateway (the
+		// custom AIGatewayRef type) are updated by the on-prem machinery via
+		// typed clients before any status is written, and the client's omitzero
+		// drops the status key entirely; the rule must tolerate a missing
+		// self.status. Entities with a plain ObjectRef keep the original rule
+		// so their released CRD schemas stay untouched.
+		statusGuard := ""
+		if parentRefCustomTypeName != "" {
+			statusGuard = "!has(self.status) || "
+		}
 		typeXValidations = []string{
 			fmt.Sprintf(
-				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || `+statusGuard+`!has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
 				fn, fn, fn, fn,
 			)}
 	}

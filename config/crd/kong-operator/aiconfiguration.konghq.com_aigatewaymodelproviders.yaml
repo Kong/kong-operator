@@ -60,15 +60,15 @@ spec:
             description: AIGatewayModelProviderSpec defines the desired state of AIGatewayModelProvider.
             properties:
               aiGatewayRef:
-                description: AIGatewayRef is the reference to the parent KonnectAIGateway
-                  object.
+                description: AIGatewayRef is the reference to the parent AI Gateway
+                  (control plane) object.
                 properties:
                   group:
                     default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      Defaults to konnect.konghq.com for KonnectAIGateway; on-prem
-                      OnPremAIGateway lives in the aigateway.konghq.com group.
+                      Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+                      it to aigateway.konghq.com explicitly.
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -125,6 +125,9 @@ spec:
                     and konnect.konghq.com when kind is KonnectAIGateway
                   rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com''
                     : self.group == ''konnect.konghq.com'''
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
@@ -5009,9 +5012,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

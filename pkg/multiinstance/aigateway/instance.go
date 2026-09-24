@@ -196,13 +196,32 @@ func (i *Instance) Run(ctx context.Context) error {
 		return fmt.Errorf("creating instance controller-runtime manager: %w", err)
 	}
 
-	// The field index is used by translator.BuildDocument to list the AIGatewayModels
-	// referencing this gateway. It lives on the instance's own cache, alongside its only
-	// consumer.
-	// TODO: This will require adjustments for indexing excluding the KonnectAIGateway.
-	for _, opt := range index.OptionsForAIGatewayModel() {
-		if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
-			return fmt.Errorf("registering AIGatewayModel field index: %w", err)
+	// The field indexes are used by translator.BuildDocument to list the
+	// configuration entities referencing this gateway. They live on the
+	// instance's own cache, alongside their only consumer. Every entity kind
+	// registers both its KonnectAIGatewayRef index (unused here, kept for
+	// parity with the main manager's indexes) and its OnOnPremAIGatewayRef
+	// index, whose extractor only matches entities actually targeting an
+	// OnPremAIGateway, so a KonnectAIGateway sharing namespace/name never
+	// collides.
+	for _, opts := range [][]index.Option{
+		index.OptionsForAIGatewayAgent(),
+		index.OptionsForAIGatewayAuthStrategy(),
+		index.OptionsForAIGatewayCACertificate(),
+		index.OptionsForAIGatewayCertificate(),
+		index.OptionsForAIGatewayConsumer(),
+		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayDataPlaneCertificate(),
+		index.OptionsForAIGatewayMCPServer(),
+		index.OptionsForAIGatewayModel(),
+		index.OptionsForAIGatewayModelProvider(),
+		index.OptionsForAIGatewayPolicy(),
+		index.OptionsForAIGatewaySNI(),
+	} {
+		for _, opt := range opts {
+			if err := mgr.GetFieldIndexer().IndexField(ctx, opt.Object, opt.Field, opt.ExtractValueFn); err != nil {
+				return fmt.Errorf("registering %s field index: %w", opt.Field, err)
+			}
 		}
 	}
 

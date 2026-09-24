@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayCertificateOnKonnectAIGatewayRef is the index field for AIGatewayCertificate -> KonnectAIGateway.
 	IndexFieldAIGatewayCertificateOnKonnectAIGatewayRef = "aiGatewayCertificateOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef is the index field for AIGatewayCertificate -> OnPremAIGateway.
+	IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef = "aiGatewayCertificateOnOnPremAIGatewayRef"
 )
 
 // OptionsForAIGatewayCertificate returns required Index options for AIGatewayCertificate reconciler.
@@ -21,6 +23,11 @@ func OptionsForAIGatewayCertificate() []Option {
 			Field:          IndexFieldAIGatewayCertificateOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayCertificateOnKonnectAIGatewayRef,
 		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayCertificate{},
+			Field:          IndexFieldAIGatewayCertificateOnOnPremAIGatewayRef,
+			ExtractValueFn: aiGatewayCertificateOnOnPremAIGatewayRef,
+		},
 	}
 }
 
@@ -30,6 +37,32 @@ func aiGatewayCertificateOnKonnectAIGatewayRef(object client.Object) []string {
 		return nil
 	}
 	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting a KonnectAIGateway are visible to the Konnect
+	// reconciler: on-prem-targeted ones are indexed separately.
+	if !ent.Spec.AIGatewayRef.TargetsKonnectAIGateway() {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.AIGatewayRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+func aiGatewayCertificateOnOnPremAIGatewayRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayCertificate)
+	if !ok {
+		return nil
+	}
+	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting an OnPremAIGateway are visible to the on-prem
+	// reconciler: Konnect-targeted ones stay in the KonnectAIGateway index.
+	if !ent.Spec.AIGatewayRef.TargetsOnPremAIGateway() {
 		return nil
 	}
 
