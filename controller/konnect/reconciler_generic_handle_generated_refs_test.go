@@ -328,6 +328,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 					Namespace: "default",
 					Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
 						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+							Group:         aiconfigurationv1alpha1.AIGatewayRefGroupKonnect,
 							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
 						},
 					},

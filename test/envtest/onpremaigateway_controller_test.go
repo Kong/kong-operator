@@ -168,8 +168,8 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
-				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
@@ -198,10 +198,10 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				//nolint:staticcheck
 				Type:          aiconfigurationv1alpha1.AIGatewayRefTypeNamespacedRef,
 				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
-				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{

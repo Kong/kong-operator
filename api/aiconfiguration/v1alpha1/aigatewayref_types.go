@@ -47,10 +47,10 @@ const (
 // AIGatewayRef is the reference to the AI Gateway (control plane) that owns an
 // AI Gateway configuration entity.
 //
-// When Kind is unset it defaults to KonnectAIGateway, and Group resolves to
-// the group matching Kind (konnect.konghq.com or aigateway.konghq.com), so
-// that existing objects which predate the Group/Kind fields keep referencing
-// their KonnectAIGateway.
+// When Kind is unset it defaults to KonnectAIGateway, so that existing objects
+// which predate the Kind field keep referencing their KonnectAIGateway. When
+// Group is unset it defaults to konnect.konghq.com: an OnPremAIGateway
+// reference must set Group to aigateway.konghq.com explicitly.
 //
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="self.kind == 'OnPremAIGateway' ? (!has(self.group) || self.group == 'aigateway.konghq.com') : (!has(self.group) || self.group == 'konnect.konghq.com')",message="group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway"
@@ -67,11 +67,11 @@ type AIGatewayRef struct {
 	Type AIGatewayRefType `json:"type,omitempty"`
 
 	// Group is the API group of the referenced AI Gateway (control plane).
-	// When unset, it resolves to the group matching Kind:
-	// konnect.konghq.com for KonnectAIGateway, aigateway.konghq.com for
-	// OnPremAIGateway.
+	// Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+	// it to aigateway.konghq.com explicitly.
 	//
 	// +optional
+	// +kubebuilder:default=konnect.konghq.com
 	Group AIGatewayRefGroup `json:"group,omitempty"`
 
 	// Kind is the kind of the referenced AI Gateway (control plane):
@@ -100,28 +100,15 @@ func (r AIGatewayRef) ToObjectRef() commonv1alpha1.ObjectRef {
 }
 
 // AIGatewayRefFromObjectRef converts a commonv1alpha1.ObjectRef to an
-// AIGatewayRef with default (Konnect) Group/Kind. Only namespacedRef-typed
-// ObjectRefs carry meaningful data: the Konnect ID reference type has no
-// AIGatewayRef representation, and converting one yields an AIGatewayRef with
-// a nil NamespacedRef.
+// AIGatewayRef. Only namespacedRef-typed ObjectRefs carry meaningful data: the
+// Konnect ID reference type has no AIGatewayRef representation, and converting
+// one yields an AIGatewayRef with a nil NamespacedRef. The Group/Kind
+// discriminator has no ObjectRef representation either, so the converted
+// reference carries an empty Group and is not valid against the CRD schema.
 func AIGatewayRefFromObjectRef(ref commonv1alpha1.ObjectRef) AIGatewayRef {
 	return AIGatewayRef{
 		NamespacedRef: ref.NamespacedRef,
 	}
-}
-
-// EffectiveGroup returns the group of the referenced AI Gateway. When unset,
-// it resolves to the group matching Kind: konnect.konghq.com for
-// KonnectAIGateway (including objects that predate the Group/Kind fields) and
-// aigateway.konghq.com for OnPremAIGateway.
-func (r AIGatewayRef) EffectiveGroup() AIGatewayRefGroup {
-	if r.Group != "" {
-		return r.Group
-	}
-	if r.EffectiveKind() == AIGatewayRefKindOnPrem {
-		return AIGatewayRefGroupOnPrem
-	}
-	return AIGatewayRefGroupKonnect
 }
 
 // EffectiveKind returns the kind of the referenced AI Gateway, applying the
@@ -134,12 +121,10 @@ func (r AIGatewayRef) EffectiveKind() AIGatewayRefKind {
 }
 
 // ParentGVK returns the GroupVersionKind of the AI Gateway (control plane)
-// this reference points at, with the group/kind defaults applied: group
-// konnect.konghq.com for KonnectAIGateway and aigateway.konghq.com for
-// OnPremAIGateway.
+// this reference points at, with the KonnectAIGateway default kind applied.
 func (r AIGatewayRef) ParentGVK() schema.GroupVersionKind {
 	return schema.GroupVersionKind{
-		Group:   string(r.EffectiveGroup()),
+		Group:   string(r.Group),
 		Version: aigatewayv1alpha1.GroupVersion.Version,
 		Kind:    string(r.EffectiveKind()),
 	}

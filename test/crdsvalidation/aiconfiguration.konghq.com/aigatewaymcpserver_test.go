@@ -121,7 +121,7 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 			},
 			{
-				Name: "OnPremAIGateway kind without group is accepted (group resolves to aigateway.konghq.com)",
+				Name: "OnPremAIGateway kind without group is rejected (group defaults to konnect.konghq.com)",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
@@ -132,6 +132,7 @@ func TestAIGatewayMCPServer(t *testing.T) {
 					}
 					return obj
 				}(),
+				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
 			},
 			{
 				Name: "OnPremAIGateway kind with explicit konnect.konghq.com group is rejected",
@@ -175,7 +176,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
-						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},
@@ -188,7 +190,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
-						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},
@@ -209,7 +212,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
 					obj := validAIGatewayMCPServer(ns.Name)
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
-						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "test-ai-gateway",
 						},
@@ -218,7 +222,8 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
 					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
-						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+						Kind:  aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 						NamespacedRef: &commonv1alpha1.NamespacedRef{
 							Name: "another-ai-gateway",
 						},

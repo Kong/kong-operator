@@ -64,11 +64,11 @@ spec:
                   (control plane) object.
                 properties:
                   group:
+                    default: konnect.konghq.com
                     description: |-
                       Group is the API group of the referenced AI Gateway (control plane).
-                      When unset, it resolves to the group matching Kind:
-                      konnect.konghq.com for KonnectAIGateway, aigateway.konghq.com for
-                      OnPremAIGateway.
+                      Defaults to konnect.konghq.com; an OnPremAIGateway reference must set
+                      it to aigateway.konghq.com explicitly.
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com

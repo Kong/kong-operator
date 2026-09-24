@@ -59,6 +59,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -515,6 +516,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -991,6 +993,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1210,6 +1213,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1766,6 +1770,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -1972,6 +1977,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -2200,6 +2206,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -2407,6 +2414,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -5635,6 +5643,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -8678,6 +8687,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -16607,6 +16617,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
@@ -16849,6 +16860,7 @@ spec:
               aiGatewayRef:
                 properties:
                   group:
+                    default: konnect.konghq.com
                     enum:
                     - konnect.konghq.com
                     - aigateway.konghq.com
