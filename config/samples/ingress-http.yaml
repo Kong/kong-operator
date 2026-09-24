@@ -1,6 +1,9 @@
 # By default Ingress relies on Kong Gateway default setting, which differ by version.
-# To ensure HTTPS, add annotation `konghq.com/protocols: "https"` on Ingress resource.
-# See examples/ingress-http.yaml for a HTTP example .
+# To ensure HTTP, add annotation `konghq.com/protocols: "http"` on Ingress resource.
+# See ingress-https.yaml for a HTTPS example.
+#
+# Apply ingress.yaml first: it provides the IngressClass, DataPlane and
+# ControlPlane that serve this Ingress.
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -44,8 +47,8 @@ kind: Ingress
 metadata:
   name: httpbin-ingress
   annotations:
-    konghq.com/protocols: "https"
     konghq.com/strip-path: "true"
+    konghq.com/protocols: "http"
 spec:
   ingressClassName: kong
   rules:

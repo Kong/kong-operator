@@ -1,6 +1,10 @@
 # This configuration file presents fallback configuration (feature gate FallbackConfiguration=true),
 # it contains a plugin that is misconfigured and will not work. The whole route /for-auth-users won't
 # be configured. Only the route /httproute-testing will be configured.
+#
+# See this directory's README.md: the gate is enabled under controlPlaneOptions
+# below, and the operator's KongPlugin validating webhook rejects the broken
+# plugin at admission when it is active — disable it to exercise this path.
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -18,14 +22,14 @@ spec:
     spec:
       containers:
       - name: echo-1
-        image: kong/go-echo:0.3.0
+        image: kong/go-echo:0.5.0
         env:
           - name: POD_NAME
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
         ports:
-        - containerPort: 80
+        - containerPort: 1027
         resources:
           limits:
             memory: "64Mi"
@@ -63,18 +67,18 @@ spec:
     spec:
       containers:
       - name: echo-2
-        image: kong/go-echo:0.3.0
+        image: kong/go-echo:0.5.0
         env:
           - name: POD_NAME
             valueFrom:
               fieldRef:
                 fieldPath: metadata.name
         ports:
-        - containerPort: 80
+        - containerPort: 1027
         resources:
           limits:
             memory: "64Mi"
-            cpu: "250m"          
+            cpu: "250m"
 ---
 apiVersion: v1
 kind: Service
@@ -91,14 +95,40 @@ spec:
     app: echo-2
   type: ClusterIP
 ---
+apiVersion: gateway-operator.konghq.com/v2beta1
+kind: GatewayConfiguration
+metadata:
+  name: kong
+  namespace: default
+spec:
+  controlPlaneOptions:
+    featureGates:
+    # Off by default. Without it a single broken entity fails the whole sync.
+    - name: FallbackConfiguration
+      state: enabled
+  dataPlaneOptions:
+    deployment:
+      podTemplateSpec:
+        spec:
+          containers:
+          - name: proxy
+            # renovate: datasource=docker versioning=docker
+            image: kong/kong-gateway:3.16
+            readinessProbe:
+              initialDelaySeconds: 1
+              periodSeconds: 1
+---
 apiVersion: gateway.networking.k8s.io/v1
 kind: GatewayClass
 metadata:
   name: kong
-  annotations:
-    konghq.com/gatewayclass-unmanaged: "true"
 spec:
-  controllerName: konghq.com/kic-gateway-controller
+  controllerName: konghq.com/gateway-operator
+  parametersRef:
+    group: gateway-operator.konghq.com
+    kind: GatewayConfiguration
+    name: kong
+    namespace: default
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
@@ -107,9 +137,9 @@ metadata:
 spec:
   gatewayClassName: kong
   listeners:
-  - name: https
-    protocol: HTTPS
-    port: 443
+  - name: http
+    protocol: HTTP
+    port: 80
 ---
 apiVersion: gateway.networking.k8s.io/v1
 kind: HTTPRoute
