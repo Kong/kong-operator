@@ -89,12 +89,12 @@ type KonnectConfigStoreSyncReconciler struct {
 type configStoreSyncLiveGetClient struct {
 	client.Client
 
-	reader client.Reader
+	apiReader client.Reader
 }
 
 // Get bypasses the manager cache for the sync being reconciled.
 func (c configStoreSyncLiveGetClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
-	return c.reader.Get(ctx, key, obj, opts...)
+	return c.apiReader.Get(ctx, key, obj, opts...)
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -117,8 +117,8 @@ func (r *KonnectConfigStoreSyncReconciler) SetupWithManager(_ context.Context, m
 			handler.EnqueueRequestsFromMapFunc(r.listSyncsForReferenceGrant),
 		).
 		Complete(reconcile.AsReconciler(configStoreSyncLiveGetClient{
-			Client: r.Client,
-			reader: mgr.GetAPIReader(),
+			Client:    r.Client,
+			apiReader: mgr.GetAPIReader(),
 		}, r))
 }
 
