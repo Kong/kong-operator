@@ -64,7 +64,7 @@ type AdminAPIEndpointsReconciler struct {
 
 	// OnDiscovery is called with the Admin APIs discovered for all the
 	// AIGatewayDataPlanes referencing GatewayNN. It is called on every
-	// reconciliation, including when the set is empty.
+	// successful reconciliation, including when the set is empty.
 	OnDiscovery func(ctx context.Context, adminAPIs sets.Set[adminapidiscovery.DiscoveredAdminAPI])
 }
 
@@ -125,8 +125,6 @@ func (r *AdminAPIEndpointsReconciler) adminAPIEndpointSlicePredicate() predicate
 	})
 }
 
-// +kubebuilder:rbac:groups=discovery.k8s.io,resources=endpointslices,verbs=get;list;watch
-
 // Reconcile discovers the Admin API endpoints of all the AIGatewayDataPlanes
 // referencing the Reconciler's OnPremAIGateway and notifies about the result.
 // The reconcile.Request is ignored: every event triggers a full rediscovery,
@@ -152,11 +150,12 @@ func (r *AdminAPIEndpointsReconciler) Reconcile(ctx context.Context, _ reconcile
 			},
 		)
 		if err != nil {
-			// One failing data plane must not wedge the gateway's
-			// endpoint set: skip it and keep the rest.
+			// A partial set must never replace the last known complete
+			// one: skip the notification and requeue, so the next
+			// reconciliation rediscovers everything.
 			r.Log.Error(err, "failed to discover Admin API endpoints",
 				"dataplane", client.ObjectKeyFromObject(dp))
-			continue
+			return ctrl.Result{}, err
 		}
 		adminAPIs = adminAPIs.Union(discovered)
 	}

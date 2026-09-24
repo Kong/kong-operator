@@ -157,7 +157,8 @@ func (i *Instance) onAdminAPIsDiscovered(
 		return
 	}
 	if adminAPIs.Len() == 0 {
-		// No endpoints discovered: there is nothing to (re)configure.
+		// No endpoints discovered: there are no push targets, so there is
+		// nothing to re-render for. The next non-empty discovery notifies.
 		return
 	}
 	// Notify the sync loop so the configuration is re-rendered for the
@@ -169,12 +170,12 @@ func (i *Instance) onAdminAPIsDiscovered(
 	})
 }
 
-// AdminAPIs returns the Admin API endpoints discovered for the AIGatewayDataPlanes
-// referencing the instance's OnPremAIGateway.
+// AdminAPIs returns a copy of the Admin API endpoints discovered for the
+// AIGatewayDataPlanes referencing the instance's OnPremAIGateway.
 func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
 	i.adminAPIsMu.RLock()
 	defer i.adminAPIsMu.RUnlock()
-	return i.adminAPIs
+	return i.adminAPIs.Clone()
 }
 
 // newCtrlManager builds the instance's own lightweight controller-runtime manager.

@@ -3,6 +3,7 @@ package aigateway
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -28,7 +29,7 @@ const (
 	testGatewayName      = "gw"
 )
 
-func adminAPIEndpointSlice(namespace, serviceName string, podIP string) *discoveryv1.EndpointSlice {
+func adminAPIEndpointSlice(namespace, serviceName, podName, podIP string) *discoveryv1.EndpointSlice {
 	return &discoveryv1.EndpointSlice{
 		Name:      serviceName + "-xyz",
 		Namespace: namespace,
@@ -43,7 +44,7 @@ func adminAPIEndpointSlice(namespace, serviceName string, podIP string) *discove
 		Endpoints: []discoveryv1.Endpoint{
 			{
 				Addresses: []string{podIP},
-				TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: namespace, Name: "pod-1"},
+				TargetRef: &corev1.ObjectReference{Kind: "Pod", Namespace: namespace, Name: podName},
 			},
 		},
 	}
@@ -83,7 +84,7 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 			name: "discovers endpoints of the referencing data plane's Admin API Service",
 			objects: []client.Object{
 				aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
-				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "10.0.0.1"),
+				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "pod-1", "10.0.0.1"),
 			},
 			wantAdminAPI: sets.New(
 				adminapidiscovery.DiscoveredAdminAPI{
@@ -98,8 +99,8 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 			objects: []client.Object{
 				aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
 				aigatewayDataPlane("dp-2", testGatewayNamespace, testGatewayName),
-				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "10.0.0.1"),
-				adminAPIEndpointSlice(testGatewayNamespace, "dp-2-admin", "10.0.0.2"),
+				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "pod-1", "10.0.0.1"),
+				adminAPIEndpointSlice(testGatewayNamespace, "dp-2-admin", "pod-2", "10.0.0.2"),
 			},
 			wantAdminAPI: sets.New(
 				adminapidiscovery.DiscoveredAdminAPI{
@@ -110,7 +111,7 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 				adminapidiscovery.DiscoveredAdminAPI{
 					Address:       "https://10.0.0.2:8444",
 					TLSServerName: "pod.dp-2-admin.default.svc",
-					PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+					PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
 				},
 			),
 		},
@@ -118,14 +119,14 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 			name: "data planes referencing a different gateway are not discovered",
 			objects: []client.Object{
 				aigatewayDataPlane("dp-1", testGatewayNamespace, "other-gateway"),
-				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "10.0.0.1"),
+				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "pod-1", "10.0.0.1"),
 			},
 			wantAdminAPI: sets.New[adminapidiscovery.DiscoveredAdminAPI](),
 		},
 		{
 			name: "no data planes reference the gateway",
 			objects: []client.Object{
-				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "10.0.0.1"),
+				adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "pod-1", "10.0.0.1"),
 			},
 			wantAdminAPI: sets.New[adminapidiscovery.DiscoveredAdminAPI](),
 		},
@@ -156,19 +157,22 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 	}
 }
 
-// TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane verifies that a
-// data plane whose Admin API endpoints cannot be discovered does not wedge the
-// gateway's endpoint set: the other data planes' endpoints stay in the set and
-// OnDiscovery is still called.
-func TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane(t *testing.T) {
+// TestAdminAPIEndpointsReconciler_Reconcile_ReturnsErrorOnDiscoveryFailure verifies
+// that a data plane whose Admin API endpoints cannot be discovered fails the whole
+// reconciliation: OnDiscovery is not called with a partial set, and the error makes
+// controller-runtime requeue. Once the failure clears, the next reconciliation
+// notifies with the complete set.
+func TestAdminAPIEndpointsReconciler_Reconcile_ReturnsErrorOnDiscoveryFailure(t *testing.T) {
 	gatewayNN := k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
 
+	var failDP1List atomic.Bool
+	failDP1List.Store(true)
 	c := fake.NewClientBuilder().
 		WithScheme(managerscheme.Get()).
 		WithObjects(
 			aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
 			aigatewayDataPlane("dp-2", testGatewayNamespace, testGatewayName),
-			adminAPIEndpointSlice(testGatewayNamespace, "dp-2-admin", "10.0.0.2"),
+			adminAPIEndpointSlice(testGatewayNamespace, "dp-2-admin", "pod-2", "10.0.0.2"),
 		).
 		WithInterceptorFuncs(interceptor.Funcs{
 			List: func(
@@ -182,7 +186,8 @@ func TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane(t *testing.
 					opt.ApplyToList(listOpts)
 				}
 				// Fail discovery of dp-1's Admin API Service only.
-				if listOpts.LabelSelector != nil &&
+				if failDP1List.Load() &&
+					listOpts.LabelSelector != nil &&
 					listOpts.LabelSelector.String() == "kubernetes.io/service-name=dp-1-admin" {
 					return errors.New("injected list failure")
 				}
@@ -207,13 +212,20 @@ func TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane(t *testing.
 	}
 
 	_, err := r.Reconcile(context.Background(), ctrl.Request{})
+	require.Error(t, err)
+	require.False(t, called, "OnDiscovery must not be called with a partial set")
+
+	// Once the failure clears, the next reconciliation notifies with the
+	// complete set.
+	failDP1List.Store(false)
+	_, err = r.Reconcile(context.Background(), ctrl.Request{})
 	require.NoError(t, err)
-	require.True(t, called, "OnDiscovery should be called")
+	require.True(t, called, "OnDiscovery should be called once discovery succeeds")
 	require.Equal(t, sets.New(
 		adminapidiscovery.DiscoveredAdminAPI{
 			Address:       "https://10.0.0.2:8444",
 			TLSServerName: "pod.dp-2-admin.default.svc",
-			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-2"},
 		},
 	), gotAdminAPI)
 }
@@ -252,11 +264,11 @@ func TestAdminAPIEndpointsReconciler_Predicates(t *testing.T) {
 
 	t.Run("endpoint slice predicate only accepts admin service slices in the gateway namespace", func(t *testing.T) {
 		p := r.adminAPIEndpointSlicePredicate()
-		require.True(t, p.Create(createEvent(adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "10.0.0.1"))))
+		require.True(t, p.Create(createEvent(adminAPIEndpointSlice(testGatewayNamespace, "dp-1-admin", "pod-1", "10.0.0.1"))))
 		// Non-admin Service EndpointSlice.
-		require.False(t, p.Create(createEvent(adminAPIEndpointSlice(testGatewayNamespace, "dp-1-ingress", "10.0.0.1"))))
+		require.False(t, p.Create(createEvent(adminAPIEndpointSlice(testGatewayNamespace, "dp-1-ingress", "pod-1", "10.0.0.1"))))
 		// Admin Service EndpointSlice in another namespace.
-		require.False(t, p.Create(createEvent(adminAPIEndpointSlice("other-namespace", "dp-1-admin", "10.0.0.1"))))
+		require.False(t, p.Create(createEvent(adminAPIEndpointSlice("other-namespace", "dp-1-admin", "pod-1", "10.0.0.1"))))
 	})
 }
 
