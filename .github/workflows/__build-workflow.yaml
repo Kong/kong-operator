@@ -496,7 +496,7 @@ jobs:
   # image, and a syft or registry flake there would skip every
   # `needs: build-push-images` consumer with the image already pushed.
   sbom-image:
-    name: Image SBOM
+    name: Image SBOM (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: build-multi-arch
     if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
@@ -507,6 +507,12 @@ jobs:
     continue-on-error: true
     permissions:
       contents: read
+    strategy:
+      # One matrix instance per architecture: a failure on one does not affect the other, and the
+      # two SBOM files are generated from their own child manifest.
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
 
     steps:
       - name: Harden Runner
@@ -531,42 +537,39 @@ jobs:
           # backend prefix is required: a plain `syft` would not match the pin.
           install_args: github:anchore/syft
 
-      # The subject is the multi-arch index digest, so `--platform` is what selects the amd64
-      # child manifest. Keep it: handed an index and no `--platform`, syft resolves to the
-      # runner's platform, which is how a caller ends up with two per-arch-named SBOMs that
-      # both describe the same architecture.
+      # Every SBOM file is per-platform, so each is generated from its own child manifest:
+      # `--platform` is what selects it, and the filename carries the same platform. Handed an
+      # index with no `--platform`, syft resolves to the *runner's* platform instead, which is how
+      # a caller ends up with two per-arch-named files that both describe one architecture.
       #
-      # amd64 only, deliberately: we describe one platform of the published multi-arch index, and
-      # the filenames below carry that platform so they are not a false claim about arm64. The
-      # inventory is arch-invariant on this artifact — the runtime base is distroless/static, whose
-      # 6 packages carry the same names and versions on both architectures, and the binary is
-      # cross-compiled from the same go.mod — so what amd64-only costs is the arm64 coverage
-      # claim, not a different package list. Per-arch lands when the shared security actions are
-      # adopted for CVE scanning. arm64 would also need a second syft invocation with
-      # `--platform linux/arm64` plus the matching artifact names and (in release-bot.yaml)
-      # release-asset and SHA256SUMS entries.
+      # amd64 and arm64, one matrix instance each. Their content is expected to be identical
+      # today — distroless/static base with 6 packages carrying the same names and versions on
+      # both, Go modules from the same go.mod — and that is the point of generating both: each
+      # file comes from its own manifest, so a future arch-dependent layer changes one and not
+      # the other, instead of silently invalidating a single shared file.
       - name: Generate image SBOM
         env:
           REGISTRY: ${{ inputs.registry }}
           IMAGE_NAME: ${{ inputs.image-name }}
           DIGEST: ${{ needs.build-multi-arch.outputs.index_digest }}
+          ARCH: ${{ matrix.arch }}
         run: |
           set -euo pipefail
           syft "registry:${REGISTRY}/${IMAGE_NAME}@${DIGEST}" \
-            --platform linux/amd64 \
-            -o spdx-json=image-linux-amd64-sbom.spdx.json \
-            -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
+            --platform "linux/${ARCH}" \
+            -o "spdx-json=image-linux-${ARCH}-sbom.spdx.json" \
+            -o "cyclonedx-json=image-linux-${ARCH}-sbom.cyclonedx.json"
 
       # One artifact per file, name = filename — matches how sca uploads (artifact contract)
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: image-linux-amd64-sbom.spdx.json
-          path: image-linux-amd64-sbom.spdx.json
+          name: image-linux-${{ matrix.arch }}-sbom.spdx.json
+          path: image-linux-${{ matrix.arch }}-sbom.spdx.json
           retention-days: 90
       - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: image-linux-amd64-sbom.cyclonedx.json
-          path: image-linux-amd64-sbom.cyclonedx.json
+          name: image-linux-${{ matrix.arch }}-sbom.cyclonedx.json
+          path: image-linux-${{ matrix.arch }}-sbom.cyclonedx.json
           retention-days: 90
 
   sbom-source:

@@ -154,17 +154,13 @@ jobs:
           # backend prefix is required: a plain `syft` would not match the pin.
           install_args: github:anchore/syft
 
-      # The subject is the index digest the tag currently resolves to, never the
-      # tag itself: a tag can be moved later, and the signature and the
-      # provenance are both on the digest.
+      # The subject is the index digest the tag currently resolves to, never the tag itself: a tag
+      # can be moved later, and the signature and the provenance are both on the digest.
       #
-      # `--platform` narrows that index digest to the amd64 child manifest. Keep it:
-      # an index with no `--platform` is resolved by syft to the runner's platform,
-      # which silently yields the same SBOM under two different per-arch names.
-      # amd64 only, and the filenames here and in the release-asset list below say so: on this
-      # distroless/static image the inventory is arch-invariant (the base packages and the Go
-      # module list are the same on both architectures), so what amd64-only costs is the arm64
-      # coverage claim, not a different package list.
+      # Every SBOM file is per-platform and generated from its own child manifest: `--platform`
+      # selects it and the filename carries the same platform. Handed an index with no
+      # `--platform`, syft resolves to the *runner's* platform instead, which silently yields the
+      # same SBOM under two different per-arch names.
       #
       # Non-blocking on purpose. This job also gates create-release-branch and
       # create-cherry-pick-branch-to-main, so a syft or registry flake must not
@@ -179,14 +175,24 @@ jobs:
           set -euo pipefail
           DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
           echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
-          syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
-            --platform linux/amd64 \
-            -o spdx-json=image-linux-amd64-sbom.spdx.json \
-            -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
+
+          # Both architectures are attempted even if the first fails: the file that was produced
+          # is still worth publishing, and the missing one is reported in the warning step below.
+          failed=0
+          for arch in amd64 arm64; do
+            if ! syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
+                 --platform "linux/${arch}" \
+                 -o "spdx-json=image-linux-${arch}-sbom.spdx.json" \
+                 -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"; then
+              echo "::warning::image-linux-${arch} SBOM generation failed"
+              failed=1
+            fi
+          done
+          exit "${failed}"
 
       - name: Warn when the image SBOM is missing
         if: ${{ steps.image_sbom.outcome != 'success' }}
-        run: echo "::warning::image SBOM generation failed; publishing the release without it"
+        run: echo "::warning::image SBOM generation did not complete; publishing the release with the files that were produced"
 
       # Both SBOM producers above are non-blocking, so this set can be partial
       # or empty. nullglob keeps an unmatched glob from failing the release.
@@ -228,6 +234,8 @@ jobs:
             source-sbom.cyclonedx.json
             image-linux-amd64-sbom.spdx.json
             image-linux-amd64-sbom.cyclonedx.json
+            image-linux-arm64-sbom.spdx.json
+            image-linux-arm64-sbom.cyclonedx.json
             SHA256SUMS
 
   create-release-branch:
