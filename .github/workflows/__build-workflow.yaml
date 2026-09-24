@@ -447,10 +447,7 @@ jobs:
             ${{ steps.meta.outputs.tags }}-amd64
             ${{ steps.meta.outputs.tags }}-arm64
 
-      # Exactly one of the manifest-create steps above runs per event, so the
-      # index digest comes from whichever one did. Both cosign and the SLSA
-      # provenance generator need it, and it is a stabler SBOM subject than a
-      # tag that can later be moved.
+      # Stable subject for the SBOM, the signature and the provenance: never a tag, which moves.
       - name: Resolve the multi-arch index digest
         id: index
         env:
@@ -492,24 +489,19 @@ jobs:
             fields: repo,message,commit,author,action,eventName,ref,workflow
             text: ":red_circle: Docker build failed. cc: <!subteam^${{ env.SLACK_TEAM_ID }}>"
 
-  # Deliberately not a step in build-multi-arch: that job is what publishes the
-  # image, and a syft or registry flake there would skip every
-  # `needs: build-push-images` consumer with the image already pushed.
+  # Not a step in build-multi-arch: a flake there would skip consumers that already have the image.
   sbom-image:
     name: Image SBOM (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: build-multi-arch
     if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
-    # A separate job is not enough on its own: callers depend on this reusable
-    # workflow as a whole, so any failing job here would still fail their
-    # `build-push-images` and skip everything downstream. This keeps the run
-    # green when syft or the registry flakes; the job itself still shows red.
+    # Load-bearing: callers consume this workflow as a whole, so a failing job here would skip
+    # everything downstream. The run stays green; the job itself still shows red.
     continue-on-error: true
     permissions:
       contents: read
     strategy:
-      # One matrix instance per architecture: a failure on one does not affect the other, and the
-      # two SBOM files are generated from their own child manifest.
+      # One instance per architecture, so one arch's failure does not affect the other.
       fail-fast: false
       matrix:
         arch: [amd64, arm64]
@@ -521,9 +513,7 @@ jobs:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      # build-multi-arch logged in before running syft; keep that here. syft
-      # reads ~/.docker/config.json, and an anonymous Docker Hub pull is rate
-      # limited on shared runner IPs.
+      # syft reads ~/.docker/config.json; anonymous Docker Hub pulls are rate limited.
       - name: Log in to the Container registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
@@ -533,20 +523,11 @@ jobs:
 
       - uses: ./.github/actions/setup-mise
         with:
-          # The tool is declared as [tools."github:anchore/syft"], so the
-          # backend prefix is required: a plain `syft` would not match the pin.
+          # The backend prefix is required: a plain `syft` would not match the pinned entry.
           install_args: github:anchore/syft
 
-      # Every SBOM file is per-platform, so each is generated from its own child manifest:
-      # `--platform` is what selects it, and the filename carries the same platform. Handed an
-      # index with no `--platform`, syft resolves to the *runner's* platform instead, which is how
-      # a caller ends up with two per-arch-named files that both describe one architecture.
-      #
-      # amd64 and arm64, one matrix instance each. Their content is expected to be identical
-      # today — distroless/static base with 6 packages carrying the same names and versions on
-      # both, Go modules from the same go.mod — and that is the point of generating both: each
-      # file comes from its own manifest, so a future arch-dependent layer changes one and not
-      # the other, instead of silently invalidating a single shared file.
+      # One file per platform, each from its own child manifest: `--platform` selects it and the
+      # filename mirrors it. Handed an index without `--platform`, syft picks the runner's arch.
       - name: Generate image SBOM
         env:
           REGISTRY: ${{ inputs.registry }}

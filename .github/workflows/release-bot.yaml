@@ -141,8 +141,7 @@ jobs:
 
       - name: Generate source SBOM
         uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
-        # An upstream Grype DB outage must never block the release: the SBOM
-        # step itself is what we consume here, the vulnerability scan is not.
+        # An upstream Grype DB outage must never block the release: only the SBOM is consumed.
         continue-on-error: true
         with:
           dir: '.'
@@ -150,21 +149,11 @@ jobs:
 
       - uses: ./.github/actions/setup-mise
         with:
-          # The tool is declared as [tools."github:anchore/syft"], so the
-          # backend prefix is required: a plain `syft` would not match the pin.
+          # The backend prefix is required: a plain `syft` would not match the pinned entry.
           install_args: github:anchore/syft
 
-      # The subject is the index digest the tag currently resolves to, never the tag itself: a tag
-      # can be moved later, and the signature and the provenance are both on the digest.
-      #
-      # Every SBOM file is per-platform and generated from its own child manifest: `--platform`
-      # selects it and the filename carries the same platform. Handed an index with no
-      # `--platform`, syft resolves to the *runner's* platform instead, which silently yields the
-      # same SBOM under two different per-arch names.
-      #
-      # Non-blocking on purpose. This job also gates create-release-branch and
-      # create-cherry-pick-branch-to-main, so a syft or registry flake must not
-      # cost us the release and the branches.
+      # Subject is the index digest the tag resolves to, never the tag. Each file is per-platform,
+      # selected by `--platform`. Non-blocking: this job also gates the branches below.
       - name: Generate image SBOM
         id: image_sbom
         continue-on-error: true
@@ -176,8 +165,7 @@ jobs:
           DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
           echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
 
-          # Both architectures are attempted even if the first fails: the file that was produced
-          # is still worth publishing, and the missing one is reported in the warning step below.
+          # Both arches are attempted; a missing one is reported in the warning below.
           failed=0
           for arch in amd64 arm64; do
             if ! syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
@@ -194,8 +182,7 @@ jobs:
         if: ${{ steps.image_sbom.outcome != 'success' }}
         run: echo "::warning::image SBOM generation did not complete; publishing the release with the files that were produced"
 
-      # Both SBOM producers above are non-blocking, so this set can be partial
-      # or empty. nullglob keeps an unmatched glob from failing the release.
+      # Non-blocking producers, so this set can be empty; nullglob keeps the glob from failing.
       - name: Generate SBOM checksums
         run: |
           set -euo pipefail
