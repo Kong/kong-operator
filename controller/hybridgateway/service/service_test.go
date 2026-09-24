@@ -3407,6 +3407,20 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	// The parent Gateway and its GatewayClass both carry tags, so every case also pins that the
+	// KongService inherits them after its own backend-Service tags.
+	gateway := &gwtypes.Gateway{
+		Name:        "test-gateway",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{"konghq.com/tags": "gw-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        "test-class",
+		Annotations: map[string]string{"konghq.com/tags": "class-tag"},
+	}
 
 	cp := &commonv1alpha1.ControlPlaneRef{
 		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -3430,17 +3444,17 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 			backendServices: []corev1.Service{
 				{Name: "my-svc", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a,prod"}},
 			},
-			expected: commonv1alpha1.Tags{"team-a", "prod"},
+			expected: commonv1alpha1.Tags{"team-a", "prod", "gw-tag", "class-tag"},
 		},
 		{
-			name: "service without tags annotation leaves field unset",
+			name: "service without tags annotation carries only the inherited tags",
 			backendRefs: []gatewayv1.HTTPBackendRef{
 				{Name: "plain-svc", Port: &port80},
 			},
 			backendServices: []corev1.Service{
 				{Name: "plain-svc", Namespace: "test-namespace"},
 			},
-			expected: nil,
+			expected: commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 		{
 			name: "first backend ref with annotation wins",
@@ -3452,7 +3466,7 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 				{Name: "svc-a", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-a"}},
 				{Name: "svc-b", Namespace: "test-namespace", Annotations: map[string]string{"konghq.com/tags": "team-b"}},
 			},
-			expected: commonv1alpha1.Tags{"team-a"},
+			expected: commonv1alpha1.Tags{"team-a", "gw-tag", "class-tag"},
 		},
 	}
 
@@ -3474,6 +3488,7 @@ func TestServiceForRule_TagsAnnotation(t *testing.T) {
 			for i := range tt.backendServices {
 				objects = append(objects, &tt.backendServices[i])
 			}
+			objects = append(objects, gateway, gatewayClass)
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
 			service, _, _, err := ServiceForRule(ctx, logger, cl, httpRoute, rule, pRef, cp, upstreamName)

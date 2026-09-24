@@ -70,6 +70,8 @@ func TestGRPCPluginsForRule(t *testing.T) {
 	assert.Contains(t, plugin.Annotations, consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation)
 	assert.Equal(t, "test-namespace/test-route", plugin.Annotations[consts.GatewayOperatorHybridRoutesGRPCRouteAnnotation])
 	// tags in GRPCRoute should not be merged into the tags annotation of the KongPlugin, since plugins are shared across multiple routes.
+	// The Gateway's and GatewayClass's tags are inherited instead; this route has no parent in the
+	// fake client, so nothing is added here. See TestGRPCPluginsForRule_InheritedTagsAnnotation.
 	assert.Empty(t, plugin.Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
@@ -230,6 +232,55 @@ func TestGetReferencedKongPluginForGRPCFilter(t *testing.T) {
 			assert.Equal(t, tt.expectedPlugin.Config.Raw, plugin.Config.Raw)
 		})
 	}
+}
+
+// TestGRPCPluginsForRule_InheritedTagsAnnotation is the GRPCRoute counterpart of
+// TestPluginsForRule_InheritedTagsAnnotation.
+func TestGRPCPluginsForRule_InheritedTagsAnnotation(t *testing.T) {
+	logger := logr.Discard()
+	ctx := context.Background()
+
+	grpcRoute := &gwtypes.GRPCRoute{
+		TypeMeta:  grpcRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			pkgmetadata.AnnotationKeyTags: "route-tag",
+		},
+		Spec: gwtypes.GRPCRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+	parentRef := &gwtypes.ParentReference{Name: "test-gateway"}
+	fakeClient := fakectrlruntimeclient.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
+		&gwtypes.Gateway{
+			Name:        "test-gateway",
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "gw-tag"},
+			Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+		},
+		&gwtypes.GatewayClass{
+			Name:        "test-class",
+			Annotations: map[string]string{pkgmetadata.AnnotationKeyTags: "class-tag"},
+		},
+	).Build()
+
+	rule := gwtypes.GRPCRouteRule{
+		Filters: []gatewayv1.GRPCRouteFilter{{
+			Type: gatewayv1.GRPCRouteFilterRequestHeaderModifier,
+			RequestHeaderModifier: &gatewayv1.HTTPHeaderFilter{
+				Set: []gatewayv1.HTTPHeader{{Name: "X-Custom-Header", Value: "custom-value"}},
+			},
+		}},
+	}
+
+	plugins, err := GRPCPluginsForRule(ctx, logger, fakeClient, grpcRoute, rule, parentRef)
+	require.NoError(t, err)
+	require.Len(t, plugins, 1)
+	// The route's own tags stay out of a shared generated plugin; only the inherited ones land.
+	assert.Equal(t, "gw-tag,class-tag", plugins[0].Annotations[pkgmetadata.AnnotationKeyTags])
 }
 
 func TestGRPCPluginsForRule_ExtensionRef_TagsAnnotation(t *testing.T) {

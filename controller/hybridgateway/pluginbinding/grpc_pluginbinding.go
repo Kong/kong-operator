@@ -13,6 +13,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -40,6 +41,10 @@ func BindingForGRPCPluginAndRoute(
 		WithAnnotations(grpcRoute, pRef).
 		WithPluginRef(pluginName).
 		WithControlPlaneRef(*cp).
+		// A KongPluginBinding belongs to exactly one route (VerifyAndUpdate is called with
+		// exclusiveRoute=true below) and to one parentRef, so it inherits the tags of that
+		// parent Gateway alone.
+		WithSpecTags(utils.MergeTags(logger, utils.InheritedTagsForParentRef(ctx, logger, cl, grpcRoute, pRef))).
 		WithRouteRef(routeName).
 		Build()
 	if err != nil {
@@ -77,6 +82,10 @@ func BindingForGRPCPluginAndService(
 		WithAnnotations(grpcRoute, pRef).
 		WithPluginRef(pluginName).
 		WithControlPlaneRef(*cp).
+		// A KongPluginBinding belongs to exactly one route (VerifyAndUpdate is called with
+		// exclusiveRoute=true below) and to one parentRef, so it inherits the tags of that
+		// parent Gateway alone.
+		WithSpecTags(utils.MergeTags(logger, utils.InheritedTagsForParentRef(ctx, logger, cl, grpcRoute, pRef))).
 		WithServiceRef(serviceName).
 		Build()
 	if err != nil {
