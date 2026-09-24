@@ -23,6 +23,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	certificatesv1 "k8s.io/api/certificates/v1"
+	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	k8stypes "k8s.io/apimachinery/pkg/types"
@@ -39,10 +41,12 @@ import (
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
+	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/logging"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -70,6 +74,15 @@ type Reconciler struct {
 	RestConfig       *rest.Config
 	Scheme           *runtime.Scheme
 	CacheSyncTimeout time.Duration
+
+	// ClusterCASecretName and ClusterCASecretNamespace point to the Secret holding
+	// the cluster CA used to sign the mTLS client certificate the instances use to
+	// push configuration to their data planes' Admin API.
+	ClusterCASecretName      string
+	ClusterCASecretNamespace string
+
+	// CertTTL is the TTL of the certificates provisioned by this controller.
+	CertTTL time.Duration
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -128,6 +141,17 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
 
+	// The mTLS client certificate is what the instance presents to the data planes'
+	// Admin API when pushing configuration. Provision it before scheduling the
+	// instance: an instance without it cannot push, and the push loop would only
+	// accumulate retries until the Secret shows up.
+	adminClientCertSecret, err := r.ensureAdminClientCertificateSecret(ctx, onprem)
+	if err != nil {
+		// Certificate provisioning failures are transient (CA availability, API server
+		// errors): requeue with backoff.
+		return ctrl.Result{}, fmt.Errorf("failed to ensure the Admin API client certificate Secret: %w", err)
+	}
+
 	cfg, err := r.configFromSpec(ctx, logger, onprem)
 	if err != nil {
 		log.Debug(logger, "failed to render OnPremAIGateway configuration", "error", err)
@@ -160,7 +184,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 
 		if _, ok := errors.AsType[instances.InstanceNotFoundError](err); ok {
 			log.Debug(logger, "control plane instance not found, creating new instance")
-			if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem)); err != nil {
+			if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem), client.ObjectKeyFromObject(adminClientCertSecret)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -183,7 +207,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
 		}
-		if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem)); err != nil {
+		if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem), client.ObjectKeyFromObject(adminClientCertSecret)); err != nil {
 			// The stopped instance is removed from the manager asynchronously, so it can still be
 			// registered here. Requeue and reschedule once it's gone.
 			if _, ok := errors.AsType[instances.InstanceWithIDAlreadyScheduledError](err); !ok {
@@ -225,6 +249,7 @@ func (r *Reconciler) scheduleInstance(
 	mgrID manager.ID,
 	cfg multiinstanceai.Config,
 	gatewayNN k8stypes.NamespacedName,
+	adminClientCertSecretNN k8stypes.NamespacedName,
 ) error {
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
 	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(
@@ -236,11 +261,49 @@ func (r *Reconciler) scheduleInstance(
 			// Used by the instance to discover the AIGatewayDataPlanes referencing
 			// this gateway and their Admin API endpoints.
 			GatewayNN: gatewayNN,
+			// Used by the instance to load the mTLS client certificate it presents
+			// to the data planes' Admin API when pushing configuration.
+			AdminClientCertSecretNN: adminClientCertSecretNN,
+			TypeConverter:           r.TypeConverter,
 		},
 	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)
 	}
 	return nil
+}
+
+// ensureAdminClientCertificateSecret provisions (or finds) the mTLS client certificate
+// Secret the control plane instance uses to authenticate against the Admin API of the
+// AIGatewayDataPlanes referencing the gateway. The data planes' Admin API listeners
+// verify client certificates against the cluster CA, so the certificate is signed by
+// the cluster CA; its subject is arbitrary.
+func (r *Reconciler) ensureAdminClientCertificateSecret(
+	ctx context.Context,
+	onprem *aigatewayv1alpha1.OnPremAIGateway,
+) (*corev1.Secret, error) {
+	_, secret, err := secrets.EnsureCertificate(
+		ctx,
+		onprem,
+		fmt.Sprintf("%s.%s", onprem.GetName(), onprem.GetNamespace()),
+		k8stypes.NamespacedName{
+			Namespace: r.ClusterCASecretNamespace,
+			Name:      r.ClusterCASecretName,
+		},
+		[]certificatesv1.KeyUsage{
+			certificatesv1.UsageKeyEncipherment,
+			certificatesv1.UsageDigitalSignature,
+			certificatesv1.UsageClientAuth,
+		},
+		r.Client,
+		client.MatchingLabels{
+			consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
+		},
+		r.CertTTL,
+	)
+	if err != nil {
+		return nil, fmt.Errorf("ensuring the Admin API client certificate Secret for %s: %w", client.ObjectKeyFromObject(onprem), err)
+	}
+	return secret, nil
 }
 
 // initStatusToWaitingToBecomeReady marks the resource as not ready yet and requeues it so that the

@@ -21,6 +21,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/instances"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 	multiinstanceai "github.com/kong/kong-operator/v2/pkg/multiinstance/aigateway"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
 )
@@ -44,6 +45,8 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-cluster-ca")
+
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
@@ -58,6 +61,11 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 			RestConfig:       cfg,
 			Scheme:           scheme.Get(),
 			CacheSyncTimeout: waitTime,
+			// Used to provision the mTLS client certificate the instances present
+			// to their data planes' Admin API when pushing configuration.
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),
@@ -125,6 +133,8 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
+	clusterCA := createClusterCASecret(t, ctx, mgr.GetClient(), ns.Name, "onprem-aigw-models-cluster-ca")
+
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
@@ -139,6 +149,11 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 			RestConfig:       cfg,
 			Scheme:           scheme.Get(),
 			CacheSyncTimeout: waitTime,
+			// Used to provision the mTLS client certificate the instances present
+			// to their data planes' Admin API when pushing configuration.
+			ClusterCASecretName:      clusterCA.Name,
+			ClusterCASecretNamespace: clusterCA.Namespace,
+			CertTTL:                  consts.DefaultCertTTL,
 		},
 		&crdschema.Reconciler{
 			Client:   mgr.GetClient(),

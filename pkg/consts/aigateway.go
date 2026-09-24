@@ -65,3 +65,21 @@ const (
 	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
 	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
 )
+
+// -----------------------------------------------------------------------------
+// Consts - OnPremAIGateway Labels
+// -----------------------------------------------------------------------------
+
+const (
+	// OnPremAIGatewayManagedByLabelValue is the managed-by label value for OnPremAIGateway owned resources.
+	OnPremAIGatewayManagedByLabelValue = "onprem-aigateway"
+
+	// OnPremAIGatewayPrefix is the GenerateName prefix used when creating mTLS certificate Secrets
+	// for OnPremAIGateway control plane instances.
+	OnPremAIGatewayPrefix = "onprem-aigw"
+
+	// SecretOnPremAIGatewayAdminClientCertificateLabel marks a Secret as the mTLS client
+	// certificate the control plane instance uses when pushing configuration to the Admin
+	// API of the AIGatewayDataPlanes referencing the gateway.
+	SecretOnPremAIGatewayAdminClientCertificateLabel = "konghq.com/onprem-aigw-admin-client-cert" //nolint:gosec
+)

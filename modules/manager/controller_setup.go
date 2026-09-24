@@ -902,6 +902,11 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				RestConfig:       mgr.GetConfig(),
 				Scheme:           mgr.GetScheme(),
 				CacheSyncTimeout: c.CacheSyncTimeout,
+				// Used to provision the mTLS client certificate the instances present
+				// to their data planes' Admin API when pushing configuration.
+				ClusterCASecretName:      c.ClusterCASecretName,
+				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				CertTTL:                  c.CertTTL,
 			},
 		},
 		// CRD schema reconciler: rebuilds the shared SSA TypeConverter when

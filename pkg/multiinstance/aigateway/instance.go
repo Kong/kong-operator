@@ -11,11 +11,14 @@ import (
 
 	"github.com/Kong/ai-deck-converter/convert"
 	"github.com/go-logr/logr"
+	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/apimachinery/pkg/util/sets"
 	"k8s.io/client-go/rest"
+	"k8s.io/client-go/tools/events"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/cache"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -64,6 +67,14 @@ type Env struct {
 	// serves. It is used to discover the AIGatewayDataPlanes referencing the
 	// gateway and their Admin API endpoints.
 	GatewayNN types.NamespacedName
+
+	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret
+	// provisioned by the OnPremAIGateway controller. The instance reads it to build
+	// the Admin API clients that push configuration to the data planes.
+	AdminClientCertSecretNN types.NamespacedName
+
+	// TypeConverter is the SSA type converter used to patch the OnPremAIGateway status.
+	TypeConverter managedfields.TypeConverter
 }
 
 // Instance is a single on-prem AI Gateway control plane instance. It runs its own
@@ -85,6 +96,14 @@ type Instance struct {
 	// referencing the instance's OnPremAIGateway. They are kept up to date by the
 	// AdminAPIEndpointsReconciler running on the instance's own manager.
 	adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]
+
+	// newPushClient builds the Admin API client used to push configuration to a
+	// single discovered endpoint. Swappable in tests.
+	newPushClient newPushClientFunc
+
+	// eventRecorder records events on the instance's OnPremAIGateway. It is set in
+	// Run once the instance's manager is built, and may be nil in tests.
+	eventRecorder events.EventRecorder
 }
 
 var _ instances.Instance = &Instance{}
@@ -97,11 +116,12 @@ func NewInstance(
 	env Env,
 ) *Instance {
 	return &Instance{
-		id:     id,
-		logger: logger.WithValues("instanceID", id.String()),
-		env:    env,
-		cfg:    cfg,
-		cn:     changenotifier.New(),
+		id:            id,
+		logger:        logger.WithValues("instanceID", id.String()),
+		env:           env,
+		cfg:           cfg,
+		cn:            changenotifier.New(),
+		newPushClient: newMTLSClientAdapter,
 	}
 }
 
@@ -197,10 +217,10 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 }
 
 // cacheOpts scopes the instance manager's per-object caches. AIGatewayModels stay
-// cluster-wide: they may reference the gateway from any namespace. EndpointSlices
-// and AIGatewayDataPlanes are scoped to the gateway's namespace: the
-// onpremNamespacedRef is same-namespace and the Admin API endpoints discovery
-// controller only reads them there.
+// cluster-wide: they may reference the gateway from any namespace. EndpointSlices,
+// AIGatewayDataPlanes, the Admin API client certificate Secret and the OnPremAIGateway
+// itself are scoped to the gateway's namespace: the onpremNamespacedRef is
+// same-namespace and only objects in it are read there.
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
@@ -210,6 +230,8 @@ func (i *Instance) cacheOpts() cache.Options {
 	opts.ByObject = map[client.Object]cache.ByObject{
 		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
 		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
+		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
+		&corev1.Secret{}:                        {Namespaces: namespaces},
 	}
 	return opts
 }
@@ -231,10 +253,10 @@ func (i *Instance) sendConfig(
 	if err != nil {
 		return fmt.Errorf("rendering dbless configuration: %w", err)
 	}
-	// TODO: https://github.com/Kong/kong-operator/issues/5401
-	// push the payload to the Admin API endpoints discovered for this gateway's
-	// data planes (see Instance.AdminAPIs, populated by AdminAPIEndpointsReconciler).
-	_ = payload
+
+	if err := i.sendConfigToDataPlanes(ctx, *gw, payload); err != nil {
+		return fmt.Errorf("sending configuration to data planes: %w", err)
+	}
 
 	for _, w := range warnings {
 		// TODO: https://github.com/Kong/kong-operator/issues/5664
@@ -278,6 +300,9 @@ func (i *Instance) Run(ctx context.Context) error {
 	if err != nil {
 		return fmt.Errorf("creating instance controller-runtime manager: %w", err)
 	}
+	// The event recorder is used to emit Warning events on the instance's
+	// OnPremAIGateway when the configuration push to a data plane Admin API fails.
+	i.eventRecorder = mgr.GetEventRecorder(ControllerNameAdminAPIEndpoints)
 
 	// The field indexes are used by translator.BuildDocument to list the
 	// configuration entities referencing this gateway. They live on the

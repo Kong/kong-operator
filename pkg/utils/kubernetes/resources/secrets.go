@@ -26,7 +26,8 @@ type ControlPlaneOrDataPlaneOrKonnectExtension interface {
 		*operatorv1beta1.DataPlane |
 		*konnectv1alpha2.KonnectExtension |
 		*eventgatewayv1alpha1.KegDataPlane |
-		*aigatewayv1alpha1.AIGatewayDataPlane
+		*aigatewayv1alpha1.AIGatewayDataPlane |
+		*aigatewayv1alpha1.OnPremAIGateway
 }
 
 // SecretOpt is an option function for a Secret.
@@ -66,6 +67,8 @@ func getPrefixForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](owner T) str
 		return consts.KEGDataPlanePrefix
 	case *aigatewayv1alpha1.AIGatewayDataPlane:
 		return consts.AIGatewayDataPlanePrefix
+	case *aigatewayv1alpha1.OnPremAIGateway:
+		return consts.OnPremAIGatewayPrefix
 	default:
 		return ""
 	}
@@ -84,6 +87,8 @@ func addLabelForOwner[T ControlPlaneOrDataPlaneOrKonnectExtension](obj client.Ob
 		LabelObjectAsKEGDataPlaneManaged(obj)
 	case *aigatewayv1alpha1.AIGatewayDataPlane:
 		LabelObjectAsAIGatewayDataPlaneManaged(obj)
+	case *aigatewayv1alpha1.OnPremAIGateway:
+		LabelObjectAsOnPremAIGatewayManaged(obj)
 	}
 }
 
