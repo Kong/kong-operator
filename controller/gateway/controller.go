@@ -366,7 +366,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 	isHybridGateway := gwconfigutils.IsGatewayHybrid(gatewayConfig)
 	if isHybridGateway {
 		log.Trace(logger, "Hybrid Gateway provisioning")
-		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, gateway, gatewayConfig)
+		konnectControlPlane, cpReady := r.provisionKonnectGatewayControlPlane(ctx, logger, gateway, gwc.GatewayClass, gatewayConfig)
 		if konnectControlPlane != nil {
 			patched, res, err := patch.WithFinalizer(ctx, r.Client, konnectControlPlane, KonnectGatewayControlPlaneFinalizer)
 			if patched || err != nil || !res.IsZero() {
@@ -403,7 +403,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, gateway *gwtypes.Gateway) (c
 			log.Debug(logger, "KonnectGatewayControlplane is ready")
 		}
 
-		konnectExtension = r.provisionKonnectExtension(ctx, logger, gateway, konnectControlPlane)
+		konnectExtension = r.provisionKonnectExtension(ctx, logger, gateway, gwc.GatewayClass, konnectControlPlane)
 		// Set the KonnectExtensionReadyType Condition to False. This happens only if:
 		// * the new status is false and there was no KonnectExtensionReadyType condition in the gateway
 		// * the new status is false and the previous status was true
@@ -875,6 +875,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	gatewayConfig *GatewayConfiguration,
 ) (cp *konnectv1alpha2.KonnectGatewayControlPlane, ready bool) {
 	logger = logger.WithName("konnectGatewayControlPlaneProvisioning")
@@ -892,7 +893,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 
 	switch count := len(konnectControlPlanes); {
 	case count == 0:
-		_, err := r.createKonnectGatewayControlPlane(ctx, gateway, gatewayConfig)
+		_, err := r.createKonnectGatewayControlPlane(ctx, gateway, gatewayClass, gatewayConfig)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("KonnectGatewayControlPlane creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -926,7 +927,7 @@ func (r *Reconciler) provisionKonnectGatewayControlPlane(
 	konnectControlPlane := konnectControlPlanes[0].DeepCopy()
 
 	log.Trace(logger, "ensuring KonnectGatewayControlPlane spec is up to date")
-	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, konnectControlPlane, gatewayConfig)
+	patched, err := r.enforceKonnectGatewayControlPlaneSpec(ctx, gateway, gatewayClass, konnectControlPlane, gatewayConfig)
 	if err != nil {
 		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectGatewayControlPlane spec - error: %v", err))
 		k8sutils.SetCondition(
@@ -963,6 +964,7 @@ func (r *Reconciler) provisionKonnectExtension(
 	ctx context.Context,
 	logger logr.Logger,
 	gateway *gwtypes.Gateway,
+	gatewayClass *gatewayv1.GatewayClass,
 	konnectControlPlane *konnectv1alpha2.KonnectGatewayControlPlane,
 ) *konnectv1alpha2.KonnectExtension {
 	logger = logger.WithName("KonnectExtensionProvisioning")
@@ -980,7 +982,7 @@ func (r *Reconciler) provisionKonnectExtension(
 
 	switch count := len(konnectExtensions); {
 	case count == 0:
-		_, err := r.createKonnectExtension(ctx, gateway, konnectControlPlane)
+		_, err := r.createKonnectExtension(ctx, gateway, gatewayClass, konnectControlPlane)
 		if err != nil {
 			log.Debug(logger, fmt.Sprintf("KonnectExtension creation failed - error: %v", err))
 			k8sutils.SetCondition(
@@ -1054,6 +1056,22 @@ func (r *Reconciler) provisionKonnectExtension(
 				"KonnectExtension", client.ObjectKeyFromObject(konnectExtension))
 		}
 		return nil
+	}
+
+	log.Trace(logger, "ensuring KonnectExtension spec is up to date")
+	if patched, err := r.enforceKonnectExtensionSpec(ctx, gateway, gatewayClass, konnectExtension); err != nil {
+		log.Debug(logger, fmt.Sprintf("failed enforcing KonnectExtension spec - error: %v", err))
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
+		return konnectExtension
+	} else if patched {
+		log.Debug(logger, "KonnectExtension spec updated")
+		k8sutils.SetCondition(
+			k8sutils.NewConditionWithGeneration(kcfggateway.KonnectExtensionReadyType, metav1.ConditionFalse, kcfgdataplane.ResourceCreatedOrUpdatedReason, kcfgdataplane.ResourceUpdatedMessage, gateway.Generation),
+			gatewayConditionsAndListenersAware(gateway),
+		)
 	}
 
 	log.Trace(logger, "waiting for KonnectExtension readiness")
