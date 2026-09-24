@@ -2,6 +2,7 @@ package aigateway
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -13,6 +14,7 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	ctrllog "sigs.k8s.io/controller-runtime/pkg/log"
 
@@ -154,6 +156,68 @@ func TestAdminAPIEndpointsReconciler_Reconcile(t *testing.T) {
 	}
 }
 
+// TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane verifies that a
+// data plane whose Admin API endpoints cannot be discovered does not wedge the
+// gateway's endpoint set: the other data planes' endpoints stay in the set and
+// OnDiscovery is still called.
+func TestAdminAPIEndpointsReconciler_Reconcile_SkipsFailingDataPlane(t *testing.T) {
+	gatewayNN := k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
+
+	c := fake.NewClientBuilder().
+		WithScheme(managerscheme.Get()).
+		WithObjects(
+			aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
+			aigatewayDataPlane("dp-2", testGatewayNamespace, testGatewayName),
+			adminAPIEndpointSlice(testGatewayNamespace, "dp-2-admin", "10.0.0.2"),
+		).
+		WithInterceptorFuncs(interceptor.Funcs{
+			List: func(
+				ctx context.Context,
+				parent client.WithWatch,
+				list client.ObjectList,
+				opts ...client.ListOption,
+			) error {
+				listOpts := &client.ListOptions{}
+				for _, opt := range opts {
+					opt.ApplyToList(listOpts)
+				}
+				// Fail discovery of dp-1's Admin API Service only.
+				if listOpts.LabelSelector != nil &&
+					listOpts.LabelSelector.String() == "kubernetes.io/service-name=dp-1-admin" {
+					return errors.New("injected list failure")
+				}
+				return parent.List(ctx, list, opts...)
+			},
+		}).
+		Build()
+
+	var (
+		gotAdminAPI sets.Set[adminapidiscovery.DiscoveredAdminAPI]
+		called      bool
+	)
+	r := &AdminAPIEndpointsReconciler{
+		Client:     c,
+		GatewayNN:  gatewayNN,
+		Discoverer: mustDiscoverer(t),
+		Log:        ctrllog.Log,
+		OnDiscovery: func(_ context.Context, adminAPIs sets.Set[adminapidiscovery.DiscoveredAdminAPI]) {
+			called = true
+			gotAdminAPI = adminAPIs
+		},
+	}
+
+	_, err := r.Reconcile(context.Background(), ctrl.Request{})
+	require.NoError(t, err)
+	require.True(t, called, "OnDiscovery should be called")
+	require.Equal(t, sets.New(
+		adminapidiscovery.DiscoveredAdminAPI{
+			Address:       "https://10.0.0.2:8444",
+			TLSServerName: "pod.dp-2-admin.default.svc",
+			PodRef:        k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: "pod-1"},
+		},
+	), gotAdminAPI)
+}
+
 func TestAdminAPIEndpointsReconciler_Predicates(t *testing.T) {
 	gatewayNN := k8stypes.NamespacedName{Namespace: testGatewayNamespace, Name: testGatewayName}
 	r := &AdminAPIEndpointsReconciler{GatewayNN: gatewayNN}
@@ -164,6 +228,26 @@ func TestAdminAPIEndpointsReconciler_Predicates(t *testing.T) {
 		require.False(t, p.Create(createEvent(aigatewayDataPlane("dp-1", testGatewayNamespace, "other-gateway"))))
 		require.False(t, p.Create(createEvent(aigatewayDataPlane("dp-1", "other-namespace", testGatewayName))))
 		require.False(t, p.Create(createEvent(aigatewayDataPlane("dp-1", testGatewayNamespace, ""))))
+	})
+
+	t.Run("data plane update predicate accepts events where either side references the gateway", func(t *testing.T) {
+		p := r.gatewayDataPlanePredicate()
+		// Data plane stops referencing the gateway: must trigger rediscovery
+		// to drop its stale endpoints.
+		require.True(t, p.Update(updateEvent(
+			aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
+			aigatewayDataPlane("dp-1", testGatewayNamespace, "other-gateway"),
+		)))
+		// Data plane starts referencing the gateway.
+		require.True(t, p.Update(updateEvent(
+			aigatewayDataPlane("dp-1", testGatewayNamespace, "other-gateway"),
+			aigatewayDataPlane("dp-1", testGatewayNamespace, testGatewayName),
+		)))
+		// Neither side references the gateway.
+		require.False(t, p.Update(updateEvent(
+			aigatewayDataPlane("dp-1", testGatewayNamespace, "other-gateway"),
+			aigatewayDataPlane("dp-1", testGatewayNamespace, "another-gateway"),
+		)))
 	})
 
 	t.Run("endpoint slice predicate only accepts admin service slices in the gateway namespace", func(t *testing.T) {
@@ -179,6 +263,11 @@ func TestAdminAPIEndpointsReconciler_Predicates(t *testing.T) {
 // createEvent wraps an object in a Create event for predicate testing.
 func createEvent(obj client.Object) event.TypedCreateEvent[client.Object] {
 	return event.TypedCreateEvent[client.Object]{Object: obj}
+}
+
+// updateEvent wraps an old/new object pair in an Update event for predicate testing.
+func updateEvent(oldObj, newObj client.Object) event.TypedUpdateEvent[client.Object] {
+	return event.TypedUpdateEvent[client.Object]{ObjectOld: oldObj, ObjectNew: newObj}
 }
 
 // mustDiscoverer returns a Discoverer matching the Admin API Service port name
