@@ -6,13 +6,10 @@ package konnect
 
 import (
 	"context"
-	"fmt"
 
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
-	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -120,7 +117,9 @@ func (e *UnsupportedGeneratedReferenceTypeError) Error() string {
 // konnectReconciliationSkipper is implemented by generated entities whose
 // parent reference can resolve to a parent the Konnect reconciler does not
 // manage: an AIGatewayRef targeting an OnPremAIGateway is owned by the on-prem
-// reconciliation machinery, so reconciling it here would be wrong.
+// reconciliation machinery. The watch criteria of those types (the For
+// predicate and the enqueue handlers) use it to keep such entities out of the
+// Konnect reconciler's work queue.
 type konnectReconciliationSkipper interface {
 	SkipKonnectReconciliation() bool
 }
@@ -139,30 +138,6 @@ func (r *KonnectEntityReconciler[T, TEnt]) handleGeneratedTypeParentReferences(
 	parentGVK := obj.GetParentGVK()
 	handler, ok := _generatedTypeReferenceHandlers()[parentGVK]
 	if !ok || handler.parentTypeName() != parentGVK.Kind {
-		// The parent reference resolves to a parent this reconciler does not
-		// manage. Entities that can target such parents (AI Gateway
-		// configuration entities referencing an OnPremAIGateway) are skipped
-		// silently: the on-prem machinery owns them.
-		if skipper, isSkipper := any(ent).(konnectReconciliationSkipper); isSkipper && skipper.SkipKonnectReconciliation() {
-			// Drop the Konnect cleanup finalizer from a deleting entity: the
-			// on-prem machinery owns it now and never removes this finalizer,
-			// so keeping it would wedge the entity in Terminating. Same
-			// tradeoff as the missing-parent paths: a Konnect entity created
-			// before the repoint may leak.
-			if !ent.GetDeletionTimestamp().IsZero() && controllerutil.RemoveFinalizer(ent, KonnectCleanupFinalizer) {
-				if err := r.Client.Update(ctx, ent); err != nil {
-					if apierrors.IsConflict(err) {
-						return true, ctrl.Result{Requeue: true}, nil
-					}
-					// in case the finalizer removal fails because the resource does not exist, ignore the error.
-					if apierrors.IsNotFound(err) {
-						return true, ctrl.Result{}, nil
-					}
-					return true, ctrl.Result{}, fmt.Errorf("failed to remove finalizer %s: %w", KonnectCleanupFinalizer, err)
-				}
-			}
-			return true, ctrl.Result{}, nil
-		}
 		return false, ctrl.Result{}, &UnsupportedGeneratedReferenceTypeError{
 			TypeName: parentGVK.String(),
 		}

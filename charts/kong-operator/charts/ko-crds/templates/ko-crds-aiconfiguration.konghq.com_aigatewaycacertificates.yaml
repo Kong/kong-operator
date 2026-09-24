@@ -88,6 +88,9 @@ spec:
                   rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group
                     == ''aigateway.konghq.com'') : (!has(self.group) || self.group
                     == ''konnect.konghq.com'')'
+                - message: repointing an entity between KonnectAIGateway and OnPremAIGateway
+                    is forbidden
+                  rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
                 properties:
                   cert:
@@ -215,9 +218,9 @@ spec:
         type: object
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
-          rule: '!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c,
-            c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef
-            == self.spec.aiGatewayRef'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions)
+            || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status
+            == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
     served: true
     storage: true
     subresources:

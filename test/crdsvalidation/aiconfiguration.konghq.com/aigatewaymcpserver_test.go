@@ -162,6 +162,69 @@ func TestAIGatewayMCPServer(t *testing.T) {
 				}(),
 				ExpectedErrorMessage: new("group must be aigateway.konghq.com when kind is OnPremAIGateway"),
 			},
+			{
+				Name: "repointing from KonnectAIGateway to OnPremAIGateway is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"),
+			},
+			{
+				Name: "repointing from OnPremAIGateway to KonnectAIGateway is rejected",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+				},
+				ExpectedUpdateErrorMessage: new("repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"),
+			},
+			{
+				Name: "repointing to a different OnPremAIGateway is accepted",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayMCPServer {
+					obj := validAIGatewayMCPServer(ns.Name)
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "test-ai-gateway",
+						},
+					}
+					return obj
+				}(),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayMCPServer) {
+					obj.Spec.AIGatewayRef = aiconfigurationv1alpha1.AIGatewayRef{
+						Kind: aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+						NamespacedRef: &commonv1alpha1.NamespacedRef{
+							Name: "another-ai-gateway",
+						},
+					}
+				},
+			},
 		}.RunWithConfig(t, cfg, scheme)
 	})
 

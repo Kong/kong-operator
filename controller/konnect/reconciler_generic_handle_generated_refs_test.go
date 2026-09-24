@@ -6,7 +6,6 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
@@ -322,84 +321,7 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 			},
 		},
 		{
-			name: "skips entities whose aiGatewayRef targets an OnPremAIGateway",
-			run: func(t *testing.T) {
-				ent := &aiconfigurationv1alpha1.AIGatewayModel{
-					Name:      "model",
-					Namespace: "default",
-					Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
-							Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
-							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
-						},
-					},
-				}
-
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
-					WithStatusSubresource(ent).
-					WithObjects(ent).
-					Build()
-				r := &KonnectEntityReconciler[
-					aiconfigurationv1alpha1.AIGatewayModel, *aiconfigurationv1alpha1.AIGatewayModel,
-				]{Client: cl}
-
-				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
-
-				require.NoError(t, err)
-				assert.True(t, stop)
-				assert.True(t, res.IsZero())
-
-				// No status conditions were written for the skipped entity.
-				updated := &aiconfigurationv1alpha1.AIGatewayModel{}
-				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
-				assert.Empty(t, updated.Status.Conditions)
-			},
-		},
-		{
-			name: "removes the konnect cleanup finalizer when a skipped entity is being deleted",
-			run: func(t *testing.T) {
-				ent := &aiconfigurationv1alpha1.AIGatewayModel{
-					Name:      "model",
-					Namespace: "default",
-					// The finalizer is added before any Konnect API call, so a
-					// not-yet-programmed entity can carry it when repointed at
-					// an OnPremAIGateway; without removal it would wedge the
-					// entity in Terminating.
-					Finalizers:        []string{KonnectCleanupFinalizer},
-					DeletionTimestamp: &metav1.Time{Time: time.Now()},
-					Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
-							Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
-							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
-						},
-					},
-				}
-
-				cl := fake.NewClientBuilder().
-					WithScheme(scheme.Get()).
-					WithStatusSubresource(ent).
-					WithObjects(ent).
-					Build()
-				r := &KonnectEntityReconciler[
-					aiconfigurationv1alpha1.AIGatewayModel, *aiconfigurationv1alpha1.AIGatewayModel,
-				]{Client: cl}
-
-				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
-
-				require.NoError(t, err)
-				assert.True(t, stop)
-				assert.True(t, res.IsZero())
-
-				// The entity is gone: dropping its only finalizer let the
-				// deletion proceed instead of wedging it in Terminating.
-				updated := &aiconfigurationv1alpha1.AIGatewayModel{}
-				err = cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated)
-				require.True(t, apierrors.IsNotFound(err), "expected entity to be deleted, got: %v", err)
-			},
-		},
-		{
-			name: "does not skip entities whose aiGatewayRef targets a KonnectAIGateway",
+			name: "resolves the parent ref for entities whose aiGatewayRef targets a KonnectAIGateway",
 			run: func(t *testing.T) {
 				ent := &aiconfigurationv1alpha1.AIGatewayModel{
 					Name:      "model",

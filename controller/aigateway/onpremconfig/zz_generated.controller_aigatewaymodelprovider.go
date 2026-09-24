@@ -93,6 +93,9 @@ func (r *AIGatewayModelProviderReconciler) SetupWithManager(mgr ctrl.Manager) er
 			&aiconfigurationv1alpha1.AIGatewayModelProvider{},
 			builder.WithPredicates(
 				GenerationChangedPredicate{},
+				// Entities referencing a KonnectAIGateway are owned by the
+				// Konnect reconciler, not the on-prem machinery.
+				OnPremAIGatewayTargetedPredicate{},
 			),
 		).
 		Complete(r)
@@ -153,41 +156,27 @@ func (r *AIGatewayModelProviderReconciler) Reconcile(ctx context.Context, req ct
 		return ctrl.Result{}, err
 	}
 
-	parent := types.NamespacedName{}
-	targetsOnPrem := false
-	if ref := obj.GetAIGatewayRef(); ref.TargetsOnPremAIGateway() && ref.NamespacedRef != nil {
-		targetsOnPrem = true
-		parent.Namespace = obj.Namespace
-		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
-			parent.Namespace = *ref.NamespacedRef.Namespace
-		}
-		parent.Name = ref.NamespacedRef.Name
+	// The watch predicate guarantees the entity targets an OnPremAIGateway,
+	// and CRD validation requires namespacedRef, so the reference always
+	// resolves here.
+	ref := obj.GetAIGatewayRef()
+	parent := types.NamespacedName{
+		Namespace: obj.Namespace,
+		Name:      ref.NamespacedRef.Name,
+	}
+	if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+		parent.Namespace = *ref.NamespacedRef.Namespace
 	}
 
 	previous, hadPrevious := r.Cache[req.NamespacedName]
-	if targetsOnPrem {
-		if hadPrevious && previous != parent {
-			// The entity was repointed at a different OnPremAIGateway: notify the
-			// previously referenced one so it re-renders without the entity.
-			if r.ChangeNotifier != nil {
-				r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
-			}
+	if hadPrevious && previous != parent {
+		// The entity was repointed at a different OnPremAIGateway: notify the
+		// previously referenced one so it re-renders without the entity.
+		if r.ChangeNotifier != nil {
+			r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
 		}
-		r.Cache[req.NamespacedName] = parent
-	} else {
-		if hadPrevious {
-			// The entity no longer targets an OnPremAIGateway (it was deleted or
-			// repointed at a KonnectAIGateway): notify the previously referenced
-			// gateway so it re-renders without the entity, then forget it.
-			delete(r.Cache, req.NamespacedName)
-			if r.ChangeNotifier != nil {
-				r.ChangeNotifier.NotifyChange(ctx, &previous, obj)
-			}
-		}
-		// Entities referencing a KonnectAIGateway are owned by the Konnect
-		// reconciler, not the on-prem machinery.
-		return ctrl.Result{}, nil
 	}
+	r.Cache[req.NamespacedName] = parent
 
 	if r.ChangeNotifier != nil {
 		r.ChangeNotifier.NotifyChange(ctx, &parent, obj)

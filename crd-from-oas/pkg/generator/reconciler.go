@@ -279,8 +279,14 @@ import (
 {{- if .HasSecretRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
+{{- if .ParentRefCustomTypeName}}
+	"sigs.k8s.io/controller-runtime/pkg/builder"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+{{- if .ParentRefCustomTypeName}}
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
+{{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	{{.APIGroupPackageAlias}} "{{.APIGroupPackagePath}}"
@@ -300,7 +306,25 @@ func {{.EntityName}}ReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
+{{- if .ParentRefCustomTypeName}}
+			// Entities whose AIGatewayRef targets an OnPremAIGateway are owned
+			// by the on-prem machinery and must never be enqueued into the
+			// Konnect reconciler.
+			return b.For(
+				&{{.APIGroupPackageAlias}}.{{.EntityName}}{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(func(object client.Object) bool {
+						ent, ok := object.(*{{.APIGroupPackageAlias}}.{{.EntityName}})
+						if !ok {
+							return true
+						}
+						return !ent.SkipKonnectReconciliation()
+					}),
+				),
+			)
+{{- else}}
 			return b.For(&{{.APIGroupPackageAlias}}.{{.EntityName}}{})
+{{- end}}
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -799,6 +823,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		ParentEntityName           string
 		ParentEntityVersion        string
 		ParentRefFieldName         string
+		ParentRefCustomTypeName    string
 		APIAuthPackageAlias        string
 		NeedsSeparateAPIAuthImport bool
 		APIGroupPackagePath        string
@@ -809,11 +834,17 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		CrossRefs                  []crossRefWatchData
 		HasSecretRefs              bool
 	}{
-		EntityName:                 metadata.EntityName,
-		EntityNameLowerCamel:       metadata.EntityNameLowerCamel,
-		ParentEntityName:           metadata.ParentEntityName,
-		ParentEntityVersion:        metadata.ParentEntityVersion,
-		ParentRefFieldName:         metadata.ParentRefFieldName,
+		EntityName:           metadata.EntityName,
+		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
+		ParentEntityName:     metadata.ParentEntityName,
+		ParentEntityVersion:  metadata.ParentEntityVersion,
+		ParentRefFieldName:   metadata.ParentRefFieldName,
+		ParentRefCustomTypeName: func() string {
+			if rc != nil && rc.ParentRef != nil {
+				return rc.ParentRef.TypeName
+			}
+			return ""
+		}(),
 		APIAuthPackageAlias:        apiAuthPackageAlias,
 		NeedsSeparateAPIAuthImport: needsSeparateAPIAuthImport,
 		APIGroupPackagePath:        metadata.APIGroupPackagePath,

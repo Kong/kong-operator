@@ -54,6 +54,7 @@ const (
 //
 // +kong:channels=kong-operator
 // +kubebuilder:validation:XValidation:rule="self.kind == 'OnPremAIGateway' ? (!has(self.group) || self.group == 'aigateway.konghq.com') : (!has(self.group) || self.group == 'konnect.konghq.com')",message="group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway"
+// +kubebuilder:validation:XValidation:rule="!has(oldSelf.kind) || self.kind == oldSelf.kind",message="repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"
 type AIGatewayRef struct {
 	// Type is the type of the reference. Only namespacedRef is supported.
 	//
