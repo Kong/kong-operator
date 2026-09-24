@@ -1302,7 +1302,8 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			})
 		}
 	}
-	{{- else if .NestedArrayList}}
+	{{- else}}
+	{{- if .NestedArrayList}}
 	for _, refs := range {{.RefsExpr}} {
 		for _, ref := range refs {
 	{{- else}}
@@ -1330,6 +1331,7 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 		}
 		{{- end}}
 	}
+	{{- end}}
 	{{- end}}
 	{{- end}}
 	return checks

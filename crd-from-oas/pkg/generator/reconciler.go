@@ -524,7 +524,7 @@ func {{$.EntityNameLowerCamel}}On{{.RefKind}}Ref(object client.Object) []string 
 	{{- $cr := .}}
 	{{- if .ObjectRefField}}
 	{{- range .AccessorExprs}}
-	if ref := {{.}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+	if ref := {{.Expr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
 		ns := ent.GetNamespace()
 		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
 			ns = *ref.NamespacedRef.Namespace
