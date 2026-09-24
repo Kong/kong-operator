@@ -152,7 +152,11 @@ func (r *AdminAPIEndpointsReconciler) Reconcile(ctx context.Context, _ reconcile
 			},
 		)
 		if err != nil {
-			return ctrl.Result{}, err
+			// One failing data plane must not wedge the gateway's
+			// endpoint set: skip it and keep the rest.
+			r.Log.Error(err, "failed to discover Admin API endpoints",
+				"dataplane", client.ObjectKeyFromObject(dp))
+			continue
 		}
 		adminAPIs = adminAPIs.Union(discovered)
 	}
