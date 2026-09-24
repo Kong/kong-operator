@@ -77,6 +77,16 @@
   [#5779](https://github.com/Kong/kong-operator/pull/5779),
   [#5785](https://github.com/Kong/kong-operator/pull/5785)
 
+### Fixes
+
+- Gateway: when more than one `ControlPlane` is found for a `Gateway`, the
+  extra ones are now deleted and the oldest is kept. Previously, two
+  reconciliations running close together could each create a `ControlPlane`.
+  The `Gateway` then stayed stuck with `Programmed=False`, while two control
+  plane instances served the same ingress class and sent configuration to the
+  same `DataPlane`.
+  [#5855](https://github.com/Kong/kong-operator/pull/5855)
+
 ## [v2.4.0-rapid.1]
 
 > Release date: 2026-09-23
