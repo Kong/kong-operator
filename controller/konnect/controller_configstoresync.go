@@ -82,6 +82,21 @@ type KonnectConfigStoreSyncReconciler struct {
 	eventRecorder events.EventRecorder
 }
 
+// configStoreSyncLiveGetClient gives AsReconciler the latest sync status,
+// while r.Client retains the manager's indexed cache for conflict checks.
+// Replaying an older ObservedUpdatedAt after our own PUT otherwise looks like
+// external drift and triggers another unnecessary PUT.
+type configStoreSyncLiveGetClient struct {
+	client.Client
+
+	reader client.Reader
+}
+
+// Get bypasses the manager cache for the sync being reconciled.
+func (c configStoreSyncLiveGetClient) Get(ctx context.Context, key client.ObjectKey, obj client.Object, opts ...client.GetOption) error {
+	return c.reader.Get(ctx, key, obj, opts...)
+}
+
 // SetupWithManager sets up the controller with the Manager.
 func (r *KonnectConfigStoreSyncReconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
 	r.eventRecorder = mgr.GetEventRecorder("konnectconfigstoresync")
@@ -101,7 +116,10 @@ func (r *KonnectConfigStoreSyncReconciler) SetupWithManager(_ context.Context, m
 			&configurationv1alpha1.KongReferenceGrant{},
 			handler.EnqueueRequestsFromMapFunc(r.listSyncsForReferenceGrant),
 		).
-		Complete(reconcile.AsReconciler(r.Client, r))
+		Complete(reconcile.AsReconciler(configStoreSyncLiveGetClient{
+			Client: r.Client,
+			reader: mgr.GetAPIReader(),
+		}, r))
 }
 
 // Reconcile syncs the referenced Secret into the referenced Config Store.
@@ -113,6 +131,28 @@ func (r *KonnectConfigStoreSyncReconciler) Reconcile(
 	// conditions are maintained with apimeta.SetStatusCondition on a working
 	// copy of the status and persisted with a single merge patch at the end.
 	old := sync.DeepCopy()
+	// The CRD requires at least four conditions. Its default only applies
+	// when conditions are absent, not when a partial list is patched: an
+	// invalid reference can stop reconciliation before PairValid is set.
+	// Keep every condition present even on the first, fail-closed reconcile.
+	if sync.DeletionTimestamp.IsZero() {
+		for _, conditionType := range []string{
+			konnectv1alpha1.ConfigStoreRefValidConditionType,
+			konnectv1alpha1.SecretRefValidConditionType,
+			konnectv1alpha1.KonnectConfigStoreSyncPairValidConditionType,
+			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+		} {
+			if apimeta.FindStatusCondition(sync.Status.Conditions, conditionType) == nil {
+				r.setCondition(sync, metav1.Condition{
+					Type:               conditionType,
+					Status:             metav1.ConditionUnknown,
+					Reason:             "Pending",
+					Message:            "Waiting for controller",
+					ObservedGeneration: sync.Generation,
+				})
+			}
+		}
+	}
 	res, err := r.reconcile(ctx, sync, old)
 	if !equality.Semantic.DeepEqual(old.Status, sync.Status) {
 		if perr := r.Client.Status().Patch(ctx, sync, client.MergeFrom(old)); perr != nil {
