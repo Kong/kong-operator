@@ -818,6 +818,12 @@ func (r *Reconciler) provisionControlPlane(
 			createControlPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, err.Error(), gateway.Generation),
 			gatewayConditionsAndListenersAware(gateway),
 		)
+		log.Info(logger, "multiple controlplanes found for gateway, reducing", "count", count,
+			"controlplanes", lo.Map(controlplanes, func(cp gwtypes.ControlPlane, _ int) string { return cp.Name }),
+		)
+		if rErr := k8sreduce.ReduceControlPlanes(ctx, r.Client, controlplanes); rErr != nil {
+			log.Error(logger, rErr, "reducing controlplanes failed")
+		}
 		return nil
 	}
 

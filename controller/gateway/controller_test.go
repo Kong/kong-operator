@@ -471,6 +471,67 @@ func TestProvisionControlPlane_UpdatesExtensionsWhenOnlyExtensionsDiffer(t *test
 	require.Equal(t, gatewayConfig.Spec.Extensions, updatedControlPlane.Spec.Extensions)
 }
 
+// TestProvisionControlPlane_ReducesDuplicatedControlPlanes is a regression test for
+// the Gateway getting stuck with multiple ControlPlanes: when two ControlPlanes are
+// created for the same Gateway (e.g. two reconciliations racing against a stale
+// cache), provisionControlPlane must delete all but one of them instead of
+// requeueing forever.
+func TestProvisionControlPlane_ReducesDuplicatedControlPlanes(t *testing.T) {
+	ctx := t.Context()
+
+	gateway := &gwtypes.Gateway{
+		Name:      "test-gateway",
+		Namespace: "test-namespace",
+		UID:       types.UID(uuid.NewString()),
+	}
+
+	// Both ControlPlanes share the same creation timestamp (1 second granularity),
+	// as it happens when they're created by two racing reconciliations.
+	creationTimestamp := metav1.Now()
+	newControlPlane := func(name string) *gwtypes.ControlPlane {
+		cp := &gwtypes.ControlPlane{
+			Name:              name,
+			Namespace:         gateway.Namespace,
+			CreationTimestamp: creationTimestamp,
+		}
+		k8sutils.SetOwnerForObject(cp, gateway)
+		gatewayutils.LabelObjectAsGatewayManaged(cp, gateway.Name)
+		return cp
+	}
+
+	fakeClient := fakectrlruntimeclient.
+		NewClientBuilder().
+		WithScheme(scheme.Get()).
+		WithObjects(newControlPlane("test-controlplane-b"), newControlPlane("test-controlplane-a")).
+		Build()
+
+	reconciler := Reconciler{
+		Client: fakeClient,
+	}
+
+	require.Nil(t, reconciler.provisionControlPlane(ctx, logr.Discard(), gateway, &GatewayConfiguration{}))
+
+	condition, found := k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gatewayConditionsAndListenersAware(gateway))
+	require.True(t, found)
+	assert.Equal(t, metav1.ConditionFalse, condition.Status)
+	assert.Equal(t, string(kcfgdataplane.UnableToProvisionReason), condition.Reason)
+
+	controlPlanes, err := gatewayutils.ListControlPlanesForGateway(ctx, fakeClient, gateway)
+	require.NoError(t, err)
+	require.Len(t, controlPlanes, 1)
+	assert.Equal(t, "test-controlplane-a", controlPlanes[0].Name)
+
+	// The next provisioning finds the single remaining ControlPlane and doesn't create a new one.
+	reconciler.provisionControlPlane(ctx, logr.Discard(), gateway, &GatewayConfiguration{})
+	controlPlanes, err = gatewayutils.ListControlPlanesForGateway(ctx, fakeClient, gateway)
+	require.NoError(t, err)
+	require.Len(t, controlPlanes, 1)
+	assert.Equal(t, "test-controlplane-a", controlPlanes[0].Name)
+	condition, found = k8sutils.GetCondition(kcfggateway.ControlPlaneReadyType, gatewayConditionsAndListenersAware(gateway))
+	require.True(t, found)
+	assert.Equal(t, string(kcfgdataplane.WaitingToBecomeReadyReason), condition.Reason)
+}
+
 // Test_deploymentOptionsDeepEqual_Scaling is a regression test for the DataPlane's
 // spec.deployment.scaling never being updated by provisionDataPlane: the comparator
 // used to gate whether the owned DataPlane needs a patch only compared Replicas and
