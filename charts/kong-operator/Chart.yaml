@@ -12,7 +12,7 @@ version: 1.5.0-rapid.1
 appVersion: "2.4.0-rapid.1"
 annotations:
   artifacthub.io/category: networking
-  artifacthub.io/prerelease: "false"
+  artifacthub.io/prerelease: "true"
   artifacthub.io/operator: "true"
   artifacthub.io/operatorCapabilities: Seamless Upgrades
   artifacthub.io/links: |
