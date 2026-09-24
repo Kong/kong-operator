@@ -143,6 +143,32 @@ func (i *Instance) setAdminAPIs(adminAPIs sets.Set[adminapi.DiscoveredAdminAPI])
 	i.adminAPIs = adminAPIs
 }
 
+// onAdminAPIsDiscovered stores the Admin API endpoints discovered for the
+// AIGatewayDataPlanes referencing this instance's OnPremAIGateway and, when the
+// set changed and is non-empty, notifies the sync loop so the configuration is
+// re-rendered for the discovered endpoints.
+func (i *Instance) onAdminAPIsDiscovered(
+	ctx context.Context,
+	adminAPIs sets.Set[adminapi.DiscoveredAdminAPI],
+) {
+	prev := i.AdminAPIs()
+	i.setAdminAPIs(adminAPIs)
+	if prev.Equal(adminAPIs) {
+		return
+	}
+	if adminAPIs.Len() == 0 {
+		// No endpoints discovered: there is nothing to (re)configure.
+		return
+	}
+	// Notify the sync loop so the configuration is re-rendered for the
+	// discovered endpoints. The notified object is only used for logging
+	// by the sync loop.
+	i.cn.NotifyChange(ctx, &i.env.GatewayNN, &aigatewayv1alpha1.OnPremAIGateway{
+		Namespace: i.env.GatewayNN.Namespace,
+		Name:      i.env.GatewayNN.Name,
+	})
+}
+
 // AdminAPIs returns the Admin API endpoints discovered for the AIGatewayDataPlanes
 // referencing the instance's OnPremAIGateway.
 func (i *Instance) AdminAPIs() sets.Set[adminapi.DiscoveredAdminAPI] {
@@ -303,28 +329,11 @@ func (i *Instance) Run(ctx context.Context) error {
 		return fmt.Errorf("creating Admin API endpoints discoverer: %w", err)
 	}
 	if err := (&AdminAPIEndpointsReconciler{
-		Client:     mgr.GetClient(),
-		GatewayNN:  i.env.GatewayNN,
-		Discoverer: discoverer,
-		Log:        i.logger.WithName(ControllerNameAdminAPIEndpoints),
-		OnDiscovery: func(ctx context.Context, adminAPIs sets.Set[adminapi.DiscoveredAdminAPI]) {
-			prev := i.AdminAPIs()
-			i.setAdminAPIs(adminAPIs)
-			if prev.Equal(adminAPIs) {
-				return
-			}
-			if adminAPIs.Len() == 0 {
-				// No endpoints discovered: there is nothing to (re)configure.
-				return
-			}
-			// Notify the sync loop so the configuration is re-rendered for the
-			// discovered endpoints. The notified object is only used for logging
-			// by the sync loop.
-			i.cn.NotifyChange(ctx, &i.env.GatewayNN, &aigatewayv1alpha1.OnPremAIGateway{
-				Namespace: i.env.GatewayNN.Namespace,
-				Name:      i.env.GatewayNN.Name,
-			})
-		},
+		Client:      mgr.GetClient(),
+		GatewayNN:   i.env.GatewayNN,
+		Discoverer:  discoverer,
+		Log:         i.logger.WithName(ControllerNameAdminAPIEndpoints),
+		OnDiscovery: i.onAdminAPIsDiscovered,
 	}).SetupWithManager(mgr); err != nil {
 		return fmt.Errorf("setting up Admin API endpoints discovery controller: %w", err)
 	}
