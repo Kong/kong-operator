@@ -168,7 +168,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
 			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
-				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
 				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},

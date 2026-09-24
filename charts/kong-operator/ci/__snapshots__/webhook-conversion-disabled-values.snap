@@ -132,7 +132,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -589,7 +589,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -1066,7 +1066,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -1286,7 +1286,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -1843,7 +1843,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -2050,7 +2050,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -2279,7 +2279,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -2487,7 +2487,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -5716,7 +5716,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -8760,7 +8760,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -16690,7 +16690,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:
@@ -16933,7 +16933,7 @@ spec:
                 type: object
                 x-kubernetes-validations:
                 - message: group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway
-                  rule: 'self.kind == ''OnPremAIGateway'' ? (!has(self.group) || self.group == ''aigateway.konghq.com'') : (!has(self.group) || self.group == ''konnect.konghq.com'')'
+                  rule: 'self.kind == ''OnPremAIGateway'' ? self.group == ''aigateway.konghq.com'' : self.group == ''konnect.konghq.com'''
                 - message: repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden
                   rule: '!has(oldSelf.kind) || self.kind == oldSelf.kind'
               apiSpec:

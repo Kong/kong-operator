@@ -5,6 +5,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
+	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 )
 
 // AIGatewayRefGroup is the API group of the AI Gateway (control plane) kinds
@@ -53,7 +54,7 @@ const (
 // reference must set Group to aigateway.konghq.com explicitly.
 //
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="self.kind == 'OnPremAIGateway' ? (!has(self.group) || self.group == 'aigateway.konghq.com') : (!has(self.group) || self.group == 'konnect.konghq.com')",message="group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway"
+// +kubebuilder:validation:XValidation:rule="self.kind == 'OnPremAIGateway' ? self.group == 'aigateway.konghq.com' : self.group == 'konnect.konghq.com'",message="group must be aigateway.konghq.com when kind is OnPremAIGateway, and konnect.konghq.com when kind is KonnectAIGateway"
 // +kubebuilder:validation:XValidation:rule="!has(oldSelf.kind) || self.kind == oldSelf.kind",message="repointing an entity between KonnectAIGateway and OnPremAIGateway is forbidden"
 type AIGatewayRef struct {
 	// Type is the type of the reference. Only namespacedRef is supported.
@@ -120,12 +121,30 @@ func (r AIGatewayRef) EffectiveKind() AIGatewayRefKind {
 	return r.Kind
 }
 
+// EffectiveGroup returns the API group of the referenced AI Gateway, applying
+// the konnect.konghq.com default for in-memory objects whose Group is unset
+// (the CRD schema applies the same default at the API server).
+func (r AIGatewayRef) EffectiveGroup() AIGatewayRefGroup {
+	if r.Group == "" {
+		return AIGatewayRefGroupKonnect
+	}
+	return r.Group
+}
+
 // ParentGVK returns the GroupVersionKind of the AI Gateway (control plane)
 // this reference points at, with the KonnectAIGateway default kind applied.
+// Group and Kind come from the reference (through their Effective accessors,
+// mirroring the CRD defaults); only the version, which the reference does not
+// carry, is resolved from the API group matching the kind: KonnectAIGateway
+// lives in konnect.konghq.com and OnPremAIGateway in aigateway.konghq.com.
 func (r AIGatewayRef) ParentGVK() schema.GroupVersionKind {
+	version := aigatewayv1alpha1.GroupVersion.Version
+	if r.TargetsKonnectAIGateway() {
+		version = konnectv1alpha1.GroupVersion.Version
+	}
 	return schema.GroupVersionKind{
-		Group:   string(r.Group),
-		Version: aigatewayv1alpha1.GroupVersion.Version,
+		Group:   string(r.EffectiveGroup()),
+		Version: version,
 		Kind:    string(r.EffectiveKind()),
 	}
 }
