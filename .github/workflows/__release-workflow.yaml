@@ -329,6 +329,16 @@ jobs:
     needs:
       - semver
       - build-push-images
+      # A release PR must not be openable when the published index is unsigned
+      # or has no provenance.
+      #
+      # Both jobs are skipped when `index_digest` is empty, and `needs:` propagates a skip, not
+      # a failure — so this pair is safe only while `build-push-images` is called with
+      # `push: true` hardcoded below and `Resolve the multi-arch index digest` keeps its
+      # `exit 1` on an empty digest. Making `push` conditional would turn a missing digest
+      # into a silently empty release instead of a failed run.
+      - sign-image
+      - image-provenance
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
       - github-app-token
