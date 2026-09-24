@@ -57,6 +57,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
 
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
+
 // AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayACLRef struct {

@@ -76,6 +76,11 @@
   [#5773](https://github.com/Kong/kong-operator/pull/5773),
   [#5779](https://github.com/Kong/kong-operator/pull/5779),
   [#5785](https://github.com/Kong/kong-operator/pull/5785)
+- `PortalPage`: `spec.apiSpec.parentPageIDRef` can now reference another
+  `PortalPage` (by `namespacedRef` or `konnectID`) to build page hierarchies;
+  the operator resolves the reference to the parent's Konnect ID and watches
+  referenced pages for changes.
+  [#5701](https://github.com/Kong/kong-operator/pull/5701)
 
 ## [v2.4.0-rapid.1]
 

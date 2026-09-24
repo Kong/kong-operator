@@ -1075,13 +1075,13 @@ apiGroupVersions:
           delete: {}
         reconciler: {}
       - path: /v3/portals/{portalId}/pages
-        cel:
-          spec:
-            apiSpec:
-              parentPageIDRef:
-                _validations:
-                  # TODO: https://github.com/Kong/kong-operator/issues/4008
-                  - "+kubebuilder:validation:XValidation:rule=\"self == null\",message=\"cannot set parentPageIDRef\""
+        references:
+          # Pages form a hierarchy within a portal: parentPageIDRef points at
+          # the parent PortalPage (same type) whose Konnect ID is sent as
+          # parent_page_id. https://github.com/Kong/kong-operator/issues/4008
+          - path: spec.apiSpec.parentPageIDRef
+            kinds: [PortalPage]
+            resolvesTo: id
         ops:
           getForUID:
             # Portal pages do not expose labels/tags in Konnect list responses;
