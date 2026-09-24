@@ -9,6 +9,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 	gatewayv1beta1 "sigs.k8s.io/gateway-api/apis/v1beta1"
 
@@ -1280,6 +1281,65 @@ func Test_hasMatchingCrossNamespaceSecretRef(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			result := hasMatchingCrossNamespaceSecretRef(tt.gw, tt.rg)
 			assert.Equal(t, tt.expected, result)
+		})
+	}
+}
+
+func Test_MapGatewayForGatewayClass(t *testing.T) {
+	tests := []struct {
+		name        string
+		obj         client.Object
+		gateways    []client.Object
+		expectedGWs []client.ObjectKey
+	}{
+		{
+			name: "every Gateway on the class is enqueued",
+			obj:  &gwtypes.GatewayClass{Name: "gwc1"},
+			gateways: []client.Object{
+				&gwtypes.Gateway{
+					Name: "gw1", Namespace: "ns1",
+					Spec: gatewayv1.GatewaySpec{GatewayClassName: "gwc1"},
+				},
+				&gwtypes.Gateway{
+					Name: "gw2", Namespace: "ns2",
+					Spec: gatewayv1.GatewaySpec{GatewayClassName: "gwc1"},
+				},
+				&gwtypes.Gateway{
+					Name: "gw3", Namespace: "ns1",
+					Spec: gatewayv1.GatewaySpec{GatewayClassName: "other"},
+				},
+			},
+			expectedGWs: []client.ObjectKey{
+				{Name: "gw1", Namespace: "ns1"},
+				{Name: "gw2", Namespace: "ns2"},
+			},
+		},
+		{
+			name:        "a class with no Gateways enqueues nothing",
+			obj:         &gwtypes.GatewayClass{Name: "unused"},
+			expectedGWs: nil,
+		},
+		{
+			name:        "a non-GatewayClass object is ignored",
+			obj:         &corev1.Secret{Name: "secret", Namespace: "ns1"},
+			expectedGWs: nil,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cl := fake.NewClientBuilder().
+				WithScheme(scheme.Get()).
+				WithObjects(tt.gateways...).
+				WithIndex(&gwtypes.Gateway{}, index.GatewayClassOnGatewayIndex, index.GatewayClassOnGateway).
+				Build()
+
+			requests := MapGatewayForGatewayClass(cl)(context.Background(), tt.obj)
+
+			assert.Len(t, requests, len(tt.expectedGWs))
+			for _, want := range tt.expectedGWs {
+				assert.Contains(t, requests, reconcile.Request{NamespacedName: want})
+			}
 		})
 	}
 }

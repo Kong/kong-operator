@@ -16,6 +16,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 )
@@ -67,6 +68,12 @@ func GRPCPluginsForRule(
 			if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &plugin, grpcRoute, false); err != nil {
 				return nil, err
 			}
+
+			// A generated KongPlugin is shared by every route producing the same filter set, so
+			// the inherited tags are resolved from all of its attached routes.
+			utils.AppendTagsAnnotation(logger, &plugin,
+				utils.InheritedTagsForKongObject(ctx, logger, cl, grpcRoute, &plugin))
+
 			plugins = append(plugins, plugin)
 		}
 	}
@@ -109,6 +116,10 @@ func GRPCPluginsForRule(
 		if err != nil {
 			return nil, fmt.Errorf("failed to build KongPlugin %s: %w", pluginName, err)
 		}
+
+		utils.AppendTagsAnnotation(logger, &pluginCopy,
+			utils.InheritedTagsForKongObject(ctx, logger, cl, grpcRoute, &pluginCopy))
+
 		plugins = append(plugins, pluginCopy)
 	}
 
