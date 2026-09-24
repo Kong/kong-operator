@@ -41,3 +41,38 @@ spec:
       ```
     status: published
     visibility: public
+---
+kind: PortalPage
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: portal1-page-child
+  namespace: default
+spec:
+  portalRef:
+    type: namespacedRef
+    namespacedRef:
+      name: portal1
+  apiSpec:
+    title: Authentication
+    slug: authentication
+    description: Authentication guide for the developer portal
+    content: |
+      # Authentication
+
+      All API requests require a valid API key.
+
+      ## Obtaining an API Key
+
+      Register your application in the developer portal to receive an API key.
+
+      ## Using the API Key
+
+      Include the API key in the `Authorization` header of every request.
+    # Reference another PortalPage in the cluster as the parent page.
+    # The full path of this page becomes /getting-started/authentication.
+    parentPageIDRef:
+      type: namespacedRef
+      namespacedRef:
+        name: portal1-page
+    status: published
+    visibility: public
