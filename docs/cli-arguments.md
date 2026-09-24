@@ -171,7 +171,7 @@ rows:
     default: '`10s`'
   - flag: '`--konnect-sync-period`'
     type: '`duration`'
-    description: "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again."
+    description: "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again."
     default: '`1m0s`'
   - flag: '`--kubeconfig`'
     type: '`string`'

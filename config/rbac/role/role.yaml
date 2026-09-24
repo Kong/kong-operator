@@ -553,6 +553,7 @@ rules:
   - konnectcloudgatewaynetworks
   - konnectcloudgatewaytransitgateways
   - konnectconfigstores
+  - konnectconfigstoresyncs
   - konnecteventgateways
   - portalcustomdomains
   - portalcustomizations
@@ -583,6 +584,7 @@ rules:
   - konnectcloudgatewaytransitgateways/status
   - konnectconfigstores/finalizers
   - konnectconfigstores/status
+  - konnectconfigstoresyncs/finalizers
   - konnecteventgateways/finalizers
   - konnecteventgateways/status
   - konnectextensions/finalizers
@@ -607,6 +609,14 @@ rules:
   - portalteams/finalizers
   - portalteams/status
   verbs:
+  - patch
+  - update
+- apiGroups:
+  - konnect.konghq.com
+  resources:
+  - konnectconfigstoresyncs/status
+  verbs:
+  - get
   - patch
   - update
 - apiGroups:

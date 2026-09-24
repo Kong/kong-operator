@@ -126,10 +126,11 @@ spec:
                   to. The sync reads the store's Konnect ID and Control Plane ID from the
                   referenced store's status and never resolves a Control Plane itself.
 
-                  The name is immutable; the namespace may be changed. Referencing a store
-                  in another namespace requires a KongReferenceGrant in the referenced
-                  namespace allowing it; that is enforced by the controller, not by CRD
-                  validation.
+                  The reference is immutable. Moving synchronization to another store
+                  requires creating a new KonnectConfigStoreSync and explicitly migrating
+                  consumers before removing this one. Referencing a store in another
+                  namespace requires a KongReferenceGrant in the referenced namespace
+                  allowing it; that is enforced by the controller, not by CRD validation.
                 properties:
                   name:
                     description: Name is the name of the referred resource.
@@ -206,7 +207,10 @@ spec:
                     description: |-
                       Entries lists the Secret data fields to sync. Fields may be added or
                       removed freely; the storeKey of an existing entry (identified by its
-                      field) is immutable.
+                      field) is immutable. To replace a key safely, first sync its replacement
+                      (in this sync if capacity permits, otherwise in another sync), migrate
+                      consumers, then remove the old entry. A removed entry still in use is
+                      preserved in the store but no longer updated from the Secret.
                     items:
                       description: |-
                         KonnectConfigStoreSyncSplitEntry maps one Secret data field to one Config
@@ -357,12 +361,16 @@ spec:
                 maxLength: 256
                 type: string
               entries:
-                description: Entries reports the state of each Config Store entry
-                  owned by this sync.
+                description: |-
+                  Entries reports durable state for desired Config Store entries this sync
+                  has written, including entries currently lost in per-key conflict
+                  election, plus entries retained while cleanup is blocked. Removed entries
+                  awaiting cleanup are not published in References. The limit accommodates
+                  one full desired set and one full set awaiting cleanup.
                 items:
                   description: |-
-                    KonnectConfigStoreSyncEntryStatus reports the state of one Config Store
-                    entry owned by the sync.
+                    KonnectConfigStoreSyncEntryStatus reports durable state for one Config Store
+                    entry written by the sync.
                   properties:
                     hash:
                       description: |-
@@ -422,15 +430,15 @@ spec:
                   - sourceFields
                   - storeKey
                   type: object
-                maxItems: 64
+                maxItems: 128
                 type: array
                 x-kubernetes-list-map-keys:
                 - storeKey
                 x-kubernetes-list-type: map
               entriesSynced:
                 description: |-
-                  EntriesSynced is the number of entries currently synced to the Config
-                  Store.
+                  EntriesSynced is the number of desired entries this sync currently wins
+                  and has synced to the Config Store.
                 format: int32
                 type: integer
               entriesTotal:
@@ -447,13 +455,18 @@ spec:
                 type: string
               references:
                 description: |-
-                  References publishes the reference suffixes consumers need to build
-                  vault reference strings. A full reference is
-                  {vault://<KongVault prefix>/<suffix>}.
+                  References advertises suffixes for entries still declared in the spec
+                  that this sync has successfully synced. Consumers can build a full
+                  reference as {vault://<KongVault prefix>/<suffix>}. A later failed update
+                  can leave the previous value serving; check Synced and EntriesSynced for
+                  current freshness. This is not an inventory of all remote entries: a
+                  spec-removed entry may still serve existing consumers while awaiting
+                  cleanup, but is no longer updated or advertised here. Such entries remain
+                  recorded in Entries.
                 items:
                   description: |-
                     KonnectConfigStoreSyncReference publishes the reference suffix for one
-                    synced entry (or one JSON subfield of it), so consumers can assemble a
+                    desired, synced entry (or one JSON subfield of it), so consumers can assemble a
                     vault reference string as {vault://<KongVault prefix>/<suffix>} without
                     hand-assembling the store key and subfield fragments.
                   properties:
@@ -494,8 +507,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.mode is immutable
           rule: self.spec.mode == oldSelf.spec.mode
-        - message: spec.configStoreRef.name is immutable
-          rule: self.spec.configStoreRef.name == oldSelf.spec.configStoreRef.name
+        - message: spec.configStoreRef is immutable
+          rule: self.spec.configStoreRef == oldSelf.spec.configStoreRef
     served: true
     storage: true
     subresources:
