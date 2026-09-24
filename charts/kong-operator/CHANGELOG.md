@@ -1,5 +1,24 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Strip the per-field `description` doc strings from the chart's copy of the
+  operator CRDs. The CRDs ship as chart templates, so they are part of the Helm
+  release manifest, which is stored gzip-compressed in a `Secret` capped at 1MiB.
+  With `ko-crds.enabled=true` the manifest grew past that limit and
+  `helm install`/`helm upgrade` failed with
+  `Secret ... is invalid: data: Too long`. Dropping the doc strings takes the CRD
+  set from 7.6MB to 2.9MB raw (743KB to 133KB compressed), which restores
+  Helm-managed CRD installs and upgrades with enough headroom to spare.
+  Note that `kubectl explain` no longer prints field documentation for CRDs
+  installed through this chart. The published API reference is generated from
+  `config/crd/kong-operator`, which is untouched. See
+  [CRD field descriptions](UPGRADE.md#crd-field-descriptions) for how to
+  install the CRDs with their field documentation.
+  [#5819](https://github.com/Kong/kong-operator/pull/5819)
+
 ## 1.4.0
 
 ### Added

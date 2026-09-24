@@ -60,3 +60,31 @@ kustomize build github.com/kubernetes-sigs/gateway-api/config/crd\?ref=v1.5.1 | 
 ```
 
 [gwapi]: https://github.com/kubernetes-sigs/gateway-api/
+
+## CRD field descriptions
+
+Starting with chart version 1.5.0, the Kong Operator CRDs shipped with this
+chart (`ko-crds`) no longer carry per-field `description` doc strings. With them the Helm release manifest
+grows past the 1MiB `Secret` size limit, which makes `helm install`/`helm upgrade`
+fail. As a result, `kubectl explain` does not print field documentation for
+these CRDs.
+
+If you want the field documentation in your cluster, apply the full CRDs for
+your operator version (the chart's `appVersion`) after every `helm install` or
+`helm upgrade`. The chart's CRDs differ from the full ones only by the doc
+strings, so server-side apply with a separate field manager adds the
+descriptions and leaves the Helm-managed fields, including the conversion
+webhook configuration, untouched:
+
+```sh
+# Set to the appVersion of the installed chart, e.g.
+# helm get metadata <release> -n <namespace> -o json | jq -r .appVersion
+KO_VERSION=<version>
+
+kustomize build "github.com/Kong/kong-operator/config/crd/kong-operator?ref=v${KO_VERSION}" | \
+  kubectl apply --server-side --field-manager=kong-operator-crd-docs -f -
+```
+
+Do not install the CRDs from `config/crd/kong-operator` in place of the chart's
+`ko-crds` (i.e. with `ko-crds.enabled=false`): they do not contain the
+conversion webhook configuration that the chart templates for your release.
