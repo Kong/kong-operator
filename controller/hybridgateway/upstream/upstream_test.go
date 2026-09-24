@@ -16,6 +16,7 @@ import (
 	clientgoscheme "k8s.io/client-go/kubernetes/scheme"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -247,6 +248,7 @@ func newTestScheme(t *testing.T) *runtime.Scheme {
 	s := runtime.NewScheme()
 	require.NoError(t, clientgoscheme.AddToScheme(s))
 	require.NoError(t, configurationv1alpha1.AddToScheme(s))
+	require.NoError(t, gatewayv1.Install(s))
 	return s
 }
 
@@ -690,6 +692,24 @@ func TestUpstreamForRule_TagsAnnotation(t *testing.T) {
 		TypeMeta:  httpRouteTypeMeta,
 		Name:      "test-route",
 		Namespace: "test-namespace",
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "test-gateway"}},
+			},
+		},
+	}
+
+	// The parent Gateway and its GatewayClass both carry tags, so every case also pins that the
+	// KongUpstream inherits them after its own backend-Service tags.
+	gateway := &gwtypes.Gateway{
+		Name:        "test-gateway",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{"konghq.com/tags": "gw-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        "test-class",
+		Annotations: map[string]string{"konghq.com/tags": "class-tag"},
 	}
 
 	makeRule := func(svcName string) gwtypes.HTTPRouteRule {
@@ -721,19 +741,19 @@ func TestUpstreamForRule_TagsAnnotation(t *testing.T) {
 			backendSvc: makeSvc("test-svc", "test-namespace", map[string]string{
 				"konghq.com/tags": "team-a,prod",
 			}),
-			expectedTags: commonv1alpha1.Tags{"team-a", "prod"},
+			expectedTags: commonv1alpha1.Tags{"team-a", "prod", "gw-tag", "class-tag"},
 		},
 		{
-			name:         "annotation absent",
+			name:         "annotation absent leaves only the inherited tags",
 			backendSvc:   makeSvc("test-svc", "test-namespace", nil),
-			expectedTags: nil,
+			expectedTags: commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			s := newTestScheme(t)
-			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.backendSvc).Build()
+			cl := fake.NewClientBuilder().WithScheme(s).WithObjects(tt.backendSvc, gateway, gatewayClass).Build()
 
 			upstream, err := UpstreamForRule(context.Background(), logr.Discard(), cl, httpRoute, makeRule("test-svc"), pRef, cp)
 			require.NoError(t, err)

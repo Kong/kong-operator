@@ -232,6 +232,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
 
 	cp := &commonv1alpha1.ControlPlaneRef{
 		Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
@@ -275,7 +276,7 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 	}
 
 	// certSecretNoTags carries no konghq.com/tags annotation; used to prove that tags on
-	// the backend Service do not leak into the client-cert KongCertificate (Secret-only).
+	// the backend Service do not leak into the client-cert KongCertificate.
 	certSecretNoTags := corev1.Secret{
 		Name: "my-client-cert", Namespace: "test-ns",
 		Data: map[string][]byte{
@@ -293,6 +294,9 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 		wantClientCertRef     bool
 		wantServiceCertRefNil bool
 		wantTags              commonv1alpha1.Tags
+		// withParentGateway seeds a tagged parent Gateway and GatewayClass, so the case also
+		// exercises tag inheritance.
+		withParentGateway bool
 	}{
 		{
 			name:                  "no annotation - no cert",
@@ -343,9 +347,9 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			wantServiceCertRefNil: true,
 		},
 		{
-			// Secret-only invariant: tags on the backend Service must not leak into the
-			// client-cert KongCertificate when the Secret itself carries no tags.
-			name: "tags on backend Service do not leak into client-cert KongCertificate (Secret-only)",
+			// Tags on the backend Service must not leak into the client-cert KongCertificate:
+			// its tags come from the Secret plus what is inherited from the Gateway above it.
+			name: "tags on backend Service do not leak into client-cert KongCertificate",
 			svcAnnotations: map[string]string{
 				"konghq.com/client-cert": "my-client-cert",
 				"konghq.com/protocol":    "https",
@@ -356,6 +360,23 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			wantCertName:      serviceName,
 			wantClientCertRef: true,
 			wantTags:          nil,
+		},
+		{
+			// With a tagged parent Gateway and GatewayClass in the cluster, the certificate
+			// carries the Secret's tags first and the inherited ones after, and the backend
+			// Service's tags still do not leak in.
+			name: "client-cert KongCertificate inherits the Gateway and GatewayClass tags",
+			svcAnnotations: map[string]string{
+				"konghq.com/client-cert": "my-client-cert",
+				"konghq.com/protocol":    "https",
+				"konghq.com/tags":        "svc-tag",
+			},
+			secrets:           []client.Object{&certSecret},
+			withParentGateway: true,
+			wantCertNotNil:    true,
+			wantCertName:      serviceName,
+			wantClientCertRef: true,
+			wantTags:          commonv1alpha1.Tags{"cc-tag", "gw-tag", "class-tag"},
 		},
 	}
 
@@ -368,6 +389,19 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 			}
 			objects := []client.Object{&backendSvc}
 			objects = append(objects, tt.secrets...)
+			if tt.withParentGateway {
+				objects = append(objects,
+					&gwtypes.Gateway{
+						Name:        "test-gateway",
+						Namespace:   "test-ns",
+						Annotations: map[string]string{"konghq.com/tags": "gw-tag"},
+						Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+					},
+					&gwtypes.GatewayClass{
+						Name:        "test-class",
+						Annotations: map[string]string{"konghq.com/tags": "class-tag"},
+					})
+			}
 
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(objects...).Build()
 
@@ -381,7 +415,8 @@ func TestServiceForRule_ClientCertAnnotation(t *testing.T) {
 				assert.Equal(t, "test-ns", cert.Namespace)
 				require.NotNil(t, cert.Spec.SecretRef)
 				assert.Equal(t, "my-client-cert", cert.Spec.SecretRef.Name)
-				assert.Equal(t, tt.wantTags, cert.Spec.Tags, "client-cert KongCertificate tags must come solely from the Secret")
+				assert.Equal(t, tt.wantTags, cert.Spec.Tags,
+					"client-cert KongCertificate tags must come from the Secret and the Gateway above it, never from the backend Service")
 			} else {
 				assert.Nil(t, cert, "expected KongCertificate to be nil")
 			}

@@ -2512,6 +2512,69 @@ func TestCreateTargetsFromvalidBackendRefs(t *testing.T) {
 	}
 }
 
+// TestCreateTargetsFromvalidBackendRefs_InheritedTags pins that a KongTarget carries the tags of
+// its own backend Service first and then those inherited from the parent Gateway and its
+// GatewayClass, so the least specific tags are the ones dropped if the set goes over budget.
+func TestCreateTargetsFromvalidBackendRefs_InheritedTags(t *testing.T) {
+	gateway := &gwtypes.Gateway{
+		Name:        "test-gateway",
+		Namespace:   "test-namespace",
+		Annotations: map[string]string{"konghq.com/tags": "gw-tag"},
+		Spec:        gwtypes.GatewaySpec{GatewayClassName: "test-class"},
+	}
+	gatewayClass := &gwtypes.GatewayClass{
+		Name:        "test-class",
+		Annotations: map[string]string{"konghq.com/tags": "class-tag"},
+	}
+
+	httpRoute := createGlobalTestHTTPRoute("test-route", "test-namespace")
+	httpRoute.Spec.ParentRefs = []gwtypes.ParentReference{{Name: "test-gateway"}}
+
+	tests := []struct {
+		name            string
+		serviceTags     map[string]string
+		expected        commonv1alpha1.Tags
+		withoutGateways bool
+	}{
+		{
+			name:        "backend Service tags come first, then the Gateway's and the GatewayClass's",
+			serviceTags: map[string]string{"konghq.com/tags": "svc-tag"},
+			expected:    commonv1alpha1.Tags{"svc-tag", "gw-tag", "class-tag"},
+		},
+		{
+			name:     "no backend Service tags leaves only the inherited ones",
+			expected: commonv1alpha1.Tags{"gw-tag", "class-tag"},
+		},
+		{
+			name:            "an unresolvable Gateway leaves the backend Service tags alone",
+			serviceTags:     map[string]string{"konghq.com/tags": "svc-tag"},
+			withoutGateways: true,
+			expected:        commonv1alpha1.Tags{"svc-tag"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			vbRef := createTestvalidBackendRef("service1", "test-namespace", new(int32(100)), []string{"10.0.0.1"})
+			vbRef.service.Annotations = tt.serviceTags
+
+			var objects []client.Object
+			if !tt.withoutGateways {
+				objects = append(objects, gateway, gatewayClass)
+			}
+
+			targets, err := createTargetsFromValidBackendRefs(
+				context.Background(), logr.Discard(), createTestFakeClient(objects...),
+				httpRoute, &gwtypes.ParentReference{Name: "test-gateway"}, "test-upstream",
+				[]validBackendRef[gwtypes.HTTPBackendRef]{vbRef},
+			)
+			require.NoError(t, err)
+			require.Len(t, targets, 1)
+			assert.Equal(t, tt.expected, targets[0].Spec.Tags)
+		})
+	}
+}
+
 func TestTargetsForBackendRefs(t *testing.T) {
 	// Helper function to create test context.
 	createTestContext := context.Background
