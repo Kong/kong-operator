@@ -76,6 +76,11 @@
   [#5773](https://github.com/Kong/kong-operator/pull/5773),
   [#5779](https://github.com/Kong/kong-operator/pull/5779),
   [#5785](https://github.com/Kong/kong-operator/pull/5785)
+- `PortalPage`: `spec.apiSpec.parentPageIDRef` can now reference another
+  `PortalPage` (by `namespacedRef` or `konnectID`) to build page hierarchies;
+  the operator resolves the reference to the parent's Konnect ID and watches
+  referenced pages for changes.
+  [#5701](https://github.com/Kong/kong-operator/pull/5701)
 
 ## [v2.4.0-rapid.1]
 
@@ -185,11 +190,6 @@
   `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds) target an
   `OnPremAIGateway` via `spec.aiGatewayRef`.
   [#5834](https://github.com/Kong/kong-operator/pull/5834)
-- `PortalPage`: `spec.apiSpec.parentPageIDRef` can now reference another
-  `PortalPage` (by `namespacedRef` or `konnectID`) to build page hierarchies;
-  the operator resolves the reference to the parent's Konnect ID and watches
-  referenced pages for changes.
-  [#4008](https://github.com/Kong/kong-operator/issues/4008)
 
 ### Breaking changes
 
