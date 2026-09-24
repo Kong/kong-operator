@@ -126,19 +126,57 @@ jobs:
           asset_prefix: source
 
       - uses: ./.github/actions/setup-mise
+        with:
+          # The tool is declared as [tools."github:anchore/syft"], so the
+          # backend prefix is required: a plain `syft` would not match the pin.
+          install_args: github:anchore/syft
 
+      # The subject is the index digest the tag currently resolves to, never the
+      # tag itself: a tag can be moved later, and the signature and the
+      # provenance are both on the digest.
+      #
+      # `--platform` narrows that index digest to the amd64 child manifest. Keep it:
+      # an index with no `--platform` is resolved by syft to the runner's platform,
+      # which silently yields the same SBOM under two different per-arch names.
+      # amd64 only, and the filenames here and in the release-asset list below say so: on this
+      # distroless/static image the inventory is arch-invariant (the base packages and the Go
+      # module list are the same on both architectures), so what amd64-only costs is the arm64
+      # coverage claim, not a different package list.
+      #
+      # Non-blocking on purpose. This job also gates create-release-branch and
+      # create-cherry-pick-branch-to-main, so a syft or registry flake must not
+      # cost us the release and the branches.
       - name: Generate image SBOM
+        id: image_sbom
+        continue-on-error: true
         env:
           IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
           VERSION: ${{ needs.semver.outputs.version }}
         run: |
-          syft "registry:docker.io/${IMAGE_NAME}:${VERSION}" \
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
+          syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
             --platform linux/amd64 \
             -o spdx-json=image-linux-amd64-sbom.spdx.json \
             -o cyclonedx-json=image-linux-amd64-sbom.cyclonedx.json
 
+      - name: Warn when the image SBOM is missing
+        if: ${{ steps.image_sbom.outcome != 'success' }}
+        run: echo "::warning::image SBOM generation failed; publishing the release without it"
+
+      # Both SBOM producers above are non-blocking, so this set can be partial
+      # or empty. nullglob keeps an unmatched glob from failing the release.
       - name: Generate SBOM checksums
-        run: sha256sum -- *-sbom.*.json > SHA256SUMS
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=( *-sbom.*.json )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::warning::no SBOM files were produced; skipping SHA256SUMS"
+            exit 0
+          fi
+          sha256sum -- "${files[@]}" > SHA256SUMS
 
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
