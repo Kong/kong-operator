@@ -25,6 +25,7 @@ import (
 	"github.com/go-logr/logr"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/runtime"
+	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
@@ -159,7 +160,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 
 		if _, ok := errors.AsType[instances.InstanceNotFoundError](err); ok {
 			log.Debug(logger, "control plane instance not found, creating new instance")
-			if err := r.scheduleInstance(logger, mgrID, cfg); err != nil {
+			if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem)); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
@@ -182,7 +183,7 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		if err := r.InstancesManager.StopInstance(mgrID); err != nil {
 			return ctrl.Result{}, fmt.Errorf("failed to stop instance: %w", err)
 		}
-		if err := r.scheduleInstance(logger, mgrID, cfg); err != nil {
+		if err := r.scheduleInstance(logger, mgrID, cfg, client.ObjectKeyFromObject(onprem)); err != nil {
 			// The stopped instance is removed from the manager asynchronously, so it can still be
 			// registered here. Requeue and reschedule once it's gone.
 			if _, ok := errors.AsType[instances.InstanceWithIDAlreadyScheduledError](err); !ok {
@@ -219,10 +220,12 @@ func (r *Reconciler) configFromSpec(
 }
 
 // scheduleInstance creates a new control plane instance and schedules it in the multi-instance manager.
-func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg multiinstanceai.Config) error {
-	// TODO: When https://github.com/Kong/kong-operator/pull/5734 is done we should
-	// handle multiple data plane Admin API services which can be associated with
-	// a single control plane - OnPremAIGateway - instance.
+func (r *Reconciler) scheduleInstance(
+	logger logr.Logger,
+	mgrID manager.ID,
+	cfg multiinstanceai.Config,
+	gatewayNN k8stypes.NamespacedName,
+) error {
 	log.Debug(logger, "creating new instance", "manager_id", mgrID, "manager_config", cfg)
 	if err := r.InstancesManager.ScheduleInstance(multiinstanceai.NewInstance(
 		mgrID, logger, cfg,
@@ -230,6 +233,9 @@ func (r *Reconciler) scheduleInstance(logger logr.Logger, mgrID manager.ID, cfg 
 			RestConfig:       r.RestConfig,
 			Scheme:           r.Scheme,
 			CacheSyncTimeout: r.CacheSyncTimeout,
+			// Used by the instance to discover the AIGatewayDataPlanes referencing
+			// this gateway and their Admin API endpoints.
+			GatewayNN: gatewayNN,
 		},
 	)); err != nil {
 		return fmt.Errorf("failed to schedule instance: %w", err)

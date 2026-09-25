@@ -47,6 +47,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/kubernetes/object/status"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/versions"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 	"github.com/kong/kong-operator/v2/modules/manager/metadata"
 )
 
@@ -117,7 +118,7 @@ func New(
 		m.kubeconfig = kubeconfigConstructed
 	}
 
-	adminAPIsDiscoverer, err := adminapi.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
+	adminAPIsDiscoverer, err := adminapidiscovery.NewDiscoverer(sets.New(c.KongAdminSvcPortNames...))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create admin apis discoverer: %w", err)
 	}

@@ -15,11 +15,12 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util/clock"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // ClientFactory is responsible for creating Admin API clients.
 type ClientFactory interface {
-	CreateAdminAPIClient(ctx context.Context, address adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
+	CreateAdminAPIClient(ctx context.Context, address adminapidiscovery.DiscoveredAdminAPI) (*adminapi.Client, error)
 }
 
 // AdminAPIClientsProvider allows fetching the most recent list of Admin API clients of Gateways that
@@ -43,7 +44,7 @@ type Ticker interface {
 type AdminAPIClientsManager struct {
 	// discoveredAdminAPIsNotifyChan is used for notifications that contain Admin API
 	// endpoints list that should be used for configuring the dataplane.
-	discoveredAdminAPIsNotifyChan    chan []adminapi.DiscoveredAdminAPI
+	discoveredAdminAPIsNotifyChan    chan []adminapidiscovery.DiscoveredAdminAPI
 	gatewayClientsChangesSubscribers []chan struct{}
 
 	dbMode dpconf.DBMode
@@ -57,7 +58,7 @@ type AdminAPIClientsManager struct {
 
 	// pendingGatewayClients represent all Kong Gateway data-planes that were discovered but are not ready to be
 	// configured.
-	pendingGatewayClients map[string]adminapi.DiscoveredAdminAPI
+	pendingGatewayClients map[string]adminapidiscovery.DiscoveredAdminAPI
 
 	readinessReconciliationInterval time.Duration
 
@@ -113,11 +114,11 @@ func NewAdminAPIClientsManager(
 	})
 	c := &AdminAPIClientsManager{
 		readyGatewayClients:             readyClients,
-		pendingGatewayClients:           make(map[string]adminapi.DiscoveredAdminAPI),
+		pendingGatewayClients:           make(map[string]adminapidiscovery.DiscoveredAdminAPI),
 		readinessReconciliationInterval: managercfg.DefaultDataPlanesReadinessReconciliationInterval,
 		readinessChecker:                readinessChecker,
 		readinessReconciliationTicker:   clock.NewTicker(),
-		discoveredAdminAPIsNotifyChan:   make(chan []adminapi.DiscoveredAdminAPI),
+		discoveredAdminAPIsNotifyChan:   make(chan []adminapidiscovery.DiscoveredAdminAPI),
 		runningChan:                     make(chan struct{}),
 		logger:                          ctrl.LoggerFrom(ctx),
 	}
@@ -148,7 +149,7 @@ func (c *AdminAPIClientsManager) Run(ctx context.Context) {
 
 // Notify receives a list of addresses that KongClient should use from now on as
 // a list of Kong Admin API endpoints.
-func (c *AdminAPIClientsManager) Notify(ctx context.Context, discoveredAPIs []adminapi.DiscoveredAdminAPI) {
+func (c *AdminAPIClientsManager) Notify(ctx context.Context, discoveredAPIs []adminapidiscovery.DiscoveredAdminAPI) {
 	// Ensure here that we're not done.
 	select {
 	case <-ctx.Done():
@@ -249,7 +250,7 @@ func (c *AdminAPIClientsManager) gatewayClientsReconciliationLoop(ctx context.Co
 // onDiscoveredAdminAPIsNotification is called when a new notification about Admin API addresses change is received.
 // It will adjust lists of gateway clients and notify subscribers about the change if readyGatewayClients list has
 // changed.
-func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(ctx context.Context, discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) {
+func (c *AdminAPIClientsManager) onDiscoveredAdminAPIsNotification(ctx context.Context, discoveredAdminAPIs []adminapidiscovery.DiscoveredAdminAPI) {
 	c.logger.V(logging.DebugLevel).Info("Received notification about Admin API addresses change")
 
 	clientsChanged := c.adjustGatewayClients(discoveredAdminAPIs)
@@ -273,7 +274,7 @@ func (c *AdminAPIClientsManager) onReadinessReconciliationTick(ctx context.Conte
 // discovered Admin APIs slice. It consults BaseRootURLs of already stored clients with each
 // of the discovered Admin APIs and creates only those clients that we don't have.
 // It returns true if the gatewayClients slice has been changed, false otherwise.
-func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapi.DiscoveredAdminAPI) (changed bool) {
+func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []adminapidiscovery.DiscoveredAdminAPI) (changed bool) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -298,7 +299,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 	// Remove ready clients that are not present in the discovered list.
 	for _, cl := range c.readyGatewayClients {
-		clientNotOnDiscoveredList := !lo.ContainsBy(discoveredAdminAPIs, func(d adminapi.DiscoveredAdminAPI) bool {
+		clientNotOnDiscoveredList := !lo.ContainsBy(discoveredAdminAPIs, func(d adminapidiscovery.DiscoveredAdminAPI) bool {
 			return d.Address == cl.BaseRootURL()
 		})
 		if clientNotOnDiscoveredList {
@@ -309,7 +310,7 @@ func (c *AdminAPIClientsManager) adjustGatewayClients(discoveredAdminAPIs []admi
 
 	// Remove pending clients that are not present in the discovered list.
 	for _, cl := range c.pendingGatewayClients {
-		clientNotOnDiscoveredList := !lo.ContainsBy(discoveredAdminAPIs, func(d adminapi.DiscoveredAdminAPI) bool {
+		clientNotOnDiscoveredList := !lo.ContainsBy(discoveredAdminAPIs, func(d adminapidiscovery.DiscoveredAdminAPI) bool {
 			return d.Address == cl.Address
 		})
 		if clientNotOnDiscoveredList {
