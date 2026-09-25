@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"testing"
+	"time"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -182,17 +183,18 @@ func TestFakeConfigStoreSecretsUpdatedAtAdvancesOnIdenticalWrite(t *testing.T) {
 	f := NewFakeConfigStoreSecrets()
 	createSecret(t, f, "key", "same-value")
 
-	getUpdatedAt := func() string {
+	getUpdatedAt := func() time.Time {
 		resp, err := f.GetConfigStoreSecret(context.Background(), sdkkonnectops.GetConfigStoreSecretRequest{
 			ControlPlaneID: fakeTestCPID,
 			ConfigStoreID:  fakeTestStoreID,
 			Key:            "key",
 		})
 		require.NoError(t, err)
-		return resp.ConfigStoreSecret.UpdatedAt.String()
+		return *resp.ConfigStoreSecret.UpdatedAt
 	}
 
 	before := getUpdatedAt()
+	assert.NotZero(t, before.Nanosecond(), "fake timestamps must exercise status precision loss")
 	_, err := f.UpdateConfigStoreSecret(context.Background(), sdkkonnectops.UpdateConfigStoreSecretRequest{
 		ControlPlaneID: fakeTestCPID,
 		ConfigStoreID:  fakeTestStoreID,
@@ -203,7 +205,7 @@ func TestFakeConfigStoreSecretsUpdatedAtAdvancesOnIdenticalWrite(t *testing.T) {
 	})
 	require.NoError(t, err)
 	after := getUpdatedAt()
-	assert.NotEqual(t, before, after, "updated_at must advance even on identical-value writes")
+	assert.True(t, after.After(before), "updated_at must advance even on identical-value writes")
 }
 
 func TestFakeConfigStoreSecretsMissingKeyOperations(t *testing.T) {

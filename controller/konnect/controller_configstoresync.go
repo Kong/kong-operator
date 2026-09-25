@@ -136,22 +136,7 @@ func (r *KonnectConfigStoreSyncReconciler) Reconcile(
 	// invalid reference can stop reconciliation before PairValid is set.
 	// Keep every condition present even on the first, fail-closed reconcile.
 	if sync.DeletionTimestamp.IsZero() {
-		for _, conditionType := range []string{
-			konnectv1alpha1.ConfigStoreRefValidConditionType,
-			konnectv1alpha1.SecretRefValidConditionType,
-			konnectv1alpha1.KonnectConfigStoreSyncPairValidConditionType,
-			konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
-		} {
-			if apimeta.FindStatusCondition(sync.Status.Conditions, conditionType) == nil {
-				r.setCondition(sync, metav1.Condition{
-					Type:               conditionType,
-					Status:             metav1.ConditionUnknown,
-					Reason:             "Pending",
-					Message:            "Waiting for controller",
-					ObservedGeneration: sync.Generation,
-				})
-			}
-		}
+		r.ensureConditions(sync)
 	}
 	res, err := r.reconcile(ctx, sync, old)
 	if !equality.Semantic.DeepEqual(old.Status, sync.Status) {
@@ -1272,7 +1257,8 @@ func configStoreSecretWriteDecision(
 		}
 		return true, ""
 	}
-	if observedUpdatedAt != nil && updatedAt.After(observedUpdatedAt.Time) {
+	if observedUpdatedAt != nil &&
+		updatedAt.Truncate(time.Second).After(observedUpdatedAt.Truncate(time.Second)) {
 		// updated_at advances on every store-side write, even of an identical
 		// value, so a newer timestamp means something external touched the
 		// entry. Re-write to reassert our value.
@@ -1350,11 +1336,37 @@ func (r *KonnectConfigStoreSyncReconciler) setCondition(
 	apimeta.SetStatusCondition(&sync.Status.Conditions, condition)
 }
 
+func (r *KonnectConfigStoreSyncReconciler) ensureConditions(
+	sync *konnectv1alpha1.KonnectConfigStoreSync,
+) {
+	for _, conditionType := range []string{
+		konnectv1alpha1.ConfigStoreRefValidConditionType,
+		konnectv1alpha1.SecretRefValidConditionType,
+		konnectv1alpha1.KonnectConfigStoreSyncPairValidConditionType,
+		konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
+	} {
+		if apimeta.FindStatusCondition(sync.Status.Conditions, conditionType) == nil {
+			r.setCondition(sync, metav1.Condition{
+				Type:               conditionType,
+				Status:             metav1.ConditionUnknown,
+				Reason:             "Pending",
+				Message:            "Waiting for controller",
+				ObservedGeneration: sync.Generation,
+			})
+		}
+	}
+}
+
 func (r *KonnectConfigStoreSyncReconciler) setConditionSynced(
 	sync *konnectv1alpha1.KonnectConfigStoreSync,
 	status metav1.ConditionStatus,
 	reason, message string,
 ) {
+	if !sync.DeletionTimestamp.IsZero() {
+		// A blocked deletion still persists status and must satisfy the CRD's
+		// four-condition minimum. Successful deletion never reaches this path.
+		r.ensureConditions(sync)
+	}
 	r.setCondition(sync, metav1.Condition{
 		Type:               konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 		Status:             status,

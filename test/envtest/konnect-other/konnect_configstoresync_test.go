@@ -49,9 +49,9 @@ var configStoreSyncRetryBackoff = wait.Backoff{
 	Steps: 20, Duration: 100 * time.Millisecond, Factor: 1.3, Jitter: 0.1,
 }
 
-// The controller may replay an older cached status while its own status
-// updates are still being observed. Wait for that watch backlog to drain
-// before taking a snapshot of the fake's calls for fail-closed assertions.
+// In-flight reconciles triggered by earlier watches may still write after
+// the awaited condition appears. Wait for the fake's call log to stop
+// changing before snapshotting it for fail-closed assertions.
 func (e *configStoreSyncEnvtest) waitSettled(t *testing.T) {
 	t.Helper()
 	require.Eventually(t, func() bool {
@@ -218,6 +218,7 @@ func combinedHash(t *testing.T, cert, key []byte) string {
 }
 
 func TestKonnectConfigStoreSyncEnvtestCombined(t *testing.T) {
+	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
 	cert1, key1 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 	cert2, key2 := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
@@ -290,6 +291,7 @@ func TestKonnectConfigStoreSyncEnvtestCombined(t *testing.T) {
 }
 
 func TestKonnectConfigStoreSyncEnvtestPreflight(t *testing.T) {
+	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
 	// The Config Store API measures decoded bytes, not runes. The existing
 	// fake's own unit tests assert that 5120/512 bytes succeed and +1 fail.
@@ -361,6 +363,7 @@ func stringsToBytes(length int) []byte {
 }
 
 func TestKonnectConfigStoreSyncEnvtestRecovery(t *testing.T) {
+	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
 	secret := e.secret(t, "source", map[string][]byte{"first": []byte("one"), "second": []byte("two")})
 	var failSecond atomic.Bool
@@ -438,6 +441,7 @@ func TestKonnectConfigStoreSyncEnvtestRecovery(t *testing.T) {
 }
 
 func TestKonnectConfigStoreSyncEnvtestOrphanRecreate(t *testing.T) {
+	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
 	secret := e.secret(t, "source", map[string][]byte{"tls.crt": cert, "tls.key": key})
@@ -463,6 +467,7 @@ func TestKonnectConfigStoreSyncEnvtestOrphanRecreate(t *testing.T) {
 }
 
 func TestKonnectConfigStoreSyncEnvtestConflictOrder(t *testing.T) {
+	t.Parallel()
 	for _, firstName := range []string{"a-first", "z-first"} {
 		t.Run(firstName, func(t *testing.T) {
 			e := newConfigStoreSyncEnvtest(t)
@@ -526,6 +531,7 @@ func grantConfigStoreSyncReference(t *testing.T, e *configStoreSyncEnvtest, from
 }
 
 func TestKonnectConfigStoreSyncEnvtestReferenceGrants(t *testing.T) {
+	t.Parallel()
 	e := newConfigStoreSyncEnvtest(t)
 	other := deploy.Namespace(t, e.ctx, e.cl)
 	cert, key := certificate.MustGenerateCertPEMFormat(certificate.WithKeyType(certificate.ECDSA))
