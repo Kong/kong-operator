@@ -31,6 +31,7 @@ func testGeneratedPortalForSDKOps() *konnectv1alpha1.Portal {
 				AuthenticationEnabled:   "Enabled",
 				AutoApproveApplications: "Enabled",
 				AutoApproveDevelopers:   "Enabled",
+				CreateDefaultContent:    "Enabled",
 				DefaultAPIVisibility:    "public",
 				DefaultPageVisibility:   "public",
 				Description:             new("test-value"),

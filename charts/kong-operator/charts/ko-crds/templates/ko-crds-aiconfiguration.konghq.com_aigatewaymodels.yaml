@@ -1004,6 +1004,16 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -1024,6 +1034,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -3494,11 +3506,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -4887,6 +4910,16 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -4907,6 +4940,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -7377,11 +7412,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:

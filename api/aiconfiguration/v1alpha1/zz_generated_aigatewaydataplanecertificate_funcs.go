@@ -9,6 +9,35 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 )
 
+// GetKonnectLabels gets the Konnect labels from the object's API spec.
+func (obj *AIGatewayDataPlaneCertificate) GetKonnectLabels() map[string]string {
+	if obj.Spec.APISpec.Labels == nil {
+		return nil
+	}
+
+	labels := make(map[string]string, len(obj.Spec.APISpec.Labels))
+	for key, value := range obj.Spec.APISpec.Labels {
+		labels[key] = string(value)
+	}
+
+	return labels
+}
+
+// SetKonnectLabels sets the Konnect labels in the object's API spec.
+func (obj *AIGatewayDataPlaneCertificate) SetKonnectLabels(labels map[string]string) {
+	if labels == nil {
+		obj.Spec.APISpec.Labels = nil
+		return
+	}
+
+	converted := make(PublicLabels, len(labels))
+	for key, value := range labels {
+		converted[key] = PublicLabelsValue(value)
+	}
+
+	obj.Spec.APISpec.Labels = converted
+}
+
 // GetKonnectStatus returns the Konnect status contained in the AIGatewayDataPlaneCertificate status.
 func (obj *AIGatewayDataPlaneCertificate) GetKonnectStatus() *konnectv1alpha2.KonnectEntityStatus {
 	return &obj.Status.KonnectEntityStatus

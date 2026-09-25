@@ -64,6 +64,20 @@ spec:
                 description: APISpec defines the desired state of the resource's API
                   spec fields.
                 properties:
+                  managedBy:
+                    additionalProperties:
+                      description: ManagedByValue is the value type for ManagedBy.
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    description: |-
+                      Stores information about what manages this entity, such as the tool or
+                      system responsible for its lifecycle (for example, `terraform`).
+
+                      Keys must be 1–63 characters long and start with an alphanumeric
+                      character.
+                    type: object
                   name:
                     maxLength: 100
                     minLength: 1

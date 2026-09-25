@@ -2346,6 +2346,20 @@ spec:
                   description:
                     maxLength: 1024
                     type: string
+                  labels:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
+                  managedBy:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
                   title:
                     maxLength: 256
                     minLength: 1
@@ -3183,6 +3197,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -3502,6 +3712,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -4300,6 +4706,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                     required:
                     - config
                     - displayName
@@ -4981,6 +5583,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -5491,6 +6289,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -8211,11 +9205,148 @@ spec:
                     - ollama
                     - openai
                     - sagemaker
+                    - typesafe
                     - vercel
                     - vllm
                     - xai
                     minLength: 1
                     type: string
+                  typesafe:
+                    properties:
+                      config:
+                        properties:
+                          auth:
+                            properties:
+                              headers:
+                                items:
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline; secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                              params:
+                                items:
+                                  properties:
+                                    location:
+                                      enum:
+                                      - body
+                                      - query
+                                      maxLength: 253
+                                      type: string
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline; secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                            type: object
+                        required:
+                        - auth
+                        type: object
+                      displayName:
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                        type: string
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
                   vercel:
                     properties:
                       config:
@@ -9701,6 +10832,16 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -9721,6 +10862,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -12191,11 +13334,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -13584,6 +14738,16 @@ spec:
                         required:
                         - route
                         type: object
+                      datastores:
+                        items:
+                          properties:
+                            name:
+                              maxLength: 255
+                              minLength: 2
+                              pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                              type: string
+                          type: object
+                        type: array
                       displayName:
                         maxLength: 256
                         minLength: 1
@@ -13604,6 +14768,8 @@ spec:
                               - gemini
                               - huggingface
                               - openai
+                              - passthrough
+                              - typesafe
                               maxLength: 253
                               type: string
                           type: object
@@ -16074,11 +17240,22 @@ spec:
                                   - ollama
                                   - openai
                                   - sagemaker
+                                  - typesafe
                                   - vercel
                                   - vllm
                                   - xai
                                   minLength: 1
                                   type: string
+                                typesafe:
+                                  properties:
+                                    inputCost:
+                                      type: number
+                                    outputCost:
+                                      type: number
+                                    upstreamURL:
+                                      maxLength: 253
+                                      type: string
+                                  type: object
                                 vercel:
                                   properties:
                                     cacheReadCost:
@@ -16757,6 +17934,16 @@ spec:
                     x-kubernetes-validations:
                     - message: value required when type=inline; secretRef required when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  datastores:
+                    items:
+                      properties:
+                        name:
+                          maxLength: 255
+                          minLength: 2
+                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                          type: string
+                      type: object
+                    type: array
                   displayName:
                     maxLength: 256
                     minLength: 1
@@ -21822,6 +23009,42 @@ spec:
                     properties:
                       anonymous:
                         type: object
+                      saslAwsIam:
+                        properties:
+                          saslAwsIam:
+                            properties:
+                              assumeRole:
+                                properties:
+                                  assumeRole:
+                                    properties:
+                                      arn:
+                                        maxLength: 2048
+                                        minLength: 10
+                                        pattern: ^arn:aws(-[a-z-]+)?:iam:.+
+                                        type: string
+                                      sessionName:
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - arn
+                                    type: object
+                                required:
+                                - assumeRole
+                                type: object
+                              defaultProviderChain:
+                                type: object
+                              type:
+                                enum:
+                                - assumeRole
+                                - defaultProviderChain
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        required:
+                        - saslAwsIam
+                        type: object
                       saslPlain:
                         properties:
                           password:
@@ -21861,6 +23084,7 @@ spec:
                       type:
                         enum:
                         - anonymous
+                        - saslAwsIam
                         - saslPlain
                         - saslScram
                         minLength: 1
@@ -23364,6 +24588,265 @@ spec:
                     required:
                     - config
                     type: object
+                  maskFields:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          failureMode:
+                            enum:
+                            - error
+                            - skip
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          maskFields:
+                            items:
+                              properties:
+                                paths:
+                                  properties:
+                                    array:
+                                      items:
+                                        properties:
+                                          match:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - match
+                                        type: object
+                                      type: array
+                                    expression:
+                                      type: string
+                                    type:
+                                      enum:
+                                      - array
+                                      - expression
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                strategy:
+                                  properties:
+                                    email:
+                                      properties:
+                                        email:
+                                          properties:
+                                            domain:
+                                              properties:
+                                                keepAll:
+                                                  type: object
+                                                keepChars:
+                                                  properties:
+                                                    keepChars:
+                                                      properties:
+                                                        first:
+                                                          minimum: 0
+                                                          type: integer
+                                                        last:
+                                                          minimum: 0
+                                                          type: integer
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - keepChars
+                                                  type: object
+                                                replace:
+                                                  properties:
+                                                    replace:
+                                                      properties:
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - replace
+                                                  type: object
+                                                type:
+                                                  enum:
+                                                  - keepAll
+                                                  - keepChars
+                                                  - replace
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                            localPart:
+                                              properties:
+                                                keepChars:
+                                                  properties:
+                                                    keepChars:
+                                                      properties:
+                                                        first:
+                                                          minimum: 0
+                                                          type: integer
+                                                        last:
+                                                          minimum: 0
+                                                          type: integer
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - keepChars
+                                                  type: object
+                                                replace:
+                                                  properties:
+                                                    replace:
+                                                      properties:
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - replace
+                                                  type: object
+                                                type:
+                                                  enum:
+                                                  - keepChars
+                                                  - replace
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                          required:
+                                          - domain
+                                          - localPart
+                                          type: object
+                                      required:
+                                      - email
+                                      type: object
+                                    keepChars:
+                                      properties:
+                                        keepChars:
+                                          properties:
+                                            first:
+                                              minimum: 0
+                                              type: integer
+                                            last:
+                                              minimum: 0
+                                              type: integer
+                                            phrase:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - phrase
+                                          type: object
+                                      required:
+                                      - keepChars
+                                      type: object
+                                    replace:
+                                      properties:
+                                        replace:
+                                          properties:
+                                            phrase:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - phrase
+                                          type: object
+                                      required:
+                                      - replace
+                                      type: object
+                                    type:
+                                      enum:
+                                      - email
+                                      - keepChars
+                                      - replace
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - paths
+                              - strategy
+                              type: object
+                            maxItems: 256
+                            type: array
+                        required:
+                        - failureMode
+                        - maskFields
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        properties:
+                          konnectID:
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            properties:
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   modifyHeaders:
                     properties:
                       condition:
@@ -23494,6 +24977,35 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
+                              key:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               keyValidationAction:
                                 enum:
                                 - mark
@@ -23532,6 +25044,35 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              value:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               valueValidationAction:
                                 enum:
                                 - mark
@@ -23642,13 +25183,280 @@ spec:
                         maxLength: 255
                         type: string
                     type: object
+                  transcode:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          avro:
+                            properties:
+                              failureMode:
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              schemaRefDestination:
+                                properties:
+                                  confluentFormat:
+                                    type: object
+                                  none:
+                                    type: object
+                                  recordHeader:
+                                    properties:
+                                      recordHeader:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    type: object
+                                  type:
+                                    enum:
+                                    - confluentFormat
+                                    - none
+                                    - recordHeader
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      reference:
+                                        properties:
+                                          schemaRegistry:
+                                            properties:
+                                              id:
+                                                type: object
+                                              name:
+                                                properties:
+                                                  name:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - name
+                                                type: object
+                                              type:
+                                                enum:
+                                                - id
+                                                - name
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          subject:
+                                            maxLength: 253
+                                            type: string
+                                          version:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    required:
+                                    - reference
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaRefDestination
+                            - schemaSource
+                            type: object
+                          json:
+                            properties:
+                              failureMode:
+                                enum:
+                                - error
+                                - skip
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              schemaRefDestination:
+                                properties:
+                                  confluentFormat:
+                                    type: object
+                                  none:
+                                    type: object
+                                  recordHeader:
+                                    properties:
+                                      recordHeader:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    type: object
+                                  type:
+                                    enum:
+                                    - confluentFormat
+                                    - none
+                                    - recordHeader
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      reference:
+                                        properties:
+                                          schemaRegistry:
+                                            properties:
+                                              id:
+                                                type: object
+                                              name:
+                                                properties:
+                                                  name:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - name
+                                                type: object
+                                              type:
+                                                enum:
+                                                - id
+                                                - name
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          subject:
+                                            maxLength: 253
+                                            type: string
+                                          version:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    required:
+                                    - reference
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaRefDestination
+                            type: object
+                          outputFormat:
+                            enum:
+                            - avro
+                            - json
+                            minLength: 1
+                            type: string
+                        required:
+                        - outputFormat
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        properties:
+                          konnectID:
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            properties:
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   type:
                     enum:
                     - decrypt
                     - decryptFields
+                    - maskFields
                     - modifyHeaders
                     - schemaValidation
                     - skipRecord
+                    - transcode
                     minLength: 1
                     type: string
                 required:
@@ -24688,6 +26496,264 @@ spec:
                     required:
                     - config
                     type: object
+                  maskFields:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          failureMode:
+                            enum:
+                            - reject
+                            - passthrough
+                            - mark
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          maskFields:
+                            items:
+                              properties:
+                                paths:
+                                  properties:
+                                    array:
+                                      items:
+                                        properties:
+                                          match:
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - match
+                                        type: object
+                                      type: array
+                                    expression:
+                                      type: string
+                                    type:
+                                      enum:
+                                      - array
+                                      - expression
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                                strategy:
+                                  properties:
+                                    email:
+                                      properties:
+                                        email:
+                                          properties:
+                                            domain:
+                                              properties:
+                                                keepAll:
+                                                  type: object
+                                                keepChars:
+                                                  properties:
+                                                    keepChars:
+                                                      properties:
+                                                        first:
+                                                          minimum: 0
+                                                          type: integer
+                                                        last:
+                                                          minimum: 0
+                                                          type: integer
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - keepChars
+                                                  type: object
+                                                replace:
+                                                  properties:
+                                                    replace:
+                                                      properties:
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - replace
+                                                  type: object
+                                                type:
+                                                  enum:
+                                                  - keepAll
+                                                  - keepChars
+                                                  - replace
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                            localPart:
+                                              properties:
+                                                keepChars:
+                                                  properties:
+                                                    keepChars:
+                                                      properties:
+                                                        first:
+                                                          minimum: 0
+                                                          type: integer
+                                                        last:
+                                                          minimum: 0
+                                                          type: integer
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - keepChars
+                                                  type: object
+                                                replace:
+                                                  properties:
+                                                    replace:
+                                                      properties:
+                                                        phrase:
+                                                          maxLength: 255
+                                                          minLength: 1
+                                                          type: string
+                                                      required:
+                                                      - phrase
+                                                      type: object
+                                                  required:
+                                                  - replace
+                                                  type: object
+                                                type:
+                                                  enum:
+                                                  - keepChars
+                                                  - replace
+                                                  minLength: 1
+                                                  type: string
+                                              required:
+                                              - type
+                                              type: object
+                                          required:
+                                          - domain
+                                          - localPart
+                                          type: object
+                                      required:
+                                      - email
+                                      type: object
+                                    keepChars:
+                                      properties:
+                                        keepChars:
+                                          properties:
+                                            first:
+                                              minimum: 0
+                                              type: integer
+                                            last:
+                                              minimum: 0
+                                              type: integer
+                                            phrase:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - phrase
+                                          type: object
+                                      required:
+                                      - keepChars
+                                      type: object
+                                    replace:
+                                      properties:
+                                        replace:
+                                          properties:
+                                            phrase:
+                                              maxLength: 255
+                                              minLength: 1
+                                              type: string
+                                          required:
+                                          - phrase
+                                          type: object
+                                      required:
+                                      - replace
+                                      type: object
+                                    type:
+                                      enum:
+                                      - email
+                                      - keepChars
+                                      - replace
+                                      minLength: 1
+                                      type: string
+                                  required:
+                                  - type
+                                  type: object
+                              required:
+                              - paths
+                              - strategy
+                              type: object
+                            maxItems: 256
+                            type: array
+                        required:
+                        - failureMode
+                        - maskFields
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        properties:
+                          konnectID:
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            properties:
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   modifyHeaders:
                     properties:
                       condition:
@@ -24823,6 +26889,35 @@ spec:
                                 - mark
                                 maxLength: 253
                                 type: string
+                              key:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               keyValidationAction:
                                 enum:
                                 - reject
@@ -24861,6 +26956,35 @@ spec:
                                 - Enabled
                                 - Disabled
                                 type: string
+                              value:
+                                properties:
+                                  avro:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  json:
+                                    properties:
+                                      schema:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - schema
+                                    type: object
+                                  schemaType:
+                                    enum:
+                                    - avro
+                                    - json
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - schemaType
+                                type: object
                               valueValidationAction:
                                 enum:
                                 - reject
@@ -24953,12 +27077,277 @@ spec:
                     required:
                     - config
                     type: object
+                  transcode:
+                    properties:
+                      condition:
+                        maxLength: 1000
+                        type: string
+                      config:
+                        properties:
+                          avro:
+                            properties:
+                              failureMode:
+                                enum:
+                                - reject
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              schemaRefDestination:
+                                properties:
+                                  confluentFormat:
+                                    type: object
+                                  none:
+                                    type: object
+                                  recordHeader:
+                                    properties:
+                                      recordHeader:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    type: object
+                                  type:
+                                    enum:
+                                    - confluentFormat
+                                    - none
+                                    - recordHeader
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      reference:
+                                        properties:
+                                          schemaRegistry:
+                                            properties:
+                                              id:
+                                                type: object
+                                              name:
+                                                properties:
+                                                  name:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - name
+                                                type: object
+                                              type:
+                                                enum:
+                                                - id
+                                                - name
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          subject:
+                                            maxLength: 253
+                                            type: string
+                                          version:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    required:
+                                    - reference
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaRefDestination
+                            - schemaSource
+                            type: object
+                          json:
+                            properties:
+                              failureMode:
+                                enum:
+                                - reject
+                                - passthrough
+                                - mark
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              schemaRefDestination:
+                                properties:
+                                  confluentFormat:
+                                    type: object
+                                  none:
+                                    type: object
+                                  recordHeader:
+                                    properties:
+                                      recordHeader:
+                                        properties:
+                                          name:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    type: object
+                                  type:
+                                    enum:
+                                    - confluentFormat
+                                    - none
+                                    - recordHeader
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              schemaSource:
+                                properties:
+                                  inline:
+                                    properties:
+                                      inline:
+                                        maxLength: 253
+                                        minLength: 1
+                                        type: string
+                                    required:
+                                    - inline
+                                    type: object
+                                  reference:
+                                    properties:
+                                      reference:
+                                        properties:
+                                          schemaRegistry:
+                                            properties:
+                                              id:
+                                                type: object
+                                              name:
+                                                properties:
+                                                  name:
+                                                    maxLength: 255
+                                                    minLength: 1
+                                                    type: string
+                                                required:
+                                                - name
+                                                type: object
+                                              type:
+                                                enum:
+                                                - id
+                                                - name
+                                                minLength: 1
+                                                type: string
+                                            required:
+                                            - type
+                                            type: object
+                                          subject:
+                                            maxLength: 253
+                                            type: string
+                                          version:
+                                            maxLength: 253
+                                            type: string
+                                        type: object
+                                    required:
+                                    - reference
+                                    type: object
+                                  type:
+                                    enum:
+                                    - inline
+                                    - reference
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                            required:
+                            - failureMode
+                            - schemaRefDestination
+                            type: object
+                          outputFormat:
+                            enum:
+                            - avro
+                            - json
+                            minLength: 1
+                            type: string
+                        required:
+                        - outputFormat
+                        type: object
+                      description:
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 255
+                        type: string
+                      parentPolicyID:
+                        properties:
+                          konnectID:
+                            maxLength: 36
+                            type: string
+                          namespacedRef:
+                            properties:
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              namespace:
+                                maxLength: 253
+                                type: string
+                            required:
+                            - name
+                            type: object
+                          type:
+                            enum:
+                            - konnectID
+                            - namespacedRef
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: when type is namespacedRef, namespacedRef must be set
+                          rule: 'self.type == ''namespacedRef'' ? has(self.namespacedRef) : true'
+                        - message: when type is namespacedRef, konnectID must not be set
+                          rule: 'self.type == ''namespacedRef'' ? !has(self.konnectID) : true'
+                        - message: when type is konnectID, konnectID must be set
+                          rule: 'self.type == ''konnectID'' ? has(self.konnectID) : true'
+                        - message: when type is konnectID, namespacedRef must not be set
+                          rule: 'self.type == ''konnectID'' ? !has(self.namespacedRef) : true'
+                    required:
+                    - config
+                    - parentPolicyID
+                    type: object
                   type:
                     enum:
                     - encrypt
                     - encryptFields
+                    - maskFields
                     - modifyHeaders
                     - schemaValidation
+                    - transcode
                     minLength: 1
                     type: string
                 required:
@@ -42453,6 +44842,13 @@ spec:
             properties:
               apiSpec:
                 properties:
+                  managedBy:
+                    additionalProperties:
+                      maxLength: 63
+                      minLength: 1
+                      pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                      type: string
+                    type: object
                   name:
                     maxLength: 100
                     minLength: 1
@@ -43512,6 +45908,17 @@ spec:
                   css:
                     maxLength: 253
                     type: string
+                  js:
+                    properties:
+                      custom:
+                        maxLength: 253
+                        type: string
+                      scripts:
+                        items:
+                          type: string
+                        maxItems: 20
+                        type: array
+                    type: object
                   layout:
                     maxLength: 253
                     type: string
@@ -43620,6 +46027,15 @@ spec:
                           type: object
                         type: array
                     type: object
+                  portalLayout:
+                    properties:
+                      footer:
+                        properties:
+                          snippetName:
+                            maxLength: 512
+                            type: string
+                        type: object
+                    type: object
                   robots:
                     maxLength: 253
                     type: string
@@ -43659,6 +46075,13 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      tryItUiAudience:
+                        enum:
+                        - all
+                        - authenticated
+                        - registered
+                        maxLength: 253
                         type: string
                     type: object
                   theme:
@@ -44629,6 +47052,58 @@ spec:
             properties:
               apiSpec:
                 properties:
+                  ai:
+                    properties:
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      features:
+                        properties:
+                          aiSearch:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                          mcpServer:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              writeOperationsEnabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            - writeOperationsEnabled
+                            type: object
+                          portalAgent:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                        required:
+                        - mcpServer
+                        type: object
+                    required:
+                    - enabled
+                    - features
+                    type: object
                   authenticationEnabled:
                     enum:
                     - Enabled
@@ -44640,6 +47115,11 @@ spec:
                     - Disabled
                     type: string
                   autoApproveDevelopers:
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
+                  createDefaultContent:
                     enum:
                     - Enabled
                     - Disabled
@@ -64353,6 +66833,10 @@ spec:
                   description:
                     type: string
                   labels:
+                    additionalProperties:
+                      type: string
+                    type: object
+                  managed_by:
                     additionalProperties:
                       type: string
                     type: object

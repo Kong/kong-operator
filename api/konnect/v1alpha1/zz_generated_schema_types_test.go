@@ -20,6 +20,32 @@ func TestAIGatewayProxyURL_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestAISettings_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AISettings
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestAISettingsFeatures_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec AISettingsFeatures
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestCreatePortalCustomDomainSSLStandard_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
