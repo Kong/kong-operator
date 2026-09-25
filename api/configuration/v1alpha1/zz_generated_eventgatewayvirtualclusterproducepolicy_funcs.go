@@ -39,6 +39,10 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectName() string {
 		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordEncryptFieldsPolicyCreate.Name)
 		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordMaskFieldsProducePolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordMaskFieldsProducePolicyCreate.Name)
+		}
 	case EventGatewayVirtualClusterProducePolicyConfigTypeModifyHeadersPolicyCreate:
 		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ModifyHeadersPolicyCreate.Name)
@@ -46,6 +50,10 @@ func (obj *EventGatewayVirtualClusterProducePolicy) GetKonnectName() string {
 	case EventGatewayVirtualClusterProducePolicyConfigTypeProduceSchemaValidationPolicy:
 		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy != nil {
 			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy.Name)
+		}
+	case EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate:
+		if obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate != nil {
+			return string(obj.Spec.APISpec.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate.Name)
 		}
 	}
 	return ""

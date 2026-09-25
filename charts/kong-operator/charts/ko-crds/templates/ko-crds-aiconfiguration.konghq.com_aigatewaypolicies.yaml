@@ -131,6 +131,16 @@ spec:
                     - message: value required when type=inline; secretRef required
                         when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  datastores:
+                    items:
+                      properties:
+                        name:
+                          maxLength: 255
+                          minLength: 2
+                          pattern: ^[a-z][a-z0-9-]*[a-z0-9]+$
+                          type: string
+                      type: object
+                    type: array
                   displayName:
                     maxLength: 256
                     minLength: 1

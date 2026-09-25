@@ -126,6 +126,15 @@ var AIGatewayModelProviderSDKOpsConstFields = []sdkOpsConstField{
 	},
 	{
 		Path: []string{
+			"typesafe",
+			"config",
+			"auth",
+		},
+		Key:   "type",
+		Value: "basic",
+	},
+	{
+		Path: []string{
 			"vercel",
 			"config",
 			"auth",
@@ -351,6 +360,18 @@ var AIGatewayModelProviderSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 	},
 	{
 		Path: []string{
+			"typesafe",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"typesafe",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
 			"vercel",
 			"labels",
 		},
@@ -474,6 +495,9 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 	case AIGatewayModelProviderConfigTypeSagemaker:
 		selected = payload["sagemaker"]
 		variant = "Sagemaker"
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		selected = payload["typesafe"]
+		variant = "Typesafe"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayModelProvider config type %q", s.AIGatewayModelProviderConfig.Type)
 	}
@@ -650,6 +674,13 @@ func (s *AIGatewayModelProviderAPISpec) ToCreateAIGatewayModelProviderRequest() 
 		}
 		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestSagemaker(member)
 		return &target, nil
+	case "Typesafe":
+		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTypesafe: %w", err)
+		}
+		target := sdkkonnectcomp.CreateCreateAIGatewayModelProviderRequestTypesafe(member)
+		return &target, nil
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModelProvider config variant %q", variant)
 	}
@@ -810,6 +841,13 @@ func (s *AIGatewayModelProviderAPISpec) ToUpdateAIGatewayModelProviderRequest() 
 			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderSagemaker: %w", err)
 		}
 		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestSagemaker(member)
+		return &target, nil
+	case "Typesafe":
+		var member sdkkonnectcomp.AIGatewayModelProviderTypesafe
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into AIGatewayModelProviderTypesafe: %w", err)
+		}
+		target := sdkkonnectcomp.CreateUpdateAIGatewayModelProviderRequestTypesafe(member)
 		return &target, nil
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayModelProvider config variant %q", variant)
@@ -1142,6 +1180,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Headers[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.headers[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers {
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.headers[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -1547,6 +1612,33 @@ func (obj *AIGatewayModelProvider) sdkOpsAPISpec(ctx context.Context, cl client.
 					}
 					resolved := string(secretBytes)
 					apiSpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params[i].Value.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.*.config.auth.params[].value
+	if apiSpec.AIGatewayModelProviderConfig != nil {
+		if apiSpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for i := range apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params {
+				src := apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params[i].Value
+				if src.Type == SensitiveDataSourceTypeSecretRef {
+					if src.SecretRef == nil {
+						return nil, fmt.Errorf("secretRef is nil for spec.apiSpec.*.config.auth.params[].value")
+					}
+					namespace := obj.GetNamespace()
+					if src.SecretRef.Namespace != nil && *src.SecretRef.Namespace != "" {
+						namespace = *src.SecretRef.Namespace
+					}
+					var secret corev1.Secret
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: src.SecretRef.Name}, &secret); err != nil {
+						return nil, fmt.Errorf("failed to fetch Secret %s/%s: %w", namespace, src.SecretRef.Name, err)
+					}
+					secretBytes, ok := secret.Data[src.SecretRef.Key]
+					if !ok {
+						return nil, fmt.Errorf("secret %s/%s is missing key %q", namespace, src.SecretRef.Name, src.SecretRef.Key)
+					}
+					resolved := string(secretBytes)
+					apiSpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params[i].Value.Value = &resolved
 				}
 			}
 		}
@@ -2091,6 +2183,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 		}
 	}
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Headers {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Config.Auth.Headers {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
@@ -2219,6 +2320,15 @@ func (obj *AIGatewayModelProvider) GetSensitiveDataSecretRefs() []SensitiveDataS
 	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai != nil {
 			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Openai.Config.Auth.Params {
+				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
+					refs = append(refs, *item.Value.SecretRef)
+				}
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayModelProviderConfig != nil {
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			for _, item := range obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Config.Auth.Params {
 				if item.Value.Type == SensitiveDataSourceTypeSecretRef && item.Value.SecretRef != nil {
 					refs = append(refs, *item.Value.SecretRef)
 				}

@@ -10,6 +10,10 @@ package v1alpha1
 // Data planes older than this version still connect for topology visibility.
 //
 // When not specified, the latest generally available runtime version is used.
+//
+// When runtime_auto_upgrade is enabled (the default), this value is raised
+// automatically to track the minimum runtime version reported across connected
+// data planes, so any value set here may be superseded as the fleet upgrades.
 type AIGatewayMinRuntimeVersion string
 
 // AIGatewayProxyURL Proxy URL associated with reaching the data-planes
@@ -34,8 +38,9 @@ type AIGatewayProxyURL struct {
 }
 
 // AIGatewayRuntimeAutoUpgrade Whether the control plane should automatically
-// raise min_runtime_version as connected data planes report a newer AI Gateway
-// runtime version.
+// raise min_runtime_version to match the DP fleet's minimum runtime version
+// (the lowest AI Gateway runtime version reported across all connected data
+// planes) as that value increases.
 //
 // +kubebuilder:validation:Enum=Enabled;Disabled
 type AIGatewayRuntimeAutoUpgrade string
@@ -46,6 +51,72 @@ const (
 	// AIGatewayRuntimeAutoUpgradeDisabled sets AIGatewayRuntimeAutoUpgrade as disabled.
 	AIGatewayRuntimeAutoUpgradeDisabled AIGatewayRuntimeAutoUpgrade = "Disabled"
 )
+
+// AISettings is a type alias.
+type AISettings struct {
+	// Is AI enabled?
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// AI features configuration.
+	// When top-level `enabled` is false, every feature toggle here is
+	// automatically reset to false.
+	//
+	// +required
+	Features AISettingsFeatures `json:"features,omitzero"`
+}
+
+// AISettingsFeatures AI features configuration.
+// When top-level `enabled` is false, every feature toggle here is automatically
+// reset to false.
+type AISettingsFeatures struct {
+	// AI Search config
+	//
+	// +optional
+	AISearch AISettingsFeaturesAISearch `json:"aiSearch,omitzero"`
+	// AI Features config
+	//
+	// +required
+	McpServer AISettingsFeaturesMcpServer `json:"mcpServer,omitzero"`
+	// Portal Agent config
+	//
+	// +optional
+	PortalAgent AISettingsFeaturesPortalAgent `json:"portalAgent,omitzero"`
+}
+
+// AISettingsFeaturesAISearch AI Search config
+type AISettingsFeaturesAISearch struct {
+	// Whether AI Search is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+}
+
+// AISettingsFeaturesMcpServer AI Features config
+type AISettingsFeaturesMcpServer struct {
+	// Whether the MCP Server is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Whether write operations are enabled or not for the Portal MCP Server
+	// enabled
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	WriteOperationsEnabled string `json:"writeOperationsEnabled,omitzero"`
+}
+
+// AISettingsFeaturesPortalAgent Portal Agent config
+type AISettingsFeaturesPortalAgent struct {
+	// Whether the Portal Agent is enabled or not
+	//
+	// +required
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+}
 
 // CreatePortalCustomDomainSSL is a type alias.
 type CreatePortalCustomDomainSSL map[string]string
@@ -151,6 +222,19 @@ type LabelsUpdateValue string
 // Keys must be of length 1-63 characters, and cannot start with "kong",
 // "konnect", "mesh", "kic", or "_".
 type LabelsUpdate map[string]LabelsUpdateValue
+
+// ManagedByValue is the value type for ManagedBy.
+//
+// +kubebuilder:validation:MinLength=1
+// +kubebuilder:validation:MaxLength=63
+// +kubebuilder:validation:Pattern=`^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$`
+type ManagedByValue string
+
+// ManagedBy Stores information about what manages this entity, such as the tool
+// or system responsible for its lifecycle (for example, `terraform`).
+//
+// Keys must be 1–63 characters long and start with an alphanumeric character.
+type ManagedBy map[string]ManagedByValue
 
 // MinRuntimeVersion The minimum runtime version supported by the API.
 // This is the lowest version of the data plane

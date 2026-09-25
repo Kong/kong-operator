@@ -28,7 +28,8 @@ func testGeneratedKonnectConfigStoreForSDKOps() *konnectv1alpha1.KonnectConfigSt
 		},
 		Spec: konnectv1alpha1.KonnectConfigStoreSpec{
 			APISpec: konnectv1alpha1.KonnectConfigStoreAPISpec{
-				Name: "test-value",
+				ManagedBy: konnectv1alpha1.ManagedBy{"test-key": "test-value"},
+				Name:      "test-value",
 			},
 		},
 	}

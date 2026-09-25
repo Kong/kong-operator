@@ -5,12 +5,189 @@ package v1alpha1
 import (
 	"encoding/json"
 	"fmt"
+	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	intstr "k8s.io/apimachinery/pkg/util/intstr"
 )
 
 // BackendClusterAuthenticationAnonymous Anonymous authentication scheme for the
 // backend cluster.
 type BackendClusterAuthenticationAnonymous struct {
+}
+
+// BackendClusterAuthenticationSaslAwsIam AWS IAM-based OAUTHBEARER
+// authentication scheme for the backend cluster, for example when connecting to
+// Amazon MSK with IAM authentication.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type BackendClusterAuthenticationSaslAwsIam struct {
+	//
+	//
+	// +required
+	SaslAwsIam *BackendClusterAuthenticationSaslAwsIamSaslAwsIam `json:"saslAwsIam,omitempty"`
+}
+
+// BackendClusterAuthenticationSaslAwsIamSaslAwsIam represents a union type for sasl_aws_iam.
+// Only one of the fields should be set based on the Type.
+type BackendClusterAuthenticationSaslAwsIamSaslAwsIam struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=assumeRole;defaultProviderChain
+	Type BackendClusterAuthenticationSaslAwsIamSaslAwsIamType `json:"type,omitempty"`
+
+	// AssumeRole configuration.
+	//
+	// +optional
+	AssumeRole *BackendClusterAuthenticationSaslAwsIamAssumeRole `json:"assumeRole,omitempty"`
+	// DefaultProviderChain configuration.
+	//
+	// +optional
+	DefaultProviderChain *BackendClusterAuthenticationSaslAwsIamDefaultProviderChain `json:"defaultProviderChain,omitempty"`
+}
+
+// BackendClusterAuthenticationSaslAwsIamSaslAwsIamType represents the type of sasl_aws_iam.
+type BackendClusterAuthenticationSaslAwsIamSaslAwsIamType string
+
+// BackendClusterAuthenticationSaslAwsIamSaslAwsIamType values.
+const (
+	BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeAssumeRole           BackendClusterAuthenticationSaslAwsIamSaslAwsIamType = "assumeRole"
+	BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeDefaultProviderChain BackendClusterAuthenticationSaslAwsIamSaslAwsIamType = "defaultProviderChain"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u BackendClusterAuthenticationSaslAwsIamSaslAwsIam) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeAssumeRole:
+		if u.AssumeRole != nil {
+			raw, err := json.Marshal(u.AssumeRole)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam assume_role: %w", err)
+			}
+			m["assumeRole"] = raw
+		}
+	case BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeDefaultProviderChain:
+		if u.DefaultProviderChain != nil {
+			raw, err := json.Marshal(u.DefaultProviderChain)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam default_provider_chain: %w", err)
+			}
+			m["defaultProviderChain"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *BackendClusterAuthenticationSaslAwsIamSaslAwsIam) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = BackendClusterAuthenticationSaslAwsIamSaslAwsIamType(probe.Type)
+	switch probe.Type {
+	case "assumeRole":
+		payload, ok := raw["assumeRole"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslAwsIamAssumeRole
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam assume_role: %w", err)
+		}
+		u.AssumeRole = &val
+	case "defaultProviderChain":
+		payload, ok := raw["defaultProviderChain"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslAwsIamDefaultProviderChain
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam default_provider_chain: %w", err)
+		}
+		u.DefaultProviderChain = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *BackendClusterAuthenticationSaslAwsIam) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling BackendClusterAuthenticationSaslAwsIam: nil receiver")
+	}
+	type alias BackendClusterAuthenticationSaslAwsIam
+	aux := alias{}
+	aux.SaslAwsIam = &BackendClusterAuthenticationSaslAwsIamSaslAwsIam{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling BackendClusterAuthenticationSaslAwsIam: %w", err)
+	}
+	if aux.SaslAwsIam != nil && aux.SaslAwsIam.Type == "" && aux.SaslAwsIam.AssumeRole == nil && aux.SaslAwsIam.DefaultProviderChain == nil {
+		aux.SaslAwsIam = nil
+	}
+	*s = BackendClusterAuthenticationSaslAwsIam(aux)
+	return nil
+}
+
+// BackendClusterAuthenticationSaslAwsIamAssumeRole Configures whether to
+// authenticate using credentials obtained by first assuming a role, using the
+// AWS default credentials provider chain
+//
+// **Requires a minimum runtime version of `1.3`**.
+type BackendClusterAuthenticationSaslAwsIamAssumeRole struct {
+	// Configuration for assuming an IAM role.
+	// Required when `type` is `assume_role`.
+	//
+	// +required
+	AssumeRole BackendClusterAuthenticationSaslAwsIamAssumeRoleAssumeRole `json:"assumeRole,omitzero"`
+}
+
+// BackendClusterAuthenticationSaslAwsIamAssumeRoleAssumeRole Configuration for
+// assuming an IAM role.
+// Required when `type` is `assume_role`.
+type BackendClusterAuthenticationSaslAwsIamAssumeRoleAssumeRole struct {
+	// The
+	// [ARN](https://docs.aws.amazon.com/IAM/latest/UserGuide/reference_identifiers.html#identifiers-arns)
+	// of the IAM role to assume, formatted as
+	// `arn:aws:iam::<account-id>:role/<role-name>`.
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=10
+	// +kubebuilder:validation:MaxLength=2048
+	// +kubebuilder:validation:Pattern=`^arn:aws(-[a-z-]+)?:iam:.+`
+	Arn string `json:"arn,omitzero"`
+	// The session name to attach to the assumed role session.
+	// The value becomes part of the assumed
+	// role user ARN, queryable as
+	// `arn:aws:sts::<account-id>:assumed-role/<role-name>/<session-name>`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	SessionName string `json:"sessionName,omitzero"`
+}
+
+// BackendClusterAuthenticationSaslAwsIamDefaultProviderChain Configures whether
+// to authenticate using credentials obtained from the AWS default credentials
+// provider chain
+//
+// **Requires a minimum runtime version of `1.3`**.
+type BackendClusterAuthenticationSaslAwsIamDefaultProviderChain struct {
 }
 
 // BackendClusterAuthenticationSaslPlain SASL/PLAIN authentication scheme for
@@ -81,13 +258,17 @@ type BackendClusterAuthenticationScheme struct {
 	//
 	// +required
 	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:Enum=anonymous;saslPlain;saslScram
+	// +kubebuilder:validation:Enum=anonymous;saslAwsIam;saslPlain;saslScram
 	Type BackendClusterAuthenticationSchemeType `json:"type,omitempty"`
 
 	// Anonymous configuration.
 	//
 	// +optional
 	Anonymous *BackendClusterAuthenticationAnonymous `json:"anonymous,omitempty"`
+	// SaslAwsIam configuration.
+	//
+	// +optional
+	SaslAwsIam *BackendClusterAuthenticationSaslAwsIam `json:"saslAwsIam,omitempty"`
 	// SaslPlain configuration.
 	//
 	// +optional
@@ -103,9 +284,10 @@ type BackendClusterAuthenticationSchemeType string
 
 // BackendClusterAuthenticationSchemeType values.
 const (
-	BackendClusterAuthenticationSchemeTypeAnonymous BackendClusterAuthenticationSchemeType = "anonymous"
-	BackendClusterAuthenticationSchemeTypeSaslPlain BackendClusterAuthenticationSchemeType = "saslPlain"
-	BackendClusterAuthenticationSchemeTypeSaslScram BackendClusterAuthenticationSchemeType = "saslScram"
+	BackendClusterAuthenticationSchemeTypeAnonymous  BackendClusterAuthenticationSchemeType = "anonymous"
+	BackendClusterAuthenticationSchemeTypeSaslAwsIam BackendClusterAuthenticationSchemeType = "saslAwsIam"
+	BackendClusterAuthenticationSchemeTypeSaslPlain  BackendClusterAuthenticationSchemeType = "saslPlain"
+	BackendClusterAuthenticationSchemeTypeSaslScram  BackendClusterAuthenticationSchemeType = "saslScram"
 )
 
 // MarshalJSON implements json.Marshaler.
@@ -124,6 +306,14 @@ func (u BackendClusterAuthenticationScheme) MarshalJSON() ([]byte, error) {
 				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme anonymous: %w", err)
 			}
 			m["anonymous"] = raw
+		}
+	case BackendClusterAuthenticationSchemeTypeSaslAwsIam:
+		if u.SaslAwsIam != nil {
+			raw, err := json.Marshal(u.SaslAwsIam)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling BackendClusterAuthenticationScheme sasl_aws_iam: %w", err)
+			}
+			m["saslAwsIam"] = raw
 		}
 	case BackendClusterAuthenticationSchemeTypeSaslPlain:
 		if u.SaslPlain != nil {
@@ -172,6 +362,16 @@ func (u *BackendClusterAuthenticationScheme) UnmarshalJSON(data []byte) error {
 			return fmt.Errorf("unmarshaling BackendClusterAuthenticationScheme anonymous: %w", err)
 		}
 		u.Anonymous = &val
+	case "saslAwsIam":
+		payload, ok := raw["saslAwsIam"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val BackendClusterAuthenticationSaslAwsIam
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling BackendClusterAuthenticationScheme sasl_aws_iam: %w", err)
+		}
+		u.SaslAwsIam = &val
 	case "saslPlain":
 		payload, ok := raw["saslPlain"]
 		if !ok || len(payload) == 0 {
@@ -1071,6 +1271,12 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
 	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Defines the schema for a record key or value, inline.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	//
+	// +optional
+	Key *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey `json:"key,omitempty"`
 	// Deprecated. Use `failure_mode`.
 	//
 	// Defines a behavior when record key is not valid.
@@ -1101,6 +1307,12 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ValidateValue string `json:"validateValue,omitzero"`
+	// Defines the schema for a record key or value, inline.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	//
+	// +optional
+	Value *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue `json:"value,omitempty"`
 	// Deprecated. Use `failure_mode`.
 	//
 	// Defines a behavior when record value is not valid.
@@ -1113,6 +1325,105 @@ type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=mark;skip
 	ValueValidationAction ConsumeValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
+// Only one of the fields should be set based on the SchemaType.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey struct {
+	// SchemaType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType `json:"schemaType,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *SchemaValidationInlineSchemaConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *SchemaValidationInlineSchemaConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType represents the type of key.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType string
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType = "avro"
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.SchemaType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
+	}
+	m["schemaType"] = typeBytes
+	switch u.SchemaType {
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey: nil receiver")
+	}
+	var probe struct {
+		SchemaType string `json:"schemaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.SchemaType = EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyType(probe.SchemaType)
+	switch probe.SchemaType {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
 }
 
 // EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
@@ -1214,6 +1525,105 @@ func (u *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegist
 	return nil
 }
 
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
+// Only one of the fields should be set based on the SchemaType.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue struct {
+	// SchemaType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType `json:"schemaType,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *SchemaValidationInlineSchemaConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *SchemaValidationInlineSchemaConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType represents the type of value.
+type EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType string
+
+// EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType values.
+const (
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeAvro EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType = "avro"
+	EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeJSON EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.SchemaType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
+	}
+	m["schemaType"] = typeBytes
+	switch u.SchemaType {
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue: nil receiver")
+	}
+	var probe struct {
+		SchemaType string `json:"schemaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.SchemaType = EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueType(probe.SchemaType)
+	switch probe.SchemaType {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -1221,12 +1631,20 @@ func (s *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) UnmarshalJ
 	}
 	type alias EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
 	aux := alias{}
+	aux.Key = &EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey{}
 	aux.SchemaRegistry = &EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry{}
+	aux.Value = &EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig: %w", err)
 	}
+	if aux.Key != nil && aux.Key.SchemaType == "" && aux.Key.Avro == nil && aux.Key.JSON == nil {
+		aux.Key = nil
+	}
 	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
 		aux.SchemaRegistry = nil
+	}
+	if aux.Value != nil && aux.Value.SchemaType == "" && aux.Value.Avro == nil && aux.Value.JSON == nil {
+		aux.Value = nil
 	}
 	*s = EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig(aux)
 	return nil
@@ -2010,6 +2428,669 @@ type EventGatewayListenerPortInteger int
 // EventGatewayListenerPortString A port or a range of ports in the format 9092
 // or 9092-9094.
 type EventGatewayListenerPortString string
+
+// EventGatewayMaskEmailDomainKeepAll Keeps the whole domain unmasked.
+type EventGatewayMaskEmailDomainKeepAll struct {
+}
+
+// EventGatewayMaskEmailDomainStrategy represents a union type for EventGatewayMaskEmailDomainStrategy.
+// Only one of the fields should be set based on the Type.
+type EventGatewayMaskEmailDomainStrategy struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=keepAll;keepChars;replace
+	Type EventGatewayMaskEmailDomainStrategyType `json:"type,omitempty"`
+
+	// EmailDomainKeepAll configuration.
+	//
+	// +optional
+	EmailDomainKeepAll *EventGatewayMaskEmailDomainKeepAll `json:"keepAll,omitempty"`
+	// StrategyKeepChars configuration.
+	//
+	// +optional
+	StrategyKeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// StrategyReplace configuration.
+	//
+	// +optional
+	StrategyReplace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayMaskEmailDomainStrategyType represents the type of EventGatewayMaskEmailDomainStrategy.
+type EventGatewayMaskEmailDomainStrategyType string
+
+// EventGatewayMaskEmailDomainStrategyType values.
+const (
+	EventGatewayMaskEmailDomainStrategyTypeEmailDomainKeepAll EventGatewayMaskEmailDomainStrategyType = "keepAll"
+	EventGatewayMaskEmailDomainStrategyTypeStrategyKeepChars  EventGatewayMaskEmailDomainStrategyType = "keepChars"
+	EventGatewayMaskEmailDomainStrategyTypeStrategyReplace    EventGatewayMaskEmailDomainStrategyType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayMaskEmailDomainStrategy) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayMaskEmailDomainStrategyTypeEmailDomainKeepAll:
+		if u.EmailDomainKeepAll != nil {
+			raw, err := json.Marshal(u.EmailDomainKeepAll)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy keep_all: %w", err)
+			}
+			m["keepAll"] = raw
+		}
+	case EventGatewayMaskEmailDomainStrategyTypeStrategyKeepChars:
+		if u.StrategyKeepChars != nil {
+			raw, err := json.Marshal(u.StrategyKeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayMaskEmailDomainStrategyTypeStrategyReplace:
+		if u.StrategyReplace != nil {
+			raw, err := json.Marshal(u.StrategyReplace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskEmailDomainStrategy replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayMaskEmailDomainStrategy) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskEmailDomainStrategy: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayMaskEmailDomainStrategyType(probe.Type)
+	switch probe.Type {
+	case "keepAll":
+		payload, ok := raw["keepAll"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskEmailDomainKeepAll
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskEmailDomainStrategy keep_all: %w", err)
+		}
+		u.EmailDomainKeepAll = &val
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskEmailDomainStrategy keep_chars: %w", err)
+		}
+		u.StrategyKeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskEmailDomainStrategy replace: %w", err)
+		}
+		u.StrategyReplace = &val
+	}
+	return nil
+}
+
+// EventGatewayMaskEmailLocalPartStrategy represents a union type for EventGatewayMaskEmailLocalPartStrategy.
+// Only one of the fields should be set based on the Type.
+type EventGatewayMaskEmailLocalPartStrategy struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=keepChars;replace
+	Type EventGatewayMaskEmailLocalPartStrategyType `json:"type,omitempty"`
+
+	// KeepChars configuration.
+	//
+	// +optional
+	KeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// Replace configuration.
+	//
+	// +optional
+	Replace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayMaskEmailLocalPartStrategyType represents the type of EventGatewayMaskEmailLocalPartStrategy.
+type EventGatewayMaskEmailLocalPartStrategyType string
+
+// EventGatewayMaskEmailLocalPartStrategyType values.
+const (
+	EventGatewayMaskEmailLocalPartStrategyTypeKeepChars EventGatewayMaskEmailLocalPartStrategyType = "keepChars"
+	EventGatewayMaskEmailLocalPartStrategyTypeReplace   EventGatewayMaskEmailLocalPartStrategyType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayMaskEmailLocalPartStrategy) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayMaskEmailLocalPartStrategy type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayMaskEmailLocalPartStrategyTypeKeepChars:
+		if u.KeepChars != nil {
+			raw, err := json.Marshal(u.KeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskEmailLocalPartStrategy keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayMaskEmailLocalPartStrategyTypeReplace:
+		if u.Replace != nil {
+			raw, err := json.Marshal(u.Replace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskEmailLocalPartStrategy replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayMaskEmailLocalPartStrategy) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskEmailLocalPartStrategy: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayMaskEmailLocalPartStrategyType(probe.Type)
+	switch probe.Type {
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskEmailLocalPartStrategy keep_chars: %w", err)
+		}
+		u.KeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskEmailLocalPartStrategy replace: %w", err)
+		}
+		u.Replace = &val
+	}
+	return nil
+}
+
+// EventGatewayMaskStrategy represents a union type for EventGatewayMaskStrategy.
+// Only one of the fields should be set based on the Type.
+type EventGatewayMaskStrategy struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=email;keepChars;replace
+	Type EventGatewayMaskStrategyType `json:"type,omitempty"`
+
+	// Email configuration.
+	//
+	// +optional
+	Email *EventGatewayMaskStrategyEmail `json:"email,omitempty"`
+	// KeepChars configuration.
+	//
+	// +optional
+	KeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// Replace configuration.
+	//
+	// +optional
+	Replace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayMaskStrategyType represents the type of EventGatewayMaskStrategy.
+type EventGatewayMaskStrategyType string
+
+// EventGatewayMaskStrategyType values.
+const (
+	EventGatewayMaskStrategyTypeEmail     EventGatewayMaskStrategyType = "email"
+	EventGatewayMaskStrategyTypeKeepChars EventGatewayMaskStrategyType = "keepChars"
+	EventGatewayMaskStrategyTypeReplace   EventGatewayMaskStrategyType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayMaskStrategy) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayMaskStrategyTypeEmail:
+		if u.Email != nil {
+			raw, err := json.Marshal(u.Email)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy email: %w", err)
+			}
+			m["email"] = raw
+		}
+	case EventGatewayMaskStrategyTypeKeepChars:
+		if u.KeepChars != nil {
+			raw, err := json.Marshal(u.KeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayMaskStrategyTypeReplace:
+		if u.Replace != nil {
+			raw, err := json.Marshal(u.Replace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategy replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayMaskStrategy) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskStrategy: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayMaskStrategyType(probe.Type)
+	switch probe.Type {
+	case "email":
+		payload, ok := raw["email"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyEmail
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategy email: %w", err)
+		}
+		u.Email = &val
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategy keep_chars: %w", err)
+		}
+		u.KeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategy replace: %w", err)
+		}
+		u.Replace = &val
+	}
+	return nil
+}
+
+// EventGatewayMaskStrategyEmail Masks an email address by applying a separate
+// strategy to the local part and to the domain.
+type EventGatewayMaskStrategyEmail struct {
+	//
+	//
+	// +required
+	Email EventGatewayMaskStrategyEmailEmail `json:"email,omitzero"`
+}
+
+// EventGatewayMaskStrategyEmailEmail is a type alias.
+type EventGatewayMaskStrategyEmailEmail struct {
+	// The strategy used to redact the domain of an email address.
+	//
+	// +required
+	Domain *EventGatewayMaskStrategyEmailEmailDomain `json:"domain,omitempty"`
+	// The strategy used to redact the local part of an email address.
+	//
+	// +required
+	LocalPart *EventGatewayMaskStrategyEmailEmailLocalPart `json:"localPart,omitempty"`
+}
+
+// EventGatewayMaskStrategyEmailEmailDomain represents a union type for domain.
+// Only one of the fields should be set based on the Type.
+type EventGatewayMaskStrategyEmailEmailDomain struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=keepAll;keepChars;replace
+	Type EventGatewayMaskStrategyEmailEmailDomainType `json:"type,omitempty"`
+
+	// EmailDomainKeepAll configuration.
+	//
+	// +optional
+	EmailDomainKeepAll *EventGatewayMaskEmailDomainKeepAll `json:"keepAll,omitempty"`
+	// StrategyKeepChars configuration.
+	//
+	// +optional
+	StrategyKeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// StrategyReplace configuration.
+	//
+	// +optional
+	StrategyReplace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayMaskStrategyEmailEmailDomainType represents the type of domain.
+type EventGatewayMaskStrategyEmailEmailDomainType string
+
+// EventGatewayMaskStrategyEmailEmailDomainType values.
+const (
+	EventGatewayMaskStrategyEmailEmailDomainTypeEmailDomainKeepAll EventGatewayMaskStrategyEmailEmailDomainType = "keepAll"
+	EventGatewayMaskStrategyEmailEmailDomainTypeStrategyKeepChars  EventGatewayMaskStrategyEmailEmailDomainType = "keepChars"
+	EventGatewayMaskStrategyEmailEmailDomainTypeStrategyReplace    EventGatewayMaskStrategyEmailEmailDomainType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayMaskStrategyEmailEmailDomain) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailDomain type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayMaskStrategyEmailEmailDomainTypeEmailDomainKeepAll:
+		if u.EmailDomainKeepAll != nil {
+			raw, err := json.Marshal(u.EmailDomainKeepAll)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailDomain keep_all: %w", err)
+			}
+			m["keepAll"] = raw
+		}
+	case EventGatewayMaskStrategyEmailEmailDomainTypeStrategyKeepChars:
+		if u.StrategyKeepChars != nil {
+			raw, err := json.Marshal(u.StrategyKeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailDomain keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayMaskStrategyEmailEmailDomainTypeStrategyReplace:
+		if u.StrategyReplace != nil {
+			raw, err := json.Marshal(u.StrategyReplace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailDomain replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayMaskStrategyEmailEmailDomain) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailDomain: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayMaskStrategyEmailEmailDomainType(probe.Type)
+	switch probe.Type {
+	case "keepAll":
+		payload, ok := raw["keepAll"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskEmailDomainKeepAll
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailDomain keep_all: %w", err)
+		}
+		u.EmailDomainKeepAll = &val
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailDomain keep_chars: %w", err)
+		}
+		u.StrategyKeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailDomain replace: %w", err)
+		}
+		u.StrategyReplace = &val
+	}
+	return nil
+}
+
+// EventGatewayMaskStrategyEmailEmailLocalPart represents a union type for local_part.
+// Only one of the fields should be set based on the Type.
+type EventGatewayMaskStrategyEmailEmailLocalPart struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=keepChars;replace
+	Type EventGatewayMaskStrategyEmailEmailLocalPartType `json:"type,omitempty"`
+
+	// KeepChars configuration.
+	//
+	// +optional
+	KeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// Replace configuration.
+	//
+	// +optional
+	Replace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayMaskStrategyEmailEmailLocalPartType represents the type of local_part.
+type EventGatewayMaskStrategyEmailEmailLocalPartType string
+
+// EventGatewayMaskStrategyEmailEmailLocalPartType values.
+const (
+	EventGatewayMaskStrategyEmailEmailLocalPartTypeKeepChars EventGatewayMaskStrategyEmailEmailLocalPartType = "keepChars"
+	EventGatewayMaskStrategyEmailEmailLocalPartTypeReplace   EventGatewayMaskStrategyEmailEmailLocalPartType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayMaskStrategyEmailEmailLocalPart) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailLocalPart type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayMaskStrategyEmailEmailLocalPartTypeKeepChars:
+		if u.KeepChars != nil {
+			raw, err := json.Marshal(u.KeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailLocalPart keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayMaskStrategyEmailEmailLocalPartTypeReplace:
+		if u.Replace != nil {
+			raw, err := json.Marshal(u.Replace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayMaskStrategyEmailEmailLocalPart replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayMaskStrategyEmailEmailLocalPart) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailLocalPart: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayMaskStrategyEmailEmailLocalPartType(probe.Type)
+	switch probe.Type {
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailLocalPart keep_chars: %w", err)
+		}
+		u.KeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmailLocalPart replace: %w", err)
+		}
+		u.Replace = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayMaskStrategyEmailEmail) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmail: nil receiver")
+	}
+	type alias EventGatewayMaskStrategyEmailEmail
+	aux := alias{}
+	aux.Domain = &EventGatewayMaskStrategyEmailEmailDomain{}
+	aux.LocalPart = &EventGatewayMaskStrategyEmailEmailLocalPart{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayMaskStrategyEmailEmail: %w", err)
+	}
+	if aux.Domain != nil && aux.Domain.Type == "" && aux.Domain.EmailDomainKeepAll == nil && aux.Domain.StrategyKeepChars == nil && aux.Domain.StrategyReplace == nil {
+		aux.Domain = nil
+	}
+	if aux.LocalPart != nil && aux.LocalPart.Type == "" && aux.LocalPart.KeepChars == nil && aux.LocalPart.Replace == nil {
+		aux.LocalPart = nil
+	}
+	*s = EventGatewayMaskStrategyEmailEmail(aux)
+	return nil
+}
+
+// EventGatewayMaskStrategyKeepChars Keeps a number of leading and/or trailing
+// characters and replaces the middle with a fixed phrase.
+// If `first + last` is greater than or equal to the value length, the whole
+// value is replaced with the phrase, so it never shows more characters than the
+// original value.
+// The phrase is fixed, so the masked output does not leak the value length.
+type EventGatewayMaskStrategyKeepChars struct {
+	//
+	//
+	// +required
+	KeepChars EventGatewayMaskStrategyKeepCharsKeepChars `json:"keepChars,omitzero"`
+}
+
+// EventGatewayMaskStrategyKeepCharsKeepChars is a type alias.
+type EventGatewayMaskStrategyKeepCharsKeepChars struct {
+	// Number of leading characters to keep unmasked.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	First int `json:"first,omitzero"`
+	// Number of trailing characters to keep unmasked.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	Last int `json:"last,omitzero"`
+	// The phrase that replaces the masked middle of the value.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Phrase string `json:"phrase,omitzero"`
+}
+
+// EventGatewayMaskStrategyReplace Replaces the whole value with a fixed phrase.
+// The masked length does not reflect the original value length.
+type EventGatewayMaskStrategyReplace struct {
+	//
+	//
+	// +required
+	Replace EventGatewayMaskStrategyReplaceReplace `json:"replace,omitzero"`
+}
+
+// EventGatewayMaskStrategyReplaceReplace is a type alias.
+type EventGatewayMaskStrategyReplaceReplace struct {
+	// The phrase to replace the value with.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=255
+	Phrase string `json:"phrase,omitzero"`
+}
 
 // EventGatewayModifyHeaderAction represents a union type for EventGatewayModifyHeaderAction.
 // Only one of the fields should be set based on the Op.
@@ -2827,6 +3908,2504 @@ type EventGatewayParsedRecordFieldPathsArray []EventGatewayParsedRecordFieldPath
 // equivalent to the `match` values in the array variant.
 type EventGatewayParsedRecordFieldPathsExpression string
 
+// EventGatewayParsedRecordMaskFieldsConsumeConfig The configuration of the mask
+// parsed record fields consume policy.
+type EventGatewayParsedRecordMaskFieldsConsumeConfig struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Selects which fields to mask and how to mask them.
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=256
+	MaskFields []EventGatewayParsedRecordMaskSelector `json:"maskFields,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskFieldsConsumePolicyCreate Redacts string fields
+// of parsed Kafka records using a configurable masking strategy.
+//
+// Only string fields may be selected.
+// Selecting a field that does not exist is ignored;
+// selecting a field that is not a string is a policy error handled by
+// `failure_mode`.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayConsumeSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayParsedRecordMaskFieldsConsumePolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayParsedRecordMaskFieldsConsumeConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskFieldsProduceConfig The configuration of the mask
+// record fields produce policy.
+type EventGatewayParsedRecordMaskFieldsProduceConfig struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+	// Selects which fields to mask and how to mask them.
+	//
+	// +required
+	// +kubebuilder:validation:MaxItems=256
+	MaskFields []EventGatewayParsedRecordMaskSelector `json:"maskFields,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskFieldsProducePolicyCreate Redacts string fields
+// of parsed Kafka records using a configurable masking strategy.
+//
+// Only string fields may be selected.
+// Selecting a field that does not exist is ignored;
+// selecting a field that is not a string is a policy error handled by
+// `failure_mode`.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayProduceSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayParsedRecordMaskFieldsProducePolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config EventGatewayParsedRecordMaskFieldsProduceConfig `json:"config,omitzero"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskSelector Selects fields of a parsed record for
+// masking and defines the strategy used to redact them.
+type EventGatewayParsedRecordMaskSelector struct {
+	// Selects which fields of the parsed record to mask.
+	// A maximum of 50 path entries are allowed.
+	//
+	// +required
+	Paths *EventGatewayParsedRecordMaskSelectorPaths `json:"paths,omitempty"`
+	// The strategy used to redact a matched field value.
+	//
+	// +required
+	Strategy *EventGatewayParsedRecordMaskSelectorStrategy `json:"strategy,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskSelectorPaths represents a union type for paths.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordMaskSelectorPaths struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=array;expression
+	Type EventGatewayParsedRecordMaskSelectorPathsType `json:"type,omitempty"`
+
+	// Array configuration.
+	//
+	// +optional
+	Array *EventGatewayParsedRecordFieldPathsArray `json:"array,omitempty"`
+	// Expression configuration.
+	//
+	// +optional
+	Expression *EventGatewayParsedRecordFieldPathsExpression `json:"expression,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskSelectorPathsType represents the type of paths.
+type EventGatewayParsedRecordMaskSelectorPathsType string
+
+// EventGatewayParsedRecordMaskSelectorPathsType values.
+const (
+	EventGatewayParsedRecordMaskSelectorPathsTypeArray      EventGatewayParsedRecordMaskSelectorPathsType = "array"
+	EventGatewayParsedRecordMaskSelectorPathsTypeExpression EventGatewayParsedRecordMaskSelectorPathsType = "expression"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordMaskSelectorPaths) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorPaths type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordMaskSelectorPathsTypeArray:
+		if u.Array != nil {
+			raw, err := json.Marshal(u.Array)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorPaths Array: %w", err)
+			}
+			m["array"] = raw
+		}
+	case EventGatewayParsedRecordMaskSelectorPathsTypeExpression:
+		if u.Expression != nil {
+			raw, err := json.Marshal(u.Expression)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorPaths Expression: %w", err)
+			}
+			m["expression"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordMaskSelectorPaths) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorPaths: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordMaskSelectorPathsType(probe.Type)
+	switch probe.Type {
+	case "array":
+		payload, ok := raw["array"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordFieldPathsArray
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorPaths Array: %w", err)
+		}
+		u.Array = &val
+	case "expression":
+		payload, ok := raw["expression"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordFieldPathsExpression
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorPaths Expression: %w", err)
+		}
+		u.Expression = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordMaskSelectorStrategy represents a union type for strategy.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordMaskSelectorStrategy struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=email;keepChars;replace
+	Type EventGatewayParsedRecordMaskSelectorStrategyType `json:"type,omitempty"`
+
+	// Email configuration.
+	//
+	// +optional
+	Email *EventGatewayMaskStrategyEmail `json:"email,omitempty"`
+	// KeepChars configuration.
+	//
+	// +optional
+	KeepChars *EventGatewayMaskStrategyKeepChars `json:"keepChars,omitempty"`
+	// Replace configuration.
+	//
+	// +optional
+	Replace *EventGatewayMaskStrategyReplace `json:"replace,omitempty"`
+}
+
+// EventGatewayParsedRecordMaskSelectorStrategyType represents the type of strategy.
+type EventGatewayParsedRecordMaskSelectorStrategyType string
+
+// EventGatewayParsedRecordMaskSelectorStrategyType values.
+const (
+	EventGatewayParsedRecordMaskSelectorStrategyTypeEmail     EventGatewayParsedRecordMaskSelectorStrategyType = "email"
+	EventGatewayParsedRecordMaskSelectorStrategyTypeKeepChars EventGatewayParsedRecordMaskSelectorStrategyType = "keepChars"
+	EventGatewayParsedRecordMaskSelectorStrategyTypeReplace   EventGatewayParsedRecordMaskSelectorStrategyType = "replace"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordMaskSelectorStrategy) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordMaskSelectorStrategyTypeEmail:
+		if u.Email != nil {
+			raw, err := json.Marshal(u.Email)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy email: %w", err)
+			}
+			m["email"] = raw
+		}
+	case EventGatewayParsedRecordMaskSelectorStrategyTypeKeepChars:
+		if u.KeepChars != nil {
+			raw, err := json.Marshal(u.KeepChars)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy keep_chars: %w", err)
+			}
+			m["keepChars"] = raw
+		}
+	case EventGatewayParsedRecordMaskSelectorStrategyTypeReplace:
+		if u.Replace != nil {
+			raw, err := json.Marshal(u.Replace)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordMaskSelectorStrategy replace: %w", err)
+			}
+			m["replace"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordMaskSelectorStrategy) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorStrategy: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordMaskSelectorStrategyType(probe.Type)
+	switch probe.Type {
+	case "email":
+		payload, ok := raw["email"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyEmail
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorStrategy email: %w", err)
+		}
+		u.Email = &val
+	case "keepChars":
+		payload, ok := raw["keepChars"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyKeepChars
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorStrategy keep_chars: %w", err)
+		}
+		u.KeepChars = &val
+	case "replace":
+		payload, ok := raw["replace"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayMaskStrategyReplace
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelectorStrategy replace: %w", err)
+		}
+		u.Replace = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordMaskSelector) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelector: nil receiver")
+	}
+	type alias EventGatewayParsedRecordMaskSelector
+	aux := alias{}
+	aux.Paths = &EventGatewayParsedRecordMaskSelectorPaths{}
+	aux.Strategy = &EventGatewayParsedRecordMaskSelectorStrategy{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordMaskSelector: %w", err)
+	}
+	if aux.Paths != nil && aux.Paths.Type == "" && aux.Paths.Array == nil && aux.Paths.Expression == nil {
+		aux.Paths = nil
+	}
+	if aux.Strategy != nil && aux.Strategy.Type == "" && aux.Strategy.Email == nil && aux.Strategy.KeepChars == nil && aux.Strategy.Replace == nil {
+		aux.Strategy = nil
+	}
+	*s = EventGatewayParsedRecordMaskSelector(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfig represents a union type for EventGatewayParsedRecordTranscodeConsumeConfig.
+// Only one of the fields should be set based on the OutputFormat.
+type EventGatewayParsedRecordTranscodeConsumeConfig struct {
+	// OutputFormat designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	OutputFormat EventGatewayParsedRecordTranscodeConsumeConfigType `json:"outputFormat,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *EventGatewayParsedRecordTranscodeConsumeConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *EventGatewayParsedRecordTranscodeConsumeConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigType represents the type of EventGatewayParsedRecordTranscodeConsumeConfig.
+type EventGatewayParsedRecordTranscodeConsumeConfigType string
+
+// EventGatewayParsedRecordTranscodeConsumeConfigType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumeConfigTypeAvro EventGatewayParsedRecordTranscodeConsumeConfigType = "avro"
+	EventGatewayParsedRecordTranscodeConsumeConfigTypeJSON EventGatewayParsedRecordTranscodeConsumeConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumeConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.OutputFormat))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfig outputFormat: %w", err)
+	}
+	m["outputFormat"] = typeBytes
+	switch u.OutputFormat {
+	case EventGatewayParsedRecordTranscodeConsumeConfigTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfig avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumeConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfig: nil receiver")
+	}
+	var probe struct {
+		OutputFormat string `json:"outputFormat"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.OutputFormat = EventGatewayParsedRecordTranscodeConsumeConfigType(probe.OutputFormat)
+	switch probe.OutputFormat {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeConsumeConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfig avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeConsumeConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvro The configuration of the
+// transcode parsed record policy when converting consumed records to Avro.
+// Avro requires a schema to serialize the record value, so `schema_source` must
+// be set.
+type EventGatewayParsedRecordTranscodeConsumeConfigAvro struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Defines how to record the schema id for the transcoded output data. See the
+	// [Confluent
+	// docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
+	// for more about the wire format.
+	//
+	//
+	// +required
+	SchemaRefDestination *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination `json:"schemaRefDestination,omitempty"`
+	// Determines how to look up the schema to use for the transcoded output data.
+	// Leave this unset if the output data schema isn't needed.
+	//
+	//
+	// +required
+	SchemaSource *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource `json:"schemaSource,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination represents a union type for schema_ref_destination.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentFormat;none;recordHeader
+	Type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType `json:"type,omitempty"`
+
+	// ConfluentFormat configuration.
+	//
+	// +optional
+	ConfluentFormat *EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat `json:"confluentFormat,omitempty"`
+	// None configuration.
+	//
+	// +optional
+	None *EventGatewayParsedRecordTranscodeSchemaRefDestinationNone `json:"none,omitempty"`
+	// RecordHeader configuration.
+	//
+	// +optional
+	RecordHeader *EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader `json:"recordHeader,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType represents the type of schema_ref_destination.
+type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType string
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeConfluentFormat EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType = "confluentFormat"
+	EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeNone            EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType = "none"
+	EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeRecordHeader    EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType = "recordHeader"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeConfluentFormat:
+		if u.ConfluentFormat != nil {
+			raw, err := json.Marshal(u.ConfluentFormat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination confluent_format: %w", err)
+			}
+			m["confluentFormat"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeNone:
+		if u.None != nil {
+			raw, err := json.Marshal(u.None)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination none: %w", err)
+			}
+			m["none"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeRecordHeader:
+		if u.RecordHeader != nil {
+			raw, err := json.Marshal(u.RecordHeader)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination record_header: %w", err)
+			}
+			m["recordHeader"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationType(probe.Type)
+	switch probe.Type {
+	case "confluentFormat":
+		payload, ok := raw["confluentFormat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination confluent_format: %w", err)
+		}
+		u.ConfluentFormat = &val
+	case "none":
+		payload, ok := raw["none"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination none: %w", err)
+		}
+		u.None = &val
+	case "recordHeader":
+		payload, ok := raw["recordHeader"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination record_header: %w", err)
+		}
+		u.RecordHeader = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource represents a union type for schema_source.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=inline;reference
+	Type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType `json:"type,omitempty"`
+
+	// Inlin configuration.
+	//
+	// +optional
+	Inlin *EventGatewayParsedRecordTranscodeSchemaSourceInline `json:"inline,omitempty"`
+	// Referenc configuration.
+	//
+	// +optional
+	Referenc *EventGatewayParsedRecordTranscodeSchemaSourceReference `json:"reference,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType represents the type of schema_source.
+type EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType string
+
+// EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeInlin    EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType = "inline"
+	EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeReferenc EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType = "reference"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeInlin:
+		if u.Inlin != nil {
+			raw, err := json.Marshal(u.Inlin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource inline: %w", err)
+			}
+			m["inline"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeReferenc:
+		if u.Referenc != nil {
+			raw, err := json.Marshal(u.Referenc)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource reference: %w", err)
+			}
+			m["reference"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceType(probe.Type)
+	switch probe.Type {
+	case "inline":
+		payload, ok := raw["inline"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceInline
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource inline: %w", err)
+		}
+		u.Inlin = &val
+	case "reference":
+		payload, ok := raw["reference"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceReference
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource reference: %w", err)
+		}
+		u.Referenc = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeConsumeConfigAvro) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvro: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeConsumeConfigAvro
+	aux := alias{}
+	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination{}
+	aux.SchemaSource = &EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvro: %w", err)
+	}
+	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
+		aux.SchemaRefDestination = nil
+	}
+	if aux.SchemaSource != nil && aux.SchemaSource.Type == "" && aux.SchemaSource.Inlin == nil && aux.SchemaSource.Referenc == nil {
+		aux.SchemaSource = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeConsumeConfigAvro(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSON The configuration of the
+// transcode parsed record policy when converting consumed records to JSON.
+type EventGatewayParsedRecordTranscodeConsumeConfigJSON struct {
+	// Describes how to handle a failure in a policy applied to consumed records.
+	// * `error` - the batch is not delivered to the client.
+	// Use sparingly: erroring on a batch causes clients to get stuck on the
+	// problematic offset and requires manual intervention to skip it.
+	// * `skip` - the record is not delivered to the client.
+	// * `passthrough` - passes the record to the client even though policy
+	// execution failed.
+	// * `mark` - passes the record to the client but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=error;skip;passthrough;mark
+	FailureMode ConsumeFailureMode `json:"failureMode,omitzero"`
+	// Defines how to record the schema id for the transcoded output data. See the
+	// [Confluent
+	// docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
+	// for more about the wire format.
+	//
+	//
+	// +required
+	SchemaRefDestination *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination `json:"schemaRefDestination,omitempty"`
+	// Determines how to look up the schema to use for the transcoded output data.
+	// Leave this unset if the output data schema isn't needed.
+	//
+	//
+	// +optional
+	SchemaSource *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource `json:"schemaSource,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination represents a union type for schema_ref_destination.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentFormat;none;recordHeader
+	Type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType `json:"type,omitempty"`
+
+	// ConfluentFormat configuration.
+	//
+	// +optional
+	ConfluentFormat *EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat `json:"confluentFormat,omitempty"`
+	// None configuration.
+	//
+	// +optional
+	None *EventGatewayParsedRecordTranscodeSchemaRefDestinationNone `json:"none,omitempty"`
+	// RecordHeader configuration.
+	//
+	// +optional
+	RecordHeader *EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader `json:"recordHeader,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType represents the type of schema_ref_destination.
+type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType string
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeConfluentFormat EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType = "confluentFormat"
+	EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeNone            EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType = "none"
+	EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeRecordHeader    EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType = "recordHeader"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeConfluentFormat:
+		if u.ConfluentFormat != nil {
+			raw, err := json.Marshal(u.ConfluentFormat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination confluent_format: %w", err)
+			}
+			m["confluentFormat"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeNone:
+		if u.None != nil {
+			raw, err := json.Marshal(u.None)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination none: %w", err)
+			}
+			m["none"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeRecordHeader:
+		if u.RecordHeader != nil {
+			raw, err := json.Marshal(u.RecordHeader)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination record_header: %w", err)
+			}
+			m["recordHeader"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationType(probe.Type)
+	switch probe.Type {
+	case "confluentFormat":
+		payload, ok := raw["confluentFormat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination confluent_format: %w", err)
+		}
+		u.ConfluentFormat = &val
+	case "none":
+		payload, ok := raw["none"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination none: %w", err)
+		}
+		u.None = &val
+	case "recordHeader":
+		payload, ok := raw["recordHeader"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination record_header: %w", err)
+		}
+		u.RecordHeader = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource represents a union type for schema_source.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=inline;reference
+	Type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType `json:"type,omitempty"`
+
+	// Inlin configuration.
+	//
+	// +optional
+	Inlin *EventGatewayParsedRecordTranscodeSchemaSourceInline `json:"inline,omitempty"`
+	// Referenc configuration.
+	//
+	// +optional
+	Referenc *EventGatewayParsedRecordTranscodeSchemaSourceReference `json:"reference,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType represents the type of schema_source.
+type EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType string
+
+// EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeInlin    EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType = "inline"
+	EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeReferenc EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType = "reference"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeInlin:
+		if u.Inlin != nil {
+			raw, err := json.Marshal(u.Inlin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource inline: %w", err)
+			}
+			m["inline"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeReferenc:
+		if u.Referenc != nil {
+			raw, err := json.Marshal(u.Referenc)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource reference: %w", err)
+			}
+			m["reference"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceType(probe.Type)
+	switch probe.Type {
+	case "inline":
+		payload, ok := raw["inline"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceInline
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource inline: %w", err)
+		}
+		u.Inlin = &val
+	case "reference":
+		payload, ok := raw["reference"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceReference
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource reference: %w", err)
+		}
+		u.Referenc = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeConsumeConfigJSON) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSON: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeConsumeConfigJSON
+	aux := alias{}
+	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination{}
+	aux.SchemaSource = &EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSON: %w", err)
+	}
+	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
+		aux.SchemaRefDestination = nil
+	}
+	if aux.SchemaSource != nil && aux.SchemaSource.Type == "" && aux.SchemaSource.Inlin == nil && aux.SchemaSource.Referenc == nil {
+		aux.SchemaSource = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeConsumeConfigJSON(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeConsumePolicyCreate Converts an already
+// schema-validated record value into a different serialization
+// format before it is returned to the consumer.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayConsumeSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayParsedRecordTranscodeConsumePolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config *EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig `json:"config,omitempty"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig represents a union type for config.
+// Only one of the fields should be set based on the OutputFormat.
+type EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig struct {
+	// OutputFormat designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	OutputFormat EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType `json:"outputFormat,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *EventGatewayParsedRecordTranscodeConsumeConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *EventGatewayParsedRecordTranscodeConsumeConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType represents the type of config.
+type EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType string
+
+// EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType values.
+const (
+	EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeAvro EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType = "avro"
+	EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeJSON EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.OutputFormat))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig outputFormat: %w", err)
+	}
+	m["outputFormat"] = typeBytes
+	switch u.OutputFormat {
+	case EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig: nil receiver")
+	}
+	var probe struct {
+		OutputFormat string `json:"outputFormat"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.OutputFormat = EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigType(probe.OutputFormat)
+	switch probe.OutputFormat {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeConsumeConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeConsumeConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeConsumePolicyCreate) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreate: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeConsumePolicyCreate
+	aux := alias{}
+	aux.Config = &EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreate: %w", err)
+	}
+	if aux.Config != nil && aux.Config.OutputFormat == "" && aux.Config.Avro == nil && aux.Config.JSON == nil {
+		aux.Config = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeConsumePolicyCreate(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfig represents a union type for EventGatewayParsedRecordTranscodeProduceConfig.
+// Only one of the fields should be set based on the OutputFormat.
+type EventGatewayParsedRecordTranscodeProduceConfig struct {
+	// OutputFormat designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	OutputFormat EventGatewayParsedRecordTranscodeProduceConfigType `json:"outputFormat,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *EventGatewayParsedRecordTranscodeProduceConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *EventGatewayParsedRecordTranscodeProduceConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigType represents the type of EventGatewayParsedRecordTranscodeProduceConfig.
+type EventGatewayParsedRecordTranscodeProduceConfigType string
+
+// EventGatewayParsedRecordTranscodeProduceConfigType values.
+const (
+	EventGatewayParsedRecordTranscodeProduceConfigTypeAvro EventGatewayParsedRecordTranscodeProduceConfigType = "avro"
+	EventGatewayParsedRecordTranscodeProduceConfigTypeJSON EventGatewayParsedRecordTranscodeProduceConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProduceConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.OutputFormat))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfig outputFormat: %w", err)
+	}
+	m["outputFormat"] = typeBytes
+	switch u.OutputFormat {
+	case EventGatewayParsedRecordTranscodeProduceConfigTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfig avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProduceConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfig: nil receiver")
+	}
+	var probe struct {
+		OutputFormat string `json:"outputFormat"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.OutputFormat = EventGatewayParsedRecordTranscodeProduceConfigType(probe.OutputFormat)
+	switch probe.OutputFormat {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeProduceConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfig avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeProduceConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvro The configuration of the
+// transcode parsed record policy when converting produced records to Avro.
+// Avro requires a schema to serialize the record value, so `schema_source` must
+// be set.
+type EventGatewayParsedRecordTranscodeProduceConfigAvro struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+	// Defines how to record the schema id for the transcoded output data. See the
+	// [Confluent
+	// docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
+	// for more about the wire format.
+	//
+	//
+	// +required
+	SchemaRefDestination *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination `json:"schemaRefDestination,omitempty"`
+	// Determines how to look up the schema to use for the transcoded output data.
+	// Leave this unset if the output data schema isn't needed.
+	//
+	//
+	// +required
+	SchemaSource *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource `json:"schemaSource,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination represents a union type for schema_ref_destination.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentFormat;none;recordHeader
+	Type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType `json:"type,omitempty"`
+
+	// ConfluentFormat configuration.
+	//
+	// +optional
+	ConfluentFormat *EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat `json:"confluentFormat,omitempty"`
+	// None configuration.
+	//
+	// +optional
+	None *EventGatewayParsedRecordTranscodeSchemaRefDestinationNone `json:"none,omitempty"`
+	// RecordHeader configuration.
+	//
+	// +optional
+	RecordHeader *EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader `json:"recordHeader,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType represents the type of schema_ref_destination.
+type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType string
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType values.
+const (
+	EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeConfluentFormat EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType = "confluentFormat"
+	EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeNone            EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType = "none"
+	EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeRecordHeader    EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType = "recordHeader"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeConfluentFormat:
+		if u.ConfluentFormat != nil {
+			raw, err := json.Marshal(u.ConfluentFormat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination confluent_format: %w", err)
+			}
+			m["confluentFormat"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeNone:
+		if u.None != nil {
+			raw, err := json.Marshal(u.None)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination none: %w", err)
+			}
+			m["none"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeRecordHeader:
+		if u.RecordHeader != nil {
+			raw, err := json.Marshal(u.RecordHeader)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination record_header: %w", err)
+			}
+			m["recordHeader"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationType(probe.Type)
+	switch probe.Type {
+	case "confluentFormat":
+		payload, ok := raw["confluentFormat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination confluent_format: %w", err)
+		}
+		u.ConfluentFormat = &val
+	case "none":
+		payload, ok := raw["none"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination none: %w", err)
+		}
+		u.None = &val
+	case "recordHeader":
+		payload, ok := raw["recordHeader"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination record_header: %w", err)
+		}
+		u.RecordHeader = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource represents a union type for schema_source.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=inline;reference
+	Type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType `json:"type,omitempty"`
+
+	// Inlin configuration.
+	//
+	// +optional
+	Inlin *EventGatewayParsedRecordTranscodeSchemaSourceInline `json:"inline,omitempty"`
+	// Referenc configuration.
+	//
+	// +optional
+	Referenc *EventGatewayParsedRecordTranscodeSchemaSourceReference `json:"reference,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType represents the type of schema_source.
+type EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType string
+
+// EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType values.
+const (
+	EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeInlin    EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType = "inline"
+	EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeReferenc EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType = "reference"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeInlin:
+		if u.Inlin != nil {
+			raw, err := json.Marshal(u.Inlin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource inline: %w", err)
+			}
+			m["inline"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeReferenc:
+		if u.Referenc != nil {
+			raw, err := json.Marshal(u.Referenc)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource reference: %w", err)
+			}
+			m["reference"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceType(probe.Type)
+	switch probe.Type {
+	case "inline":
+		payload, ok := raw["inline"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceInline
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource inline: %w", err)
+		}
+		u.Inlin = &val
+	case "reference":
+		payload, ok := raw["reference"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceReference
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource reference: %w", err)
+		}
+		u.Referenc = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeProduceConfigAvro) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvro: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeProduceConfigAvro
+	aux := alias{}
+	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination{}
+	aux.SchemaSource = &EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvro: %w", err)
+	}
+	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
+		aux.SchemaRefDestination = nil
+	}
+	if aux.SchemaSource != nil && aux.SchemaSource.Type == "" && aux.SchemaSource.Inlin == nil && aux.SchemaSource.Referenc == nil {
+		aux.SchemaSource = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeProduceConfigAvro(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSON The configuration of the
+// transcode parsed record policy when converting produced records to JSON.
+type EventGatewayParsedRecordTranscodeProduceConfigJSON struct {
+	// Describes how to handle a failure in a policy applied to produced records.
+	// * `reject` - rejects the record batch.
+	// * `passthrough` - passes the record silently to the backend cluster even
+	// though policy execution failed.
+	// * `mark` - passes the record to the backend cluster but marks it with a
+	// `kong/policy-failure-<id>` header whose value is the reason for the policy
+	// failure (truncated to 512 characters).
+	//
+	// **Requires a minimum runtime version of `1.2`**.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=reject;passthrough;mark
+	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+	// Defines how to record the schema id for the transcoded output data. See the
+	// [Confluent
+	// docs](https://docs.confluent.io/platform/current/schema-registry/fundamentals/serdes-develop/index.html#wire-format)
+	// for more about the wire format.
+	//
+	//
+	// +required
+	SchemaRefDestination *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination `json:"schemaRefDestination,omitempty"`
+	// Determines how to look up the schema to use for the transcoded output data.
+	// Leave this unset if the output data schema isn't needed.
+	//
+	//
+	// +optional
+	SchemaSource *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource `json:"schemaSource,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination represents a union type for schema_ref_destination.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentFormat;none;recordHeader
+	Type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType `json:"type,omitempty"`
+
+	// ConfluentFormat configuration.
+	//
+	// +optional
+	ConfluentFormat *EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat `json:"confluentFormat,omitempty"`
+	// None configuration.
+	//
+	// +optional
+	None *EventGatewayParsedRecordTranscodeSchemaRefDestinationNone `json:"none,omitempty"`
+	// RecordHeader configuration.
+	//
+	// +optional
+	RecordHeader *EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader `json:"recordHeader,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType represents the type of schema_ref_destination.
+type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType string
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType values.
+const (
+	EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeConfluentFormat EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType = "confluentFormat"
+	EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeNone            EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType = "none"
+	EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeRecordHeader    EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType = "recordHeader"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeConfluentFormat:
+		if u.ConfluentFormat != nil {
+			raw, err := json.Marshal(u.ConfluentFormat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination confluent_format: %w", err)
+			}
+			m["confluentFormat"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeNone:
+		if u.None != nil {
+			raw, err := json.Marshal(u.None)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination none: %w", err)
+			}
+			m["none"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeRecordHeader:
+		if u.RecordHeader != nil {
+			raw, err := json.Marshal(u.RecordHeader)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination record_header: %w", err)
+			}
+			m["recordHeader"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationType(probe.Type)
+	switch probe.Type {
+	case "confluentFormat":
+		payload, ok := raw["confluentFormat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination confluent_format: %w", err)
+		}
+		u.ConfluentFormat = &val
+	case "none":
+		payload, ok := raw["none"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination none: %w", err)
+		}
+		u.None = &val
+	case "recordHeader":
+		payload, ok := raw["recordHeader"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination record_header: %w", err)
+		}
+		u.RecordHeader = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource represents a union type for schema_source.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=inline;reference
+	Type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType `json:"type,omitempty"`
+
+	// Inlin configuration.
+	//
+	// +optional
+	Inlin *EventGatewayParsedRecordTranscodeSchemaSourceInline `json:"inline,omitempty"`
+	// Referenc configuration.
+	//
+	// +optional
+	Referenc *EventGatewayParsedRecordTranscodeSchemaSourceReference `json:"reference,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType represents the type of schema_source.
+type EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType string
+
+// EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType values.
+const (
+	EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeInlin    EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType = "inline"
+	EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeReferenc EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType = "reference"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeInlin:
+		if u.Inlin != nil {
+			raw, err := json.Marshal(u.Inlin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource inline: %w", err)
+			}
+			m["inline"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeReferenc:
+		if u.Referenc != nil {
+			raw, err := json.Marshal(u.Referenc)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource reference: %w", err)
+			}
+			m["reference"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceType(probe.Type)
+	switch probe.Type {
+	case "inline":
+		payload, ok := raw["inline"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceInline
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource inline: %w", err)
+		}
+		u.Inlin = &val
+	case "reference":
+		payload, ok := raw["reference"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceReference
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource reference: %w", err)
+		}
+		u.Referenc = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeProduceConfigJSON) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSON: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeProduceConfigJSON
+	aux := alias{}
+	aux.SchemaRefDestination = &EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination{}
+	aux.SchemaSource = &EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSON: %w", err)
+	}
+	if aux.SchemaRefDestination != nil && aux.SchemaRefDestination.Type == "" && aux.SchemaRefDestination.ConfluentFormat == nil && aux.SchemaRefDestination.None == nil && aux.SchemaRefDestination.RecordHeader == nil {
+		aux.SchemaRefDestination = nil
+	}
+	if aux.SchemaSource != nil && aux.SchemaSource.Type == "" && aux.SchemaSource.Inlin == nil && aux.SchemaSource.Referenc == nil {
+		aux.SchemaSource = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeProduceConfigJSON(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeProducePolicyCreate Converts an already
+// schema-validated record value into a different serialization
+// format before it is produced to the backend cluster.
+//
+// Note this policy can only be used as a child of a
+// `EventGatewayProduceSchemaValidationPolicy` policy.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type EventGatewayParsedRecordTranscodeProducePolicyCreate struct {
+	// A string containing the boolean expression that determines whether the
+	// policy is applied.
+	//
+	// When the policy is applied as a child policy of schema_validation, the
+	// expression can also reference
+	// `record.value` fields.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1000
+	Condition string `json:"condition,omitzero"`
+	// The configuration of the policy.
+	//
+	// +required
+	Config *EventGatewayParsedRecordTranscodeProducePolicyCreateConfig `json:"config,omitempty"`
+	// A human-readable description of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=512
+	Description string `json:"description,omitzero"`
+	// Whether the policy is enabled.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Enabled string `json:"enabled,omitzero"`
+	// Labels store metadata of an entity that can be used for filtering an entity
+	// list or for searching across entity types.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels Labels `json:"labels,omitzero"`
+	// A unique user-defined name of the policy.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=255
+	Name string `json:"name,omitzero"`
+	// The unique identifier of the parent schema validation policy.
+	//
+	// +required
+	ParentPolicyID *commonv1alpha1.ObjectRef `json:"parentPolicyID,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProducePolicyCreateConfig represents a union type for config.
+// Only one of the fields should be set based on the OutputFormat.
+type EventGatewayParsedRecordTranscodeProducePolicyCreateConfig struct {
+	// OutputFormat designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	OutputFormat EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType `json:"outputFormat,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *EventGatewayParsedRecordTranscodeProduceConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *EventGatewayParsedRecordTranscodeProduceConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType represents the type of config.
+type EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType string
+
+// EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType values.
+const (
+	EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeAvro EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType = "avro"
+	EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeJSON EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeProducePolicyCreateConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.OutputFormat))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig outputFormat: %w", err)
+	}
+	m["outputFormat"] = typeBytes
+	switch u.OutputFormat {
+	case EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeProducePolicyCreateConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig: nil receiver")
+	}
+	var probe struct {
+		OutputFormat string `json:"outputFormat"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.OutputFormat = EventGatewayParsedRecordTranscodeProducePolicyCreateConfigType(probe.OutputFormat)
+	switch probe.OutputFormat {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeProduceConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeProduceConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeProducePolicyCreate) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreate: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeProducePolicyCreate
+	aux := alias{}
+	aux.Config = &EventGatewayParsedRecordTranscodeProducePolicyCreateConfig{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreate: %w", err)
+	}
+	if aux.Config != nil && aux.Config.OutputFormat == "" && aux.Config.Avro == nil && aux.Config.JSON == nil {
+		aux.Config = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeProducePolicyCreate(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestination represents a union type for EventGatewayParsedRecordTranscodeSchemaRefDestination.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeSchemaRefDestination struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=confluentFormat;none;recordHeader
+	Type EventGatewayParsedRecordTranscodeSchemaRefDestinationType `json:"type,omitempty"`
+
+	// ConfluentFormat configuration.
+	//
+	// +optional
+	ConfluentFormat *EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat `json:"confluentFormat,omitempty"`
+	// None configuration.
+	//
+	// +optional
+	None *EventGatewayParsedRecordTranscodeSchemaRefDestinationNone `json:"none,omitempty"`
+	// RecordHeader configuration.
+	//
+	// +optional
+	RecordHeader *EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader `json:"recordHeader,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationType represents the type of EventGatewayParsedRecordTranscodeSchemaRefDestination.
+type EventGatewayParsedRecordTranscodeSchemaRefDestinationType string
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationType values.
+const (
+	EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeConfluentFormat EventGatewayParsedRecordTranscodeSchemaRefDestinationType = "confluentFormat"
+	EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeNone            EventGatewayParsedRecordTranscodeSchemaRefDestinationType = "none"
+	EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeRecordHeader    EventGatewayParsedRecordTranscodeSchemaRefDestinationType = "recordHeader"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeSchemaRefDestination) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeConfluentFormat:
+		if u.ConfluentFormat != nil {
+			raw, err := json.Marshal(u.ConfluentFormat)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination confluent_format: %w", err)
+			}
+			m["confluentFormat"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeNone:
+		if u.None != nil {
+			raw, err := json.Marshal(u.None)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination none: %w", err)
+			}
+			m["none"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeSchemaRefDestinationTypeRecordHeader:
+		if u.RecordHeader != nil {
+			raw, err := json.Marshal(u.RecordHeader)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaRefDestination record_header: %w", err)
+			}
+			m["recordHeader"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeSchemaRefDestination) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaRefDestination: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeSchemaRefDestinationType(probe.Type)
+	switch probe.Type {
+	case "confluentFormat":
+		payload, ok := raw["confluentFormat"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaRefDestination confluent_format: %w", err)
+		}
+		u.ConfluentFormat = &val
+	case "none":
+		payload, ok := raw["none"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaRefDestination none: %w", err)
+		}
+		u.None = &val
+	case "recordHeader":
+		payload, ok := raw["recordHeader"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaRefDestination record_header: %w", err)
+		}
+		u.RecordHeader = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat Prefixes
+// the structured data bytes with a reference to the schema.
+type EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat struct {
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationNone Do not persist the
+// schema anywhere.
+type EventGatewayParsedRecordTranscodeSchemaRefDestinationNone struct {
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader Puts the
+// schema reference in a record header.
+type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader struct {
+	//
+	//
+	// +optional
+	RecordHeader EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeaderRecordHeader `json:"recordHeader,omitzero"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeaderRecordHeader is a type alias.
+type EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeaderRecordHeader struct {
+	// The name is compatible with Confluent's serializer by default but can be
+	// changed.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Name string `json:"name,omitzero"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaReference References a schema
+// registered in a schema registry, computing the subject and version to use.
+type EventGatewayParsedRecordTranscodeSchemaReference struct {
+	// A reference to a schema Registry.
+	//
+	// +optional
+	SchemaRegistry *EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry `json:"schemaRegistry,omitempty"`
+	// An expression that computes the schema registry subject of the output data's
+	// schema.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Subject string `json:"subject,omitzero"`
+	// An expression that computes the schema registry version of the output data's
+	// schema.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	Version string `json:"version,omitzero"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry represents a union type for schema_registry.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=id;name
+	Type EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType `json:"type,omitempty"`
+
+	// ID configuration.
+	//
+	// +optional
+	ID *SchemaRegistryReferenceByID `json:"id,omitempty"`
+	// Name configuration.
+	//
+	// +optional
+	Name *SchemaRegistryReferenceByName `json:"name,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType represents the type of schema_registry.
+type EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType string
+
+// EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType values.
+const (
+	EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeID   EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType = "id"
+	EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeName EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType = "name"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeID:
+		if u.ID != nil {
+			raw, err := json.Marshal(u.ID)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry Id: %w", err)
+			}
+			m["id"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeName:
+		if u.Name != nil {
+			raw, err := json.Marshal(u.Name)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry Name: %w", err)
+			}
+			m["name"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryType(probe.Type)
+	switch probe.Type {
+	case "id":
+		payload, ok := raw["id"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByID
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry Id: %w", err)
+		}
+		u.ID = &val
+	case "name":
+		payload, ok := raw["name"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaRegistryReferenceByName
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry Name: %w", err)
+		}
+		u.Name = &val
+	}
+	return nil
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (s *EventGatewayParsedRecordTranscodeSchemaReference) UnmarshalJSON(data []byte) error {
+	if s == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaReference: nil receiver")
+	}
+	type alias EventGatewayParsedRecordTranscodeSchemaReference
+	aux := alias{}
+	aux.SchemaRegistry = &EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry{}
+	if err := json.Unmarshal(data, &aux); err != nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaReference: %w", err)
+	}
+	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
+		aux.SchemaRegistry = nil
+	}
+	*s = EventGatewayParsedRecordTranscodeSchemaReference(aux)
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeSchemaSource represents a union type for EventGatewayParsedRecordTranscodeSchemaSource.
+// Only one of the fields should be set based on the Type.
+type EventGatewayParsedRecordTranscodeSchemaSource struct {
+	// Type designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=inline;reference
+	Type EventGatewayParsedRecordTranscodeSchemaSourceType `json:"type,omitempty"`
+
+	// Inlin configuration.
+	//
+	// +optional
+	Inlin *EventGatewayParsedRecordTranscodeSchemaSourceInline `json:"inline,omitempty"`
+	// Referenc configuration.
+	//
+	// +optional
+	Referenc *EventGatewayParsedRecordTranscodeSchemaSourceReference `json:"reference,omitempty"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaSourceType represents the type of EventGatewayParsedRecordTranscodeSchemaSource.
+type EventGatewayParsedRecordTranscodeSchemaSourceType string
+
+// EventGatewayParsedRecordTranscodeSchemaSourceType values.
+const (
+	EventGatewayParsedRecordTranscodeSchemaSourceTypeInlin    EventGatewayParsedRecordTranscodeSchemaSourceType = "inline"
+	EventGatewayParsedRecordTranscodeSchemaSourceTypeReferenc EventGatewayParsedRecordTranscodeSchemaSourceType = "reference"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayParsedRecordTranscodeSchemaSource) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.Type))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSource type: %w", err)
+	}
+	m["type"] = typeBytes
+	switch u.Type {
+	case EventGatewayParsedRecordTranscodeSchemaSourceTypeInlin:
+		if u.Inlin != nil {
+			raw, err := json.Marshal(u.Inlin)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSource inline: %w", err)
+			}
+			m["inline"] = raw
+		}
+	case EventGatewayParsedRecordTranscodeSchemaSourceTypeReferenc:
+		if u.Referenc != nil {
+			raw, err := json.Marshal(u.Referenc)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayParsedRecordTranscodeSchemaSource reference: %w", err)
+			}
+			m["reference"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayParsedRecordTranscodeSchemaSource) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSource: nil receiver")
+	}
+	var probe struct {
+		Type string `json:"type"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.Type = EventGatewayParsedRecordTranscodeSchemaSourceType(probe.Type)
+	switch probe.Type {
+	case "inline":
+		payload, ok := raw["inline"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceInline
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSource inline: %w", err)
+		}
+		u.Inlin = &val
+	case "reference":
+		payload, ok := raw["reference"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val EventGatewayParsedRecordTranscodeSchemaSourceReference
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayParsedRecordTranscodeSchemaSource reference: %w", err)
+		}
+		u.Referenc = &val
+	}
+	return nil
+}
+
+// EventGatewayParsedRecordTranscodeSchemaSourceInline A schema embedded
+// directly in the policy configuration.
+type EventGatewayParsedRecordTranscodeSchemaSourceInline struct {
+	// The raw schema text (e.g.
+	// an Avro JSON schema) to use for the transcoded output data.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Inline string `json:"inline,omitzero"`
+}
+
+// EventGatewayParsedRecordTranscodeSchemaSourceReference Looks up an existing
+// schema in a schema registry using a computed subject and version.
+type EventGatewayParsedRecordTranscodeSchemaSourceReference struct {
+	// References a schema registered in a schema registry, computing the subject
+	// and version to use.
+	//
+	// +required
+	Reference EventGatewayParsedRecordTranscodeSchemaReference `json:"reference,omitzero"`
+}
+
 // EventGatewayProduceRequestRules The rules to apply to Kafka `Produce`
 // requests.
 type EventGatewayProduceRequestRules struct {
@@ -3074,11 +6653,15 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;passthrough;mark
 	FailureMode ProduceFailureMode `json:"failureMode,omitzero"`
+	// Defines the schema for a record key or value, inline.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	//
+	// +optional
+	Key *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey `json:"key,omitempty"`
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -3104,11 +6687,15 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	ValidateValue string `json:"validateValue,omitzero"`
+	// Defines the schema for a record key or value, inline.
+	//
+	// **Requires a minimum runtime version of `1.3`**.
+	//
+	// +optional
+	Value *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue `json:"value,omitempty"`
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -3116,6 +6703,105 @@ type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig struct {
 	// +kubebuilder:validation:MaxLength=253
 	// +kubebuilder:validation:Enum=reject;mark
 	ValueValidationAction ProduceValueValidationAction `json:"valueValidationAction,omitzero"`
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey represents a union type for key.
+// Only one of the fields should be set based on the SchemaType.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey struct {
+	// SchemaType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType `json:"schemaType,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *SchemaValidationInlineSchemaConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *SchemaValidationInlineSchemaConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType represents the type of key.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType string
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType values.
+const (
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType = "avro"
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.SchemaType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey schemaType: %w", err)
+	}
+	m["schemaType"] = typeBytes
+	switch u.SchemaType {
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey: nil receiver")
+	}
+	var probe struct {
+		SchemaType string `json:"schemaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.SchemaType = EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyType(probe.SchemaType)
+	switch probe.SchemaType {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
 }
 
 // EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
@@ -3217,6 +6903,105 @@ func (u *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegist
 	return nil
 }
 
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue represents a union type for value.
+// Only one of the fields should be set based on the SchemaType.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue struct {
+	// SchemaType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType `json:"schemaType,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *SchemaValidationInlineSchemaConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *SchemaValidationInlineSchemaConfigJSON `json:"json,omitempty"`
+}
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType represents the type of value.
+type EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType string
+
+// EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType values.
+const (
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeAvro EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType = "avro"
+	EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeJSON EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.SchemaType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue schemaType: %w", err)
+	}
+	m["schemaType"] = typeBytes
+	switch u.SchemaType {
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue: nil receiver")
+	}
+	var probe struct {
+		SchemaType string `json:"schemaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.SchemaType = EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueType(probe.SchemaType)
+	switch probe.SchemaType {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
 // UnmarshalJSON implements json.Unmarshaler.
 func (s *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) UnmarshalJSON(data []byte) error {
 	if s == nil {
@@ -3224,12 +7009,20 @@ func (s *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) UnmarshalJ
 	}
 	type alias EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
 	aux := alias{}
+	aux.Key = &EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey{}
 	aux.SchemaRegistry = &EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry{}
+	aux.Value = &EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue{}
 	if err := json.Unmarshal(data, &aux); err != nil {
 		return fmt.Errorf("unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig: %w", err)
 	}
+	if aux.Key != nil && aux.Key.SchemaType == "" && aux.Key.Avro == nil && aux.Key.JSON == nil {
+		aux.Key = nil
+	}
 	if aux.SchemaRegistry != nil && aux.SchemaRegistry.Type == "" && aux.SchemaRegistry.ID == nil && aux.SchemaRegistry.Name == nil {
 		aux.SchemaRegistry = nil
+	}
+	if aux.Value != nil && aux.Value.SchemaType == "" && aux.Value.Avro == nil && aux.Value.JSON == nil {
+		aux.Value = nil
 	}
 	*s = EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig(aux)
 	return nil
@@ -3255,8 +7048,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -3285,8 +7076,6 @@ type EventGatewayProduceSchemaValidationPolicyJSONConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -3434,8 +7223,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record key is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -3464,8 +7251,6 @@ type EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig struct {
 	// Defines a behavior when record value is not valid.
 	// * reject - rejects a batch for topic partition. Only available for produce.
 	// * mark - marks a record with kong/server header and client ID value
-	//
-	//
 	// to help to identify the clients violating schema.
 	//
 	//
@@ -4585,7 +8370,6 @@ type ProduceFailureMode string
 // ProduceKeyValidationAction Defines a behavior when record key is not valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceKeyValidationAction string
 
@@ -4593,7 +8377,6 @@ type ProduceKeyValidationAction string
 // valid.
 // * reject - rejects a batch for topic partition. Only available for produce.
 // * mark - marks a record with kong/server header and client ID value
-//
 // to help to identify the clients violating schema.
 type ProduceValueValidationAction string
 
@@ -4867,6 +8650,131 @@ type SchemaRegistryReferenceByName struct {
 	Name string `json:"name,omitzero"`
 }
 
+// SchemaValidationInlineSchemaConfig represents a union type for SchemaValidationInlineSchemaConfig.
+// Only one of the fields should be set based on the SchemaType.
+type SchemaValidationInlineSchemaConfig struct {
+	// SchemaType designates the type of configuration.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:Enum=avro;json
+	SchemaType SchemaValidationInlineSchemaConfigType `json:"schemaType,omitempty"`
+
+	// Avro configuration.
+	//
+	// +optional
+	Avro *SchemaValidationInlineSchemaConfigAvro `json:"avro,omitempty"`
+	// JSON configuration.
+	//
+	// +optional
+	JSON *SchemaValidationInlineSchemaConfigJSON `json:"json,omitempty"`
+}
+
+// SchemaValidationInlineSchemaConfigType represents the type of SchemaValidationInlineSchemaConfig.
+type SchemaValidationInlineSchemaConfigType string
+
+// SchemaValidationInlineSchemaConfigType values.
+const (
+	SchemaValidationInlineSchemaConfigTypeAvro SchemaValidationInlineSchemaConfigType = "avro"
+	SchemaValidationInlineSchemaConfigTypeJSON SchemaValidationInlineSchemaConfigType = "json"
+)
+
+// MarshalJSON implements json.Marshaler.
+func (u SchemaValidationInlineSchemaConfig) MarshalJSON() ([]byte, error) {
+	m := map[string]json.RawMessage{}
+	typeBytes, err := json.Marshal(string(u.SchemaType))
+	if err != nil {
+		return nil, fmt.Errorf("marshaling SchemaValidationInlineSchemaConfig schemaType: %w", err)
+	}
+	m["schemaType"] = typeBytes
+	switch u.SchemaType {
+	case SchemaValidationInlineSchemaConfigTypeAvro:
+		if u.Avro != nil {
+			raw, err := json.Marshal(u.Avro)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling SchemaValidationInlineSchemaConfig avro: %w", err)
+			}
+			m["avro"] = raw
+		}
+	case SchemaValidationInlineSchemaConfigTypeJSON:
+		if u.JSON != nil {
+			raw, err := json.Marshal(u.JSON)
+			if err != nil {
+				return nil, fmt.Errorf("marshaling SchemaValidationInlineSchemaConfig json: %w", err)
+			}
+			m["json"] = raw
+		}
+	}
+	return json.Marshal(m)
+}
+
+// UnmarshalJSON implements json.Unmarshaler.
+func (u *SchemaValidationInlineSchemaConfig) UnmarshalJSON(data []byte) error {
+	if u == nil {
+		return fmt.Errorf("unmarshaling SchemaValidationInlineSchemaConfig: nil receiver")
+	}
+	var probe struct {
+		SchemaType string `json:"schemaType"`
+	}
+	if err := json.Unmarshal(data, &probe); err != nil {
+		return err
+	}
+	var raw map[string]json.RawMessage
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+	u.SchemaType = SchemaValidationInlineSchemaConfigType(probe.SchemaType)
+	switch probe.SchemaType {
+	case "avro":
+		payload, ok := raw["avro"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigAvro
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling SchemaValidationInlineSchemaConfig avro: %w", err)
+		}
+		u.Avro = &val
+	case "json":
+		payload, ok := raw["json"]
+		if !ok || len(payload) == 0 {
+			return nil
+		}
+		var val SchemaValidationInlineSchemaConfigJSON
+		if err := json.Unmarshal(payload, &val); err != nil {
+			return fmt.Errorf("unmarshaling SchemaValidationInlineSchemaConfig json: %w", err)
+		}
+		u.JSON = &val
+	}
+	return nil
+}
+
+// SchemaValidationInlineSchemaConfigAvro The configuration of an inline schema
+// when using Avro.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type SchemaValidationInlineSchemaConfigAvro struct {
+	// A schema that applies according to `schema_type`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Schema string `json:"schema,omitzero"`
+}
+
+// SchemaValidationInlineSchemaConfigJSON The configuration of an inline schema
+// when using JSON.
+//
+// **Requires a minimum runtime version of `1.3`**.
+type SchemaValidationInlineSchemaConfigJSON struct {
+	// A schema that applies according to `schema_type`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Schema string `json:"schema,omitzero"`
+}
+
 // TLSCertificate A TLS certificate and its associated private key.
 type TLSCertificate struct {
 	// A literal value or a reference to an existing secret as a template string
@@ -4937,7 +8845,6 @@ type TLSVersionRange struct {
 // the gateway.
 // - `enforce_on_gateway` means the gateway enforces its own ACL policies for
 // this virtual cluster
-//
 // and does not forward ACL-related commands to the backend cluster.
 // Note that if there are no ACL policies configured, all access is denied.
 // - `passthrough` tells the gateway to forward all ACL-related commands.
@@ -5035,18 +8942,12 @@ type VirtualClusterAuthenticationOauthBearer struct {
 	// Methods to mediate authentication:
 	// * passthrough - pass authentication from the client through proxy to the
 	// backend cluster without any kind of
-	//
-	//
 	// validation
 	// * validate_forward - pass authentication from the client through proxy to
 	// the backend cluster.
-	//
-	//
 	// Proxy does the validation before forwarding it to the client.
 	// * terminate - terminate authentication at the proxy level and originate
 	// authentication to the backend cluster
-	//
-	//
 	// using the configuration defined at BackendCluster's authentication.
 	// SASL auth is not originated if authentication on the backend_cluster is not
 	// configured.
@@ -5340,12 +9241,8 @@ type VirtualClusterNamespace struct {
 	Additional VirtualClusterNamespaceAdditionalProperties `json:"additional,omitzero"`
 	// * hide_prefix - the configured prefix is hidden from clients for topics and
 	// IDs when reading.
-	//
-	//
 	// Created resources are written with the prefix on the backend cluster.
 	// * enforce_prefix - the configured prefix remains visible to clients.
-	//
-	//
 	// Created resources must include the prefix or the request will fail.
 	//
 	//
