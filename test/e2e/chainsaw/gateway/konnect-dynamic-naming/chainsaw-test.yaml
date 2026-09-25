@@ -1,0 +1,125 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: gateway-konnect-dynamic-naming
+spec:
+  description: |
+    Non-regression lock for the default (dynamic) naming path. Without the static-naming
+    annotation the operator generates "<gateway-name>-<random suffix>" and uses that same
+    string as the Konnect name (https://github.com/Kong/kong-operator/issues/3357). The fix in
+    https://github.com/Kong/kong-operator/issues/4079 qualifies it only under
+    static naming: this makes sure the dynamic path is not changed by accident.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: gateway_image
+      value: (env('GATEWAY_IMAGE'))
+    # A short literal rather than the usual "<test_name>-gateway": a name already embedding
+    # the namespace would make the comparisons below meaningless.
+    - name: gateway_name
+      value: edge-gw
+    - name: listener_http_port
+      value: 80
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+
+  steps:
+    - name: 01-create-auth-secret
+      description: Create the Secret holding the Konnect token.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+
+    - name: 02-create-konnect-api-auth
+      description: Create the KonnectAPIAuthConfiguration.
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+
+    - name: 03-create-gateway-configuration
+      description: |
+        Local files rather than the shared templates: apply-assert-gatewayConfiguration.yaml
+        always emits an explicit authRef.namespace, which would need a KongReferenceGrant.
+      try:
+        - apply:
+            file: 01-gatewayconfiguration.yaml
+        - assert:
+            file: 02-assert-gatewayclass.yaml
+
+    - name: 04-create-gateway
+      description: Create a Gateway without the static-naming annotation.
+      try:
+        - apply:
+            file: 03-gateway.yaml
+
+    - name: 05-assert-konnect-control-plane-programmed
+      description: The Gateway-owned KonnectGatewayControlPlane reaches Programmed in Konnect.
+      try:
+        - assert:
+            file: 04-assert-kgcp.yaml
+
+    - name: 06-assert-dynamic-naming-invariants
+      description: |
+        The Konnect name equals the generated Kubernetes name
+        (https://github.com/Kong/kong-operator/issues/3357) and is not qualified
+        with the namespace. A script rather than an assertion tree because it compares two
+        fields of the same resource, whose values are not known up front. The preceding step
+        already waited for the resource, so the script's single read is enough.
+      try:
+        - script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: GATEWAY_NAME
+                value: ($gateway_name)
+            content: |
+              bash ../../common/scripts/assert_konnect_dynamic_naming.sh
+
+    - name: 07-cleanup
+      description: |
+        Delete the Gateway and wait for its Konnect-backed children to be gone, so the
+        operator can still authenticate while deprovisioning. The error operation succeeds
+        only when nothing matches, so it doubles as "wait until gone".
+      timeouts:
+        delete: 120s
+        error: 120s
+      try:
+        - delete:
+            ref:
+              apiVersion: gateway.networking.k8s.io/v1
+              kind: Gateway
+              name: ($gateway_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectGatewayControlPlane
+              metadata:
+                namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: konnect.konghq.com/v1alpha2
+              kind: KonnectExtension
+              metadata:
+                namespace: ($namespace)
+
+  catch:
+    - description: Capture debug snapshot
+      script:
+        env:
+          - name: TEST_NAME
+            value: gateway-konnect-dynamic-naming
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

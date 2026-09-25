@@ -1,0 +1,12 @@
+# WITHOUT the static-naming annotation: owned resources get "<gateway-name>-<random>".
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: ($gateway_name)
+  namespace: ($namespace)
+spec:
+  gatewayClassName: (join('-', [($test_name), 'gateway-class']))
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: ($listener_http_port)
