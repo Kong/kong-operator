@@ -19,6 +19,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/builder"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/refs"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/secrets"
 	secretref "github.com/kong/kong-operator/v2/controller/pkg/secrets/ref"
@@ -94,6 +95,8 @@ func (c *gatewayConverter) GetRootObject() gwtypes.Gateway {
 func (c *gatewayConverter) Translate(ctx context.Context, logger logr.Logger) (int, error) {
 	logger = logger.WithValues("phase", "gateway-translate")
 	log.Debug(logger, "Starting Gateway translation")
+
+	ctx = utils.WithTagCache(ctx)
 
 	// Check if the gateway is handled by this controller.
 	// It could happen when the GatewayClass is changed to an unsupported one.
@@ -270,9 +273,14 @@ func (c *gatewayConverter) processListenerCertificate(
 		return fmt.Errorf("invalid TLS secret %s/%s for listener %+v", secretNamespace, certRef.Name, listener)
 	}
 
-	// KongCertificate/KongSNI tags come solely from the TLS Secret's konghq.com/tags
-	// annotation. Tags on the Gateway or backend Service must not leak here.
-	certTags := metadata.ExtractTags(secret)
+	// KongCertificate/KongSNI tags come from the TLS Secret's konghq.com/tags annotation, plus the
+	// tags inherited from the Gateway that owns the listener and from its GatewayClass. Tags on
+	// the backend Service must still not leak here.
+	certTags := utils.MergeTags(logger,
+		metadata.ExtractTags(secret),
+		metadata.ExtractTags(c.gateway),
+		utils.TagsForGatewayClassOf(ctx, logger, c.Client, c.gateway),
+	)
 
 	// Create the KongCertificate resource.
 	kongCert, err := c.buildKongCertificate(listener, certRef, secretNamespace, certTags)

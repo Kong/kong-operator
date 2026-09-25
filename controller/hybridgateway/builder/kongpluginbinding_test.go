@@ -288,3 +288,18 @@ func TestKongPluginBindingBuilder_FullBinding(t *testing.T) {
 	assert.Equal(t, "test-route", ownerRef.Name)
 	assert.True(t, *ownerRef.BlockOwnerDeletion)
 }
+
+func TestKongPluginBindingBuilder_WithSpecTags(t *testing.T) {
+	t.Run("nil leaves tags unset", func(t *testing.T) {
+		binding := NewKongPluginBinding().WithSpecTags(nil).MustBuild()
+		assert.Nil(t, binding.Spec.Tags)
+	})
+	t.Run("empty leaves tags unset", func(t *testing.T) {
+		binding := NewKongPluginBinding().WithSpecTags([]string{}).MustBuild()
+		assert.Nil(t, binding.Spec.Tags)
+	})
+	t.Run("sets tags", func(t *testing.T) {
+		binding := NewKongPluginBinding().WithSpecTags([]string{"foo", "bar"}).MustBuild()
+		assert.Equal(t, commonv1alpha1.Tags{"foo", "bar"}, binding.Spec.Tags)
+	})
+}

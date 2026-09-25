@@ -200,6 +200,21 @@
   `AIGatewayConsumer`, and the other `aiconfiguration.konghq.com` kinds) target an
   `OnPremAIGateway` via `spec.aiGatewayRef`.
   [#5834](https://github.com/Kong/kong-operator/pull/5834)
+- Konnect hybrid gateways: Kong entities translated from `HTTPRoute`, `GRPCRoute`,
+  `TLSRoute`, `TCPRoute` and `UDPRoute` now also inherit the `konghq.com/tags`
+  annotation from the route's parent `Gateway` and from that Gateway's
+  `GatewayClass`, so a whole Gateway's worth of traffic can be tagged in one
+  place. Inherited tags are merged after the entity's own tags (the route's, the
+  backend `Service`'s or the referenced `Secret`'s annotation), then the
+  Gateway's, then the GatewayClass's; the merged set is deduplicated and capped
+  at 20 entries, dropping from the end, so the least specific tags are lost
+  first. This applies to `KongService`, `KongRoute`, `KongUpstream`,
+  `KongTarget`, `KongCertificate`, `KongSNI`, `KongPlugin` and
+  `KongPluginBinding`. Entities that several routes share - a `KongService`,
+  `KongUpstream`, `KongTarget` or generated `KongPlugin` with the same backends
+  and ControlPlane - inherit the union over every attached route's parents, so
+  the value does not depend on which route is reconciled.
+  [#5842](https://github.com/Kong/kong-operator/pull/5842)
 
 ### Breaking changes
 
@@ -281,6 +296,14 @@ by the operator's semver:
 
 ### Changed
 
+- Konnect hybrid gateways: the `KongCertificate` and `KongSNI` generated from a
+  `Gateway` listener's TLS configuration now inherit the `konghq.com/tags`
+  annotation of that `Gateway` and of its `GatewayClass`, where previously they
+  were tagged from the referenced `Secret` alone. Tags read from a
+  `konghq.com/tags` annotation are also now whitespace-trimmed with empty
+  entries dropped, so an annotation written as `"a, b"` yields `["a", "b"]`
+  rather than `["a", " b"]`; existing entities are rewritten once on upgrade.
+  [#5842](https://github.com/Kong/kong-operator/pull/5842)
 - Security: harden containers for `MCPServerDataPlane`'s `Deployment` with
   a tight security context:
   - disallows privilege escalation

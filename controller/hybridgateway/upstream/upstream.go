@@ -108,7 +108,7 @@ func UpstreamForRule[
 
 	policy := upstreamPolicyForRouteRule(ctx, logger, cl, parentRoute.GetNamespace(), rule)
 	hostHeader := resolveHostHeaderFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
-	tags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
+	backendTags := utils.TagsFromBackendRefs(ctx, cl, namespace, backendRefs, logger)
 	logger = logger.WithValues("kongupstream", upstreamName)
 	log.Debug(logger, fmt.Sprintf("Creating KongUpstream for %s rule", parentRoute.GetObjectKind().GroupVersionKind().Kind))
 
@@ -120,7 +120,6 @@ func UpstreamForRule[
 		WithSpecName(upstreamName).
 		WithHostHeader(hostHeader).
 		WithControlPlaneRef(*cp).
-		WithSpecTags(tags).
 		Build()
 	if err != nil {
 		log.Error(logger, err, "Failed to build KongUpstream resource")
@@ -131,6 +130,14 @@ func UpstreamForRule[
 
 	if _, err = translator.VerifyAndUpdate(ctx, logger, cl, &upstream, parentRoute, false); err != nil {
 		return nil, err
+	}
+
+	// Tags are set after VerifyAndUpdate, once the KongUpstream identity is final: a KongUpstream
+	// is shared by every route with the same backends and ControlPlane, so the inherited tags must
+	// be resolved from all of its attached routes rather than from this one alone.
+	if tags := utils.MergeTags(logger, backendTags,
+		utils.InheritedTagsForKongObject(ctx, logger, cl, parentRoute, &upstream)); len(tags) > 0 {
+		upstream.Spec.Tags = commonv1alpha1.Tags(tags)
 	}
 
 	return &upstream, nil

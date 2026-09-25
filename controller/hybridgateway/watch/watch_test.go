@@ -132,9 +132,10 @@ func TestWatches(t *testing.T) {
 		{
 			name:    "Gateway",
 			obj:     &gwtypes.Gateway{},
-			wantLen: 2,
+			wantLen: 3,
 			wantType: []any{
 				&corev1.Secret{},
+				&gwtypes.GatewayClass{},
 				&gwtypes.ReferenceGrant{},
 			},
 		},
