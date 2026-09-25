@@ -27,19 +27,15 @@ jobs:
           - name: go-fix
             make-target: verify.go-fix
             fetch_depth: 1
-            lint-cache: false
           - name: manifests
             make-target: verify.manifests
             fetch_depth: 1
-            lint-cache: false
           - name: generators
             make-target: verify.generators
             fetch_depth: 1
-            lint-cache: true
           - name: crd-breaking-changes
             make-target: verify.crd-breaking-changes
             fetch_depth: 0
-            lint-cache: false
     steps:
     - name: Harden Runner
       uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -77,24 +73,6 @@ jobs:
         key: go-build-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}
         restore-keys: |
           go-build-${{ runner.os }}-${{ runner.arch }}-go-
-
-    # Only the `generators` target runs golangci-lint (via generate -> generate.lint-fix).
-    # Restore-only, reusing the shared `go-lint-*` cache written by the lint job in
-    # __lint.yaml. Key/paths must match __lint.yaml exactly for the restore to hit.
-    - if: ${{ matrix.lint-cache }}
-      run: echo "GOLANGCI_LINT_CACHE=$(make golangci-lint-cache-path | tail -1)" >> $GITHUB_ENV
-
-    - name: Restore lint cache
-      if: ${{ matrix.lint-cache }}
-      uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
-      with:
-        path: |
-          ${{ env.GO_MOD_CACHE }}
-          ${{ env.GO_BUILD_CACHE }}
-          ${{ env.GOLANGCI_LINT_CACHE }}
-        key: go-lint-${{ runner.os }}-${{ runner.arch }}-go-${{ hashFiles('**/go.mod') }}
-        restore-keys: |
-          go-lint-${{ runner.os }}-${{ runner.arch }}-go-
 
     - name: Check CRD breaking-change acknowledgement
       if: ${{ matrix.name == 'crd-breaking-changes' && github.event_name == 'pull_request' }}
