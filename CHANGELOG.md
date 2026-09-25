@@ -379,6 +379,14 @@ by the operator's semver:
   was treated as authoritative and deleted the in-cluster `MCPServer`s missing
   from it.
   [#5727](https://github.com/Kong/kong-operator/pull/5727)
+- Hybridgateway: preserve Gateway API precedence for overlapping path, method,
+  and header matches by retaining native PathPrefix matching and generating
+  specialized Kong Routes for conflicting match combinations. This enables the
+  `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
+  gateway. Generated priorities stay below `1 << 20` (`1048576`) because Kong's
+  traditional-compatible router only retains the low 20 bits when calculating
+  route precedence.
+  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 
 ## [v2.3.1]
 
