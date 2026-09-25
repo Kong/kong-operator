@@ -127,8 +127,12 @@ func (r *AdminAPIEndpointsReconciler) adminAPIEndpointSlicePredicate() predicate
 
 // Reconcile discovers the Admin API endpoints of all the AIGatewayDataPlanes
 // referencing the Reconciler's OnPremAIGateway and notifies about the result.
-// The reconcile.Request is ignored: every event triggers a full rediscovery,
-// which is a couple of cached list calls.
+// The reconcile.Request is ignored because we reconcile whole data planes
+// instead of individual EndpointSlices: any relevant event (a data plane
+// added or removed, an EndpointSlice changed) invalidates the complete
+// discovered set, so re-discovering all of it is the only correct response.
+// This is cheap - just a couple of cached list calls - and guarantees the
+// notified set is always complete, with no state to keep in sync.
 func (r *AdminAPIEndpointsReconciler) Reconcile(ctx context.Context, _ reconcile.Request) (ctrl.Result, error) {
 	var dpList aigatewayv1alpha1.AIGatewayDataPlaneList
 	if err := r.List(ctx, &dpList, client.InNamespace(r.GatewayNN.Namespace)); err != nil {
