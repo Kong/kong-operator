@@ -152,6 +152,7 @@ func runConformance(
 	opts.ConformanceProfiles = conformanceProfiles(gwType)
 	opts.SupportedFeatures = supportedFeatures
 	opts.SkipTests = skipped
+	opts.RunTest = "HTTPRouteHostnameIntersection"
 	opts.CleanupBaseResources = cleanupResources
 	opts.GatewayClassName = gwc.Name
 	opts.Client = clients.MgrClient
