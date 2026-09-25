@@ -14,6 +14,15 @@ permissions:
 
 jobs:
   look_for_release:
+    # NOTE: create-release-branch (below) pushes the release branch with the App
+    # token, and that push re-enters this workflow on the new branch. Without
+    # skipping it, it matches the same release commit again and the run fails in
+    # semver ("fail if tag already exists" - the tag was created by publish-release
+    # moments before; publish-release is skipped here because it needs semver). The
+    # echo is detected in commit_parser against the App's own login, since a ref
+    # pushed by an App token reports github.actor as "<app-slug>[bot]". Gated on the
+    # actor too (not just `created`) so a manually created release/X.Y.x branch whose
+    # tip already carries a real release commit is not silently skipped.
     outputs:
       release_found: ${{ steps.commit_parser.outputs.release_found }}
       release_type: ${{ steps.commit_parser.outputs.release_type }}
@@ -25,13 +34,36 @@ jobs:
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        if: ${{ github.event.created }}
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
 
       - name: search for release command in commit message
         id: commit_parser
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # v7
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         with:
           script: |
+            // Skip the echo push of the release branch that create-release-branch
+            // makes below: it carries the same release commit, and matching it again
+            // fails the run in semver, where the tag created by publish-release
+            // already exists.
+            if (context.payload.created && process.env.APP_SLUG
+                && context.actor === `${process.env.APP_SLUG}[bot]`) {
+              core.setOutput('release_found', 'false')
+              return
+            }
+
             const commitMessage = context.payload.head_commit.message
             if (commitMessage.includes('chore(release): [bot]')) {
               core.setOutput('release_found', 'true')
@@ -140,14 +172,30 @@ jobs:
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: peterjgrainger/action-create-branch@10c7d268152480ae859347db45dc69086cef1d9c # v3.0.0
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # NOTE: the release-branches ruleset gates refs/heads/release/* with a
+          # `creation` rule, and secrets.GITHUB_TOKEN (github-actions[bot]) is not a
+          # bypass actor on it, so creating the ref with it is rejected
+          # ("Reference update failed"). Use an identity that the ruleset lists as a
+          # bypass actor: the Kong k8s App.
+          GITHUB_TOKEN: ${{ steps.app-token.outputs.token }}
         with:
           # NOTE: using the full ref name because
           # https://github.com/peterjgrainger/action-create-branch?tab=readme-ov-file#branch
           branch: "refs/heads/release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
           sha: "${{ github.sha }}"
+
 
   create-cherry-pick-branch-to-main:
     permissions:
@@ -165,6 +213,16 @@ jobs:
         uses: step-security/harden-runner@e3f713f2d8f53843e71c69a996d56f51aa9adfb9 # v2.14.1
         with:
           egress-policy: audit
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            kong-operator
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v4
         with:
           fetch-depth: 0
@@ -184,7 +242,10 @@ jobs:
 
       - uses: peter-evans/create-pull-request@c0f553fe549906ede9cf27b5156039d195d2ece0 # v7.0.6
         with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+          # NOTE: use the App token, not GITHUB_TOKEN - a GITHUB_TOKEN-authored PR
+          # doesn't trigger pull_request-triggered required checks, so it could
+          # never merge into main.
+          token: ${{ steps.app-token.outputs.token }}
           branch: ${{ env.CHERRYPICK_BRANCH }}
           base: main
           delete-branch: true
