@@ -2032,6 +2032,7 @@ func TestKonnectConfigStoreSyncDeletion(t *testing.T) {
 		assert.Equal(t, ctrlconsts.KonnectConfigStoreDeletionBlockedRequeuePeriod, res.RequeueAfter)
 
 		got := env.getSync(t, nn)
+		require.Len(t, got.Status.Conditions, 4, "blocked deletion must satisfy the CRD condition minimum")
 		requireConfigStoreSyncCondition(t, got, konnectv1alpha1.KonnectConfigStoreSyncSyncedConditionType,
 			metav1.ConditionFalse, konnectv1alpha1.KonnectConfigStoreSyncSyncedReasonConfigStoreDeletionBlocked)
 		assert.Contains(t, got.Finalizers, KonnectCleanupFinalizer, "finalizer held")
@@ -2345,6 +2346,20 @@ func TestObservedUpdatedAt(t *testing.T) {
 	observed = observedUpdatedAt(now)
 	require.NotNil(t, observed)
 	assert.Equal(t, now, observed.Time)
+
+	updatedAt := time.Date(2026, time.September, 24, 12, 0, 0, 123_456_789, time.UTC)
+	encoded, err := json.Marshal(observedUpdatedAt(updatedAt))
+	require.NoError(t, err)
+	var persisted metav1.Time
+	require.NoError(t, json.Unmarshal(encoded, &persisted))
+
+	write, reason = configStoreSecretWriteDecision(true, updatedAt, &persisted, "sha256:same", "sha256:same")
+	assert.False(t, write, "precision lost when status is persisted must not look like drift")
+	assert.Empty(t, reason)
+
+	write, reason = configStoreSecretWriteDecision(true, updatedAt.Add(time.Second), &persisted, "sha256:same", "sha256:same")
+	assert.True(t, write)
+	assert.Equal(t, "Drifted", reason)
 }
 
 func TestKonnectConfigStoreSyncWatchMappers(t *testing.T) {
