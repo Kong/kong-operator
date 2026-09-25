@@ -113,11 +113,11 @@ func (f *FakeConfigStoreSecrets) store(controlPlaneID, configStoreID string) map
 	return s
 }
 
-// nextTimestamp advances the internal clock and returns a timestamp derived
-// from it, guaranteeing strictly increasing timestamps across writes.
+// nextTimestamp advances the internal clock in millisecond increments,
+// guaranteeing strictly increasing fractional timestamps across writes.
 func (f *FakeConfigStoreSecrets) nextTimestamp() time.Time {
 	f.clock++
-	return time.Unix(1_700_000_000+f.clock, 0).UTC()
+	return time.Unix(1_700_000_000, f.clock*int64(time.Millisecond)).UTC()
 }
 
 func newFakeSDKError(statusCode int, format string, args ...any) *sdkkonnecterrs.SDKError {
