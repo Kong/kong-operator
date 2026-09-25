@@ -218,7 +218,8 @@ func getKongTargetForUID(
 		targets = resp.Object.Data
 	}
 
-	return getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(targets), target)
+	_, id, err := getMatchingEntryFromListResponseData(sliceToEntityWithIDPtrSlice(targets), target)
+	return id, err
 }
 
 func targetMatch(konnectTarget *sdkkonnectcomp.Target, target *configurationv1alpha1.KongTarget) bool {

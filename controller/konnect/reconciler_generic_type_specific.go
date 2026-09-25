@@ -70,7 +70,6 @@ func handleTypeSpecific[
 
 	return isProblem, res, err
 }
-
 func handleKonnectGatewayControlPlaneSpecific(
 	ctx context.Context,
 	sdk sdkops.SDKWrapper,
