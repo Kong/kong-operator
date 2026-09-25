@@ -95,6 +95,10 @@ func (obj *AIGatewayModelProvider) GetKonnectName() string {
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Sagemaker.Name)
 		}
+	case AIGatewayModelProviderConfigTypeTypesafe:
+		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe != nil {
+			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Typesafe.Name)
+		}
 	case AIGatewayModelProviderConfigTypeVercel:
 		if obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel != nil {
 			return string(obj.Spec.APISpec.AIGatewayModelProviderConfig.Vercel.Name)

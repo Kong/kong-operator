@@ -2628,11 +2628,152 @@ spec:
                     - ollama
                     - openai
                     - sagemaker
+                    - typesafe
                     - vercel
                     - vllm
                     - xai
                     minLength: 1
                     type: string
+                  typesafe:
+                    properties:
+                      config:
+                        properties:
+                          auth:
+                            properties:
+                              headers:
+                                items:
+                                  properties:
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline;
+                                          secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value)
+                                          : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                              params:
+                                items:
+                                  properties:
+                                    location:
+                                      enum:
+                                      - body
+                                      - query
+                                      maxLength: 253
+                                      type: string
+                                    name:
+                                      maxLength: 253
+                                      minLength: 1
+                                      type: string
+                                    value:
+                                      properties:
+                                        secretRef:
+                                          properties:
+                                            key:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            name:
+                                              maxLength: 253
+                                              minLength: 1
+                                              type: string
+                                            namespace:
+                                              maxLength: 253
+                                              type: string
+                                          required:
+                                          - key
+                                          - name
+                                          type: object
+                                        type:
+                                          default: inline
+                                          enum:
+                                          - inline
+                                          - secretRef
+                                          type: string
+                                        value:
+                                          maxLength: 4096
+                                          type: string
+                                      required:
+                                      - type
+                                      type: object
+                                      x-kubernetes-validations:
+                                      - message: value required when type=inline;
+                                          secretRef required when type=secretRef
+                                        rule: 'self.type == ''inline'' ? has(self.value)
+                                          : has(self.secretRef)'
+                                  required:
+                                  - name
+                                  type: object
+                                maxItems: 1
+                                type: array
+                            type: object
+                        required:
+                        - auth
+                        type: object
+                      displayName:
+                        maxLength: 256
+                        minLength: 1
+                        type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      name:
+                        maxLength: 256
+                        minLength: 1
+                        pattern: ^[A-Za-z0-9._:@-]{1,256}$
+                        type: string
+                    required:
+                    - config
+                    - displayName
+                    - name
+                    type: object
                   vercel:
                     properties:
                       config:

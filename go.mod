@@ -6,7 +6,7 @@ require (
 	cloud.google.com/go/container v1.54.0
 	dario.cat/mergo v1.0.2
 	github.com/Kong/ai-deck-converter v0.18.11
-	github.com/Kong/sdk-konnect-go v0.68.1
+	github.com/Kong/sdk-konnect-go v0.69.0
 	github.com/avast/retry-go/v5 v5.0.0
 	github.com/blang/semver/v4 v4.0.0
 	github.com/cert-manager/cert-manager v1.21.2
@@ -197,8 +197,8 @@ require (
 	github.com/homeport/dyff v1.6.0 // indirect
 	github.com/imdario/mergo v0.3.16 // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/itchyny/gojq v0.12.17 // indirect
-	github.com/itchyny/timefmt-go v0.1.6 // indirect
+	github.com/itchyny/gojq v0.12.18 // indirect
+	github.com/itchyny/timefmt-go v0.1.7 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/pgx/v5 v5.9.2 // indirect
@@ -252,7 +252,7 @@ require (
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	github.com/spyzhov/ajson v0.8.0 // indirect
+	github.com/spyzhov/ajson v0.9.6 // indirect
 	github.com/ssgelm/cookiejarparser v1.1.0 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
 	github.com/texttheater/golang-levenshtein v1.0.1 // indirect
@@ -358,3 +358,5 @@ replace (
 	k8s.io/sample-controller => k8s.io/sample-controller v0.37.0
 	k8s.io/streaming => k8s.io/streaming v0.37.1
 )
+
+replace github.com/Kong/sdk-konnect-go => github.com/Kong/sdk-konnect-go v0.69.0-dev

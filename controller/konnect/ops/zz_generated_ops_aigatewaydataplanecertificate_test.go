@@ -32,6 +32,8 @@ func testGeneratedAIGatewayDataPlaneCertificateForSDKOps() *aiconfigurationv1alp
 			APISpec: aiconfigurationv1alpha1.AIGatewayDataPlaneCertificateAPISpec{
 				Cert:        aiconfigurationv1alpha1.SensitiveDataSource{Type: aiconfigurationv1alpha1.SensitiveDataSourceTypeInline, Value: new("test-value")},
 				Description: "test-value",
+				Labels:      aiconfigurationv1alpha1.PublicLabels{"test-key": "test-value"},
+				ManagedBy:   aiconfigurationv1alpha1.ManagedBy{"test-key": "test-value"},
 				Title:       "test-value",
 			},
 		},
@@ -49,6 +51,7 @@ func TestCreateAIGatewayDataPlaneCertificate_UsesSDKOpsConversion(t *testing.T) 
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
 	require.NoError(t, err)
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	expectedID := "aigatewaydataplanecertificate-id"
 
 	sdk.EXPECT().
@@ -79,6 +82,7 @@ func TestCreateAIGatewayDataPlaneCertificate_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.ToCreateAIGatewayDataPlaneCertificateRequest(ctx, cl)
 	require.NoError(t, err)
+	expectedRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.Labels)
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

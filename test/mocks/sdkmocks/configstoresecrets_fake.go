@@ -90,7 +90,7 @@ type FakeConfigStoreSecrets struct {
 	ErrorHook func(method, key string) error
 }
 
-var _ sdkkonnectgo.ConfigStoreSecretsSDK = &FakeConfigStoreSecrets{}
+// var _ sdkkonnectgo.ConfigStoreSecretsSDK = &FakeConfigStoreSecrets{}
 
 // NewFakeConfigStoreSecrets returns an empty FakeConfigStoreSecrets.
 func NewFakeConfigStoreSecrets() *FakeConfigStoreSecrets {

@@ -55,6 +55,42 @@ spec:
                     properties:
                       anonymous:
                         type: object
+                      saslAwsIam:
+                        properties:
+                          saslAwsIam:
+                            properties:
+                              assumeRole:
+                                properties:
+                                  assumeRole:
+                                    properties:
+                                      arn:
+                                        maxLength: 2048
+                                        minLength: 10
+                                        pattern: ^arn:aws(-[a-z-]+)?:iam:.+
+                                        type: string
+                                      sessionName:
+                                        maxLength: 253
+                                        type: string
+                                    required:
+                                    - arn
+                                    type: object
+                                required:
+                                - assumeRole
+                                type: object
+                              defaultProviderChain:
+                                type: object
+                              type:
+                                enum:
+                                - assumeRole
+                                - defaultProviderChain
+                                minLength: 1
+                                type: string
+                            required:
+                            - type
+                            type: object
+                        required:
+                        - saslAwsIam
+                        type: object
                       saslPlain:
                         properties:
                           password:
@@ -94,6 +130,7 @@ spec:
                       type:
                         enum:
                         - anonymous
+                        - saslAwsIam
                         - saslPlain
                         - saslScram
                         minLength: 1

@@ -759,6 +759,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -1078,6 +1274,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -1876,6 +2268,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                     required:
                     - config
                     - displayName
@@ -2557,6 +3145,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
@@ -3067,6 +3851,202 @@ spec:
                           - name
                           type: object
                         type: array
+                      tokenVault:
+                        properties:
+                          directory:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          encryptionSecrets:
+                            items:
+                              type: string
+                            type: array
+                          provider:
+                            maxLength: 253
+                            minLength: 1
+                            type: string
+                          redis:
+                            properties:
+                              cloudAuthentication:
+                                properties:
+                                  aws:
+                                    properties:
+                                      accessKeyID:
+                                        maxLength: 253
+                                        type: string
+                                      assumeRoleArn:
+                                        maxLength: 253
+                                        type: string
+                                      cacheName:
+                                        maxLength: 253
+                                        type: string
+                                      isServerless:
+                                        enum:
+                                        - Enabled
+                                        - Disabled
+                                        type: string
+                                      region:
+                                        maxLength: 253
+                                        type: string
+                                      roleSessionName:
+                                        maxLength: 253
+                                        type: string
+                                      secretAccessKey:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  azure:
+                                    properties:
+                                      clientID:
+                                        maxLength: 253
+                                        type: string
+                                      clientSecret:
+                                        maxLength: 253
+                                        type: string
+                                      tenantID:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  gcp:
+                                    properties:
+                                      serviceAccountJSON:
+                                        maxLength: 253
+                                        type: string
+                                    type: object
+                                  type:
+                                    enum:
+                                    - aws
+                                    - azure
+                                    - gcp
+                                    minLength: 1
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              cluster:
+                                properties:
+                                  maxRedirections:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  nodes:
+                                    items:
+                                      properties:
+                                        ip:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                type: object
+                              connectTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              connectionIsProxied:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              database:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              host:
+                                maxLength: 253
+                                type: string
+                              keepalive:
+                                properties:
+                                  backlog:
+                                    maximum: 2147483646
+                                    minimum: 0
+                                    type: integer
+                                  poolSize:
+                                    maximum: 2147483646
+                                    minimum: 1
+                                    type: integer
+                                type: object
+                              password:
+                                maxLength: 253
+                                type: string
+                              port:
+                                properties:
+                                  type:
+                                    enum:
+                                    - variant1
+                                    - variant2
+                                    minLength: 1
+                                    type: string
+                                  variant1:
+                                    type: integer
+                                  variant2:
+                                    type: string
+                                required:
+                                - type
+                                type: object
+                              readTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sendTimeout:
+                                maximum: 2147483646
+                                minimum: 0
+                                type: integer
+                              sentinel:
+                                properties:
+                                  master:
+                                    maxLength: 253
+                                    type: string
+                                  nodes:
+                                    items:
+                                      properties:
+                                        host:
+                                          maxLength: 253
+                                          type: string
+                                        port:
+                                          maximum: 65535
+                                          minimum: 0
+                                          type: integer
+                                      type: object
+                                    type: array
+                                  password:
+                                    maxLength: 253
+                                    type: string
+                                  role:
+                                    enum:
+                                    - any
+                                    - master
+                                    - slave
+                                    maxLength: 253
+                                    type: string
+                                  username:
+                                    maxLength: 253
+                                    type: string
+                                type: object
+                              serverName:
+                                maxLength: 253
+                                type: string
+                              ssl:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              sslVerify:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              username:
+                                maxLength: 253
+                                type: string
+                            type: object
+                        required:
+                        - directory
+                        - provider
+                        type: object
                       tools:
                         items:
                           properties:
