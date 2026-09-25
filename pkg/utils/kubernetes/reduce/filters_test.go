@@ -14,6 +14,7 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 )
 
 func TestFilterSecrets(t *testing.T) {
@@ -470,6 +471,60 @@ func TestFilterPodDisruptionBudgets(t *testing.T) {
 				return pdb.Name
 			})
 			require.ElementsMatch(t, filteredNames, tc.expectedNames)
+		})
+	}
+}
+
+func TestFilterControlPlanes(t *testing.T) {
+	controlPlane := func(name string, creationTimestamp metav1.Time) operatorv2beta1.ControlPlane {
+		return operatorv2beta1.ControlPlane{
+			Name:              name,
+			CreationTimestamp: creationTimestamp,
+		}
+	}
+	older := metav1.Date(1995, time.December, 31, 0, 0, 0, 0, time.UTC)
+	newer := metav1.Date(2000, time.January, 1, 0, 0, 0, 0, time.UTC)
+
+	testCases := []struct {
+		name                  string
+		controlplanes         []operatorv2beta1.ControlPlane
+		filteredControlPlanes []operatorv2beta1.ControlPlane
+	}{
+		{
+			name:                  "no controlplanes",
+			controlplanes:         []operatorv2beta1.ControlPlane{},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{},
+		},
+		{
+			name:                  "a single controlplane is kept",
+			controlplanes:         []operatorv2beta1.ControlPlane{controlPlane("a", newer)},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{},
+		},
+		{
+			name:                  "the oldest controlplane is kept",
+			controlplanes:         []operatorv2beta1.ControlPlane{controlPlane("a", newer), controlPlane("b", older)},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{controlPlane("a", newer)},
+		},
+		{
+			name:                  "the oldest controlplane is kept among many",
+			controlplanes:         []operatorv2beta1.ControlPlane{controlPlane("a", newer), controlPlane("b", older), controlPlane("c", newer)},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{controlPlane("a", newer), controlPlane("c", newer)},
+		},
+		{
+			name:                  "with equal creation timestamps the controlplane with the smallest name is kept",
+			controlplanes:         []operatorv2beta1.ControlPlane{controlPlane("gw-qgh6q", newer), controlPlane("gw-bv9b5", newer)},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{controlPlane("gw-qgh6q", newer)},
+		},
+		{
+			name:                  "with equal creation timestamps the choice does not depend on the order",
+			controlplanes:         []operatorv2beta1.ControlPlane{controlPlane("gw-bv9b5", newer), controlPlane("gw-qgh6q", newer)},
+			filteredControlPlanes: []operatorv2beta1.ControlPlane{controlPlane("gw-qgh6q", newer)},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			require.Equal(t, tc.filteredControlPlanes, filterControlPlanes(tc.controlplanes))
 		})
 	}
 }

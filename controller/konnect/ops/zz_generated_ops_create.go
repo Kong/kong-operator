@@ -91,7 +91,7 @@ func CreateGeneratedOps[
 	case *konnectv1alpha1.PortalIdentityProviderRequest:
 		return createPortalIdentityProviderRequest(ctx, sdk.GetPortalAuthSettingsSDK(), ent)
 	case *konnectv1alpha1.PortalPage:
-		return createPortalPage(ctx, sdk.GetPortalPagesSDK(), ent)
+		return createPortalPage(ctx, cl, sdk.GetPortalPagesSDK(), ent)
 	case *konnectv1alpha1.PortalTeam:
 		return createPortalTeam(ctx, sdk.GetPortalTeamsSDK(), ent)
 	default:
