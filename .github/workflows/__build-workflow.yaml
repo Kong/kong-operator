@@ -89,6 +89,8 @@ on:
         value: ${{ jobs.build.outputs.tags }}
       version:
         value: ${{ jobs.build.outputs.version }}
+      index_digest:
+        value: ${{ jobs.build-multi-arch.outputs.index_digest }}
 
 permissions:
   contents: read
@@ -333,6 +335,7 @@ jobs:
 
     outputs:
       full_tag: ${{ steps.tag.outputs.tag }}
+      index_digest: ${{ steps.index.outputs.digest }}
 
     needs:
       - semver
@@ -412,6 +415,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # `needs.semver.outputs.fullversion`.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-tag
         if: ${{ inputs.tag != '' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -424,6 +428,7 @@ jobs:
       # directly in sources. Instead, the sources are constructed using the `inputs.registry`, `inputs.image-name` and
       # the current date.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-nightly
         if: ${{ inputs.tag == '' && (github.event_name == 'schedule' || (github.event_name == 'workflow_dispatch' && inputs.nightly-tags)) }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
@@ -434,12 +439,31 @@ jobs:
       # When building on push (e.g. on main), `steps.meta.outputs.tags` contains only a single entry, so it can be used
       # directly in sources.
       - uses: int128/docker-manifest-create-action@6edb43463bd4878b8cee224ca274378a3635d78f # v2.28.0
+        id: manifest-push
         if: ${{ inputs.tag == '' && github.event_name == 'push' }}
         with:
           tags: ${{ steps.meta.outputs.tags }}
           sources: |
             ${{ steps.meta.outputs.tags }}-amd64
             ${{ steps.meta.outputs.tags }}-arm64
+
+      # Stable subject for the SBOM, the signature and the provenance: never a tag, which moves.
+      - name: Resolve the multi-arch index digest
+        id: index
+        env:
+          DIGEST_TAG: ${{ steps.manifest-tag.outputs.digest }}
+          DIGEST_NIGHTLY: ${{ steps.manifest-nightly.outputs.digest }}
+          DIGEST_PUSH: ${{ steps.manifest-push.outputs.digest }}
+        run: |
+          set -euo pipefail
+          DIGEST="${DIGEST_TAG:-}"
+          DIGEST="${DIGEST:-${DIGEST_NIGHTLY:-}}"
+          DIGEST="${DIGEST:-${DIGEST_PUSH:-}}"
+          if [ -z "${DIGEST}" ]; then
+            echo "::error::none of the manifest-create steps produced an index digest"
+            exit 1
+          fi
+          echo "digest=${DIGEST}" >> "$GITHUB_OUTPUT"
 
       - name: Set output tag
         if: ${{ inputs.tag != '' }}
@@ -464,3 +488,90 @@ jobs:
             status: "failure"
             fields: repo,message,commit,author,action,eventName,ref,workflow
             text: ":red_circle: Docker build failed. cc: <!subteam^${{ env.SLACK_TEAM_ID }}>"
+
+  # Not a step in build-multi-arch: a flake there would skip consumers that already have the image.
+  sbom-image:
+    name: Image SBOM (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    needs: build-multi-arch
+    if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
+    # Load-bearing: callers consume this workflow as a whole, so a failing job here would skip
+    # everything downstream. The run stays green; the job itself still shows red.
+    continue-on-error: true
+    permissions:
+      contents: read
+    strategy:
+      # One instance per architecture, so one arch's failure does not affect the other.
+      fail-fast: false
+      matrix:
+        arch: [amd64, arm64]
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # syft reads ~/.docker/config.json; anonymous Docker Hub pulls are rate limited.
+      - name: Log in to the Container registry
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ inputs.username }}
+          password: ${{ secrets.dockerhub-token }}
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          # The backend prefix is required: a plain `syft` would not match the pinned entry.
+          install_args: github:anchore/syft
+
+      # One file per platform, each from its own child manifest: `--platform` selects it and the
+      # filename mirrors it. Handed an index without `--platform`, syft picks the runner's arch.
+      - name: Generate image SBOM
+        env:
+          REGISTRY: ${{ inputs.registry }}
+          IMAGE_NAME: ${{ inputs.image-name }}
+          DIGEST: ${{ needs.build-multi-arch.outputs.index_digest }}
+          ARCH: ${{ matrix.arch }}
+        run: |
+          set -euo pipefail
+          syft "registry:${REGISTRY}/${IMAGE_NAME}@${DIGEST}" \
+            --platform "linux/${ARCH}" \
+            -o "spdx-json=image-linux-${ARCH}-sbom.spdx.json" \
+            -o "cyclonedx-json=image-linux-${ARCH}-sbom.cyclonedx.json"
+
+      # One artifact per file, name = filename — matches how sca uploads (artifact contract)
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-linux-${{ matrix.arch }}-sbom.spdx.json
+          path: image-linux-${{ matrix.arch }}-sbom.spdx.json
+          retention-days: 90
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: image-linux-${{ matrix.arch }}-sbom.cyclonedx.json
+          path: image-linux-${{ matrix.arch }}-sbom.cyclonedx.json
+          retention-days: 90
+
+  sbom-source:
+    name: Source SBOM
+    runs-on: ubuntu-latest
+    if: ${{ inputs.push }}
+    permissions:
+      contents: read
+
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        # An upstream Grype DB outage must never fail the build.
+        continue-on-error: true
+        with:
+          dir: '.'
+          asset_prefix: source
+          fail_build: false
+          codeql_upload: false

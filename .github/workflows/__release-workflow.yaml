@@ -81,6 +81,11 @@ on:
         description: "The release issue number to comment on with the docs PR link (e.g. 3622)"
         type: string
         required: false
+      notary-repository:
+        description: Registry repository that cosign publishes image signatures and provenance to, e.g. 'kong/notary'. When empty, both are published alongside the image.
+        required: false
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -172,6 +177,71 @@ jobs:
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
       verify-image-script: ${{ inputs.verify-image-script }}
+
+  # Kept out of __build-workflow.yaml: a reusable workflow requesting id-token fails validation
+  # on callers that cannot grant it, and fork PRs always get none.
+  sign-image:
+    needs: [build-push-images]
+    if: ${{ needs.build-push-images.outputs.index_digest != '' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # keyless cosign signing via the GitHub OIDC token
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
+        with:
+          egress-policy: audit
+
+      # Keyless: cosign trades this job's OIDC token for a Fulcio certificate; no key in the repo.
+      # Subject is the index digest, never the per-arch digests.
+      - name: Sign the image index
+        uses: Kong/public-shared-actions/security-actions/sign-docker-image@eb651af2c2f7ed987a3a8176d0ac32172e1d50e4 # sign-docker-image@5.1.0
+        with:
+          # The action reads only the repository part, so the bare name avoids picking a tag.
+          tags: docker.io/${{ inputs.image-name }}
+          image_digest: ${{ needs.build-push-images.outputs.index_digest }}
+          registry_username: ${{ inputs.dockerhub-push-username }}
+          registry_password: ${{ secrets.dockerhub-push-token }}
+          signature_registry: ${{ inputs.notary-repository }}
+
+      # Fails the run if the signature just published cannot be verified.
+      - name: Verify the image index signature
+        env:
+          IMAGE: docker.io/${{ inputs.image-name }}
+          DIGEST: ${{ needs.build-push-images.outputs.index_digest }}
+          NOTARY_REPOSITORY: ${{ inputs.notary-repository }}
+        run: |
+          set -euo pipefail
+          if [ -n "${NOTARY_REPOSITORY}" ]; then
+            export COSIGN_REPOSITORY="${NOTARY_REPOSITORY}"
+          fi
+          cosign verify \
+            --certificate-identity-regexp "^https://github\.com/${GITHUB_REPOSITORY}/\.github/workflows/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "${IMAGE}@${DIGEST}"
+
+  # By tag, not SHA, on purpose: the generator's detect-workflow step needs a tag ref
+  # (slsa-github-generator#3498).
+  image-provenance:
+    needs: [build-push-images]
+    if: ${{ needs.build-push-images.outputs.index_digest != '' }}
+    permissions:
+      contents: read
+      actions: read # the generator reads workflow run info to build provenance
+      packages: write # required for publishing provenance, see the generator's known issues
+      id-token: write # keyless signing of the provenance
+    uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
+    with:
+      # Must carry neither a tag nor a digest.
+      image: docker.io/${{ inputs.image-name }}
+      digest: ${{ needs.build-push-images.outputs.index_digest }}
+      registry-username: ${{ inputs.dockerhub-push-username }}
+      provenance-repository: ${{ inputs.notary-repository }}
+      provenance-registry-username: ${{ inputs.dockerhub-push-username }}
+    secrets:
+      registry-password: ${{ secrets.dockerhub-push-token }}
+      provenance-registry-password: ${{ secrets.dockerhub-push-token }}
 
   test-integration-current-kubernetes:
     runs-on: ubuntu-latest
@@ -274,6 +344,10 @@ jobs:
     needs:
       - semver
       - build-push-images
+      # An unsigned or unattested index must not open a release PR. Safe only because these jobs
+      # are never skipped while `push: true` below stays hardcoded: `needs:` propagates a skip.
+      - sign-image
+      - image-provenance
       - test-integration-current-kubernetes
       - test-e2e-current-kubernetes
     steps:

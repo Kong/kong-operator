@@ -105,6 +105,10 @@ jobs:
         egress-policy: audit
     - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
     - uses: zgosalvez/github-actions-ensure-sha-pinned-actions@62574f011e0d1967d555a862bd28a7abba8684fe # v5.0.9
+      with:
+        # The SLSA generator has to be referenced by tag: its detect-workflow step needs a tag
+        # ref, so pinning it to a SHA breaks the release (slsa-github-generator#3498).
+        allowlist: slsa-framework/slsa-github-generator
 
   ossf-scorecard:
     runs-on: ubuntu-latest

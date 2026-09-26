@@ -137,6 +137,63 @@ jobs:
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
         with:
           egress-policy: audit
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Generate source SBOM
+        uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
+        # An upstream Grype DB outage must never block the release: only the SBOM is consumed.
+        continue-on-error: true
+        with:
+          dir: '.'
+          asset_prefix: source
+
+      - uses: ./.github/actions/setup-mise
+        with:
+          # The backend prefix is required: a plain `syft` would not match the pinned entry.
+          install_args: github:anchore/syft
+
+      # Subject is the index digest the tag resolves to, never the tag. Each file is per-platform,
+      # selected by `--platform`. Non-blocking: this job also gates the branches below.
+      - name: Generate image SBOM
+        id: image_sbom
+        continue-on-error: true
+        env:
+          IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
+          VERSION: ${{ needs.semver.outputs.version }}
+        run: |
+          set -euo pipefail
+          DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
+          echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
+
+          # Both arches are attempted; a missing one is reported in the warning below.
+          failed=0
+          for arch in amd64 arm64; do
+            if ! syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
+                 --platform "linux/${arch}" \
+                 -o "spdx-json=image-linux-${arch}-sbom.spdx.json" \
+                 -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"; then
+              echo "::warning::image-linux-${arch} SBOM generation failed"
+              failed=1
+            fi
+          done
+          exit "${failed}"
+
+      - name: Warn when the image SBOM is missing
+        if: ${{ steps.image_sbom.outcome != 'success' }}
+        run: echo "::warning::image SBOM generation did not complete; publishing the release with the files that were produced"
+
+      # Non-blocking producers, so this set can be empty; nullglob keeps the glob from failing.
+      - name: Generate SBOM checksums
+        run: |
+          set -euo pipefail
+          shopt -s nullglob
+          files=( *-sbom.*.json )
+          if [ ${#files[@]} -eq 0 ]; then
+            echo "::warning::no SBOM files were produced; skipping SHA256SUMS"
+            exit 0
+          fi
+          sha256sum -- "${files[@]}" > SHA256SUMS
+
       - uses: ncipollo/release-action@339a81892b84b4eeb0f6e744e4574d79d0d9b8dd # v1.21.0
         with:
           body: |
@@ -159,6 +216,14 @@ jobs:
           # branches (e.g. 2.0.11 after 2.2.3). Only mark latest when the release commit
           # was explicitly tagged with [latest].
           makeLatest: ${{ needs.look_for_release.outputs.release_latest == 'true' && needs.look_for_release.outputs.release_type == 'release' }}
+          artifacts: |-
+            source-sbom.spdx.json
+            source-sbom.cyclonedx.json
+            image-linux-amd64-sbom.spdx.json
+            image-linux-amd64-sbom.cyclonedx.json
+            image-linux-arm64-sbom.spdx.json
+            image-linux-arm64-sbom.cyclonedx.json
+            SHA256SUMS
 
   create-release-branch:
     permissions:
