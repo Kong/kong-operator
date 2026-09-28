@@ -507,10 +507,14 @@ func (f *FakeConfigStoreSecrets) Value(controlPlaneID, configStoreID, key string
 
 // SetValue writes a value directly, bypassing the SDK interface, and advances
 // updated_at. It simulates an out-of-band write (drift) by another actor.
+// The clock jumps by more than a second so the write crosses the controller's
+// second-granularity drift comparison, matching a real external write that
+// happens at a later wall-clock time than the sync's own writes.
 func (f *FakeConfigStoreSecrets) SetValue(controlPlaneID, configStoreID, key, value string) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	store := f.store(controlPlaneID, configStoreID)
+	f.clock += int64(time.Second / time.Millisecond)
 	now := f.nextTimestamp()
 	if entry, ok := store[key]; ok {
 		entry.value = value
