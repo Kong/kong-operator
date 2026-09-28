@@ -155,6 +155,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 	// For fully-wrapped requests the JSON body lives under a named field on the
 	// operations wrapper; label/tag injection must target that field.
 	var createBodyField, createBodyTypeName string
+	var createBodyPointer bool
 	if createFullyWrapped {
 		bodyInfo, err := ParseSDKRequestBodyInfo(createReqImportPath, createReqType)
 		if err != nil {
@@ -162,6 +163,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		}
 		createBodyField = bodyInfo.FieldName
 		createBodyTypeName = bodyInfo.TypeName
+		createBodyPointer = bodyInfo.Pointer
 	}
 
 	// When labels/tags are declared inside a root-union request body's variant
@@ -198,17 +200,12 @@ func (g *Generator) generateOpsCreateFuncBody(
 					entityName, checkType, err,
 				)
 			}
-			bodyPrefix := ""
-			if createFullyWrapped && createBodyField != "" {
-				bodyPrefix = createBodyField + "."
+			bodyField := ""
+			if createFullyWrapped {
+				bodyField = createBodyField
 			}
 			for _, member := range memberFields {
-				path := bodyPrefix + member
-				labelsUnionTargets = append(labelsUnionTargets, labelsUnionTarget{
-					Path:          path,
-					Guard:         "req." + path + " != nil",
-					ExpectedGuard: "expectedRequest." + path + " != nil",
-				})
+				labelsUnionTargets = append(labelsUnionTargets, newLabelsUnionTarget(bodyField, createBodyPointer, member))
 			}
 		}
 	}

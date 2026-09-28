@@ -267,13 +267,17 @@ func resolveUpdateLabelsFieldPath(
 	}
 
 	checkImportPath, checkType := callShape.ReqImportPath, callShape.ReqType
-	var bodyField string
+	var (
+		bodyField   string
+		bodyPointer bool
+	)
 	if callShape.FullyWrapped {
 		bodyInfo, err := ParseSDKRequestBodyInfo(callShape.ReqImportPath, callShape.ReqType)
 		if err != nil {
 			return "", nil, fmt.Errorf("entity %q: inspect update request body: %w", entityName, err)
 		}
 		bodyField = bodyInfo.FieldName
+		bodyPointer = bodyInfo.Pointer
 		checkImportPath, checkType = "github.com/Kong/sdk-konnect-go/models/components", bodyInfo.TypeName
 	}
 
@@ -298,15 +302,7 @@ func resolveUpdateLabelsFieldPath(
 		}
 		targets := make([]labelsUnionTarget, 0, len(memberFields))
 		for _, member := range memberFields {
-			path := member
-			if bodyField != "" {
-				path = bodyField + "." + member
-			}
-			targets = append(targets, labelsUnionTarget{
-				Path:          path,
-				Guard:         labelsFieldGuardExpr("req", path),
-				ExpectedGuard: labelsFieldGuardExpr("expectedRequest", path),
-			})
+			targets = append(targets, newLabelsUnionTarget(bodyField, bodyPointer, member))
 		}
 		return "", targets, nil
 	}
@@ -350,6 +346,37 @@ var labelsUnionInjectFuncs = template.FuncMap{
 func parseWithLabelsUnionInject(name, tmplText string) *template.Template {
 	tmpl := template.Must(template.New(name).Funcs(labelsUnionInjectFuncs).Parse(tmplText))
 	return template.Must(tmpl.Parse(labelsUnionInjectTemplate))
+}
+
+// newLabelsUnionTarget builds the injection target for the union member
+// field member, nested under the request body field bodyField when the
+// request is fully wrapped (bodyField is empty otherwise). The guards check
+// every pointer segment: the body field only when it is a pointer (a nil
+// comparison on a struct-typed body would not compile), and always the
+// member, as only the selected one is set at runtime.
+func newLabelsUnionTarget(bodyField string, bodyPointer bool, member string) labelsUnionTarget {
+	path := member
+	var pointerSegments []string
+	if bodyField != "" {
+		path = bodyField + "." + member
+		if bodyPointer {
+			pointerSegments = append(pointerSegments, bodyField)
+		}
+	}
+	pointerSegments = append(pointerSegments, path)
+
+	guard := func(base string) string {
+		guards := make([]string, 0, len(pointerSegments))
+		for _, segment := range pointerSegments {
+			guards = append(guards, base+"."+segment+" != nil")
+		}
+		return strings.Join(guards, " && ")
+	}
+	return labelsUnionTarget{
+		Path:          path,
+		Guard:         guard("req"),
+		ExpectedGuard: guard("expectedRequest"),
+	}
 }
 
 // requireUnionMembersMetadataField verifies that every union member type of

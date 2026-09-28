@@ -2803,8 +2803,6 @@ import (
 )
 `
 
-// opsCreateFuncTemplate renders a single create<Entity> function body.
-// It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
 // labelsUnionInjectTemplate injects Kubernetes metadata labels/tags into each
 // member of a multi-member root-union request body, guarding every member as
 // only the selected one is set at runtime. Parsed alongside the ops and ops
@@ -2824,6 +2822,8 @@ const labelsUnionInjectTemplate = `{{define "labelsUnionInject"}}
 {{- end}}
 {{- end}}`
 
+// opsCreateFuncTemplate renders a single create<Entity> function body.
+// It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
 const opsCreateFuncTemplate = `
 func create{{.Entity}}(
 	ctx context.Context,

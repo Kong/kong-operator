@@ -78,3 +78,45 @@ func TestSDKStructFieldIsStringMap(t *testing.T) {
 		require.ErrorContains(t, err, "not found")
 	})
 }
+
+func TestNewLabelsUnionTarget(t *testing.T) {
+	testCases := []struct {
+		name        string
+		bodyField   string
+		bodyPointer bool
+		want        labelsUnionTarget
+	}{
+		{
+			name: "unwrapped request",
+			want: labelsUnionTarget{
+				Path:          "Member",
+				Guard:         "req.Member != nil",
+				ExpectedGuard: "expectedRequest.Member != nil",
+			},
+		},
+		{
+			name:        "wrapped request with pointer body guards the body",
+			bodyField:   "Body",
+			bodyPointer: true,
+			want: labelsUnionTarget{
+				Path:          "Body.Member",
+				Guard:         "req.Body != nil && req.Body.Member != nil",
+				ExpectedGuard: "expectedRequest.Body != nil && expectedRequest.Body.Member != nil",
+			},
+		},
+		{
+			name:      "wrapped request with struct body does not nil-check the body",
+			bodyField: "Body",
+			want: labelsUnionTarget{
+				Path:          "Body.Member",
+				Guard:         "req.Body.Member != nil",
+				ExpectedGuard: "expectedRequest.Body.Member != nil",
+			},
+		},
+	}
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			assert.Equal(t, tc.want, newLabelsUnionTarget(tc.bodyField, tc.bodyPointer, "Member"))
+		})
+	}
+}
