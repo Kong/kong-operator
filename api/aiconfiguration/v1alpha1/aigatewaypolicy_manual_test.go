@@ -57,3 +57,40 @@ func TestAIGatewayPolicyAPISpec_MarshalKeepsFreeformConfigVerbatim(t *testing.T)
 	// labels is free-form too: a two-key map must not collapse into a scalar.
 	assert.Equal(t, map[string]any{"provider": "headroom", "headroom": "x"}, payload["labels"])
 }
+
+// TestAIGatewayPolicyAPISpec_MarshalKeepsConfigWhenSiblingNamesIt is a
+// regression test for the parent-map rewrite: a sibling string field whose
+// value names the free-form key (here name: "config") used to make the union
+// heuristic fire on the payload root, deleting the config key and hoisting
+// its contents before flattenSensitiveData collapsed the whole payload.
+func TestAIGatewayPolicyAPISpec_MarshalKeepsConfigWhenSiblingNamesIt(t *testing.T) {
+	configJSON := `{
+		"provider": "headroom",
+		"headroom": {
+			"proxy_token": "test-token",
+			"ssl_verify": false,
+			"session_id_headers": ["x-session-id"]
+		}
+	}`
+	spec := &AIGatewayPolicyAPISpec{
+		Name: "config",
+		Type: "ai-prompt-compressor",
+		Config: AIGatewayPolicyConfigDataSource{
+			Type:  "inline",
+			Value: &apiextensionsv1.JSON{Raw: []byte(configJSON)},
+		},
+		Labels: PublicLabels{"provider": "headroom", "headroom": "x"},
+	}
+
+	data, err := spec.marshalSDKOpsPayload()
+	require.NoError(t, err)
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(data, &payload))
+
+	var wantConfig map[string]any
+	require.NoError(t, json.Unmarshal([]byte(configJSON), &wantConfig))
+	assert.Equal(t, "config", payload["name"])
+	assert.Equal(t, wantConfig, payload["config"])
+	assert.Equal(t, map[string]any{"provider": "headroom", "headroom": "x"}, payload["labels"])
+}

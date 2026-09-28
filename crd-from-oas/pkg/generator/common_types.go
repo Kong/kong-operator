@@ -265,9 +265,11 @@ func flattenSDKUnions(v any) any {
 }
 
 // flattenSDKUnionsExcept is flattenSDKUnions, but leaves every subtree at or
-// under a free-form path in fields verbatim (see sdkOpsFreeformKeyField):
+// under a free-form path in fields untouched (see sdkOpsFreeformKeyField):
 // free-form config is user data that Konnect accepts as-is, so the
-// discriminated-union heuristic must never rewrite it.
+// discriminated-union heuristic must never rewrite it, nor rewrite any map
+// holding such a subtree (a sibling string value naming the free-form key
+// would otherwise delete the subtree and hoist its contents).
 func flattenSDKUnionsExcept(v any, fields []sdkOpsFreeformKeyField) any {
 	paths := make([][]string, 0, len(fields))
 	for _, f := range fields {
@@ -294,6 +296,7 @@ func flattenSDKUnionsExceptUnder(v any, fields []sdkOpsFreeformKeyField, variant
 func flattenSDKUnionsWalk(v any, paths [][]string) any {
 	switch x := v.(type) {
 	case map[string]any:
+		protected := false
 		for k, val := range x {
 			// Paths use snake_case segments (they are shared with the
 			// post-rename renameKeysToSDKExcept walk); camelToSnakeCase is
@@ -301,13 +304,15 @@ func flattenSDKUnionsWalk(v any, paths [][]string) any {
 			// pre-rename and post-rename pipelines.
 			sub, atLeaf := advanceFreeformKeyPaths(paths, camelToSnakeCase(k))
 			if atLeaf {
-				// Free-form subtree: user data, keep it verbatim.
+				// Free-form subtree: user data. Rewriting this map could
+				// delete or clobber it, so skip the union rewrite.
+				protected = true
 				continue
 			}
 			x[k] = flattenSDKUnionsWalk(val, sub)
 		}
 		_, discriminatorValue, inner, ok := nestedSDKUnionMember(x)
-		if !ok {
+		if !ok || protected {
 			return x
 		}
 		innerMap, ok := inner.(map[string]any)
