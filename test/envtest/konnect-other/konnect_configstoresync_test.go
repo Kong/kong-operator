@@ -388,7 +388,8 @@ func TestKonnectConfigStoreSyncEnvtestRecovery(t *testing.T) {
 
 	failSecond.Store(false)
 	e.updateSync(t, sync, func(s *konnectv1alpha1.KonnectConfigStoreSync) {
-		s.Annotations = map[string]string{"test.konghq.com/retry": "true"}
+		// Any metadata update triggers reconciliation; the value is irrelevant.
+		s.Annotations = map[string]string{"test.konghq.com/trigger": "recover"}
 	})
 	got = e.waitReady(t, sync, configstoresync.ValueHash([]byte("one")))
 	assert.Equal(t, int32(2), got.Status.EntriesSynced)
@@ -399,11 +400,12 @@ func TestKonnectConfigStoreSyncEnvtestRecovery(t *testing.T) {
 			firstWrites++
 		}
 	}
-	assert.Positive(t, firstWrites)
+	assert.Equal(t, 1, firstWrites,
+		"only the initial push must write first-key; the recovery must not rewrite it")
 	e.waitSettled(t)
 	e.remote.ResetCalls()
 	e.updateSync(t, sync, func(s *konnectv1alpha1.KonnectConfigStoreSync) {
-		s.Annotations["test.konghq.com/retry"] = "steady"
+		s.Annotations["test.konghq.com/trigger"] = "steady"
 	})
 	e.waitSettled(t)
 	assert.Empty(t, e.remote.MutatingCalls(), "a settled sync must make no further writes")
