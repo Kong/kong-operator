@@ -38,6 +38,13 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsBoolFields = []EventGatewayVirt
 		},
 	},
 	{
+		Label: "mask_fields.enabled",
+		Path: []string{
+			"mask_fields",
+			"enabled",
+		},
+	},
+	{
 		Label: "modify_headers.enabled",
 		Path: []string{
 			"modify_headers",
@@ -55,6 +62,13 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsBoolFields = []EventGatewayVirt
 		Label: "skip_record.enabled",
 		Path: []string{
 			"skip_record",
+			"enabled",
+		},
+	},
+	{
+		Label: "transcode.enabled",
+		Path: []string{
+			"transcode",
 			"enabled",
 		},
 	},
@@ -158,6 +172,12 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsFreeformKeyFields = []sdkOpsFre
 	},
 	{
 		Path: []string{
+			"mask_fields",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
 			"modify_headers",
 			"labels",
 		},
@@ -171,6 +191,12 @@ var EventGatewayVirtualClusterConsumePolicySDKOpsFreeformKeyFields = []sdkOpsFre
 	{
 		Path: []string{
 			"skip_record",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"transcode",
 			"labels",
 		},
 	},
@@ -222,6 +248,12 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) selectedSDKOpsPayload(p
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate:
 		selected = payload["decrypt_fields"]
 		variant = "ParsedRecordDecryptFieldsPolicyCreate"
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate:
+		selected = payload["transcode"]
+		variant = "ParsedRecordTranscodeConsumePolicyCreate"
+	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate:
+		selected = payload["mask_fields"]
+		variant = "ParsedRecordMaskFieldsConsumePolicyCreate"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterConsumePolicy config type %q", s.EventGatewayVirtualClusterConsumePolicyConfig.Type)
 	}
@@ -302,6 +334,24 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) toCreateEventGatewayVir
 			return nil, fmt.Errorf("failed to unmarshal into EventGatewayParsedRecordDecryptFieldsPolicyCreate: %w", err)
 		}
 		body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateDecryptFields(member)
+		return &sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest{
+			EventGatewayConsumePolicyCreate: &body,
+		}, nil
+	case "ParsedRecordTranscodeConsumePolicyCreate":
+		var member sdkkonnectcomp.EventGatewayParsedRecordTranscodeConsumePolicyCreate
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into EventGatewayParsedRecordTranscodeConsumePolicyCreate: %w", err)
+		}
+		body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateTranscode(member)
+		return &sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest{
+			EventGatewayConsumePolicyCreate: &body,
+		}, nil
+	case "ParsedRecordMaskFieldsConsumePolicyCreate":
+		var member sdkkonnectcomp.EventGatewayParsedRecordMaskFieldsConsumePolicyCreate
+		if err := json.Unmarshal(data, &member); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal into EventGatewayParsedRecordMaskFieldsConsumePolicyCreate: %w", err)
+		}
+		body := sdkkonnectcomp.CreateEventGatewayConsumePolicyCreateMaskFields(member)
 		return &sdkkonnectoper.CreateEventGatewayVirtualClusterConsumePolicyRequest{
 			EventGatewayConsumePolicyCreate: &body,
 		}, nil

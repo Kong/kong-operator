@@ -52,6 +52,58 @@ spec:
             properties:
               apiSpec:
                 properties:
+                  ai:
+                    properties:
+                      enabled:
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      features:
+                        properties:
+                          aiSearch:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                          mcpServer:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                              writeOperationsEnabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            - writeOperationsEnabled
+                            type: object
+                          portalAgent:
+                            properties:
+                              enabled:
+                                enum:
+                                - Enabled
+                                - Disabled
+                                type: string
+                            required:
+                            - enabled
+                            type: object
+                        required:
+                        - mcpServer
+                        type: object
+                    required:
+                    - enabled
+                    - features
+                    type: object
                   authenticationEnabled:
                     enum:
                     - Enabled
@@ -63,6 +115,11 @@ spec:
                     - Disabled
                     type: string
                   autoApproveDevelopers:
+                    enum:
+                    - Enabled
+                    - Disabled
+                    type: string
+                  createDefaultContent:
                     enum:
                     - Enabled
                     - Disabled

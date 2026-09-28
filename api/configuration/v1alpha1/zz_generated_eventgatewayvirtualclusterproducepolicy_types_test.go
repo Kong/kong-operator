@@ -29,8 +29,10 @@ func TestEventGatewayVirtualClusterProducePolicyConfigUnmarshalJSON_NilReceiver(
 	}{
 		{name: "encrypt", payload: []byte("{\"type\":\"encrypt\",\"encrypt\":{}}")},
 		{name: "encrypt_fields", payload: []byte("{\"type\":\"encryptFields\",\"encryptFields\":{}}")},
+		{name: "mask_fields", payload: []byte("{\"type\":\"maskFields\",\"maskFields\":{}}")},
 		{name: "modify_headers", payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}")},
 		{name: "schema_validation", payload: []byte("{\"type\":\"schemaValidation\",\"schemaValidation\":{}}")},
+		{name: "transcode", payload: []byte("{\"type\":\"transcode\",\"transcode\":{}}")},
 	}
 
 	for _, tt := range tests {
@@ -107,6 +109,22 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 			},
 		},
 		{
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/mask_fields",
+			payload: []byte("{\"type\":\"maskFields\",\"maskFields\":{}}"),
+			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
+				t.Helper()
+				if target.EventGatewayVirtualClusterProducePolicyConfig == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig should be allocated")
+				}
+				if got, want := target.EventGatewayVirtualClusterProducePolicyConfig.Type, EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordMaskFieldsProducePolicyCreate; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordMaskFieldsProducePolicyCreate == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordMaskFieldsProducePolicyCreate should be allocated")
+				}
+			},
+		},
+		{
 			name:    "EventGatewayVirtualClusterProducePolicyConfig/modify_headers",
 			payload: []byte("{\"type\":\"modifyHeaders\",\"modifyHeaders\":{}}"),
 			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
@@ -135,6 +153,22 @@ func TestEventGatewayVirtualClusterProducePolicyAPISpecUnmarshalJSON_DecodesUnio
 				}
 				if target.EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy == nil {
 					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig.ProduceSchemaValidationPolicy should be allocated")
+				}
+			},
+		},
+		{
+			name:    "EventGatewayVirtualClusterProducePolicyConfig/transcode",
+			payload: []byte("{\"type\":\"transcode\",\"transcode\":{}}"),
+			assert: func(t *testing.T, target EventGatewayVirtualClusterProducePolicyAPISpec) {
+				t.Helper()
+				if target.EventGatewayVirtualClusterProducePolicyConfig == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig should be allocated")
+				}
+				if got, want := target.EventGatewayVirtualClusterProducePolicyConfig.Type, EventGatewayVirtualClusterProducePolicyConfigTypeParsedRecordTranscodeProducePolicyCreate; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate == nil {
+					t.Fatalf("EventGatewayVirtualClusterProducePolicyConfig.ParsedRecordTranscodeProducePolicyCreate should be allocated")
 				}
 			},
 		},
