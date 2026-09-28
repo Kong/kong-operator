@@ -153,6 +153,41 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				ExpectedUpdateErrorMessage: new("name is immutable"),
 			},
 			{
+				Name: "installed variant with labels and managedBy is valid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Labels = aiconfigurationv1alpha1.PublicLabels{"team": "ai"}
+					obj.Spec.APISpec.Installed.ManagedBy = aiconfigurationv1alpha1.ManagedBy{"tool": "kong-operator"}
+					return obj
+				}(),
+			},
+			{
+				Name: "streaming variant with labels and managedBy is valid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyStreaming(ns.Name)
+					obj.Spec.APISpec.Streaming.Labels = aiconfigurationv1alpha1.PublicLabels{"team": "ai"}
+					obj.Spec.APISpec.Streaming.ManagedBy = aiconfigurationv1alpha1.ManagedBy{"tool": "kong-operator"}
+					return obj
+				}(),
+			},
+			{
+				Name: "label values must match the label value pattern",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Labels = aiconfigurationv1alpha1.PublicLabels{"team": "-invalid"}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.apiSpec.installed.labels.team in body should match"),
+			},
+			{
+				Name:       "labels and managedBy can be updated",
+				TestObject: validAIGatewayCustomPolicyInstalled(ns.Name),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
+					obj.Spec.APISpec.Installed.Labels = aiconfigurationv1alpha1.PublicLabels{"team": "ai"}
+					obj.Spec.APISpec.Installed.ManagedBy = aiconfigurationv1alpha1.ManagedBy{"tool": "kong-operator"}
+				},
+			},
+			{
 				Name:       "display name and Lua sources can be updated",
 				TestObject: validAIGatewayCustomPolicyStreaming(ns.Name),
 				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {

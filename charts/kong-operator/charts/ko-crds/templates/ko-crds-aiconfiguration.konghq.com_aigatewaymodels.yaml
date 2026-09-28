@@ -479,6 +479,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -1539,6 +1542,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -4377,6 +4383,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -5445,6 +5454,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object

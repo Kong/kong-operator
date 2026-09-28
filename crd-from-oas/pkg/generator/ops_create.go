@@ -44,6 +44,12 @@ type opsCreateFuncData struct {
 	// (e.g. "SchemaRegistryConfluent"). Empty when the request type has a direct
 	// .Labels/.Tags field (the common, non-union case).
 	LabelsUnionField string
+	// LabelsUnionTargets lists, when the create request body is a root-level
+	// discriminated union with multiple members that all declare labels/tags,
+	// one injection target per member. Only the member selected at runtime is
+	// non-nil, so each target is guarded. Empty otherwise (see
+	// LabelsUnionField for the single-member case).
+	LabelsUnionTargets []labelsUnionTarget
 	// Parents holds metadata for each parent dependency (outermost first).
 	// Single-parent entities have len(Parents)==1; root entities have len==0.
 	Parents []parentInfo
@@ -162,10 +168,15 @@ func (g *Generator) generateOpsCreateFuncBody(
 	// (see metadataFields), the SDK request type returned by ToXXX() has no
 	// direct .Labels/.Tags field — it's nested under the selected union member.
 	// Resolve that member field name so the template can inject through it.
-	// Requires exactly one union member; a request type with multiple members
-	// (e.g. AIGatewayModelProvider's 19 variants) has no single field to target
-	// and must opt out via ops.skipRootUnionMetadataFields instead of guessing.
-	var labelsUnionField string
+	// A single union member is targeted directly; with multiple members every
+	// member must declare the labels/tags field, and each one is injected
+	// through a nil guard (only the selected member is set at runtime). A
+	// member lacking the field (e.g. some of AIGatewayModelProvider's 19
+	// variants) must opt out via ops.skipRootUnionMetadataFields instead.
+	var (
+		labelsUnionField   string
+		labelsUnionTargets []labelsUnionTarget
+	)
 	if hasLabels || hasTags {
 		checkImportPath, checkType := createReqImportPath, createReqType
 		if createFullyWrapped {
@@ -181,10 +192,24 @@ func (g *Generator) generateOpsCreateFuncBody(
 		case 1:
 			labelsUnionField = memberFields[0]
 		default:
-			return nil, fmt.Errorf(
-				"entity %q: labels/tags detected on multi-variant union create body %q; set ops.skipRootUnionMetadataFields to opt out",
-				entityName, checkType,
-			)
+			if err := requireUnionMembersMetadataField(checkImportPath, checkType, hasTags); err != nil {
+				return nil, fmt.Errorf(
+					"entity %q: create body %q: %w; set ops.skipRootUnionMetadataFields to opt out",
+					entityName, checkType, err,
+				)
+			}
+			bodyPrefix := ""
+			if createFullyWrapped && createBodyField != "" {
+				bodyPrefix = createBodyField + "."
+			}
+			for _, member := range memberFields {
+				path := bodyPrefix + member
+				labelsUnionTargets = append(labelsUnionTargets, labelsUnionTarget{
+					Path:          path,
+					Guard:         "req." + path + " != nil",
+					ExpectedGuard: "expectedRequest." + path + " != nil",
+				})
+			}
 		}
 	}
 
@@ -220,6 +245,7 @@ func (g *Generator) generateOpsCreateFuncBody(
 		HasTags:                       hasTags,
 		LabelsPointer:                 labelsPointer,
 		LabelsUnionField:              labelsUnionField,
+		LabelsUnionTargets:            labelsUnionTargets,
 		NeedsClient:                   needsClient,
 		Parents:                       parents,
 		RespField:                     schema.SuccessResponseRef,

@@ -2143,6 +2143,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2151,6 +2154,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2230,6 +2234,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2238,6 +2245,7 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2388,6 +2396,9 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2396,6 +2407,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2465,6 +2477,9 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2473,6 +2488,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2789,6 +2805,25 @@ import (
 
 // opsCreateFuncTemplate renders a single create<Entity> function body.
 // It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
+// labelsUnionInjectTemplate injects Kubernetes metadata labels/tags into each
+// member of a multi-member root-union request body, guarding every member as
+// only the selected one is set at runtime. Parsed alongside the ops and ops
+// test templates; invoked with the labelsUnionInject template func.
+const labelsUnionInjectTemplate = `{{define "labelsUnionInject"}}
+{{- $root := .Root}}
+{{- range .Targets}}
+	if {{if eq $root "req"}}{{.Guard}}{{else}}{{.ExpectedGuard}}{{end}} {
+{{- if $.HasTags}}
+		{{$root}}.{{.Path}}.Tags = GenerateTagsForObject(obj, {{$root}}.{{.Path}}.Tags...)
+{{- else if $.LabelsPointer}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$root}}.{{.Path}}.Labels)
+{{- else}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabels(obj, {{$root}}.{{.Path}}.Labels)
+{{- end}}
+	}
+{{- end}}
+{{- end}}`
+
 const opsCreateFuncTemplate = `
 func create{{.Entity}}(
 	ctx context.Context,
@@ -2850,6 +2885,9 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .LabelsUnionField}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsUnionField}}
@@ -2870,6 +2908,7 @@ func create{{.Entity}}(
 {{- end}}
 {{- if .LabelsUnionField}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}
@@ -2992,6 +3031,9 @@ func update{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "req"}}{{if .LabelsFieldPath}}{{$labelsTarget = printf "req.%s" .LabelsFieldPath}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsFieldGuard}}
@@ -3012,6 +3054,7 @@ func update{{.Entity}}(
 {{- end}}
 {{- if .LabelsFieldGuard}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .UpdateFullyWrapped}}
@@ -3538,6 +3581,14 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
+{{- if .LabelsResponseVariantFields}}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
@@ -3566,6 +3617,31 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .LabelsResponseVariantFields}}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range {{.ListResponseItemsExpr}} {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		{{- range .LabelsResponseVariantFields}}
+		case entry.{{.}} != nil:
+			id, labels = entry.{{.}}.GetID(), entry.{{.}}.GetLabels()
+		{{- end}}
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
+{{- else}}
+
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
@@ -3574,6 +3650,7 @@ func get{{.Entity}}ForUID(
 			return entry.GetID(), nil
 		}
 	}
+{{- end}}
 {{- else if .HasName}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching

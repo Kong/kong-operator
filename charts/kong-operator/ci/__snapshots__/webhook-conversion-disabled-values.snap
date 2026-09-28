@@ -2290,6 +2290,20 @@ spec:
                         maxLength: 256
                         minLength: 1
                         type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
                       name:
                         maxLength: 256
                         minLength: 1
@@ -2317,6 +2331,20 @@ spec:
                         maxLength: 262144
                         minLength: 1
                         type: string
+                      labels:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
+                      managedBy:
+                        additionalProperties:
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        type: object
                       name:
                         maxLength: 256
                         minLength: 1
@@ -10507,6 +10535,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -11567,6 +11598,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -14405,6 +14439,9 @@ spec:
                                               videoOutputS3URI:
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             properties:
@@ -15473,6 +15510,9 @@ spec:
                                       maxLength: 253
                                       type: string
                                     videoOutputS3URI:
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
                                       maxLength: 253
                                       type: string
                                   type: object

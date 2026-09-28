@@ -752,6 +752,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -2542,6 +2551,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object
@@ -7179,6 +7197,15 @@ spec:
                                                   generation outputs.
                                                 maxLength: 253
                                                 type: string
+                                              vpcEndpoint:
+                                                description: |-
+                                                  Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                                  Bedrock endpoint.
+                                                  Ignored if `upstream_url` is set.
+
+                                                  **Requires a minimum runtime version of `2.3`**.
+                                                maxLength: 253
+                                                type: string
                                             type: object
                                           gemini:
                                             description: Gemini configuration.
@@ -8981,6 +9008,15 @@ spec:
                                     videoOutputS3URI:
                                       description: S3 URI for storing video generation
                                         outputs.
+                                      maxLength: 253
+                                      type: string
+                                    vpcEndpoint:
+                                      description: |-
+                                        Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+                                        Bedrock endpoint.
+                                        Ignored if `upstream_url` is set.
+
+                                        **Requires a minimum runtime version of `2.3`**.
                                       maxLength: 253
                                       type: string
                                   type: object

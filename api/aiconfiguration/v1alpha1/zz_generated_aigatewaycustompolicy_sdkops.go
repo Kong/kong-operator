@@ -9,6 +9,36 @@ import (
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
 
+// AIGatewayCustomPolicySDKOpsFreeformKeyFields lists free-form / map data-keyed
+// subtrees whose keys are user data (e.g. an HTTP header name) and must be
+// preserved verbatim rather than camelCase→snake_case renamed.
+var AIGatewayCustomPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
+	{
+		Path: []string{
+			"installed",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"installed",
+			"managed_by",
+		},
+	},
+	{
+		Path: []string{
+			"streaming",
+			"labels",
+		},
+	},
+	{
+		Path: []string{
+			"streaming",
+			"managed_by",
+		},
+	},
+}
+
 func (s *AIGatewayCustomPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, error) {
 	data, err := json.Marshal(s)
 	if err != nil {
@@ -21,7 +51,7 @@ func (s *AIGatewayCustomPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, e
 	}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
-	renamed := renameKeysToSDK(rawPayload)
+	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayCustomPolicySDKOpsFreeformKeyFields)
 	payload, ok := renamed.(map[string]any)
 	if !ok {
 		return nil, fmt.Errorf("failed to convert AIGatewayCustomPolicyAPISpec SDK payload to map")
@@ -36,13 +66,16 @@ func (s *AIGatewayCustomPolicyAPISpec) selectedSDKOpsPayload(payload map[string]
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayCustomPolicyConfig.Type {
 	case AIGatewayCustomPolicyConfigTypeInstalled:
 		selected = payload["installed"]
 		variant = "Installed"
+		variantJSON = "installed"
 	case AIGatewayCustomPolicyConfigTypeStreaming:
 		selected = payload["streaming"]
 		variant = "Streaming"
+		variantJSON = "streaming"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayCustomPolicy config type %q", s.AIGatewayCustomPolicyConfig.Type)
 	}
@@ -50,7 +83,7 @@ func (s *AIGatewayCustomPolicyAPISpec) selectedSDKOpsPayload(payload map[string]
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayCustomPolicy config payload missing for type %q", s.AIGatewayCustomPolicyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayCustomPolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

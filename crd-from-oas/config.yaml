@@ -617,14 +617,6 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayCustomPoliciesSDK
             fieldName: AIGatewayCustomPolicies
-          # List responses are root unions whose wrapper does not expose top-level
-          # GetID/GetName accessors, so conflict lookup (matching on the
-          # variant's type and immutable name, as the variants carry no
-          # labels/tags) stays hand-written for now.
-          # Root-union metadata detection is left enabled: the installed and
-          # streaming variants declare no labels/tags, so there is nothing to
-          # inject on create/update.
-          skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest
           update:
