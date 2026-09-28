@@ -401,19 +401,16 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
-		// Treat nil as the default (SingleStack) since the API server defaults the field,
-		// and update only when the effective values differ, so that a policy removed
-		// from the DataPlane spec reverts to the default instead of lingering on the
-		// Service.
-		existingIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
-		if existingService.Spec.IPFamilyPolicy != nil {
-			existingIPFamilyPolicy = *existingService.Spec.IPFamilyPolicy
-		}
-		generatedIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
-		if generatedService.Spec.IPFamilyPolicy != nil {
-			generatedIPFamilyPolicy = *generatedService.Spec.IPFamilyPolicy
-		}
-		if existingIPFamilyPolicy != generatedIPFamilyPolicy {
+		// Overwrite only when the generated Service sets a policy: the API
+		// server adopts the previous policy of an existing Service when the
+		// field is removed from the update, so writing nil never takes effect
+		// and would re-fire a no-op patch on every reconcile (see
+		// setDataPlaneIngressServiceIPFamilies). A previously applied policy
+		// can therefore not be reverted by removing it from the DataPlane
+		// spec; users can change it by setting an explicit one.
+		if generatedService.Spec.IPFamilyPolicy != nil &&
+			(existingService.Spec.IPFamilyPolicy == nil ||
+				*existingService.Spec.IPFamilyPolicy != *generatedService.Spec.IPFamilyPolicy) {
 			existingService.Spec.IPFamilyPolicy = generatedService.Spec.IPFamilyPolicy
 			updated = true
 		}

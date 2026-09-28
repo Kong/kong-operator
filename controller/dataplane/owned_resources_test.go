@@ -360,10 +360,11 @@ func TestEnsureIngressServiceForDataPlaneIPFamily(t *testing.T) {
 			expectedSvcPolicy: new(corev1.IPFamilyPolicyPreferDualStack),
 		},
 		{
-			name:              "should revert a non-default ipFamilyPolicy to unset when removed from the DataPlane spec",
+			name:              "should leave the existing ipFamilyPolicy untouched when the generated Service sets no policy",
 			existingPolicy:    new(corev1.IPFamilyPolicyRequireDualStack),
 			existingPolicySet: true,
-			expectedResult:    op.Updated,
+			expectedResult:    op.Noop,
+			expectedSvcPolicy: new(corev1.IPFamilyPolicyRequireDualStack),
 		},
 		{
 			name:              "should update ipFamilyPolicy when changed in the DataPlane spec",
