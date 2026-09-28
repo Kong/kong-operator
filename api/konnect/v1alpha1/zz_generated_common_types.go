@@ -296,8 +296,11 @@ func flattenSensitiveDataWalk(v any, fields []sdkOpsFreeformKeyField) any {
 	case []any:
 		sub, sensitiveLeaf, atLeaf := advanceFreeformKeyFields(fields, "[]")
 		for i, val := range x {
-			if atLeaf && sensitiveLeaf {
-				x[i] = unwrapSensitiveDataSource(val)
+			if atLeaf {
+				if sensitiveLeaf {
+					x[i] = unwrapSensitiveDataSource(val)
+				}
+				// Free-form leaf: never descend, never rewrite user data.
 				continue
 			}
 			x[i] = flattenSensitiveDataWalk(val, sub)
