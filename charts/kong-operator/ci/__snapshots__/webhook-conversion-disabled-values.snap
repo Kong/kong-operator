@@ -2412,6 +2412,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
           rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: 'spec.aiGatewayRef.kind must be one of: KonnectAIGateway'
+          rule: '!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in [''KonnectAIGateway'']'
     served: true
     storage: true
     subresources:

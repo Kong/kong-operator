@@ -637,6 +637,11 @@ apiGroupVersions:
           parentRef:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
+            # Custom policies are Konnect-only: the on-prem AI Gateway
+            # controllers and config translator do not handle this entity, so
+            # an OnPremAIGateway ref would be accepted but never reconciled.
+            allowedKinds:
+              - KonnectAIGateway
 
       - path: /v1/ai-gateways/{gatewayId}/ca-certificates
         name: AIGatewayCACertificate

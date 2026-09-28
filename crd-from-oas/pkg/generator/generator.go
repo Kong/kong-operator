@@ -2771,6 +2771,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 				fn, fn, fn, fn,
 			)}
 	}
+	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
+		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
+	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -3174,6 +3177,21 @@ func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediatePar
 		return immediateParentDep.JSONName
 	}
 	return ""
+}
+
+// parentRefAllowedKindsXValidation returns the type-level CEL marker that
+// restricts the config-driven parent ref field's "kind" to
+// parentRef.AllowedKinds.
+func parentRefAllowedKindsXValidation(parentRef *config.ParentRefConfig) string {
+	quoted := make([]string, 0, len(parentRef.AllowedKinds))
+	for _, kind := range parentRef.AllowedKinds {
+		quoted = append(quoted, "'"+kind+"'")
+	}
+	fn := parentRef.FieldName
+	return fmt.Sprintf(
+		`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.spec.%s.kind) || self.spec.%s.kind in [%s]", message="spec.%s.kind must be one of: %s"`,
+		fn, fn, fn, strings.Join(quoted, ", "), fn, strings.Join(parentRef.AllowedKinds, ", "),
+	)
 }
 
 func rootRefAccessorEntityName(dep *parser.Dependency) string {

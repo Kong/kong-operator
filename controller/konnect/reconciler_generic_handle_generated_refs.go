@@ -116,8 +116,9 @@ func (e *UnsupportedGeneratedReferenceTypeError) Error() string {
 
 // konnectReconciliationSkipper is implemented by generated entities whose
 // parent reference can resolve to a parent the Konnect reconciler does not
-// manage: an AIGatewayRef targeting an OnPremAIGateway is owned by the on-prem
-// reconciliation machinery. The watch criteria of those types (the For
+// manage: an AIGatewayRef targeting an OnPremAIGateway is handled by the
+// on-prem controllers where supported (entities without on-prem support reject
+// such refs at admission). The watch criteria of those types (the For
 // predicate and the enqueue handlers) use it to keep such entities out of the
 // Konnect reconciler's work queue.
 type konnectReconciliationSkipper interface {

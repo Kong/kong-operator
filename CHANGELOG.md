@@ -95,7 +95,8 @@
 - Added `AIGatewayCustomPolicy` CRD: manage Konnect AI Gateway custom policies
   (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
   supporting both `installed` and `streaming` (Lua `schema` and `handler`)
-  custom policy types.
+  custom policy types. `OnPremAIGateway` references are not supported yet
+  and are rejected at admission.
   [#5896](https://github.com/Kong/kong-operator/pull/5896)
 
 ### Fixes

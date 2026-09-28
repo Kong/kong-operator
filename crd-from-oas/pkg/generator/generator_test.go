@@ -7154,3 +7154,36 @@ func TestGenerateSDKOps_AllOfCompositeRefCollectsBoolAndFreeformFields(t *testin
 	// names that need camelCase -> snake_case renaming).
 	assert.NotContains(t, content, "\"listener\",\n\t\t\t\"config\",\n\t\t\t\"route\",\n\t\t},")
 }
+
+func TestParentRefAllowedKindsXValidation(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name         string
+		allowedKinds []string
+		want         string
+	}{
+		{
+			name:         "single kind",
+			allowedKinds: []string{"KonnectAIGateway"},
+			want:         `+kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in ['KonnectAIGateway']", message="spec.aiGatewayRef.kind must be one of: KonnectAIGateway"`,
+		},
+		{
+			name:         "multiple kinds",
+			allowedKinds: []string{"KonnectAIGateway", "OnPremAIGateway"},
+			want:         `+kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.spec.aiGatewayRef.kind) || self.spec.aiGatewayRef.kind in ['KonnectAIGateway', 'OnPremAIGateway']", message="spec.aiGatewayRef.kind must be one of: KonnectAIGateway, OnPremAIGateway"`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			got := parentRefAllowedKindsXValidation(&config.ParentRefConfig{
+				FieldName:    "aiGatewayRef",
+				TypeName:     "AIGatewayRef",
+				AllowedKinds: tt.allowedKinds,
+			})
+			assert.Equal(t, tt.want, got)
+		})
+	}
+}
