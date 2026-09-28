@@ -31,21 +31,7 @@ func (obj *AIGatewayModelProvider) ToAIGWProvider(ctx context.Context, cl client
 		return nil, fmt.Errorf("resolving AIGatewayModelProvider %s/%s secrets: %w", obj.Namespace, obj.Name, err)
 	}
 
-	payload, err := resolved.marshalSDKOpsPayload()
-	if err != nil {
-		return nil, fmt.Errorf("marshaling AIGatewayModelProvider %s/%s: %w", obj.Namespace, obj.Name, err)
-	}
-	cfg, ok := payload[string(spec.Type)].(map[string]any)
-	if !ok {
-		return nil, fmt.Errorf("AIGatewayModelProvider %s/%s: missing %q payload", obj.Namespace, obj.Name, spec.Type)
-	}
-
-	// Konnect-only bookkeeping: no on-prem equivalent.
-	delete(cfg, "managed_by")
-
-	// The selected variant payload already carries the discriminator as its top-level "type"
-	// (selectedSDKOpsPayload copies it in), which is exactly aigw.Provider.Type.
-	data, _, err := resolved.selectedSDKOpsPayload(payload)
+	data, err := resolved.marshalAIGWProviderPayload()
 	if err != nil {
 		return nil, fmt.Errorf("marshaling AIGatewayModelProvider %s/%s: %w", obj.Namespace, obj.Name, err)
 	}
@@ -55,4 +41,27 @@ func (obj *AIGatewayModelProvider) ToAIGWProvider(ctx context.Context, cl client
 		return nil, fmt.Errorf("decoding AIGatewayModelProvider %s/%s as aigw.Provider: %w", obj.Namespace, obj.Name, err)
 	}
 	return &provider, nil
+}
+
+// marshalAIGWProviderPayload builds the aigw.Provider-shaped payload bytes for the selected
+// config variant. Shared by ToAIGWProvider and its strict round-trip test, so the test decodes
+// the production pipeline's output, not a copy of it (mirrors the Model side's
+// marshalAIGWPayload).
+func (spec *AIGatewayModelProviderAPISpec) marshalAIGWProviderPayload() ([]byte, error) {
+	payload, err := spec.marshalSDKOpsPayload()
+	if err != nil {
+		return nil, err
+	}
+	cfg, ok := payload[string(spec.Type)].(map[string]any)
+	if !ok {
+		return nil, fmt.Errorf("missing %q payload", spec.Type)
+	}
+
+	// Konnect-only bookkeeping: no on-prem equivalent.
+	delete(cfg, "managed_by")
+
+	// The selected variant payload already carries the discriminator as its top-level "type"
+	// (selectedSDKOpsPayload copies it in), which is exactly aigw.Provider.Type.
+	data, _, err := spec.selectedSDKOpsPayload(payload)
+	return data, err
 }

@@ -178,19 +178,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider_StrictRoundTrip(t *testing.T) {
 			},
 		},
 	}
-	data, err := func() ([]byte, error) {
-		payload, err := spec.marshalSDKOpsPayload()
-		if err != nil {
-			return nil, err
-		}
-		cfg, ok := payload[string(spec.Type)].(map[string]any)
-		if !ok {
-			return nil, err
-		}
-		delete(cfg, "managed_by")
-		data, _, err := spec.selectedSDKOpsPayload(payload)
-		return data, err
-	}()
+	data, err := spec.marshalAIGWProviderPayload()
 	require.NoError(t, err)
 
 	dec := yaml.NewDecoder(bytes.NewReader(data))
