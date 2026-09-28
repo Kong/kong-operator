@@ -2,6 +2,7 @@
 
 ## Table of Contents
 
+- [v2.3.2](#v232)
 - [v2.3.1](#v231)
 - [v2.3.0](#v230)
 - [v2.2.4](#v224)
@@ -60,7 +61,9 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## Unreleased
+## [v2.3.2]
+
+> Release date: 2026-09-28
 
 ### Breaking changes
 
@@ -75,6 +78,7 @@
   Recovery: change `route.paths`/`route.hosts`/`route.methods` from a bare string
   to a list, e.g. `paths: /mcp/foo` becomes `paths: [/mcp/foo]`.
   [#5804](https://github.com/Kong/kong-operator/pull/5804)
+  [#5835](https://github.com/Kong/kong-operator/pull/5835)
 - `AIGatewayMCPServer`: reference fields changed from plain string items (holding
   the referenced entity's Konnect name) to ref objects holding the referenced
   CR's `metadata.name`; the operator now resolves them to the referenced
@@ -114,8 +118,8 @@
   only holds scalar values, `paths`/`hosts`/`methods` could not be expressed as the
   lists Kong's route matching requires: `kubectl apply` accepted the resource, but
   every `AIGatewayMCPServer` with a non-empty `route` then failed to reconcile with
-  `Programmed=False`/`FailedToCreate` and an SDK unmarshal error
-  (`could not unmarshal ... into any supported union types for
+  `Programmed=False`/`FailedToCreate` and an SDK unmarshall error
+  (`could not unmarshall ... into any supported union types for
   AIGatewayMCPServerRouteWithMatcher`), making the field unusable in practice. The
   root cause was in `crd-from-oas`, which fell back to `map[string]string` for a
   schema composed via `allOf`; the generator now merges the `allOf` members'
@@ -123,11 +127,13 @@
   unchanged OpenAPI spec. See the breaking change entry above for the required
   manifest update.
   [#5804](https://github.com/Kong/kong-operator/pull/5804)
+  [#5835](https://github.com/Kong/kong-operator/pull/5835)
 - KonnectExtension: complete certificate cleanup when the referenced ControlPlane
   was deleted before extension status was persisted. Keep shared client-certificate
   Secret finalizers while another extension still uses the Secret or has pending
   certificate cleanup.
   [#5774](https://github.com/Kong/kong-operator/pull/5774)
+  [#5778](https://github.com/Kong/kong-operator/pull/5778)
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
   [#5683](https://github.com/Kong/kong-operator/pull/5683)
@@ -148,6 +154,7 @@
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
   [#5600](https://github.com/Kong/kong-operator/pull/5600)
+  [#5707](https://github.com/Kong/kong-operator/pull/5707)
 - On-prem gateway: keep tags of translated Kong certificate stable when multiple
   `Secret`s have the same certificate content. The tags generated from the `Secret`
   with the earliest creation timestamp are chosen, and the one with the lowest
@@ -156,6 +163,7 @@
   [#5657](https://github.com/Kong/kong-operator/pull/5657)
   [#5733](https://github.com/Kong/kong-operator/pull/5733)
 - Fix unnecessary reconciliations caused by incorrect status conditions updates.
+  [#5802](https://github.com/Kong/kong-operator/pull/5802)
   [#5820](https://github.com/Kong/kong-operator/pull/5820)
 
 ## [v2.3.1]
@@ -3099,6 +3107,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.3.2]: https://github.com/Kong/kong-operator/compare/v2.3.1..v2.3.2
 [v2.3.1]: https://github.com/Kong/kong-operator/compare/v2.3.0..v2.3.1
 [v2.3.0]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.3.0
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
