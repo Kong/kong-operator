@@ -489,15 +489,15 @@ jobs:
             fields: repo,message,commit,author,action,eventName,ref,workflow
             text: ":red_circle: Docker build failed. cc: <!subteam^${{ env.SLACK_TEAM_ID }}>"
 
-  # Not a step in build-multi-arch: a flake there would skip consumers that already have the image.
+  # Separate job rather than a step in build-multi-arch: per-architecture matrix, and an SBOM
+  # failure leaves that job's outputs set instead of taking them down with it.
   sbom-image:
     name: Image SBOM (${{ matrix.arch }})
     runs-on: ubuntu-latest
     needs: build-multi-arch
-    if: ${{ needs.build-multi-arch.outputs.index_digest != '' }}
-    # Load-bearing: callers consume this workflow as a whole, so a failing job here would skip
-    # everything downstream. The run stays green; the job itself still shows red.
-    continue-on-error: true
+    # Blocking: the image SBOM is a deliverable, so a missing one fails the run rather than
+    # shipping silently. DISABLE_SBOM_SCAN bypasses a known-bad upstream (Syft or registry).
+    if: ${{ needs.build-multi-arch.outputs.index_digest != '' && vars.DISABLE_SBOM_SCAN != 'true' }}
     permissions:
       contents: read
     strategy:
@@ -556,7 +556,8 @@ jobs:
   sbom-source:
     name: Source SBOM
     runs-on: ubuntu-latest
-    if: ${{ inputs.push }}
+    # Blocking, like sbom-image: the source SBOM is a deliverable. Same kill switch.
+    if: ${{ inputs.push && vars.DISABLE_SBOM_SCAN != 'true' }}
     permissions:
       contents: read
 
@@ -568,8 +569,7 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
-        # An upstream Grype DB outage must never fail the build.
-        continue-on-error: true
+        # fail_build stays false: gating on findings is a separate decision, not this PR's.
         with:
           dir: '.'
           asset_prefix: source

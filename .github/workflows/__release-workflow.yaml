@@ -58,6 +58,12 @@ on:
         description: "The name of the image to push to Docker Hub"
         type: string
         required: true
+      registry:
+        description: |
+          Registry to use for image naming, signing and provenance.
+          When using docker hub set it to 'docker.io'.
+        type: string
+        required: true
       additional-build-contexts:
         description: >
           Additional build context to include in the build (format name=path),
@@ -168,7 +174,7 @@ jobs:
     needs:
     - github-app-token
     with:
-      registry: docker.io
+      registry: ${{ inputs.registry }}
       username: ${{ inputs.dockerhub-push-username }}
       image-name: ${{ inputs.image-name }}
       additional-build-contexts: ${{ inputs.additional-build-contexts }}
@@ -199,7 +205,7 @@ jobs:
         uses: Kong/public-shared-actions/security-actions/sign-docker-image@eb651af2c2f7ed987a3a8176d0ac32172e1d50e4 # sign-docker-image@5.1.0
         with:
           # The action reads only the repository part, so the bare name avoids picking a tag.
-          tags: docker.io/${{ inputs.image-name }}
+          tags: ${{ inputs.registry }}/${{ inputs.image-name }}
           image_digest: ${{ needs.build-push-images.outputs.index_digest }}
           registry_username: ${{ inputs.dockerhub-push-username }}
           registry_password: ${{ secrets.dockerhub-push-token }}
@@ -208,7 +214,7 @@ jobs:
       # Fails the run if the signature just published cannot be verified.
       - name: Verify the image index signature
         env:
-          IMAGE: docker.io/${{ inputs.image-name }}
+          IMAGE: ${{ inputs.registry }}/${{ inputs.image-name }}
           DIGEST: ${{ needs.build-push-images.outputs.index_digest }}
           NOTARY_REPOSITORY: ${{ inputs.notary-repository }}
         run: |
@@ -234,7 +240,7 @@ jobs:
     uses: slsa-framework/slsa-github-generator/.github/workflows/generator_container_slsa3.yml@v2.1.0
     with:
       # Must carry neither a tag nor a digest.
-      image: docker.io/${{ inputs.image-name }}
+      image: ${{ inputs.registry }}/${{ inputs.image-name }}
       digest: ${{ needs.build-push-images.outputs.index_digest }}
       registry-username: ${{ inputs.dockerhub-push-username }}
       provenance-repository: ${{ inputs.notary-repository }}

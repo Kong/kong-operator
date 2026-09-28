@@ -46,6 +46,7 @@ jobs:
     with:
       dockerhub-push-username: ${{ vars.DOCKERHUB_PUSH_USERNAME }}
       image-name: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
+      registry: docker.io
       latest: ${{ inputs.latest }}
       tag: ${{ inputs.tag }}
       base: ${{ github.ref_name }}

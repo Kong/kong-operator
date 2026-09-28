@@ -140,9 +140,9 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Generate source SBOM
+        # Blocking: the SBOMs are deliverables. DISABLE_SBOM_SCAN bypasses a known-bad upstream.
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
         uses: Kong/public-shared-actions/security-actions/sca@5d8835e25221a4aa16e7a53ab6e97c7fb2528b7e # sca@6.0.3
-        # An upstream Grype DB outage must never block the release: only the SBOM is consumed.
-        continue-on-error: true
         with:
           dir: '.'
           asset_prefix: source
@@ -153,10 +153,11 @@ jobs:
           install_args: github:anchore/syft
 
       # Subject is the index digest the tag resolves to, never the tag. Each file is per-platform,
-      # selected by `--platform`. Non-blocking: this job also gates the branches below.
+      # selected by `--platform`. Blocking: this job publishes the release, so a missing image
+      # SBOM must stop it rather than produce a release with an incomplete artifact set.
       - name: Generate image SBOM
         id: image_sbom
-        continue-on-error: true
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
         env:
           IMAGE_NAME: ${{ vars.DOCKERHUB_IMAGE_NAME_KO }}
           VERSION: ${{ needs.semver.outputs.version }}
@@ -165,24 +166,19 @@ jobs:
           DIGEST="$(docker buildx imagetools inspect "docker.io/${IMAGE_NAME}:${VERSION}" --format '{{.Manifest.Digest}}')"
           echo "resolved docker.io/${IMAGE_NAME}:${VERSION} to ${DIGEST}"
 
-          # Both arches are attempted; a missing one is reported in the warning below.
-          failed=0
           for arch in amd64 arm64; do
-            if ! syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
-                 --platform "linux/${arch}" \
-                 -o "spdx-json=image-linux-${arch}-sbom.spdx.json" \
-                 -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"; then
-              echo "::warning::image-linux-${arch} SBOM generation failed"
-              failed=1
-            fi
+            syft "registry:docker.io/${IMAGE_NAME}@${DIGEST}" \
+              --platform "linux/${arch}" \
+              -o "spdx-json=image-linux-${arch}-sbom.spdx.json" \
+              -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"
           done
-          exit "${failed}"
 
       - name: Warn when the image SBOM is missing
-        if: ${{ steps.image_sbom.outcome != 'success' }}
-        run: echo "::warning::image SBOM generation did not complete; publishing the release with the files that were produced"
+        # Only reachable through the kill switch: a failure stops the job before this step.
+        if: ${{ steps.image_sbom.outcome == 'skipped' }}
+        run: echo "::warning::image SBOM generation was skipped; publishing the release with the files that were produced"
 
-      # Non-blocking producers, so this set can be empty; nullglob keeps the glob from failing.
+      # A skipped producer leaves this set empty; nullglob keeps the glob from failing.
       - name: Generate SBOM checksums
         run: |
           set -euo pipefail
