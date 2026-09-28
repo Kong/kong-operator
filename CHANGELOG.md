@@ -2,7 +2,7 @@
 
 ## Table of Contents
 
-- [Unreleased](#unreleased)
+- [v2.2.6](#v226)
 - [v2.2.5](#v225)
 - [v2.2.4](#v224)
 - [v2.2.3](#v223)
@@ -56,13 +56,15 @@
 - [v0.1.1](#v011)
 - [v0.1.0](#v010)
 
-## [Unreleased](unreleased)
+## [v2.2.6]
+
+> Release date: 2026-09-28
 
 ### Fixes
 
 - Fix compatibility with Gateway API in version lower than v1.5.0,
   where `ReferenceGrant` is only served at `v1beta1`.
-  [#5683](https://github.com/Kong/kong-operator/pull/5683)
+  [#5724](https://github.com/Kong/kong-operator/pull/5724)
 - KonnectExtension: complete certificate cleanup when the referenced ControlPlane
   was deleted before extension status was persisted. Keep shared client-certificate
   Secret finalizers while another extension still uses the Secret or has pending
@@ -83,6 +85,7 @@
   watched, so changing one triggers a reconcile, and a failure to resolve them is
   reported instead of silently yielding an empty configuration.
   [#5600](https://github.com/Kong/kong-operator/pull/5600)
+  [#5712](https://github.com/Kong/kong-operator/pull/5712)
 - Fix unnecessary reconciliations caused by incorrect status conditions updates.
   [#5820](https://github.com/Kong/kong-operator/pull/5820)
   [#5823](https://github.com/Kong/kong-operator/pull/5823)
@@ -2483,6 +2486,7 @@ leftovers from previous operator deployments in the cluster. The user needs to d
 (clusterrole, clusterrolebinding, validatingWebhookConfiguration) before
 re-installing the operator through the bundle.
 
+[v2.2.6]: https://github.com/Kong/kong-operator/compare/v2.2.5..v2.2.6
 [v2.2.5]: https://github.com/Kong/kong-operator/compare/v2.2.4..v2.2.5
 [v2.2.4]: https://github.com/Kong/kong-operator/compare/v2.2.3..v2.2.4
 [v2.2.3]: https://github.com/Kong/kong-operator/compare/v2.2.2..v2.2.3
