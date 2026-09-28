@@ -92,6 +92,11 @@
   the operator resolves the reference to the parent's Konnect ID and watches
   referenced pages for changes.
   [#5701](https://github.com/Kong/kong-operator/pull/5701)
+- Added `AIGatewayCustomPolicy` CRD: manage Konnect AI Gateway custom policies
+  (`aiconfiguration.konghq.com/v1alpha1`), parented to `KonnectAIGateway`,
+  supporting both `installed` and `streaming` (Lua `schema` and `handler`)
+  custom policy types.
+  [#5896](https://github.com/Kong/kong-operator/pull/5896)
 
 ### Fixes
 

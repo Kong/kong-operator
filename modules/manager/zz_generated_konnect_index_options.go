@@ -21,6 +21,7 @@ func generatedIndexOptionsForKonnectEntities(
 		index.OptionsForAIGatewayConsumer(),
 		index.OptionsForAIGatewayConsumerCredential(),
 		index.OptionsForAIGatewayConsumerGroup(),
+		index.OptionsForAIGatewayCustomPolicy(),
 		index.OptionsForAIGatewayDataPlaneCertificate(),
 		index.OptionsForAIGatewayMCPServer(),
 		index.OptionsForAIGatewayModel(),

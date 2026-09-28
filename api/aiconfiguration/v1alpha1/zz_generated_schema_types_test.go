@@ -1502,6 +1502,32 @@ func TestAuthGCPWorkloadIdentityFederationAwsIam_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestCreateAIGatewayCustomPolicyInstalledRequest_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreateAIGatewayCustomPolicyInstalledRequest
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestCreateAIGatewayCustomPolicyStreamingRequest_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec CreateAIGatewayCustomPolicyStreamingRequest
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestGCPModelConfig_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
