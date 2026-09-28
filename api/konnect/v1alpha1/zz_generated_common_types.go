@@ -213,6 +213,100 @@ func flattenSensitiveData(v any) any {
 	return v
 }
 
+// advanceFreeformKeyFields mirrors advanceFreeformKeyPaths over typed
+// free-form fields, reporting whether the matched leaf is sensitive.
+func advanceFreeformKeyFields(fields []sdkOpsFreeformKeyField, seg string) (sub []sdkOpsFreeformKeyField, sensitive, ok bool) {
+	for _, f := range fields {
+		if len(f.Path) == 0 {
+			continue
+		}
+		head := f.Path[0]
+		if head != seg && !(head == "{}" && seg != "[]") {
+			continue
+		}
+		if len(f.Path) == 1 {
+			ok = true
+			if f.Sensitive {
+				sensitive = true
+			}
+			continue
+		}
+		sub = append(sub, sdkOpsFreeformKeyField{Path: f.Path[1:], Sensitive: f.Sensitive})
+	}
+	return sub, sensitive, ok
+}
+
+// unwrapSensitiveDataSource collapses a SensitiveDataSource wire shape
+// {"type": "inline|secretRef", "value": X, ...} to X at a single free-form
+// leaf. Mirrors flattenSensitiveData's per-map check, including returning the
+// map unchanged when there is no "value" key (e.g. an unresolved secretRef).
+func unwrapSensitiveDataSource(v any) any {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return v
+	}
+	typ, _ := m["type"].(string)
+	if typ != "inline" && typ != "secretRef" {
+		return v
+	}
+	if rawVal, hasVal := m["value"]; hasVal {
+		return rawVal
+	}
+	return v
+}
+
+// flattenSensitiveDataExcept is flattenSensitiveData scoped by free-form
+// fields: at or under every free-form leaf the walk stops rewriting, because
+// those maps are user data (labels, header maps, nested inline-shaped
+// objects) that must reach the SDK verbatim — a user map that merely *looks*
+// like {"type": "inline", "value": X} must not be collapsed. The one
+// exception is a free-form leaf marked Sensitive: the generator itself wraps
+// it in a DataSource, so the leaf's own wrapper is unwrapped while its
+// contents stay untouched. Everywhere else the generic collapse applies
+// unchanged.
+func flattenSensitiveDataExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	return flattenSensitiveDataWalk(v, fields)
+}
+
+func flattenSensitiveDataWalk(v any, fields []sdkOpsFreeformKeyField) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			// Paths hold JSON names shared with the rename walk;
+			// camelToSnakeCase is idempotent on already-snake/kebab keys, so
+			// this matches both the pre-rename and post-rename pipelines.
+			sub, sensitiveLeaf, atLeaf := advanceFreeformKeyFields(fields, camelToSnakeCase(k))
+			if atLeaf {
+				if sensitiveLeaf {
+					x[k] = unwrapSensitiveDataSource(val)
+				}
+				// Free-form leaf: never descend, never rewrite user data.
+				continue
+			}
+			x[k] = flattenSensitiveDataWalk(val, sub)
+		}
+		typ, _ := x["type"].(string)
+		if typ != "inline" && typ != "secretRef" {
+			return x
+		}
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
+		}
+		return x
+	case []any:
+		sub, sensitiveLeaf, atLeaf := advanceFreeformKeyFields(fields, "[]")
+		for i, val := range x {
+			if atLeaf && sensitiveLeaf {
+				x[i] = unwrapSensitiveDataSource(val)
+				continue
+			}
+			x[i] = flattenSensitiveDataWalk(val, sub)
+		}
+		return x
+	}
+	return v
+}
+
 // camelToSnakeCase converts a camelCase string to snake_case.
 // e.g. "bootstrapServers" → "bootstrap_servers", "defaultAPIVisibility" → "default_api_visibility"
 func camelToSnakeCase(s string) string {
@@ -249,6 +343,11 @@ func isSDKDiscriminatorKey(key string) bool {
 // not be camelCase→snake_case renamed by renameKeysToSDK.
 type sdkOpsFreeformKeyField struct {
 	Path []string
+	// Sensitive marks a free-form leaf that is itself a secretReference
+	// target: the generator wraps it in a SensitiveDataSource, so
+	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
+	// leaving everything below it (user data) verbatim.
+	Sensitive bool
 }
 
 func renameKeysToSDK(v any) any {

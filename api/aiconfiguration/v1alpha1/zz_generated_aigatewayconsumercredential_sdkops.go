@@ -40,7 +40,7 @@ func (s *AIGatewayConsumerCredentialAPISpec) marshalSDKOpsPayload() ([]byte, err
 		return nil, fmt.Errorf("failed to decode AIGatewayConsumerCredentialAPISpec: %w", err)
 	}
 	payload = flattenSDKUnionsExcept(payload, AIGatewayConsumerCredentialSDKOpsFreeformKeyFields)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayConsumerCredentialSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayConsumerCredentialSDKOpsFreeformKeyFields)

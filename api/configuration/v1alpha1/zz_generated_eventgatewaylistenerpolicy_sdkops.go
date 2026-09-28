@@ -154,7 +154,7 @@ func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]a
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayListenerPolicyAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, EventGatewayListenerPolicySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, EventGatewayListenerPolicySDKOpsFreeformKeyFields)

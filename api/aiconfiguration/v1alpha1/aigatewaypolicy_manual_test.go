@@ -94,3 +94,42 @@ func TestAIGatewayPolicyAPISpec_MarshalKeepsConfigWhenSiblingNamesIt(t *testing.
 	assert.Equal(t, wantConfig, payload["config"])
 	assert.Equal(t, map[string]any{"provider": "headroom", "headroom": "x"}, payload["labels"])
 }
+
+// TestAIGatewayPolicyAPISpec_MarshalDoesNotCollapseWrapperShapedUserData is a
+// regression test for flattenSensitiveData: the generic collapse used to
+// rewrite user data inside free-form subtrees too — labels of shape
+// {"type": "inline", "value": "foo"} collapsed to "foo", and nested
+// inline-shaped objects inside config were corrupted. Only the free-form
+// leaf that is itself a secretReference target (config) gets its own
+// DataSource wrapper unwrapped.
+func TestAIGatewayPolicyAPISpec_MarshalDoesNotCollapseWrapperShapedUserData(t *testing.T) {
+	configJSON := `{
+		"provider": "headroom",
+		"nested": {"type": "inline", "value": "x"}
+	}`
+	spec := &AIGatewayPolicyAPISpec{
+		Name: "headroom-compressor",
+		Type: "ai-prompt-compressor",
+		Config: AIGatewayPolicyConfigDataSource{
+			Type:  "inline",
+			Value: &apiextensionsv1.JSON{Raw: []byte(configJSON)},
+		},
+		Labels:    PublicLabels{"type": "inline", "value": "foo"},
+		ManagedBy: ManagedBy{"type": "inline", "value": "bar"},
+	}
+
+	data, err := spec.marshalSDKOpsPayload()
+	require.NoError(t, err)
+
+	var payload map[string]any
+	require.NoError(t, json.Unmarshal(data, &payload))
+
+	// config's own DataSource wrapper is unwrapped, but its contents stay
+	// verbatim: the nested inline-shaped object must not be collapsed.
+	var wantConfig map[string]any
+	require.NoError(t, json.Unmarshal([]byte(configJSON), &wantConfig))
+	assert.Equal(t, wantConfig, payload["config"])
+	// Wrapper-shaped label/managed-by user data must survive verbatim.
+	assert.Equal(t, map[string]any{"type": "inline", "value": "foo"}, payload["labels"])
+	assert.Equal(t, map[string]any{"type": "inline", "value": "bar"}, payload["managed_by"])
+}

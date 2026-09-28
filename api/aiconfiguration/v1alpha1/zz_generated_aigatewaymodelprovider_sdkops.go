@@ -418,7 +418,7 @@ func (s *AIGatewayModelProviderAPISpec) marshalSDKOpsPayload() (map[string]any, 
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayModelProviderAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, AIGatewayModelProviderSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayModelProviderSDKOpsFreeformKeyFields)

@@ -122,6 +122,7 @@ var AIGatewayPolicySDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 		Path: []string{
 			"config",
 		},
+		Sensitive: true,
 	},
 	{
 		Path: []string{
@@ -145,7 +146,7 @@ func (s *AIGatewayPolicyAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 		return nil, fmt.Errorf("failed to decode AIGatewayPolicyAPISpec: %w", err)
 	}
 	payload = flattenSDKUnionsExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayPolicySDKOpsFreeformKeyFields)
