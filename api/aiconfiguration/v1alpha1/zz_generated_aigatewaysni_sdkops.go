@@ -39,7 +39,7 @@ func (s *AIGatewaySNIAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewaySNIAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
+	payload = flattenSDKUnionsExcept(payload, AIGatewaySNISDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewaySNISDKOpsFreeformKeyFields)

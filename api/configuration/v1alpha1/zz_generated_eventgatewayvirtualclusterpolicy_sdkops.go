@@ -162,13 +162,16 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) selectedSDKOpsPayload(payload 
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewayVirtualClusterPolicyConfig.Type {
 	case EventGatewayVirtualClusterPolicyConfigTypeACLs:
 		selected = payload["acls"]
 		variant = "ACLs"
+		variantJSON = "acls"
 	case EventGatewayVirtualClusterPolicyConfigTypeRequestRuleValidator:
 		selected = payload["request_rule_validator"]
 		variant = "RequestRuleValidator"
+		variantJSON = "request_rule_validator"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterPolicy config type %q", s.EventGatewayVirtualClusterPolicyConfig.Type)
 	}
@@ -176,7 +179,7 @@ func (s *EventGatewayVirtualClusterPolicyAPISpec) selectedSDKOpsPayload(payload 
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayVirtualClusterPolicy config payload missing for type %q", s.EventGatewayVirtualClusterPolicyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayVirtualClusterPolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

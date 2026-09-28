@@ -6053,7 +6053,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 	constFields := g.collectSDKOpsConstFields(schema)
 	unionUnwrapFields := g.collectSDKOpsUnionUnwrapFields(schema)
-	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(schema)
+	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(entityName, schema)
 
 	if hasRootOneOf(schema) {
 		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields, freeformKeyFields)
@@ -6913,13 +6913,18 @@ func allVariantsAnonymousSingleProperty(variants []*parser.Property) bool {
 // pass verbatim. See renameKeysToSDKExcept.
 type sdkOpsFreeformKeyField struct {
 	Path []string
+	// Sensitive marks a free-form leaf that is itself a secretReference
+	// target: the generator wraps it in a SensitiveDataSource, so
+	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
+	// leaving everything below it (user data) verbatim.
+	Sensitive bool
 }
 
 // collectSDKOpsFreeformKeyFields finds free-form/map-data fields, mirroring
 // collectSDKOpsUnionUnwrapFields' walk (including the root-oneOf variant
 // traversal) so it reaches free-form fields nested inside a root union's own
 // variants (e.g. AIGatewayModel's api.config.route.headers).
-func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkOpsFreeformKeyField {
+func (g *Generator) collectSDKOpsFreeformKeyFields(entityName string, schema *parser.Schema) []sdkOpsFreeformKeyField {
 	if schema == nil {
 		return nil
 	}
@@ -6961,7 +6966,49 @@ func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkO
 		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
 	})
 
+	refs := g.config.SecretReferences[entityName]
+	for i := range fields {
+		fields[i].Sensitive = sensitiveFreeformLeaf(refs, fields[i].Path)
+	}
+
 	return fields
+}
+
+// sensitiveFreeformLeaf reports whether the free-form leaf at path is the
+// target of one of the entity's configured SecretReferences, i.e. the
+// generator wraps that leaf in a SensitiveDataSource. Path segments use the
+// payload JSON convention ("[]" descends into every array element); spec
+// paths use "."-separated JSON names where "*" matches any single segment
+// (a union variant) and "headers[]" is expanded to "headers","[]". A
+// secretReference leaf can never be an object with nested properties, so an
+// exact-length match is complete: a sensitive leaf never contains a free-form
+// subtree beneath it.
+func sensitiveFreeformLeaf(refs []config.SecretReferenceConfig, path []string) bool {
+	for _, ref := range refs {
+		segs := strings.Split(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".")
+		normalized := make([]string, 0, len(segs)+1)
+		for _, s := range segs {
+			if base, hasSlice := strings.CutSuffix(s, "[]"); hasSlice {
+				normalized = append(normalized, base, "[]")
+			} else {
+				normalized = append(normalized, s)
+			}
+		}
+		if len(normalized) != len(path) {
+			continue
+		}
+		matched := true
+		for i := range normalized {
+			if normalized[i] != "*" && normalized[i] != path[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsFreeformKeyField) {

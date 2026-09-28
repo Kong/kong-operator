@@ -719,6 +719,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -733,9 +736,17 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSDKUnionsExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSDKUnions(payload)
+	{{- end}}
 	{{- if $.SecretReferences}}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSensitiveDataExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSensitiveData(payload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1619,6 +1630,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -1635,7 +1649,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
 	{{- if $.SecretReferences}}
+	{{- if $.FreeformKeyFields}}
+	rawPayload = flattenSensitiveDataExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	rawPayload = flattenSensitiveData(rawPayload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1669,11 +1687,17 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 
 	var selected any
 	var variant string
+	{{- if $.FreeformKeyFields}}
+	variantJSON := ""
+	{{- end}}
 	switch s.{{$.UnionTypeName}}.Type {
 {{- range .Variants}}
 	case {{$.UnionTypeName}}Type{{.FieldName}}:
 		selected = payload["{{.JSONName}}"]
 		variant = "{{.FieldName}}"
+		{{- if $.FreeformKeyFields}}
+		variantJSON = "{{.JSONName}}"
+		{{- end}}
 {{- end}}
 	default:
 		return nil, "", fmt.Errorf("unsupported {{$.EntityName}} config type %q", s.{{$.UnionTypeName}}.Type)
@@ -1682,7 +1706,11 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	{{- if $.FreeformKeyFields}}
+	selected = flattenSDKUnionsExceptUnder(selected, {{$.EntityName}}SDKOpsFreeformKeyFields, variantJSON)
+	{{- else}}
 	selected = flattenSDKUnions(selected)
+	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -2716,6 +2744,7 @@ import (
 ` + flattenSDKUnionsHelper + `
 
 ` + flattenSensitiveDataHelper + `
+` + flattenSensitiveDataExceptHelper + `
 
 ` + renameKeysToSDKHelper + `
 
