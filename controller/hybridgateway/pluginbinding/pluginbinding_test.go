@@ -230,3 +230,63 @@ func TestBindingForPluginAndRoute(t *testing.T) {
 		})
 	}
 }
+
+// TestBindingsForPlugin_InheritedTags pins that a KongPluginBinding inherits the tags of the
+// parent Gateway it was generated for, and of that Gateway's GatewayClass. A binding is scoped to
+// one route and one parentRef, so the route's other parents must not contribute.
+func TestBindingsForPlugin_InheritedTags(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	newGateway := func(name, class, tags string) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			Name:        name,
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/tags": tags},
+			Spec:        gwtypes.GatewaySpec{GatewayClassName: gwtypes.ObjectName(class)},
+		}
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme.Get()).WithObjects(
+		newGateway("gw-a", "class-a", "team-a"),
+		newGateway("gw-b", "class-b", "team-b"),
+		&gwtypes.GatewayClass{Name: "class-a", Annotations: map[string]string{"konghq.com/tags": "class-a-tag"}},
+		&gwtypes.GatewayClass{Name: "class-b", Annotations: map[string]string{"konghq.com/tags": "class-b-tag"}},
+	).Build()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		Spec: gwtypes.HTTPRouteSpec{
+			CommonRouteSpec: gwtypes.CommonRouteSpec{
+				ParentRefs: []gwtypes.ParentReference{{Name: "gw-a"}, {Name: "gw-b"}},
+			},
+		},
+	}
+	cpRef := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+
+	tests := []struct {
+		parentRef string
+		expected  commonv1alpha1.Tags
+	}{
+		{parentRef: "gw-a", expected: commonv1alpha1.Tags{"team-a", "class-a-tag"}},
+		{parentRef: "gw-b", expected: commonv1alpha1.Tags{"team-b", "class-b-tag"}},
+		{parentRef: "ghost", expected: nil},
+	}
+	for _, tt := range tests {
+		t.Run(tt.parentRef, func(t *testing.T) {
+			pRef := &gwtypes.ParentReference{Name: gwtypes.ObjectName(tt.parentRef)}
+
+			routeBinding, err := BindingForPluginAndRoute(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-route")
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, routeBinding.Spec.Tags)
+
+			serviceBinding, err := BindingForPluginAndService(ctx, logger, fakeClient, httpRoute, pRef, cpRef, "test-plugin", "test-kong-service")
+			require.NoError(t, err)
+			assert.Equal(t, tt.expected, serviceBinding.Spec.Tags)
+		})
+	}
+}

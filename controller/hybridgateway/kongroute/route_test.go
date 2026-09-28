@@ -953,6 +953,9 @@ func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
 	gateway := &gatewayv1.Gateway{
 		Name:      "test-gateway",
 		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"konghq.com/tags": "gw-tag",
+		},
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -960,7 +963,13 @@ func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
 			},
 		},
 	}
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	gatewayClass := &gwtypes.GatewayClass{
+		Name: "test-class",
+		Annotations: map[string]string{
+			"konghq.com/tags": "class-tag",
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway, gatewayClass).Build()
 
 	tests := []struct {
 		name        string
@@ -968,14 +977,14 @@ func TestRoutesForHTTPRouteRule_TagsAnnotation(t *testing.T) {
 		expected    commonv1alpha1.Tags
 	}{
 		{
-			name:        "tags annotation present",
+			name:        "route tags come first, then the Gateway's and the GatewayClass's",
 			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
-			expected:    commonv1alpha1.Tags{"r1", "r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2", "gw-tag", "class-tag"},
 		},
 		{
-			name:        "tags annotation absent",
+			name:        "no route tags leaves only the inherited ones",
 			annotations: nil,
-			expected:    nil,
+			expected:    commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
@@ -1033,6 +1042,9 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 	gateway := &gatewayv1.Gateway{
 		Name:      "test-gateway",
 		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"konghq.com/tags": "gw-tag",
+		},
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1040,7 +1052,13 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 			},
 		},
 	}
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	gatewayClass := &gwtypes.GatewayClass{
+		Name: "test-class",
+		Annotations: map[string]string{
+			"konghq.com/tags": "class-tag",
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway, gatewayClass).Build()
 
 	tests := []struct {
 		name        string
@@ -1048,14 +1066,14 @@ func TestRoutesForTLSRouteRule_TagsAnnotation(t *testing.T) {
 		expected    commonv1alpha1.Tags
 	}{
 		{
-			name:        "tags annotation present",
+			name:        "route tags come first, then the Gateway's and the GatewayClass's",
 			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
-			expected:    commonv1alpha1.Tags{"r1", "r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2", "gw-tag", "class-tag"},
 		},
 		{
-			name:        "tags annotation absent",
+			name:        "no route tags leaves only the inherited ones",
 			annotations: nil,
-			expected:    nil,
+			expected:    commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
@@ -1108,6 +1126,9 @@ func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
 	gateway := &gatewayv1.Gateway{
 		Name:      "test-gateway",
 		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"konghq.com/tags": "gw-tag",
+		},
 		Spec: gatewayv1.GatewaySpec{
 			GatewayClassName: "test-class",
 			Listeners: []gatewayv1.Listener{
@@ -1115,7 +1136,13 @@ func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
 			},
 		},
 	}
-	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	gatewayClass := &gwtypes.GatewayClass{
+		Name: "test-class",
+		Annotations: map[string]string{
+			"konghq.com/tags": "class-tag",
+		},
+	}
+	fakeClient := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway, gatewayClass).Build()
 
 	tests := []struct {
 		name        string
@@ -1123,14 +1150,14 @@ func TestRoutesForGRPCRouteRule_TagsAnnotation(t *testing.T) {
 		expected    commonv1alpha1.Tags
 	}{
 		{
-			name:        "tags annotation present",
+			name:        "route tags come first, then the Gateway's and the GatewayClass's",
 			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
-			expected:    commonv1alpha1.Tags{"r1", "r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2", "gw-tag", "class-tag"},
 		},
 		{
-			name:        "tags annotation absent",
+			name:        "no route tags leaves only the inherited ones",
 			annotations: nil,
-			expected:    nil,
+			expected:    commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
@@ -1168,7 +1195,11 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 	gateway := &gwtypes.Gateway{
 		Name:      "test-gateway",
 		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"konghq.com/tags": "gw-tag",
+		},
 		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "test-class",
 			Listeners: []gwtypes.Listener{{
 				Name:     "tcp",
 				Protocol: gatewayv1.TCPProtocolType,
@@ -1176,7 +1207,13 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 			}},
 		},
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	gatewayClass := &gwtypes.GatewayClass{
+		Name: "test-class",
+		Annotations: map[string]string{
+			"konghq.com/tags": "class-tag",
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway, gatewayClass).Build()
 
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 	cp := &commonv1alpha1.ControlPlaneRef{
@@ -1199,14 +1236,14 @@ func TestRoutesForTCPRouteRule_TagsAnnotation(t *testing.T) {
 		expected    commonv1alpha1.Tags
 	}{
 		{
-			name:        "tags annotation present",
+			name:        "route tags come first, then the Gateway's and the GatewayClass's",
 			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
-			expected:    commonv1alpha1.Tags{"r1", "r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2", "gw-tag", "class-tag"},
 		},
 		{
-			name:        "tags annotation absent",
+			name:        "no route tags leaves only the inherited ones",
 			annotations: nil,
-			expected:    nil,
+			expected:    commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
@@ -1237,7 +1274,11 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 	gateway := &gwtypes.Gateway{
 		Name:      "test-gateway",
 		Namespace: "test-namespace",
+		Annotations: map[string]string{
+			"konghq.com/tags": "gw-tag",
+		},
 		Spec: gwtypes.GatewaySpec{
+			GatewayClassName: "test-class",
 			Listeners: []gwtypes.Listener{{
 				Name:     "udp",
 				Protocol: gatewayv1.UDPProtocolType,
@@ -1245,7 +1286,13 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 			}},
 		},
 	}
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway).Build()
+	gatewayClass := &gwtypes.GatewayClass{
+		Name: "test-class",
+		Annotations: map[string]string{
+			"konghq.com/tags": "class-tag",
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(gateway, gatewayClass).Build()
 
 	pRef := &gwtypes.ParentReference{Name: "test-gateway"}
 	cp := &commonv1alpha1.ControlPlaneRef{
@@ -1268,14 +1315,14 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 		expected    commonv1alpha1.Tags
 	}{
 		{
-			name:        "tags annotation present",
+			name:        "route tags come first, then the Gateway's and the GatewayClass's",
 			annotations: map[string]string{"konghq.com/tags": "r1,r2"},
-			expected:    commonv1alpha1.Tags{"r1", "r2"},
+			expected:    commonv1alpha1.Tags{"r1", "r2", "gw-tag", "class-tag"},
 		},
 		{
-			name:        "tags annotation absent",
+			name:        "no route tags leaves only the inherited ones",
 			annotations: nil,
-			expected:    nil,
+			expected:    commonv1alpha1.Tags{"gw-tag", "class-tag"},
 		},
 	}
 
@@ -1291,6 +1338,76 @@ func TestRoutesForUDPRouteRule_TagsAnnotation(t *testing.T) {
 			require.NoError(t, err)
 			require.Len(t, results, 1)
 			assert.Equal(t, tt.expected, results[0].Spec.Tags)
+		})
+	}
+}
+
+// TestRoutesForHTTPRouteRule_InheritedTagsAreParentScoped pins that a KongRoute inherits the tags
+// of the parent Gateway it was generated for, and not those of the route's other parents. A
+// KongRoute is named per parentRef when a route has several supported parents, so mixing the
+// parents' tags would put another Gateway's tags on a route that does not serve it.
+func TestRoutesForHTTPRouteRule_InheritedTagsAreParentScoped(t *testing.T) {
+	ctx := context.Background()
+	logger := logr.Discard()
+
+	scheme := runtime.NewScheme()
+	require.NoError(t, configurationv1alpha1.AddToScheme(scheme))
+	require.NoError(t, gatewayv1.Install(scheme))
+
+	newGateway := func(name, class, tags string) *gwtypes.Gateway {
+		return &gwtypes.Gateway{
+			Name:        name,
+			Namespace:   "test-namespace",
+			Annotations: map[string]string{"konghq.com/tags": tags},
+			Spec: gwtypes.GatewaySpec{
+				GatewayClassName: gwtypes.ObjectName(class),
+				Listeners: []gwtypes.Listener{
+					{Name: "http", Protocol: gatewayv1.HTTPProtocolType, Port: 80},
+				},
+			},
+		}
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(
+		newGateway("gw-a", "class-a", "team-a"),
+		newGateway("gw-b", "class-b", "team-b"),
+		&gwtypes.GatewayClass{Name: "class-a", Annotations: map[string]string{"konghq.com/tags": "class-a-tag"}},
+		&gwtypes.GatewayClass{Name: "class-b", Annotations: map[string]string{"konghq.com/tags": "class-b-tag"}},
+	).Build()
+
+	httpRoute := &gwtypes.HTTPRoute{
+		TypeMeta:  httpRouteTypeMeta,
+		Name:      "test-route",
+		Namespace: "test-namespace",
+		Spec: gatewayv1.HTTPRouteSpec{
+			CommonRouteSpec: gatewayv1.CommonRouteSpec{
+				ParentRefs: []gatewayv1.ParentReference{{Name: "gw-a"}, {Name: "gw-b"}},
+			},
+		},
+	}
+	cp := &commonv1alpha1.ControlPlaneRef{
+		Type:                 commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+		KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{Name: "test-cp"},
+	}
+	prefix := gatewayv1.PathMatchPathPrefix
+	rule := gwtypes.HTTPRouteRule{
+		Matches: []gatewayv1.HTTPRouteMatch{{
+			Path: &gatewayv1.HTTPPathMatch{Type: &prefix, Value: new("/test")},
+		}},
+	}
+
+	for _, tc := range []struct {
+		parent   string
+		expected commonv1alpha1.Tags
+	}{
+		{parent: "gw-a", expected: commonv1alpha1.Tags{"team-a", "class-a-tag"}},
+		{parent: "gw-b", expected: commonv1alpha1.Tags{"team-b", "class-b-tag"}},
+	} {
+		t.Run(tc.parent, func(t *testing.T) {
+			pRef := &gwtypes.ParentReference{Name: gwtypes.ObjectName(tc.parent)}
+			results, err := RoutesForRule(ctx, logger, cl, httpRoute, rule, 0, pRef, cp, pRef, "test-service", []string{"example.com"})
+			require.NoError(t, err)
+			require.Len(t, results, 1)
+			assert.Equal(t, tc.expected, results[0].Spec.Tags)
 		})
 	}
 }

@@ -18,6 +18,7 @@ import (
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/metadata"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/namegen"
 	"github.com/kong/kong-operator/v2/controller/hybridgateway/translator"
+	"github.com/kong/kong-operator/v2/controller/hybridgateway/utils"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
 	gwtypes "github.com/kong/kong-operator/v2/internal/types"
 	pkgmetadata "github.com/kong/kong-operator/v2/pkg/metadata"
@@ -147,7 +148,10 @@ func RoutesForHTTPRouteRule(
 		return nil, fmt.Errorf("%w: konghq.com/preserve-host on %s/%s: %w",
 			hgerrors.ErrMalformedAnnotation, httpRoute.GetNamespace(), httpRoute.GetName(), err)
 	}
-	tags := pkgmetadata.ExtractTags(httpRoute)
+	// A KongRoute is scoped to one route and one parentRef, so it inherits the tags of that
+	// parent Gateway alone rather than of every Gateway the route is attached to.
+	tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(httpRoute),
+		utils.InheritedTagsForParentRef(ctx, logger, cl, httpRoute, pRef))
 
 	for i, match := range rule.Matches {
 		routeName := namegen.NewKongRouteNameForMatch(httpRoute, cp, namingParentRef, match, i)
@@ -222,7 +226,10 @@ func RoutesForGRPCRouteRule(
 	}
 
 	priorities := grpcRouteMatchPriorities(grpcRoute)
-	tags := pkgmetadata.ExtractTags(grpcRoute)
+	// A KongRoute is scoped to one route and one parentRef, so it inherits the tags of that
+	// parent Gateway alone rather than of every Gateway the route is attached to.
+	tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(grpcRoute),
+		utils.InheritedTagsForParentRef(ctx, logger, cl, grpcRoute, pRef))
 
 	for i, match := range matches {
 		routeName := namegen.NewKongRouteNameForGRPCRouteMatch(grpcRoute, cp, namingParentRef, match, ruleIndex, i)
@@ -582,7 +589,10 @@ func routesForTLSRouteRule(
 		protocol = sdkkonnectcomp.ProtocolsTLS
 	}
 
-	tags := pkgmetadata.ExtractTags(tlsRoute)
+	// A KongRoute is scoped to one route and one parentRef, so it inherits the tags of that
+	// parent Gateway alone rather than of every Gateway the route is attached to.
+	tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(tlsRoute),
+		utils.InheritedTagsForParentRef(ctx, logger, cl, tlsRoute, pRef))
 
 	routeBuilder := builder.NewKongRoute().WithName(routeName).
 		WithNamespace(metadata.NamespaceFromParentRef(tlsRoute, pRef)).
@@ -660,7 +670,10 @@ func RoutesForTCPRouteRuleWithPorts(
 		return nil, fmt.Errorf("no TCP listener ports selected for TCPRoute %s/%s", tcpRoute.Namespace, tcpRoute.Name)
 	}
 
-	tags := pkgmetadata.ExtractTags(tcpRoute)
+	// A KongRoute is scoped to one route and one parentRef, so it inherits the tags of that
+	// parent Gateway alone rather than of every Gateway the route is attached to.
+	tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(tcpRoute),
+		utils.InheritedTagsForParentRef(ctx, logger, cl, tcpRoute, pRef))
 	routeName := namegen.NewKongRouteNameForTCPRouteRule(tcpRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
@@ -764,7 +777,10 @@ func RoutesForUDPRouteRuleWithPorts(
 		return nil, fmt.Errorf("no UDP listener ports selected for UDPRoute %s/%s", udpRoute.Namespace, udpRoute.Name)
 	}
 
-	tags := pkgmetadata.ExtractTags(udpRoute)
+	// A KongRoute is scoped to one route and one parentRef, so it inherits the tags of that
+	// parent Gateway alone rather than of every Gateway the route is attached to.
+	tags := utils.MergeTags(logger, pkgmetadata.ExtractTags(udpRoute),
+		utils.InheritedTagsForParentRef(ctx, logger, cl, udpRoute, pRef))
 	routeName := namegen.NewKongRouteNameForUDPRouteRule(udpRoute, cp, namingParentRef, rule)
 	logger = logger.WithValues("kongroute", routeName)
 
