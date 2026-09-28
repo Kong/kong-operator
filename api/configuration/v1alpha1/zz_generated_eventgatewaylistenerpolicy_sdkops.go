@@ -175,13 +175,16 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewayListenerPolicyConfig.Type {
 	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
 		selected = payload["tls_server"]
 		variant = "EventGatewayTLSListen"
+		variantJSON = "tls_server"
 	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
 		selected = payload["forward_to_virtual_cluster"]
 		variant = "ForwardToVirtualClust"
+		variantJSON = "forward_to_virtual_cluster"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayListenerPolicy config type %q", s.EventGatewayListenerPolicyConfig.Type)
 	}
@@ -189,7 +192,7 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayListenerPolicy config payload missing for type %q", s.EventGatewayListenerPolicyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayListenerPolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

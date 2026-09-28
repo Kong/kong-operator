@@ -3274,6 +3274,46 @@ func TestGenerateSDKOps_NormalizesBooleanFields(t *testing.T) {
 	assert.Contains(t, content, "if err := normalizePortalSDKOpsBoolFields(pm); err != nil {")
 }
 
+func TestGenerateSDKOps_FlattenSkipsFreeformFields(t *testing.T) {
+	// Free-form (data-keyed) subtrees hold user data, so flattenSDKUnions must
+	// not rewrite them: its union heuristic fires on shapes like
+	// {"provider": "headroom", "headroom": {...}} inside free-form config and
+	// hoists the nested block into config, which Konnect then rejects with
+	// "unknown field" errors.
+	g := NewGenerator(Config{APIVersion: "v1alpha1"})
+	schema := &parser.Schema{
+		Properties: []*parser.Property{
+			{
+				Name: "name",
+				Type: "string",
+			},
+			{
+				Name: "config",
+				Type: "object",
+				AdditionalProperties: &parser.Property{
+					Type: "object",
+				},
+			},
+		},
+	}
+	opsConfig := &config.EntityOpsConfig{
+		Ops: map[string]*config.OpConfig{
+			"create": {
+				Path: "github.com/Kong/sdk-konnect-go/models/components.CreatePortal",
+			},
+		},
+	}
+
+	content, err := g.generateSDKOps("Portal", schema, opsConfig)
+	require.NoError(t, err)
+	_, err = format.Source([]byte(content))
+	require.NoError(t, err)
+
+	assert.Contains(t, content, "var PortalSDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField")
+	assert.Contains(t, content, "payload = flattenSDKUnionsExcept(payload, PortalSDKOpsFreeformKeyFields)")
+	assert.NotContains(t, content, "payload = flattenSDKUnions(payload)")
+}
+
 func TestGenerateSDKOps_OmitsDoubleBlankLineBeforeMarshalPayload(t *testing.T) {
 	g := NewGenerator(Config{APIVersion: "v1alpha1"})
 	schema := &parser.Schema{

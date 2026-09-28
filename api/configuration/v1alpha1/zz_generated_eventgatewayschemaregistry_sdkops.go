@@ -54,10 +54,12 @@ func (s *EventGatewaySchemaRegistryAPISpec) selectedSDKOpsPayload(payload map[st
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewaySchemaRegistryConfig.Type {
 	case EventGatewaySchemaRegistryConfigTypeSchemaRegistryConfluent:
 		selected = payload["confluent"]
 		variant = "SchemaRegistryConfluent"
+		variantJSON = "confluent"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewaySchemaRegistry config type %q", s.EventGatewaySchemaRegistryConfig.Type)
 	}
@@ -65,7 +67,7 @@ func (s *EventGatewaySchemaRegistryAPISpec) selectedSDKOpsPayload(payload map[st
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewaySchemaRegistry config payload missing for type %q", s.EventGatewaySchemaRegistryConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewaySchemaRegistrySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

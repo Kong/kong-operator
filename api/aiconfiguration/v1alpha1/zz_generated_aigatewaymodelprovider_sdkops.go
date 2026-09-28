@@ -437,67 +437,88 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayModelProviderConfig.Type {
 	case AIGatewayModelProviderConfigTypeAnthropic:
 		selected = payload["anthropic"]
 		variant = "Anthropic"
+		variantJSON = "anthropic"
 	case AIGatewayModelProviderConfigTypeAzure:
 		selected = payload["azure"]
 		variant = "Azure"
+		variantJSON = "azure"
 	case AIGatewayModelProviderConfigTypeBedrock:
 		selected = payload["bedrock"]
 		variant = "Bedrock"
+		variantJSON = "bedrock"
 	case AIGatewayModelProviderConfigTypeCerebras:
 		selected = payload["cerebras"]
 		variant = "Cerebras"
+		variantJSON = "cerebras"
 	case AIGatewayModelProviderConfigTypeCohere:
 		selected = payload["cohere"]
 		variant = "Cohere"
+		variantJSON = "cohere"
 	case AIGatewayModelProviderConfigTypeDashscope:
 		selected = payload["dashscope"]
 		variant = "Dashscope"
+		variantJSON = "dashscope"
 	case AIGatewayModelProviderConfigTypeDatabricks:
 		selected = payload["databricks"]
 		variant = "Databricks"
+		variantJSON = "databricks"
 	case AIGatewayModelProviderConfigTypeDeepseek:
 		selected = payload["deepseek"]
 		variant = "Deepseek"
+		variantJSON = "deepseek"
 	case AIGatewayModelProviderConfigTypeGemini:
 		selected = payload["gemini"]
 		variant = "Gemini"
+		variantJSON = "gemini"
 	case AIGatewayModelProviderConfigTypeHuggingface:
 		selected = payload["huggingface"]
 		variant = "Huggingface"
+		variantJSON = "huggingface"
 	case AIGatewayModelProviderConfigTypeKimi:
 		selected = payload["kimi"]
 		variant = "Kimi"
+		variantJSON = "kimi"
 	case AIGatewayModelProviderConfigTypeLlama2:
 		selected = payload["llama2"]
 		variant = "Llama2"
+		variantJSON = "llama2"
 	case AIGatewayModelProviderConfigTypeMistral:
 		selected = payload["mistral"]
 		variant = "Mistral"
+		variantJSON = "mistral"
 	case AIGatewayModelProviderConfigTypeOllama:
 		selected = payload["ollama"]
 		variant = "Ollama"
+		variantJSON = "ollama"
 	case AIGatewayModelProviderConfigTypeOpenai:
 		selected = payload["openai"]
 		variant = "Openai"
+		variantJSON = "openai"
 	case AIGatewayModelProviderConfigTypeVercel:
 		selected = payload["vercel"]
 		variant = "Vercel"
+		variantJSON = "vercel"
 	case AIGatewayModelProviderConfigTypeVllm:
 		selected = payload["vllm"]
 		variant = "Vllm"
+		variantJSON = "vllm"
 	case AIGatewayModelProviderConfigTypeXai:
 		selected = payload["xai"]
 		variant = "Xai"
+		variantJSON = "xai"
 	case AIGatewayModelProviderConfigTypeSagemaker:
 		selected = payload["sagemaker"]
 		variant = "Sagemaker"
+		variantJSON = "sagemaker"
 	case AIGatewayModelProviderConfigTypeTypesafe:
 		selected = payload["typesafe"]
 		variant = "Typesafe"
+		variantJSON = "typesafe"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayModelProvider config type %q", s.AIGatewayModelProviderConfig.Type)
 	}
@@ -505,7 +526,7 @@ func (s *AIGatewayModelProviderAPISpec) selectedSDKOpsPayload(payload map[string
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayModelProvider config payload missing for type %q", s.AIGatewayModelProviderConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayModelProviderSDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

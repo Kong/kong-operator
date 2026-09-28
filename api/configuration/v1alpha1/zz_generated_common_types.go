@@ -116,10 +116,50 @@ func (s SensitiveDataSource) GetValue() string {
 // to {"<disc>": "X", ...}, while scalar and array members are rewritten to
 // the bare selected payload. Both forms match the Konnect SDK request types.
 func flattenSDKUnions(v any) any {
+	return flattenSDKUnionsWalk(v, nil)
+}
+
+// flattenSDKUnionsExcept is flattenSDKUnions, but leaves every subtree at or
+// under a free-form path in fields verbatim (see sdkOpsFreeformKeyField):
+// free-form config is user data that Konnect accepts as-is, so the
+// discriminated-union heuristic must never rewrite it.
+func flattenSDKUnionsExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		paths = append(paths, f.Path)
+	}
+	return flattenSDKUnionsWalk(v, paths)
+}
+
+// flattenSDKUnionsExceptUnder is flattenSDKUnionsExcept for root-union
+// entities, whose free-form paths are prefixed with the selected variant's
+// JSON name (they are shared with the full-payload-scope renameKeysToSDKExcept
+// walk); the prefix is stripped so the paths apply within the variant payload
+// selected by selectedSDKOpsPayload.
+func flattenSDKUnionsExceptUnder(v any, fields []sdkOpsFreeformKeyField, variant string) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		if len(f.Path) > 1 && f.Path[0] == variant {
+			paths = append(paths, f.Path[1:])
+		}
+	}
+	return flattenSDKUnionsWalk(v, paths)
+}
+
+func flattenSDKUnionsWalk(v any, paths [][]string) any {
 	switch x := v.(type) {
 	case map[string]any:
 		for k, val := range x {
-			x[k] = flattenSDKUnions(val)
+			// Paths use snake_case segments (they are shared with the
+			// post-rename renameKeysToSDKExcept walk); camelToSnakeCase is
+			// idempotent on already-snake keys, so this matches both the
+			// pre-rename and post-rename pipelines.
+			sub, atLeaf := advanceFreeformKeyPaths(paths, camelToSnakeCase(k))
+			if atLeaf {
+				// Free-form subtree: user data, keep it verbatim.
+				continue
+			}
+			x[k] = flattenSDKUnionsWalk(val, sub)
 		}
 		_, discriminatorValue, inner, ok := nestedSDKUnionMember(x)
 		if !ok {
@@ -141,8 +181,9 @@ func flattenSDKUnions(v any) any {
 		}
 		return x
 	case []any:
+		sub, _ := advanceFreeformKeyPaths(paths, "[]")
 		for i, val := range x {
-			x[i] = flattenSDKUnions(val)
+			x[i] = flattenSDKUnionsWalk(val, sub)
 		}
 		return x
 	}

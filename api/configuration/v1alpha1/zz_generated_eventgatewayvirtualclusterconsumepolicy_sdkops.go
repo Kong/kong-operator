@@ -232,28 +232,36 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) selectedSDKOpsPayload(p
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewayVirtualClusterConsumePolicyConfig.Type {
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeConsumeSchemaValidationPolicy:
 		selected = payload["schema_validation"]
 		variant = "ConsumeSchemaValidationPolicy"
+		variantJSON = "schema_validation"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeModifyHeadersPolicyCreate:
 		selected = payload["modify_headers"]
 		variant = "ModifyHeadersPolicyCreate"
+		variantJSON = "modify_headers"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeSkipRecordPolicyCreate:
 		selected = payload["skip_record"]
 		variant = "SkipRecordPolicyCreate"
+		variantJSON = "skip_record"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeDecryptPolicy:
 		selected = payload["decrypt"]
 		variant = "DecryptPolicy"
+		variantJSON = "decrypt"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordDecryptFieldsPolicyCreate:
 		selected = payload["decrypt_fields"]
 		variant = "ParsedRecordDecryptFieldsPolicyCreate"
+		variantJSON = "decrypt_fields"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordTranscodeConsumePolicyCreate:
 		selected = payload["transcode"]
 		variant = "ParsedRecordTranscodeConsumePolicyCreate"
+		variantJSON = "transcode"
 	case EventGatewayVirtualClusterConsumePolicyConfigTypeParsedRecordMaskFieldsConsumePolicyCreate:
 		selected = payload["mask_fields"]
 		variant = "ParsedRecordMaskFieldsConsumePolicyCreate"
+		variantJSON = "mask_fields"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayVirtualClusterConsumePolicy config type %q", s.EventGatewayVirtualClusterConsumePolicyConfig.Type)
 	}
@@ -261,7 +269,7 @@ func (s *EventGatewayVirtualClusterConsumePolicyAPISpec) selectedSDKOpsPayload(p
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayVirtualClusterConsumePolicy config payload missing for type %q", s.EventGatewayVirtualClusterConsumePolicyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayVirtualClusterConsumePolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
