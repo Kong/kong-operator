@@ -411,7 +411,9 @@ func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
-// OnPremAIGateway): such entities are owned by the on-prem machinery.
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
 func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
 	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
 }

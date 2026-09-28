@@ -19,6 +19,7 @@ func generatedControllersForKonnectEntities(
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumer](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerCredential](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayConsumerGroup](controllerFactory),
+		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayCustomPolicy](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayMCPServer](controllerFactory),
 		newKonnectEntityController[aiconfigurationv1alpha1.AIGatewayModel](controllerFactory),

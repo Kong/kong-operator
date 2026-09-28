@@ -316,6 +316,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 				apiAlias,
 			),
 		}
+	case "AIGatewayCustomPolicy":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayCustomPolicyConfig",
+			TypeConstName:   "AIGatewayCustomPolicyConfigTypeInstalled",
+			VariantField:    "Installed",
+			VariantTypeName: "CreateAIGatewayCustomPolicyInstalledRequest",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}`,
+				apiAlias,
+			),
+		}
 	case "AIGatewayModelProvider":
 		return &opsControllerRootUnionFixture{
 			UnionTypeName:   "AIGatewayModelProviderConfig",

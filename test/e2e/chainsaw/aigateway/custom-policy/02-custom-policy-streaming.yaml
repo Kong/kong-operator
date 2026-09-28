@@ -1,0 +1,27 @@
+# A "streaming" AIGatewayCustomPolicy: ships both the Lua schema and handler.
+# Required bindings:
+#   - namespace: Namespace where the AIGatewayCustomPolicy is created.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+#   - aigw_custom_policy_name: Name of the AIGatewayCustomPolicy resource.
+#   - konnect_policy_name: Custom policy name in Konnect (spec.apiSpec.streaming.name).
+#     Also used as the Lua schema's plugin name, so the two always match.
+#   - display_name: Display name of the custom policy.
+#   - handler_marker: Value of the header the handler sets; lets the test tell
+#     handler revisions apart on the Konnect side.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: ($aigw_custom_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: streaming
+    streaming:
+      name: ($konnect_policy_name)
+      displayName: ($display_name)
+      # Schema and handler are kept on one line so the bindings can be interpolated.
+      schema: (join('', ['local typedefs = require "kong.db.schema.typedefs" return { name = "', $konnect_policy_name, '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Chainsaw-Custom-Policy" } } } } } } }']))
+      handler: (join('', ['local P = { PRIORITY = 1000, VERSION = "1.0.0" } function P:header_filter(conf) kong.response.set_header(conf.header_name, "', $handler_marker, '") end return P']))

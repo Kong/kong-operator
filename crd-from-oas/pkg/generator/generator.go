@@ -2771,6 +2771,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 				fn, fn, fn, fn,
 			)}
 	}
+	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
+		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
+	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -3174,6 +3177,21 @@ func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediatePar
 		return immediateParentDep.JSONName
 	}
 	return ""
+}
+
+// parentRefAllowedKindsXValidation returns the type-level CEL marker that
+// restricts the config-driven parent ref field's "kind" to
+// parentRef.AllowedKinds.
+func parentRefAllowedKindsXValidation(parentRef *config.ParentRefConfig) string {
+	quoted := make([]string, 0, len(parentRef.AllowedKinds))
+	for _, kind := range parentRef.AllowedKinds {
+		quoted = append(quoted, "'"+kind+"'")
+	}
+	fn := parentRef.FieldName
+	return fmt.Sprintf(
+		`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.spec.%s.kind) || self.spec.%s.kind in [%s]", message="spec.%s.kind must be one of: %s"`,
+		fn, fn, fn, strings.Join(quoted, ", "), fn, strings.Join(parentRef.AllowedKinds, ", "),
+	)
 }
 
 func rootRefAccessorEntityName(dep *parser.Dependency) string {
@@ -6004,6 +6022,27 @@ type sdkOpsRootUnionVariant struct {
 	WrappedUpdateConstructorName string
 }
 
+// rootUnionUpdateVariantTypeName returns the SDK type of the update-union
+// member matching a create-union variant. Some SDK update unions reuse the
+// create variant types (e.g. AIGatewayAuthStrategyKeyAuth in both), while
+// others declare dedicated update variants (e.g.
+// CreateAIGatewayCustomPolicyInstalledRequest vs.
+// UpdateAIGatewayCustomPolicyInstalledRequest). Prefer the create variant
+// when the update union declares it, then its Create->Update counterpart,
+// and fall back to the create variant otherwise.
+func rootUnionUpdateVariantTypeName(createVariantTypeName string, updateMemberTypes map[string]struct{}) string {
+	if _, ok := updateMemberTypes[createVariantTypeName]; ok {
+		return createVariantTypeName
+	}
+	if after, ok := strings.CutPrefix(createVariantTypeName, "Create"); ok {
+		candidate := "Update" + after
+		if _, ok := updateMemberTypes[candidate]; ok {
+			return candidate
+		}
+	}
+	return createVariantTypeName
+}
+
 // generateSDKOps generates a file with conversion methods from {Entity}APISpec
 // to SDK request types using JSON marshal/unmarshal.
 func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
@@ -6275,12 +6314,16 @@ func (g *Generator) generateRootUnionSDKOps(
 	// the OAS shape misclassifies variants whose only required $ref property is a
 	// scalar (e.g. a named string), which the SDK collapses to a plain type.
 	updateSDKTypeIsUnion := false
+	updateSDKUnionMemberTypes := map[string]struct{}{}
 	if hasUpdateMethod && !updateIsOperationsWrapped && updateMethodTypeName != "" {
-		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
+		memberTypes, err := ParseSDKUnionMemberTypeNames(updateMethodImportPath, updateMethodTypeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
 		}
-		updateSDKTypeIsUnion = len(memberFields) > 0
+		updateSDKTypeIsUnion = len(memberTypes) > 0
+		for _, memberType := range memberTypes {
+			updateSDKUnionMemberTypes[memberType] = struct{}{}
+		}
 	}
 
 	var rawVariantNames []string
@@ -6321,7 +6364,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
-			updateVariantTypeName = fixInitialisms(variantRefName)
+			updateVariantTypeName = rootUnionUpdateVariantTypeName(
+				fixInitialisms(variantRefName), updateSDKUnionMemberTypes,
+			)
 			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
 		} else if hasUpdateMethod && !updateIsOperationsWrapped {

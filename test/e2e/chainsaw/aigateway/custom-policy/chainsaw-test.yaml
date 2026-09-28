@@ -1,0 +1,377 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-custom-policy
+spec:
+  description: |
+    Konnect AIGateway - Custom Policy. Stands up a Konnect AIGateway control
+    plane and exercises the AIGatewayCustomPolicy CRD against the real Konnect
+    API:
+
+    - creates an "installed" and a "streaming" custom policy and verifies both
+      on the Konnect side (type, display name, and the Konnect ID matching the
+      CR's status.id);
+    - updates the streaming policy and verifies Konnect was updated in place;
+    - creates a custom policy directly in Konnect, then applies a CR with the
+      same type and name, verifying the operator recovers from the create
+      conflict by adopting the existing Konnect policy (the hand-written
+      getAIGatewayCustomPolicyForUID lookup);
+    - deletes the CRs and verifies the custom policies are removed from
+      Konnect.
+
+    No data plane is needed: this test covers the CRD <-> Konnect contract,
+    not policy execution on traffic.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: installed_cr_name
+      value: custom-policy-installed
+    - name: installed_policy_name
+      value: (join('-', [($test_name), 'installed']))
+    - name: streaming_cr_name
+      value: custom-policy-streaming
+    - name: streaming_policy_name
+      value: (join('-', [($test_name), 'streaming']))
+    - name: adopted_cr_name
+      value: custom-policy-adopted
+    - name: adopted_policy_name
+      value: (join('-', [($test_name), 'adopted']))
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: Create-installed-custom-policy
+      description: Create an "installed" AIGatewayCustomPolicy and verify it on the Konnect side.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($installed_cr_name)
+        - name: konnect_policy_name
+          value: ($installed_policy_name)
+      try:
+        - apply:
+            file: 01-custom-policy-installed.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: ACTION
+                value: assert-present
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($installed_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_TYPE
+                value: installed
+              - name: EXPECTED_DISPLAY_NAME
+                value: Chainsaw installed custom policy
+              - name: EXPECTED_CR_NAME
+                value: ($installed_cr_name)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+
+    - name: Create-streaming-custom-policy
+      description: Create a "streaming" AIGatewayCustomPolicy and verify it on the Konnect side.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_cr_name)
+        - name: konnect_policy_name
+          value: ($streaming_policy_name)
+        - name: display_name
+          value: Chainsaw streaming custom policy
+        - name: handler_marker
+          value: chainsaw-v1
+      try:
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: ACTION
+                value: assert-present
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($streaming_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_TYPE
+                value: streaming
+              - name: EXPECTED_DISPLAY_NAME
+                value: ($display_name)
+              - name: EXPECTED_HANDLER_CONTAINS
+                value: ($handler_marker)
+              - name: EXPECTED_CR_NAME
+                value: ($streaming_cr_name)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+
+    - name: Update-streaming-custom-policy
+      description: |
+        Change the streaming policy's display name and handler, and verify
+        Konnect holds the new values under the same ID (updated in place, not
+        deleted and recreated).
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_cr_name)
+        - name: konnect_policy_name
+          value: ($streaming_policy_name)
+        - name: display_name
+          value: Chainsaw streaming custom policy (updated)
+        - name: handler_marker
+          value: chainsaw-v2
+      try:
+        - description: Record the Konnect ID before the update.
+          script:
+            env:
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: CR_NAME
+                value: ($streaming_cr_name)
+            content: |
+              kubectl get aigatewaycustompolicies.aiconfiguration.konghq.com "${CR_NAME}" \
+                -n "${NAMESPACE}" -o json | jq -c '{id: .status.id}'
+            outputs:
+              - name: id_before_update
+                value: (json_parse($stdout).id)
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: ACTION
+                value: assert-present
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($streaming_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_TYPE
+                value: streaming
+              - name: EXPECTED_DISPLAY_NAME
+                value: ($display_name)
+              - name: EXPECTED_HANDLER_CONTAINS
+                value: ($handler_marker)
+              - name: EXPECTED_ID
+                value: ($id_before_update)
+              - name: EXPECTED_CR_NAME
+                value: ($streaming_cr_name)
+              - name: EXPECT_UPDATED
+                value: "true"
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+
+    - name: Adopt-custom-policy-created-outside-the-operator
+      description: |
+        Create a streaming custom policy directly in Konnect, then apply a CR
+        with the same type and name. The operator's create gets a 409
+        conflict, so it must find the existing policy by type and name and
+        adopt it: the CR becomes Programmed with the pre-created Konnect ID.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($adopted_cr_name)
+        - name: konnect_policy_name
+          value: ($adopted_policy_name)
+        - name: display_name
+          value: Chainsaw adopted custom policy
+        - name: handler_marker
+          value: chainsaw-adopted
+      try:
+        - description: Create the custom policy directly in Konnect.
+          script:
+            env:
+              - name: ACTION
+                value: create
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($adopted_policy_name)
+              - name: POLICY_TYPE
+                value: streaming
+              - name: POLICY_DISPLAY_NAME
+                value: Created outside the operator
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+            outputs:
+              - name: precreated_id
+                value: (json_parse($stdout).id)
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - description: |
+            The CR must carry the pre-created Konnect ID. Once adopted, the
+            operator reconciles the spec onto it, so the display name and
+            handler converge to the CR's values. Adoption marks the CR
+            Programmed at its current generation, so that update only runs
+            on the next Konnect sync (default: 1 minute); hence the longer
+            retry window.
+          script:
+            env:
+              - name: RETRY_COUNT
+                value: "300"
+              - name: ACTION
+                value: assert-present
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($adopted_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: EXPECTED_ID
+                value: ($precreated_id)
+              - name: EXPECTED_CR_NAME
+                value: ($adopted_cr_name)
+              - name: EXPECTED_TYPE
+                value: streaming
+              - name: EXPECTED_DISPLAY_NAME
+                value: ($display_name)
+              - name: EXPECTED_HANDLER_CONTAINS
+                value: ($handler_marker)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+
+    - name: Delete-custom-policies-and-verify-konnect-cleanup
+      description: |
+        Delete every AIGatewayCustomPolicy, wait for the Konnect-side finalizer
+        to clear, and verify Konnect no longer has the policies. Done inside
+        try: (rather than relying on end-of-test cleanup, which also deletes
+        the whole AI Gateway) so a hanging deletion fires the catch: snapshot
+        and a leftover policy fails the test.
+      try:
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($installed_cr_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($streaming_cr_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($adopted_cr_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                namespace: ($namespace)
+        - script:
+            env:
+              - name: ACTION
+                value: assert-absent
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($installed_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+        - script:
+            env:
+              - name: ACTION
+                value: assert-absent
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($streaming_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+        - script:
+            env:
+              - name: ACTION
+                value: assert-absent
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: AIGW_CP_NAME
+                value: ($aigw_cp_name)
+              - name: POLICY_NAME
+                value: ($adopted_policy_name)
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+            content: |
+              bash ../../common/scripts/konnect_aigw_custom_policy.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-custom-policy
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

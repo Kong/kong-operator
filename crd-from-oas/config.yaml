@@ -588,6 +588,61 @@ apiGroupVersions:
             fieldName: aiGatewayRef
             typeName: AIGatewayRef
 
+      - path: /v1/ai-gateways/{gatewayId}/custom-policies
+        name: AIGatewayCustomPolicy
+        # The OAS declares no maxLength for the Lua schema/handler sources, so
+        # the generator's default string limit (253) would reject any realistic
+        # plugin. The name is documented as immutable after creation.
+        cel:
+          spec:
+            apiSpec:
+              installed:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+                schema:
+                  _validations:
+                    - "+kubebuilder:validation:MaxLength=262144"
+              streaming:
+                name:
+                  _validations:
+                    - "+kubebuilder:validation:XValidation:rule=\"self == oldSelf\",message=\"name is immutable\""
+                schema:
+                  _validations:
+                    - "+kubebuilder:validation:MaxLength=262144"
+                handler:
+                  _validations:
+                    - "+kubebuilder:validation:MaxLength=262144"
+        ops:
+          sdk:
+            interface: github.com/Kong/sdk-konnect-go.AIGatewayCustomPoliciesSDK
+            fieldName: AIGatewayCustomPolicies
+          # List responses are root unions whose wrapper does not expose top-level
+          # GetID/GetName accessors, so conflict lookup (matching on the
+          # variant's type and immutable name, as the variants carry no
+          # labels/tags) stays hand-written for now.
+          # Root-union metadata detection is left enabled: the installed and
+          # streaming variants declare no labels/tags, so there is nothing to
+          # inject on create/update.
+          skipGetForUID: true
+          create:
+            path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest
+          update:
+            path: github.com/Kong/sdk-konnect-go/models/components.UpdateAIGatewayCustomPolicyRequest
+          delete: {}
+        reconciler:
+          parentEntityGVK:
+            kind: KonnectAIGateway
+            group: konnect.konghq.com
+          parentRef:
+            fieldName: aiGatewayRef
+            typeName: AIGatewayRef
+            # Custom policies are Konnect-only: the on-prem AI Gateway
+            # controllers and config translator do not handle this entity, so
+            # an OnPremAIGateway ref would be accepted but never reconciled.
+            allowedKinds:
+              - KonnectAIGateway
+
       - path: /v1/ai-gateways/{gatewayId}/ca-certificates
         name: AIGatewayCACertificate
         secretReferences:

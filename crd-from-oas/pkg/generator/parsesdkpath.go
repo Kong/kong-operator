@@ -81,6 +81,20 @@ func ParseSDKUnionMemberFieldNames(importPath, typeName string) ([]string, error
 	return extractSDKUnionMemberFieldNames(structType), nil
 }
 
+// ParseSDKUnionMemberTypeNames returns the type names of the struct fields
+// tagged as union members on an SDK type. It returns an empty slice when the
+// type is not a union wrapper.
+func ParseSDKUnionMemberTypeNames(importPath, typeName string) ([]string, error) {
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return extractSDKUnionMemberTypeNames(structType)
+}
+
 // sdkStructType resolves typeName within importPath to its declared struct
 // type, using a per-package AST index built once and cached across calls
 // (see sdkTypeIndexCache). ok is false when the type is not declared in the
@@ -314,6 +328,25 @@ func extractSDKUnionMemberFieldNames(structType *ast.StructType) []string {
 		}
 	}
 	return names
+}
+
+func extractSDKUnionMemberTypeNames(structType *ast.StructType) ([]string, error) {
+	var names []string
+	for _, field := range structType.Fields.List {
+		if field.Tag == nil {
+			continue
+		}
+		tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+		if tag.Get("union") != "member" {
+			continue
+		}
+		typeName, _, err := sdkFieldTypeName(field.Type)
+		if err != nil {
+			return nil, err
+		}
+		names = append(names, typeName)
+	}
+	return names, nil
 }
 
 func sdkFieldTypeName(expr ast.Expr) (string, bool, error) {

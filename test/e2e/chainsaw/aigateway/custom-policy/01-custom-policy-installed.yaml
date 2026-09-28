@@ -1,0 +1,24 @@
+# An "installed" AIGatewayCustomPolicy: registers the schema of a Kong plugin
+# that is already installed on the data plane.
+# Required bindings:
+#   - namespace: Namespace where the AIGatewayCustomPolicy is created.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+#   - aigw_custom_policy_name: Name of the AIGatewayCustomPolicy resource.
+#   - konnect_policy_name: Custom policy name in Konnect (spec.apiSpec.installed.name).
+#     Also used as the Lua schema's plugin name, so the two always match.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayCustomPolicy
+metadata:
+  name: ($aigw_custom_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: installed
+    installed:
+      name: ($konnect_policy_name)
+      displayName: Chainsaw installed custom policy
+      # Kept on one line so the konnect_policy_name binding can be interpolated.
+      schema: (join('', ['local typedefs = require "kong.db.schema.typedefs" return { name = "', $konnect_policy_name, '", fields = { { protocols = typedefs.protocols_http }, { config = { type = "record", fields = { { header_name = { type = "string", default = "X-Chainsaw-Custom-Policy" } } } } } } }']))

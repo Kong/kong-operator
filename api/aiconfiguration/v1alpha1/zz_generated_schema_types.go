@@ -11507,6 +11507,67 @@ type AuthGCPWorkloadIdentityFederationAwsIam struct {
 	Aws AIGatewayUpstreamAuthAWS `json:"aws,omitzero"`
 }
 
+// CreateAIGatewayCustomPolicyInstalledRequest is a type alias.
+type CreateAIGatewayCustomPolicyInstalledRequest struct {
+	// The display name for this custom policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// A user-defined unique identifier for this custom policy, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// The Lua schema definition for the custom policy, equivalent to a Kong
+	// plugin's `schema.lua`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=262144
+	Schema string `json:"schema,omitzero"`
+}
+
+// CreateAIGatewayCustomPolicyStreamingRequest is a type alias.
+type CreateAIGatewayCustomPolicyStreamingRequest struct {
+	// The display name for this custom policy.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	DisplayName string `json:"displayName,omitzero"`
+	// The Lua handler implementation for the custom policy, equivalent to a Kong
+	// plugin's `handler.lua`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=262144
+	Handler string `json:"handler,omitzero"`
+	// A user-defined unique identifier for this custom policy, used as a stable
+	// human-readable reference.
+	// This value is immutable after creation.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=256
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
+	// +kubebuilder:validation:XValidation:rule="self == oldSelf",message="name is immutable"
+	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
+	// The Lua schema definition for the custom policy, equivalent to a Kong
+	// plugin's `schema.lua`.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=262144
+	Schema string `json:"schema,omitzero"`
+}
+
 // GCPModelConfig Configuration for a model hosted on Google Cloud Project.
 type GCPModelConfig struct {
 	// The custom API endpoint for the Gemini model.
