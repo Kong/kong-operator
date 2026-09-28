@@ -150,9 +150,24 @@ func setDataPlaneIngressServiceIPFamilies(
 		return
 	}
 	ingressOptions := dataplane.Spec.Network.Services.Ingress
-	if ingressOptions.IPFamilyPolicy != nil {
+	switch {
+	case ingressOptions.IPFamilyPolicy != nil:
 		svc.Spec.IPFamilyPolicy = ingressOptions.IPFamilyPolicy
+	case len(ingressOptions.IPFamilies) == 1:
+		// A single ipFamilies entry means the Service is single-stack. Set the
+		// policy explicitly instead of relying on the API server default
+		// (SingleStack): on an update of a dual-stack Service, the API server
+		// would otherwise adopt the previous (dual) policy and reject the
+		// release of the secondary family.
+		svc.Spec.IPFamilyPolicy = new(corev1.IPFamilyPolicySingleStack)
+	case len(ingressOptions.IPFamilies) == 2:
+		// The API server requires a dual-stack policy when two families are
+		// specified. PreferDualStack falls back to single-stack allocation on
+		// clusters without the secondary family.
+		svc.Spec.IPFamilyPolicy = new(corev1.IPFamilyPolicyPreferDualStack)
 	}
+	// With no ipFamilies configured, the policy set by IPFamilyPolicyServiceOpt
+	// (PreferDualStack on dual clusters, unset otherwise) is left in place.
 	if len(ingressOptions.IPFamilies) > 0 {
 		svc.Spec.IPFamilies = ingressOptions.IPFamilies
 	}
@@ -167,7 +182,9 @@ func setDataPlaneIngressServiceIPFamilies(
 //
 // Explicit user configuration (ipFamilies/ipFamilyPolicy in the DataPlane's
 // ingress ServiceOptions) always wins over this default, as it is applied
-// afterwards by setDataPlaneIngressServiceIPFamilies.
+// afterwards by setDataPlaneIngressServiceIPFamilies, which also drops this
+// default when the user configures a single ipFamilies entry (single-stack
+// Service).
 func IPFamilyPolicyServiceOpt(family ipfamily.IPFamily) ServiceOpt {
 	return func(s *corev1.Service) {
 		if family == ipfamily.Dual {

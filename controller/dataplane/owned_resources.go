@@ -401,13 +401,27 @@ func ensureIngressServiceForDataPlane(
 			updated = true
 		}
 
-		// Only copy the IP family fields when the generated Service sets them:
-		// the API server defaults ipFamilies on existing Services, so clearing
-		// them here would fight with that defaulting (and churn the object).
+		// Treat nil as the default (SingleStack) since the API server defaults the field,
+		// and update only when the effective values differ, so that a policy removed
+		// from the DataPlane spec reverts to the default instead of lingering on the
+		// Service.
+		existingIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
+		if existingService.Spec.IPFamilyPolicy != nil {
+			existingIPFamilyPolicy = *existingService.Spec.IPFamilyPolicy
+		}
+		generatedIPFamilyPolicy := corev1.IPFamilyPolicySingleStack
 		if generatedService.Spec.IPFamilyPolicy != nil {
+			generatedIPFamilyPolicy = *generatedService.Spec.IPFamilyPolicy
+		}
+		if existingIPFamilyPolicy != generatedIPFamilyPolicy {
 			existingService.Spec.IPFamilyPolicy = generatedService.Spec.IPFamilyPolicy
 			updated = true
 		}
+
+		// Only copy ipFamilies when the generated Service sets them: the API
+		// server defaults ipFamilies on existing Services (and they cannot be
+		// cleared afterwards), so clearing them here would fight with that
+		// defaulting (and churn the object).
 		if len(generatedService.Spec.IPFamilies) > 0 {
 			existingService.Spec.IPFamilies = generatedService.Spec.IPFamilies
 			updated = true

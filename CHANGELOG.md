@@ -67,12 +67,10 @@
 
 ### Added
 
-- `DataPlane`: `spec.network.services.ingress` now supports `ipFamilies` and
-  `ipFamilyPolicy`, letting users control the IP families of the DataPlane's
-  ingress Service (e.g. requesting a dual-stack Service on dual-stack clusters).
-  Additionally, when the operator's IP family is dual (e.g. `--ip-family dual`)
-  and the user configures neither field, the ingress Service now defaults to
-  `PreferDualStack` so that the DataPlane is exposed over both address families.
+- `DataPlane`: added `ipFamilies` and `ipFamilyPolicy` to
+  `spec.network.services.ingress`. These fields are only supported on
+  dual-stack clusters. When the operator's IP family is dual and both fields
+  are unset, the ingress Service defaults to `PreferDualStack`.
   [#5352](https://github.com/Kong/kong-operator/issues/5352)
 - The on-prem AI Gateway control plane instances now dynamically discover the
   Admin API endpoints of all `AIGatewayDataPlane`s that reference the gateway

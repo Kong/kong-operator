@@ -391,11 +391,18 @@ type ServiceOptions struct {
 
 	// IPFamilyPolicy specifies the dual-stack policy of the Service (e.g.
 	// SingleStack, PreferDualStack, RequireDualStack). If unset, the Kubernetes
-	// API server default (SingleStack) applies. When neither this field nor
-	// ipFamilies is set and the operator's IP family is dual (e.g. configured
-	// via the --ip-family flag), the operator defaults the Service to
-	// PreferDualStack so that the DataPlane is exposed over both address
-	// families.
+	// API server default (SingleStack) applies, except for the following
+	// operator defaults on dual-stack clusters (i.e. when the operator's IP
+	// family is dual, e.g. configured via the --ip-family flag):
+	//
+	//   - neither ipFamilyPolicy nor ipFamilies is set: the Service defaults
+	//     to PreferDualStack, so that the DataPlane is exposed over both
+	//     address families.
+	//   - ipFamilies names a single family: the Service stays single-stack
+	//     (SingleStack).
+	//   - ipFamilies names both families: the Service defaults to
+	//     PreferDualStack, as the Kubernetes API server requires a dual-stack
+	//     policy when two families are specified.
 	//
 	// More info: https://kubernetes.io/docs/concepts/services-networking/dual-stack/
 	//

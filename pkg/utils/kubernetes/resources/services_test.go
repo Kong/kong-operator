@@ -459,13 +459,40 @@ func TestGenerateNewIngressServiceForDataPlaneIPFamilies(t *testing.T) {
 			expectedIPs: nil,
 		},
 		{
-			name:     "user-specified ipFamilies are applied",
+			name:     "user-specified single ipFamilies entry results in an explicit SingleStack policy",
 			ipFamily: ipfamily.Dual,
 			ingress: &operatorv1beta1.DataPlaneServiceOptions{
 				IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
 			},
-			expected:    &preferDualStack,
+			expected:    &singleStack,
 			expectedIPs: []corev1.IPFamily{corev1.IPv6Protocol},
+		},
+		{
+			name:     "user-specified single ipFamilies entry results in an explicit SingleStack policy on a non-dual operator",
+			ipFamily: ipfamily.IPv4,
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				IPFamilies: []corev1.IPFamily{corev1.IPv6Protocol},
+			},
+			expected:    &singleStack,
+			expectedIPs: []corev1.IPFamily{corev1.IPv6Protocol},
+		},
+		{
+			name:     "user-specified both ipFamilies default to PreferDualStack",
+			ipFamily: ipfamily.Dual,
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			},
+			expected:    &preferDualStack,
+			expectedIPs: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+		},
+		{
+			name:     "user-specified both ipFamilies default to PreferDualStack on a non-dual operator",
+			ipFamily: ipfamily.IPv4,
+			ingress: &operatorv1beta1.DataPlaneServiceOptions{
+				IPFamilies: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
+			},
+			expected:    &preferDualStack,
+			expectedIPs: []corev1.IPFamily{corev1.IPv4Protocol, corev1.IPv6Protocol},
 		},
 		{
 			name:     "user-specified RequireDualStack is preserved",
