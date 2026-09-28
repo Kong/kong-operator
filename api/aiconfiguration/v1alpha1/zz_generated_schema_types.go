@@ -2497,7 +2497,7 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=2026-07-28;2025-11-25;2025-06-18;2025-03-26
+	// +kubebuilder:validation:Enum="2026-07-28";"2025-11-25";"2025-06-18";"2025-03-26"
 	UpstreamProtocolVersion string `json:"upstreamProtocolVersion,omitzero"`
 }
 
