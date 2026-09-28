@@ -18,8 +18,8 @@ func TestEventGatewayVirtualClusterPolicyAPISpec_SelectedSDKOpsPayload_FlattensS
 
 	spec := &EventGatewayVirtualClusterPolicyAPISpec{
 		EventGatewayVirtualClusterPolicyConfig: &EventGatewayVirtualClusterPolicyConfig{
-			Type: EventGatewayVirtualClusterPolicyConfigTypeEventGatewayACLsPolicy,
-			EventGatewayACLsPolicy: &EventGatewayACLsPolicy{
+			Type: EventGatewayVirtualClusterPolicyConfigTypeACLs,
+			ACLs: &EventGatewayACLsPolicy{
 				Name: "virtual-cluster-policy",
 				Config: EventGatewayACLPolicyConfig{
 					Rules: []EventGatewayACLRule{
@@ -56,7 +56,7 @@ func TestEventGatewayVirtualClusterPolicyAPISpec_SelectedSDKOpsPayload_FlattensS
 
 	data, variant, err := spec.selectedSDKOpsPayload(payload)
 	require.NoError(t, err)
-	require.Equal(t, "EventGatewayACLsPolicy", variant)
+	require.Equal(t, "ACLs", variant)
 
 	var decoded map[string]any
 	require.NoError(t, json.Unmarshal(data, &decoded))

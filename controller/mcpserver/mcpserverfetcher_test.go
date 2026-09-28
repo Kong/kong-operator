@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -666,26 +667,65 @@ func TestFetchAllPagination(t *testing.T) {
 	})
 
 	// The SDK returns every non-200 response as an error rather than as a
-	// response, so a failed page is retried with a backoff. What matters is
-	// that the pages fetched before it are never returned as an authoritative
-	// list in the meantime.
-	t.Run("non-200 page retries instead of returning a truncated list", func(t *testing.T) {
+	// response, so a failed page is retried with a backoff rather than ending
+	// the fetch. The retry must resume at the cursor that failed: restarting
+	// from the first page would list its servers twice.
+	t.Run("non-200 page is retried at the same cursor", func(t *testing.T) {
+		// attempts is atomic so that the subtest does not rely on the client
+		// reusing one keep-alive connection, which is what has every request
+		// land on the same server goroutine today.
+		var attempts atomic.Int64
+		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
+			switch cursor {
+			case "":
+				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
+			case "cursor-1":
+				if attempts.Add(1) == 1 {
+					return http.StatusForbidden, `{"error":"forbidden"}`
+				}
+				return http.StatusOK, pageJSON(nil, "srv-2")
+			default:
+				return http.StatusInternalServerError, `{}`
+			}
+		})
+		f.pageRetryBackoffMin = time.Millisecond
+
+		servers, err := f.fetchAll(t.Context())
+		require.NoError(t, err)
+
+		ids := make([]string, 0, len(servers))
+		for _, s := range servers {
+			ids = append(ids, s.ID)
+		}
+		assert.Equal(t, []string{"srv-1", "srv-2"}, ids)
+		assert.Equal(t, []string{"", "cursor-1", "cursor-1"}, cursors())
+	})
+
+	// While a page keeps failing, the pages fetched before it must never be
+	// returned as an authoritative list.
+	t.Run("page that keeps failing never yields a truncated list", func(t *testing.T) {
+		ctx, cancel := context.WithCancel(t.Context())
+		defer cancel()
+
+		var attempts atomic.Int64
 		f, cursors := setup(t, func(baseURL, cursor string) (int, string) {
 			if cursor == "" {
 				return http.StatusOK, pageJSON(nextURI(baseURL, "cursor-1"), "srv-1")
 			}
+			// Cancel once the failing page has been retried: the fetch then
+			// ends deterministically, with no timing dependence on how fast a
+			// loaded CI runner dispatches the requests.
+			if attempts.Add(1) > 1 {
+				cancel()
+			}
 			return http.StatusForbidden, `{"error":"forbidden"}`
 		})
-
-		// The retry backoff starts at 1s, so the context expires first and ends
-		// the loop.
-		ctx, cancel := context.WithTimeout(t.Context(), 100*time.Millisecond)
-		defer cancel()
+		f.pageRetryBackoffMin = time.Millisecond
 
 		servers, err := f.fetchAll(ctx)
-		require.ErrorIs(t, err, context.DeadlineExceeded)
+		require.ErrorIs(t, err, context.Canceled)
 		assert.Nil(t, servers, "the first page must not be returned as a complete list")
-		assert.GreaterOrEqual(t, len(cursors()), 2)
+		assert.Equal(t, []string{"", "cursor-1", "cursor-1"}, cursors())
 	})
 
 	t.Run("next URI without a cursor fails instead of truncating the list", func(t *testing.T) {

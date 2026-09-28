@@ -107,6 +107,20 @@ type KonnectAIGatewayAPISpec struct {
 	// +kubebuilder:validation:MaxProperties=50
 	Labels PublicLabels `json:"labels,omitzero"`
 
+	// The minimum AI Gateway runtime version supported by this AI Gateway.
+	// This is the lowest data plane version that may receive configuration from
+	// it, and it controls which features the API accepts.
+	//
+	// Data planes older than this version still connect for topology visibility.
+	//
+	// When not specified, the latest generally available runtime version is used.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Pattern=`^\d+\.\d+$`
+	MinRuntimeVersion AIGatewayMinRuntimeVersion `json:"minRuntimeVersion,omitzero"`
+
 	// The name for this AI Gateway. This value is immutable after creation.
 	//
 	// +required
@@ -120,6 +134,12 @@ type KonnectAIGatewayAPISpec struct {
 	//
 	// +optional
 	ProxyUrls []AIGatewayProxyURL `json:"proxyUrls,omitempty"`
+
+	// Whether the control plane should automatically raise min_runtime_version as
+	// connected data planes report a newer AI Gateway runtime version.
+	//
+	// +optional
+	RuntimeAutoUpgrade AIGatewayRuntimeAutoUpgrade `json:"runtimeAutoUpgrade,omitzero"`
 }
 
 // KonnectAIGatewayStatus defines the observed state of KonnectAIGateway.

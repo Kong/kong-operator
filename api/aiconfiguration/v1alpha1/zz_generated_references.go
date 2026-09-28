@@ -57,6 +57,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
 
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
+
 // AIGatewayACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
 // object's Konnect name is used where the Konnect API accepts it.
 type AIGatewayACLRef struct {
@@ -110,6 +121,51 @@ type AIGatewayCertificateRef struct {
 	// +optional
 	// +kubebuilder:validation:Enum=AIGatewayCertificate
 	// +kubebuilder:default=AIGatewayCertificate
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace is reserved for future cross-namespace support.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// AIGatewayMCPACLRef references an AIGatewayConsumerGroup in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayMCPACLRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayConsumerGroup
+	// +kubebuilder:default=AIGatewayConsumerGroup
+	Kind string `json:"kind,omitempty"`
+
+	// Name is the name of the referenced object.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	Name string `json:"name"`
+
+	// Namespace, if set to a namespace other than the referrer's, must be
+	// permitted by a KongReferenceGrant in that namespace.
+	//
+	// +optional
+	Namespace string `json:"namespace,omitempty"`
+}
+
+// AIGatewayMCPServerRef references an AIGatewayMCPServer in the cluster. The referenced
+// object's Konnect name is used where the Konnect API accepts it.
+type AIGatewayMCPServerRef struct {
+	// Kind is the kind of the referenced object.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=AIGatewayMCPServer
+	// +kubebuilder:default=AIGatewayMCPServer
 	Kind string `json:"kind,omitempty"`
 
 	// Name is the name of the referenced object.

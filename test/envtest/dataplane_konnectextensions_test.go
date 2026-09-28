@@ -127,9 +127,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 						},
 					}, nil)
 
-				t.Logf("Waiting for caches to sync as CA manager relies on it")
-				mgr.GetCache().WaitForCacheSync(ctx)
-
 				t.Logf("Creating KonnectAPIAuthConfiguration")
 				konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 
@@ -315,9 +312,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 
 				t.Log("Check if user provided volumes and volume mounts are preserved when KonnectExtension is applied to DataPlane")
 
-				t.Logf("Waiting for caches to sync as CA manager relies on it")
-				mgr.GetCache().WaitForCacheSync(ctx)
-
 				t.Logf("Creating KonnectAPIAuthConfiguration")
 				konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)
 
@@ -496,9 +490,6 @@ func TestDataPlaneKonnectExtension(t *testing.T) {
 							},
 						},
 					}, nil).Maybe()
-
-				t.Logf("Waiting for caches to sync")
-				mgr.GetCache().WaitForCacheSync(ctx)
 
 				t.Logf("Creating KonnectAPIAuthConfiguration")
 				konnectAPIAuthConfiguration := deploy.KonnectAPIAuthConfigurationWithProgrammed(t, ctx, cl)

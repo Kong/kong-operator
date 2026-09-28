@@ -22,4 +22,10 @@ const (
 
 	// KonnectCertMountPath is the path where the Konnect certificate Secret is mounted in the DataPlane container.
 	KonnectCertMountPath = "/var/konnect-client-certificate/"
+
+	// AdminCertVolumeName is the name of the volume that holds the Admin API TLS server certificate.
+	AdminCertVolumeName = "admin-cert"
+
+	// AdminCertMountPath is the path where the Admin API certificate Secret is mounted in the DataPlane container.
+	AdminCertMountPath = "/var/admin-certificate/"
 )

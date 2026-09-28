@@ -21,11 +21,11 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
-// Reconciler reconciles TLS Secrets managed by DataPlane or ControlPlane.
-// Certs in these Secrets expires after a certain time, and the controller
-// is responsible for renewing them by deleting the expiring Secret,
-// which will trigger the creation of a new Secret with renewed certs by the
-// respective owner controllers (CP/DP).
+// Reconciler reconciles TLS Secrets managed by DataPlane, ControlPlane or
+// AIGatewayDataPlane. Certs in these Secrets expires after a certain time, and
+// the controller is responsible for renewing them by deleting the expiring
+// Secret, which will trigger the creation of a new Secret with renewed certs
+// by the respective owner controllers.
 type Reconciler struct {
 	client.Client
 
@@ -46,13 +46,24 @@ func (r *Reconciler) SetupWithManager(ctx context.Context, mgr ctrl.Manager) err
 		Complete(reconcile.AsReconciler[*corev1.Secret](r.Client, r))
 }
 
+// certOwnerManagedByLabelValues lists the managed-by label values of the
+// owner kinds whose certificate Secrets this controller renews. Certificate
+// Secrets are provisioned with a TTL and the owner reconciler re-creates a
+// deleted Secret, so deletion here is the renewal mechanism for every owner
+// that provisions certificates.
+var certOwnerManagedByLabelValues = map[string]struct{}{
+	consts.DataPlaneManagedLabelValue:            {},
+	consts.ControlPlaneManagedLabelValue:         {},
+	consts.AIGatewayDataPlaneManagedByLabelValue: {},
+}
+
 // secretMatchesFilter returns true if the Secret has the required labels and type.
 func secretMatchesFilter(obj client.Object) bool {
 	labels := obj.GetLabels()
 	if labels[config.DefaultSecretLabelSelector] != config.LabelValueForSelectorTrue {
 		return false
 	}
-	if managedBy := labels[consts.GatewayOperatorManagedByLabel]; managedBy != consts.DataPlaneManagedLabelValue && managedBy != consts.ControlPlaneManagedLabelValue {
+	if _, ok := certOwnerManagedByLabelValues[labels[consts.GatewayOperatorManagedByLabel]]; !ok {
 		return false
 	}
 

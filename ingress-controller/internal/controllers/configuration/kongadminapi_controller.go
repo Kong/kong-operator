@@ -20,9 +20,9 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/controllers"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/logging"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // KongAdminAPIServiceReconciler reconciles Kong Admin API Service Endpointslices
@@ -42,15 +42,15 @@ type KongAdminAPIServiceReconciler struct {
 	AdminAPIsDiscoverer AdminAPIsDiscoverer
 }
 
-type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapi.DiscoveredAdminAPI]
+type DiscoveredAdminAPIsCache map[k8stypes.NamespacedName]sets.Set[adminapidiscovery.DiscoveredAdminAPI]
 
 type EndpointsNotifier interface {
-	Notify(ctx context.Context, adminAPIs []adminapi.DiscoveredAdminAPI)
+	Notify(ctx context.Context, adminAPIs []adminapidiscovery.DiscoveredAdminAPI)
 }
 
 type AdminAPIsDiscoverer interface {
 	AdminAPIsFromEndpointSlice(discoveryv1.EndpointSlice) (
-		sets.Set[adminapi.DiscoveredAdminAPI],
+		sets.Set[adminapidiscovery.DiscoveredAdminAPI],
 		error,
 	)
 }
@@ -176,14 +176,14 @@ func (r *KongAdminAPIServiceReconciler) Reconcile(ctx context.Context, req ctrl.
 
 func (r *KongAdminAPIServiceReconciler) notify(ctx context.Context) {
 	discovered := flattenDiscoveredAdminAPIs(r.Cache)
-	addresses := lo.Map(discovered, func(d adminapi.DiscoveredAdminAPI, _ int) string { return d.Address })
+	addresses := lo.Map(discovered, func(d adminapidiscovery.DiscoveredAdminAPI, _ int) string { return d.Address })
 	r.Log.V(logging.DebugLevel).
 		Info("Notifying about newly detected Admin APIs", "admin_apis", addresses)
 	r.EndpointsNotifier.Notify(ctx, discovered)
 }
 
-func flattenDiscoveredAdminAPIs(cache DiscoveredAdminAPIsCache) []adminapi.DiscoveredAdminAPI {
-	var adminAPIs []adminapi.DiscoveredAdminAPI
+func flattenDiscoveredAdminAPIs(cache DiscoveredAdminAPIsCache) []adminapidiscovery.DiscoveredAdminAPI {
+	var adminAPIs []adminapidiscovery.DiscoveredAdminAPI
 	for _, v := range cache {
 		adminAPIs = append(adminAPIs, v.UnsortedList()...)
 	}

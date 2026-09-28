@@ -181,6 +181,21 @@ const (
 )
 
 // -----------------------------------------------------------------------------
+// DataPlane - Admin API Certificate Condition Constants
+// -----------------------------------------------------------------------------
+
+const (
+	// AdminCertificateProvisionedType indicates whether the Admin API TLS
+	// server certificate Secret has been provisioned for the DataPlane.
+	// Only applicable when controlPlaneRef references an OnPremAIGateway.
+	AdminCertificateProvisionedType consts.ConditionType = "AdminCertificateProvisioned"
+
+	// AdminCertificateProvisionedReason indicates the Admin API certificate
+	// Secret has been provisioned successfully.
+	AdminCertificateProvisionedReason consts.ConditionReason = "AdminCertificateProvisioned"
+)
+
+// -----------------------------------------------------------------------------
 // DataPlane - KonnectCertificate Registration Condition Constants
 // -----------------------------------------------------------------------------
 

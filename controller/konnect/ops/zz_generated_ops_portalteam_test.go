@@ -30,6 +30,7 @@ func testGeneratedPortalTeamForSDKOps() *konnectv1alpha1.PortalTeam {
 			APISpec: konnectv1alpha1.PortalTeamAPISpec{
 				CanOwnApplications: "Enabled",
 				Description:        "test-value",
+				KonnectManaged:     "Enabled",
 				Name:               "test-value",
 			},
 		},

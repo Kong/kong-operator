@@ -87,10 +87,15 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		storeID  = "konnect_configstore-id"
 	)
 
-	badRequestErr := &sdkkonnecterrs.BadRequestError{
-		Status: 400,
-		Title:  "Bad Request",
-		Detail: "server wording is not part of the contract",
+	// Each subtest must use its own instance: the ops layer mutates the
+	// BadRequestError in place (clearing Instance), and subtests run in
+	// parallel, so sharing one value is a data race.
+	newBadRequestErr := func() *sdkkonnecterrs.BadRequestError {
+		return &sdkkonnecterrs.BadRequestError{
+			Status: 400,
+			Title:  "Bad Request",
+			Detail: "server wording is not part of the contract",
+		}
 	}
 
 	newObject := func() *konnectv1alpha1.KonnectConfigStore {
@@ -145,6 +150,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
 		obj := newObject()
+		badRequestErr := newBadRequestErr()
 
 		configStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.Anything).
@@ -217,6 +223,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
 		obj := newObject()
+		badRequestErr := newBadRequestErr()
 
 		configStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.Anything).
@@ -243,6 +250,7 @@ func TestDeleteKonnectConfigStoreGuarded(t *testing.T) {
 		configStoresSDK := mocks.NewMockConfigStoresSDK(t)
 		secretsSDK := mocks.NewMockConfigStoreSecretsSDK(t)
 		obj := newObject()
+		badRequestErr := newBadRequestErr()
 
 		configStoresSDK.EXPECT().
 			DeleteConfigStore(mock.Anything, mock.Anything).

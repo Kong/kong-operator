@@ -22,7 +22,6 @@ spec:
             namespace: ($sni_namespace)
           spec:
             aiGatewayRef:
-              type: namespacedRef
               namespacedRef:
                 name: ($aigw_name)
             apiSpec:

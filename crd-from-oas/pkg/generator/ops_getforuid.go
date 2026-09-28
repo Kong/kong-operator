@@ -45,6 +45,10 @@ type opsGetForUIDFuncData struct {
 	// ListCallStylePositional indicates the SDK list method takes positional
 	// (pageSize *int64, pageNumber *int64) args instead of a request struct.
 	ListCallStylePositional bool
+	// ListCallPositionalWithParent is true when the SDK list method uses
+	// positional args and the entity has a single parent, so the generated
+	// call passes the parent ID as the first positional argument.
+	ListCallPositionalWithParent bool
 	// HasLabels indicates the entity's request schema declares a "labels"
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
@@ -55,6 +59,11 @@ type opsGetForUIDFuncData struct {
 	// MatchFields configures generated field comparisons for entities whose
 	// list responses do not expose labels/tags.
 	MatchFields []opsGetForUIDMatchFieldData
+	// AllMatchFieldsSkipWhenUnset is true when every entry in MatchFields sets
+	// SkipWhenUnset, so an object that leaves all of them unset would compare
+	// nothing and match an arbitrary list entry. The template then emits an
+	// upfront guard that reports not-found instead.
+	AllMatchFieldsSkipWhenUnset bool
 	// RootUnion configures variant-aware matching for root-union-backed specs.
 	RootUnion *opsGetForUIDRootUnionData
 	// HasName indicates the entity's request schema declares a "name" field,
@@ -80,19 +89,36 @@ type opsGetForUIDMatchFieldData struct {
 	// rather than a plain string, causing the template to emit
 	// matchSensitiveDataSourceField instead of matchStringField.
 	SensitiveMatch bool
+	// SkipWhenUnset is true when an empty object-side value must not block the
+	// match, causing the template to emit matchOptionalStringField instead of
+	// matchStringField.
+	SkipWhenUnset bool
 }
 
 type opsGetForUIDRootUnionData struct {
 	UnionField        string
 	ResponseTypeField string
-	Cases             []opsGetForUIDRootUnionCaseData
+	// ResponseTypePointer is true when the SDK discriminator getter returns a
+	// pointer to an enum rather than a plain string.
+	ResponseTypePointer bool
+	// ResponseVariantContainer is the getter path on the list entry returning
+	// the SDK union container that holds per-variant payload fields.
+	ResponseVariantContainer string
+	Cases                    []opsGetForUIDRootUnionCaseData
 }
 
 type opsGetForUIDRootUnionCaseData struct {
 	TypeValue         string
 	VariantField      string
 	ResponseTypeValue string
-	MatchFields       []opsGetForUIDMatchFieldData
+	// ResponseVariantField is the field on the SDK union container holding
+	// this case's variant payload. When set, MatchFields response paths are
+	// relative to that variant payload.
+	ResponseVariantField string
+	MatchFields          []opsGetForUIDMatchFieldData
+	// AllMatchFieldsSkipWhenUnset mirrors the same field on
+	// opsGetForUIDFuncData, scoped to this variant's match fields.
+	AllMatchFieldsSkipWhenUnset bool
 }
 
 // generateOpsGetForUIDFuncBody renders the get<Entity>ForUID function body
@@ -176,11 +202,19 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 					)
 				}
 			}
+			sliceMatch := !sensitive && isArrayMatchField(schema, field.ResponseField)
+			if field.SkipWhenUnset && (sensitive || sliceMatch) {
+				return nil, fmt.Errorf(
+					"entity %q: getForUID.matchFields.objectField %q sets skipWhenUnset, which is only supported for plain string-like fields",
+					entityName, field.ObjectField,
+				)
+			}
 			matchFields = append(matchFields, opsGetForUIDMatchFieldData{
 				ObjectField:    field.ObjectField,
 				ResponseField:  field.ResponseField,
-				SliceMatch:     !sensitive && isArrayMatchField(schema, field.ResponseField),
+				SliceMatch:     sliceMatch,
 				SensitiveMatch: sensitive,
+				SkipWhenUnset:  field.SkipWhenUnset,
 			})
 		}
 		if opsConfig.GetForUID.RootUnion != nil {
@@ -189,23 +223,28 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 				responseTypeField = "GetType()"
 			}
 			rootUnion = &opsGetForUIDRootUnionData{
-				UnionField:        opsConfig.GetForUID.RootUnion.UnionField,
-				ResponseTypeField: responseTypeField,
-				Cases:             make([]opsGetForUIDRootUnionCaseData, 0, len(opsConfig.GetForUID.RootUnion.Cases)),
+				UnionField:               opsConfig.GetForUID.RootUnion.UnionField,
+				ResponseTypeField:        responseTypeField,
+				ResponseTypePointer:      opsConfig.GetForUID.RootUnion.ResponseTypePointer,
+				ResponseVariantContainer: opsConfig.GetForUID.RootUnion.ResponseVariantContainer,
+				Cases:                    make([]opsGetForUIDRootUnionCaseData, 0, len(opsConfig.GetForUID.RootUnion.Cases)),
 			}
 			for _, c := range opsConfig.GetForUID.RootUnion.Cases {
 				caseData := opsGetForUIDRootUnionCaseData{
-					TypeValue:         c.TypeValue,
-					VariantField:      c.VariantField,
-					ResponseTypeValue: c.ResponseTypeValue,
-					MatchFields:       make([]opsGetForUIDMatchFieldData, 0, len(c.MatchFields)),
+					TypeValue:            c.TypeValue,
+					VariantField:         c.VariantField,
+					ResponseTypeValue:    c.ResponseTypeValue,
+					ResponseVariantField: c.ResponseVariantField,
+					MatchFields:          make([]opsGetForUIDMatchFieldData, 0, len(c.MatchFields)),
 				}
 				for _, field := range c.MatchFields {
 					caseData.MatchFields = append(caseData.MatchFields, opsGetForUIDMatchFieldData{
 						ObjectField:   field.ObjectField,
 						ResponseField: field.ResponseField,
+						SkipWhenUnset: field.SkipWhenUnset,
 					})
 				}
+				caseData.AllMatchFieldsSkipWhenUnset = allMatchFieldsSkipWhenUnset(caseData.MatchFields)
 				rootUnion.Cases = append(rootUnion.Cases, caseData)
 			}
 		}
@@ -224,14 +263,33 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		GetForUIDWrappedType:    getForUIDWrappedType,
 		ParentIDField:           parentIDField,
 		ListCallStylePositional: opsConfig != nil && opsConfig.ListCallStylePositional,
-		HasLabels:               hasLabels,
-		UseUIDTagFilter:         opsConfig != nil && opsConfig.UseUIDTagFilter,
-		MatchFields:             matchFields,
-		RootUnion:               rootUnion,
-		HasName:                 hasName,
-		SingletonByParent:       isParentScopedSingleton(schema),
-		SingletonNoID:           isSingletonNoID(schema),
+		ListCallPositionalWithParent: opsConfig != nil && opsConfig.ListCallStylePositional &&
+			len(parents) == 1,
+		HasLabels:                   hasLabels,
+		UseUIDTagFilter:             opsConfig != nil && opsConfig.UseUIDTagFilter,
+		MatchFields:                 matchFields,
+		AllMatchFieldsSkipWhenUnset: allMatchFieldsSkipWhenUnset(matchFields),
+		RootUnion:                   rootUnion,
+		HasName:                     hasName,
+		SingletonByParent:           isParentScopedSingleton(schema),
+		SingletonNoID:               isSingletonNoID(schema),
 	}, nil
+}
+
+// allMatchFieldsSkipWhenUnset reports whether every match field is optional
+// (skipWhenUnset). Such a set degenerates into matching nothing when the object
+// leaves all of the fields unset, so generated code must bail out instead of
+// adopting an arbitrary list entry.
+func allMatchFieldsSkipWhenUnset(fields []opsGetForUIDMatchFieldData) bool {
+	if len(fields) == 0 {
+		return false
+	}
+	for _, field := range fields {
+		if !field.SkipWhenUnset {
+			return false
+		}
+	}
+	return true
 }
 
 // isArrayMatchField reports whether the schema property matching the given Go

@@ -1,0 +1,14 @@
+# The name is generated, so match on the labels the operator applies to Gateway-owned
+# objects. The naming invariants themselves are checked by the following step.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  namespace: ($namespace)
+  labels:
+    gateway-operator.konghq.com/managed-by: gateway
+    gateway.networking.k8s.io/gateway-name: ($gateway_name)
+status:
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true

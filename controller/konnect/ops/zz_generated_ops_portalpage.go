@@ -5,6 +5,7 @@ package ops
 import (
 	"context"
 	"fmt"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectgo "github.com/Kong/sdk-konnect-go"
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
@@ -14,6 +15,7 @@ import (
 
 func createPortalPage(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.PortalPagesSDK,
 	obj *konnectv1alpha1.PortalPage,
 ) error {
@@ -21,7 +23,7 @@ func createPortalPage(
 	if parentID == "" {
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: CreateOp}
 	}
-	req, err := obj.Spec.APISpec.ToCreatePortalPageRequest()
+	req, err := obj.ToCreatePortalPageRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
@@ -40,6 +42,7 @@ func createPortalPage(
 
 func updatePortalPage(
 	ctx context.Context,
+	cl client.Client,
 	sdk sdkkonnectgo.PortalPagesSDK,
 	obj *konnectv1alpha1.PortalPage,
 ) error {
@@ -48,7 +51,7 @@ func updatePortalPage(
 		return CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "Portal", Op: UpdateOp}
 	}
 	id := obj.GetKonnectStatus().GetKonnectID()
-	req, err := obj.Spec.APISpec.ToUpdatePortalPageRequest()
+	req, err := obj.ToUpdatePortalPageRequest(ctx, cl)
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
@@ -60,7 +63,7 @@ func updatePortalPage(
 	})
 	if errWrap := wrapErrIfKonnectOpFailed(err, UpdateOp, obj); errWrap != nil {
 		return handleUpdateError(ctx, err, obj, func(ctx context.Context) error {
-			return createPortalPage(ctx, sdk, obj)
+			return createPortalPage(ctx, cl, sdk, obj)
 		})
 	}
 	return nil

@@ -176,11 +176,14 @@ const (
 	DataPlaneTypeAIGateway
 	// DataPlaneTypeKeg represents a Kong Event Gateway data plane.
 	DataPlaneTypeKeg
+	// DataPlaneTypeMcpServer represents a Kong MCP Server data plane or its init container.
+	DataPlaneTypeMcpServer
 )
 
 // HardenContainerWithSecurityContext hardens a container with a security context and returns
-// necessary volumes that has to be added to the Pod spec. It modifies the container in place
-// and returns it with adjusted SecurityContext, Environment variables and VolumeMounts.
+// necessary volumes that has to be added to the Pod spec (nil slice if not needed).
+// It modifies the container in place and returns it with necessary adjustments of
+// SecurityContext, Environment variables and VolumeMounts.
 func HardenContainerWithSecurityContext(container corev1.Container, dpType DataPlaneType) (
 	corev1.Container, []corev1.Volume,
 ) {
@@ -195,6 +198,14 @@ func HardenContainerWithSecurityContext(container corev1.Container, dpType DataP
 			Add:  []corev1.Capability{"NET_BIND_SERVICE"},
 		},
 	}
+
+	// MCP Server containers do not run Kong Gateway, so they need
+	// neither NET_BIND_SERVICE, nor /tmp or /var/kong, nor KONG_PREFIX.
+	if dpType == DataPlaneTypeMcpServer {
+		container.SecurityContext.Capabilities.Add = nil
+		return container, nil
+	}
+
 	var volumes []corev1.Volume
 
 	const volumeTMP = "tmp"

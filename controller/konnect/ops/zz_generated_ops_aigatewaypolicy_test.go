@@ -30,6 +30,7 @@ func testGeneratedAIGatewayPolicyForSDKOps() *aiconfigurationv1alpha1.AIGatewayP
 		},
 		Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
 			APISpec: aiconfigurationv1alpha1.AIGatewayPolicyAPISpec{
+				Condition:   new("test-value"),
 				DisplayName: "test-value",
 				Enabled:     "Enabled",
 				Global:      "Enabled",

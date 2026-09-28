@@ -6,8 +6,10 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -23,7 +25,21 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&aiconfigurationv1alpha1.AIGatewayMCPServer{})
+			// Entities whose AIGatewayRef targets an OnPremAIGateway are owned
+			// by the on-prem machinery and must never be enqueued into the
+			// Konnect reconciler.
+			return b.For(
+				&aiconfigurationv1alpha1.AIGatewayMCPServer{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(func(object client.Object) bool {
+						ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+						if !ok {
+							return true
+						}
+						return !ent.SkipKonnectReconciliation()
+					}),
+				),
+			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
@@ -38,6 +54,30 @@ func AIGatewayMCPServerReconciliationWatchOptions(
 				&aiconfigurationv1alpha1.AIGatewayPolicy{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueAIGatewayMCPServerForAIGatewayPolicy(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayMCPServer{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayMCPServerForAIGatewayMCPServer(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayAuthStrategy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayMCPServerForAIGatewayAuthStrategy(cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayConsumerGroup{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayMCPServerForAIGatewayConsumerGroup(cl),
 				),
 			)
 		},
@@ -81,6 +121,60 @@ func enqueueAIGatewayMCPServerForAIGatewayPolicy(
 		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
 		if err := cl.List(ctx, &l, client.MatchingFields{
 			index.IndexFieldAIGatewayMCPServerOnAIGatewayPolicyRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayMCPServerForAIGatewayMCPServer(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayMCPServer)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayMCPServerOnAIGatewayMCPServerRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayMCPServerForAIGatewayAuthStrategy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayAuthStrategy)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayMCPServerOnAIGatewayAuthStrategyRef: client.ObjectKeyFromObject(ref).String(),
+		}); err != nil {
+			return nil
+		}
+		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+func enqueueAIGatewayMCPServerForAIGatewayConsumerGroup(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		ref, ok := obj.(*aiconfigurationv1alpha1.AIGatewayConsumerGroup)
+		if !ok {
+			return nil
+		}
+		var l aiconfigurationv1alpha1.AIGatewayMCPServerList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayMCPServerOnAIGatewayConsumerGroupRef: client.ObjectKeyFromObject(ref).String(),
 		}); err != nil {
 			return nil
 		}

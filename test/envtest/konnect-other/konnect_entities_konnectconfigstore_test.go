@@ -256,7 +256,16 @@ func TestKonnectConfigStore(t *testing.T) {
 				configStore.Annotations = make(map[string]string)
 			}
 			configStore.Annotations["gateway-operator.konghq.com/reconcile-after-secret-removal"] = "true"
-			return clientNamespaced.Update(ctx, configStore)
+			if err := clientNamespaced.Update(ctx, configStore); err != nil {
+				if apierrors.IsNotFound(err) {
+					// The cached Get above can still return the object
+					// after it is gone from the API server, so the
+					// Update can still hit NotFound.
+					return nil
+				}
+				return err
+			}
+			return nil
 		}))
 		eventually.WaitForObjectToNotExist(t, ctx, clientNamespaced, configStore, consts.WaitTime, consts.TickTime)
 		envtest.EventuallyAssertSDKExpectations(t, sdk.ConfigStoresSDK, consts.WaitTime, consts.TickTime)

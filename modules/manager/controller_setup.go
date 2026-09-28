@@ -200,6 +200,7 @@ func SetupCacheIndexes(ctx context.Context, mgr manager.Manager, cfg Config) err
 			index.OptionsForKonnectCloudGatewayNetwork(),
 			index.OptionsForKonnectExtension(),
 			index.OptionsForKonnectCloudGatewayDataPlaneGroupConfiguration(cl),
+			index.OptionsForKonnectConfigStoreSync(),
 		)
 
 		indexOptions = append(indexOptions, generatedIndexOptionsForKonnectEntities(cl)...)
@@ -1002,6 +1003,17 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 					ClusterCASecretNamespace: c.ClusterCASecretNamespace,
 					SecretLabelSelector:      c.SecretLabelSelector,
 					CertTTL:                  c.CertTTL,
+				},
+			},
+			// KonnectConfigStoreSync controller
+			ControllerDef{
+				Enabled: c.KonnectControllersEnabled,
+				Controller: &konnect.KonnectConfigStoreSyncReconciler{
+					ControllerOptions: ctrlOpts,
+					LoggingMode:       c.LoggingMode,
+					Client:            mgr.GetClient(),
+					SDKFactory:        sdkFactory,
+					SyncPeriod:        c.KonnectSyncPeriod,
 				},
 			},
 		)

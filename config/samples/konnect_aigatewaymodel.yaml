@@ -21,7 +21,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -46,7 +45,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -64,7 +62,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -92,7 +89,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -126,7 +122,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -183,7 +178,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -204,6 +198,16 @@ spec:
             - customtag
           paths:
             - /v1/chat/completions
+      # Access control: allow-list of AIGatewayConsumerGroup
+      # CRs (referenced by metadata.name), resolved to the referenced CR's
+      # Konnect name at reconcile time.
+      access:
+        acls:
+          type: allow
+          allow:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-model-consumer-group
       labels:
         app: test1
         env: test

@@ -11,6 +11,7 @@ import (
 	"github.com/samber/lo"
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/apimachinery/pkg/util/yaml"
+	sigsyaml "sigs.k8s.io/yaml"
 
 	"github.com/kong/kong-operator/v2/internal/webhook/conversion"
 )
@@ -137,6 +138,11 @@ func splitChartCRDs(crdContent string, templatesDir string) (string, []chartCRDF
 			return "", nil, err
 		}
 
+		document, err = stripCRDDescriptions(document)
+		if err != nil {
+			return "", nil, fmt.Errorf("failed to strip descriptions from CRD %q: %w", manifest.Metadata.Name, err)
+		}
+
 		document = wrapCertAnnotations(document)
 		document = wrapWebhookConfig(document)
 		document = wrapDeprecatedVersions(document)
@@ -206,6 +212,94 @@ func parseCustomResourceDefinitionManifest(document string) (customResourceDefin
 		return manifest, fmt.Errorf("decoded CRD %q has empty spec.names.kind", manifest.Metadata.Name)
 	}
 	return manifest, nil
+}
+
+// stripCRDDescriptions removes the "description" carried by every schema
+// node under spec.versions[].schema.openAPIV3Schema. The chart's copy of the
+// CRDs isn't where users read field docs (that's
+// `crd-ref-docs` against config/crd/kong-operator, which this never
+// touches); stripped here it's roughly a third of the size, which is what
+// keeps a `helm install` of the whole chart from tripping the 1MiB release
+// Secret limit.
+//
+// This walks the schema structurally (properties/items/additionalProperties/
+// allOf/oneOf/anyOf/not) rather than deleting any map's "description" key by
+// name: a CRD can perfectly legitimately have a field named "description"
+// (e.g. KonnectGatewayControlPlane's spec.description), which lives as a
+// *value* in a properties map, one level below the schema node whose own
+// doc string this strips. Blindly matching on the key name can't tell those
+// apart and deletes the field's entire schema, not just its doc string.
+func stripCRDDescriptions(document string) (string, error) {
+	var obj map[string]any
+	if err := sigsyaml.Unmarshal([]byte(document), &obj); err != nil {
+		return "", fmt.Errorf("failed to unmarshal CRD document: %w", err)
+	}
+
+	versions, ok := obj["spec"].(map[string]any)["versions"].([]any)
+	if !ok {
+		return "", fmt.Errorf("CRD document has no spec.versions")
+	}
+	for _, v := range versions {
+		version, ok := v.(map[string]any)
+		if !ok {
+			continue
+		}
+		schema, ok := version["schema"].(map[string]any)
+		if !ok {
+			continue
+		}
+		openAPIV3Schema, ok := schema["openAPIV3Schema"].(map[string]any)
+		if !ok {
+			continue
+		}
+		stripSchemaNodeDescriptions(openAPIV3Schema)
+	}
+
+	out, err := sigsyaml.Marshal(obj)
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal CRD document: %w", err)
+	}
+	return string(out), nil
+}
+
+// stripSchemaNodeDescriptions deletes node's own "description" (the schema
+// node's doc string), then recurses into node's *child schema nodes* -
+// properties map values, items, additionalProperties, and allOf/oneOf/anyOf/
+// not entries - never into a properties map itself, whose keys are field
+// names, not documentation.
+func stripSchemaNodeDescriptions(node map[string]any) {
+	if node == nil {
+		return
+	}
+	delete(node, "description")
+
+	if properties, ok := node["properties"].(map[string]any); ok {
+		for _, child := range properties {
+			if childNode, ok := child.(map[string]any); ok {
+				stripSchemaNodeDescriptions(childNode)
+			}
+		}
+	}
+	if items, ok := node["items"].(map[string]any); ok {
+		stripSchemaNodeDescriptions(items)
+	}
+	if additionalProperties, ok := node["additionalProperties"].(map[string]any); ok {
+		stripSchemaNodeDescriptions(additionalProperties)
+	}
+	for _, key := range []string{"allOf", "oneOf", "anyOf"} {
+		list, ok := node[key].([]any)
+		if !ok {
+			continue
+		}
+		for _, item := range list {
+			if childNode, ok := item.(map[string]any); ok {
+				stripSchemaNodeDescriptions(childNode)
+			}
+		}
+	}
+	if not, ok := node["not"].(map[string]any); ok {
+		stripSchemaNodeDescriptions(not)
+	}
 }
 
 func shouldKeepCRDInMainChartTemplate(kind string) bool {

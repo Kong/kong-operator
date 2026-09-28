@@ -1735,11 +1735,44 @@ type refTypeTemplateData struct {
 // GenerateReferencesFile emits the shared zz_generated_references.go content,
 // or "" when no entity declares references.
 func (g *Generator) GenerateReferencesFile() (string, error) {
+	// ObjectRefField references resolve a single *commonv1alpha1.ObjectRef
+	// field directly and need no generated <RefType> struct, so a ref struct
+	// is skipped only when every reference producing its TypeName is an
+	// ObjectRefField reference. (Config validation does not distinguish
+	// shapes: an array-shaped reference and an ObjectRefField reference may
+	// share a TypeName, and the array-shaped one still needs the struct.)
+	// The file is still emitted whenever any references exist: the shared
+	// error aliases and constants it carries are used by the generated
+	// sdkops resolvers.
+	objectRefFieldOnlyRefs := map[string]bool{}
+	if g.parsed != nil {
+		for entityName, refs := range g.config.References {
+			if len(refs) == 0 {
+				continue
+			}
+			for _, ref := range g.templateReferences(entityName) {
+				name := ref.TypeName()
+				if _, seen := objectRefFieldOnlyRefs[name]; !seen {
+					objectRefFieldOnlyRefs[name] = true
+				}
+				if !ref.ObjectRefField {
+					objectRefFieldOnlyRefs[name] = false
+				}
+			}
+		}
+	}
 	byName := map[string]refTypeTemplateData{}
 	names := []string{}
+	hasReferences := false
 	for _, refs := range g.config.References {
+		if len(refs) > 0 {
+			hasReferences = true
+		}
 		for _, ref := range refs {
 			name := ref.TypeName()
+			if objectRefFieldOnlyRefs[name] {
+				continue
+			}
 			if _, seen := byName[name]; seen {
 				continue // dedup; config validation guarantees identical declarations
 			}
@@ -1756,7 +1789,7 @@ func (g *Generator) GenerateReferencesFile() (string, error) {
 			}
 		}
 	}
-	if len(names) == 0 {
+	if !hasReferences {
 		return "", nil
 	}
 	sort.Strings(names) // deterministic output
@@ -2608,6 +2641,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		parentRef                *config.ParentRefConfig
 		parentRefGoFieldName     string
 		parentRefJSONName        string
+		parentRefCustomTypeName  string
 		setParentIDEntityName    string
 		parentStatusEntityName   string
 		emitParentRefStatusField bool
@@ -2616,6 +2650,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		parentRef = rc.ParentRef
 		parentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
 		parentRefJSONName = rc.ParentRef.FieldName
+		parentRefCustomTypeName = rc.ParentRef.TypeName
 		setParentIDEntityName = rc.ParentEntityKind()
 		parentStatusEntityName = parentRefStatusEntityName(rootParentDep, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootParentDep, rc)
@@ -2658,15 +2693,25 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 
 	// Determine whether we need the ObjectRef import: either for dependencies/refs,
 	// sensitive data source SecretRef type, configured inter-CR references, or
-	// a parentRef override field.
+	// a parentRef override field. Entities whose parent ref field uses a custom
+	// (hand-written) type don't reference commonv1alpha1 from the CRD type file
+	// through the parent ref, so the parentRef-driven import is skipped there.
+	// The same applies to the OAS-derived parent dependency import: its field
+	// emission is suppressed in favour of the custom-typed parent ref field.
+	// Raw OAS reference properties (unrelated to the parent) still emit
+	// commonv1alpha1.ObjectRef fields, so the import must be kept for those.
+	customParentRefType := parentRef != nil && parentRef.TypeName != ""
 	objectRefImport := g.objectRefImportIfNeeded(schema)
-	if objectRefImport == nil && g.hasSecretRefs(entityName) && g.objectRefImported() {
+	if customParentRefType && !schemaHasReferenceProperties(schema) {
+		objectRefImport = nil
+	}
+	if objectRefImport == nil && !customParentRefType && g.hasSecretRefs(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	if objectRefImport == nil && g.entityHasReferences(entityName) && g.objectRefImported() {
+	if objectRefImport == nil && !customParentRefType && g.entityHasReferences(entityName) && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
-	if objectRefImport == nil && parentRef != nil && g.objectRefImported() {
+	if objectRefImport == nil && parentRef != nil && !customParentRefType && g.objectRefImported() {
 		objectRefImport = g.config.CommonTypes.ObjectRef.Import
 	}
 
@@ -2710,11 +2755,38 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	// exclusive and emit the same spec field.
 	var typeXValidations []string
 	if fn := parentRefImmutableFieldName(parentRef, immediateParentDep); fn != "" {
+		// Entities whose parent reference may target an OnPremAIGateway (the
+		// custom AIGatewayRef type) are updated by the on-prem machinery via
+		// typed clients before any status is written, and the client's omitzero
+		// drops the status key entirely; the rule must tolerate a missing
+		// self.status. Entities with a plain ObjectRef keep the original rule
+		// so their released CRD schemas stay untouched.
+		statusGuard := ""
+		if parentRefCustomTypeName != "" {
+			statusGuard = "!has(self.status) || "
+		}
 		typeXValidations = []string{
 			fmt.Sprintf(
-				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
+				`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || `+statusGuard+`!has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.%s == self.spec.%s", message="spec.%s is immutable when an entity is already Programmed"`,
 				fn, fn, fn, fn,
 			)}
+	}
+	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
+	// must not point at the object itself: the reference can never resolve
+	// (the object is not programmed until the reference resolves). The CEL
+	// rule below covers the namespacedRef arm at admission time; the
+	// konnectID arm cannot be checked at admission (the object's own Konnect
+	// ID is only known after it is programmed), so the generated resolver
+	// rejects it instead (see SameTypeRef).
+	for _, ref := range g.templateReferences(entityName) {
+		if !ref.ObjectRefField || len(ref.Kinds) != 1 || ref.Kinds[0] != entityName {
+			continue
+		}
+		p := "self.spec.apiSpec." + ref.JSONFieldName
+		typeXValidations = append(typeXValidations, fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="!has(%s) || !has(%s.namespacedRef) || %s.namespacedRef.name != self.metadata.name", message="%s must not reference the %s itself"`,
+			p, p, p, ref.JSONFieldName, entityName,
+		))
 	}
 
 	var buf strings.Builder
@@ -2735,6 +2807,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRef                 *config.ParentRefConfig
 		ParentRefGoFieldName      string
 		ParentRefJSONFieldName    string
+		ParentRefCustomTypeName   string
 		SetParentIDEntityName     string
 		ParentStatusEntityName    string
 		EmitParentRefStatusField  bool
@@ -2759,6 +2832,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		ParentRef:                 parentRef,
 		ParentRefGoFieldName:      parentRefGoFieldName,
 		ParentRefJSONFieldName:    parentRefJSONName,
+		ParentRefCustomTypeName:   parentRefCustomTypeName,
 		SetParentIDEntityName:     setParentIDEntityName,
 		ParentStatusEntityName:    parentStatusEntityName,
 		EmitParentRefStatusField:  emitParentRefStatusField,
@@ -2897,15 +2971,17 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 	rootRefDependency := rootRefDependency(schema)
 
 	var (
-		funcsParentRef              *config.ParentRefConfig
-		funcsParentRefGoFieldName   string
-		funcsSetParentIDEntityName  string
-		funcsParentStatusEntityName string
-		emitParentRefStatusField    bool
+		funcsParentRef               *config.ParentRefConfig
+		funcsParentRefGoFieldName    string
+		funcsParentRefCustomTypeName string
+		funcsSetParentIDEntityName   string
+		funcsParentStatusEntityName  string
+		emitParentRefStatusField     bool
 	)
 	if rc != nil && rc.ParentRef != nil {
 		funcsParentRef = rc.ParentRef
 		funcsParentRefGoFieldName = goFieldName(rc.ParentRef.FieldName)
+		funcsParentRefCustomTypeName = rc.ParentRef.TypeName
 		funcsSetParentIDEntityName = rc.ParentEntityKind()
 		funcsParentStatusEntityName = parentRefStatusEntityName(rootRefDependency, rc)
 		emitParentRefStatusField = shouldEmitParentRefStatusField(rootRefDependency, rc)
@@ -3013,6 +3089,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ObjectRefTypeName                  string
 		ParentRef                          *config.ParentRefConfig
 		ParentRefGoFieldName               string
+		ParentRefCustomTypeName            string
 		SetParentIDEntityName              string
 		ParentStatusEntityName             string
 		EmitParentRefStatusField           bool
@@ -3054,6 +3131,7 @@ func (g *Generator) generateCRDFuncs(name string, schema *parser.Schema) (string
 		ObjectRefTypeName:        g.objectRefTypeName(),
 		ParentRef:                funcsParentRef,
 		ParentRefGoFieldName:     funcsParentRefGoFieldName,
+		ParentRefCustomTypeName:  funcsParentRefCustomTypeName,
 		SetParentIDEntityName:    funcsSetParentIDEntityName,
 		ParentStatusEntityName:   funcsParentStatusEntityName,
 		EmitParentRefStatusField: emitParentRefStatusField,
@@ -4334,6 +4412,11 @@ type GoPathSegment struct {
 	// UnionWrapper is true when this hop is a discriminated-union wrapper field
 	// (a property-level oneOf/anyOf, or the synthesized root-union config).
 	UnionWrapper bool
+	// Discriminated is true when a UnionWrapper hop's union declares a
+	// discriminator. Only discriminated unions are provably flattened by the
+	// generated flattenSDKUnions helper, so SDK payload injections may pass
+	// through them but not through non-discriminated anyOf wrappers.
+	Discriminated bool
 	// UnionTypeName is the generated Go type name for this discriminated-union
 	// wrapper. It is set when UnionWrapper is true.
 	UnionTypeName string
@@ -4355,6 +4438,18 @@ type GoPathSegment struct {
 	// whose OAS leaf is a $ref to a oneOf-by-id/by-name reference object. Such
 	// a leaf is ref-ified as a single *<RefType>, not a slice.
 	ObjectRefLeaf bool
+	// LeafArray is true when the final segment's OAS type is itself an array,
+	// i.e. the ref list lives inside each element of an enclosing non-leaf
+	// array (e.g. "tools.access.acls.allow": each tool carries its own allow
+	// list) rather than being one scalar ref per element.
+	LeafArray bool
+	// ObjectRefField is true when this is the final segment and it resolves to
+	// an OAS reference property (e.g. "parent_page_id", a string uuid marked
+	// IsReference by the parser) whose CRD field is a single
+	// *commonv1alpha1.ObjectRef ("parentPageIDRef") rather than a generated
+	// []<RefType> slice. The path's last segment names the CRD field
+	// ("parentPageIDRef"), not the OAS property.
+	ObjectRefField bool
 }
 
 // TemplateAssociationConfig is the per-association data used by crdTypeTemplate
@@ -4437,8 +4532,14 @@ type TemplateReferenceConfig struct {
 	// NestedArrayScalar is true when the reference path resolves to a scalar
 	// leaf inside a single non-leaf array of objects (e.g. "api.targets.provider").
 	// Such references need a ranging RefsAt accessor instead of the linear one
-	// (see ArrayGuardExprs/ArrayPath/ArrayLeafName/ArrayLeafPointer below).
+	// (see ArrayGuardExprs/ArrayPath/ArrayLeafPath/ArrayLeafPointer below).
 	NestedArrayScalar bool
+	// NestedArrayList is true when NestedArrayScalar is and the leaf's OAS
+	// type is itself an array, i.e. each element carries its own list of
+	// references (e.g. "tools.access.acls.allow"). The RefsAt accessor then
+	// returns one []<RefType> per element and the resolver one []string per
+	// element, and the injection writes each element's resolved list wholesale.
+	NestedArrayList bool
 	// ArrayGuardExprs are the Go expressions to nil-guard, in order, before
 	// ranging ArrayPath (one per pointer segment preceding and including the
 	// array). Only set when NestedArrayScalar is true.
@@ -4447,9 +4548,16 @@ type TemplateReferenceConfig struct {
 	// "obj.Spec.APISpec.AIGatewayModelConfig.API.Targets". Only set when
 	// NestedArrayScalar is true.
 	ArrayPath string
-	// ArrayLeafName is the Go field name of the scalar leaf on the array's
-	// element type, e.g. "Provider". Only set when NestedArrayScalar is true.
-	ArrayLeafName string
+	// ElementGuardExprs are the element-relative Go expressions to nil-guard
+	// (with a `continue`) inside the ArrayPath range loop, one per pointer
+	// hop between the array and the leaf, e.g. ["Access", "Access.Acls"] for
+	// "tools.access.acls.allow". Empty when the leaf sits directly on the
+	// element. Only set when NestedArrayScalar is true.
+	ElementGuardExprs []string
+	// ArrayLeafPath is the dot-joined Go field path of the scalar leaf
+	// relative to the array's element, e.g. "Provider" or "Access.Acls.Allow".
+	// Only set when NestedArrayScalar is true.
+	ArrayLeafPath string
 	// ArrayLeafPointer is true when the leaf field on the element type is a
 	// pointer (the leaf is optional). Only set when NestedArrayScalar is true.
 	ArrayLeafPointer bool
@@ -4472,6 +4580,30 @@ type TemplateReferenceConfig struct {
 	// resolver plumbing as an array-typed direct reference, and the SDK
 	// payload write unwraps the single resolved value back out of that slice.
 	DirectScalarRef bool
+	// ObjectRefField is true when the reference path targets an OAS reference
+	// property (a string uuid marked IsReference by the parser) whose CRD
+	// field is a single *commonv1alpha1.ObjectRef (e.g. "parentPageIDRef")
+	// rather than a generated []<RefType> slice. Such references resolve the
+	// single ObjectRef (konnectID passthrough or namespacedRef lookup) and
+	// inject the resolved value as a plain string into the SDK payload under
+	// the OAS property's snake_case key (e.g. "parent_page_id").
+	ObjectRefField bool
+	// SameTypeRef is true when an ObjectRefField reference's only kind is
+	// the entity itself (e.g. PortalPage's parentPageIDRef). The resolver
+	// rejects such references when they point at the referencing object
+	// itself, which can never resolve to a usable ID.
+	SameTypeRef bool
+	// SameParentRefField is the Go name of the spec field holding the
+	// entity's parent reference (e.g. "PortalRef"). It is set only for
+	// same-type ObjectRefField references (e.g. PortalPage's
+	// parentPageIDRef), where the resolver must reject references to objects
+	// whose parent differs from the referrer's because Konnect scopes child
+	// entities under their parent.
+	SameParentRefField string
+	// SameParentRefKind is the parent kind (e.g. "Portal") used in the
+	// ReferenceDifferentParentError message. Set together with
+	// SameParentRefField.
+	SameParentRefKind string
 }
 
 // templateReferences returns the references for an entity with computed Go field names.
@@ -4500,35 +4632,57 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 		nested := len(segments) > 1
 		refsExpr := "obj.Spec.APISpec." + goFieldNameStr
 		var goPathSegments []GoPathSegment
+		// The walk requires the parsed schema; failures here are validated
+		// against earlier by validateReferences, so any error at this point
+		// leaves GoPathSegments empty rather than aborting generation.
+		_, fieldJSONName, walkedPath, walkErr := g.refFieldTarget(entityName, ref)
 		if nested {
 			refsExpr = "RefsAt" + entityName + goResolverName + "(obj)"
-			// The walk requires the parsed schema; failures here are validated
-			// against earlier by validateReferences, so any error at this point
-			// leaves GoPathSegments empty rather than aborting generation.
-			if _, _, goPath, err := g.refFieldTarget(entityName, ref); err == nil {
-				goPathSegments = goPath
+			if walkErr == nil {
+				goPathSegments = walkedPath
 			}
+		}
+		// An ObjectRefField reference targets an OAS reference property whose
+		// CRD field is a single *commonv1alpha1.ObjectRef (e.g.
+		// "parentPageIDRef"). Its SDK payload key is the OAS property's
+		// snake_case name ("parent_page_id"), not the Ref-suffixed CRD key.
+		objectRefField := walkErr == nil && len(walkedPath) > 0 && walkedPath[len(walkedPath)-1].ObjectRefField
+		sdkJSONFieldName := sdkJSONKey(tail)
+		if objectRefField {
+			sdkJSONFieldName = sdkJSONKey(fieldJSONName)
+			// Derive the Go/JSON field names from the walked leaf (computed
+			// from the OAS property) rather than the path tail, so both the
+			// Ref-suffixed ("parentPageIDRef") and the plain OAS name
+			// ("parentPageID") path spellings generate correct code.
+			leaf := walkedPath[len(walkedPath)-1]
+			goFieldNameStr = leaf.Name
+			tail = leaf.JSONKey
+			refsExpr = "obj.Spec.APISpec." + goFieldNameStr
 		}
 		// A direct (non-nested) reference whose apiSpec field is itself a plain
 		// scalar (not the usual array-shaped body field, e.g. AIGatewaySNI's
 		// single "certificate" field) resolves to exactly one reference. Wrap
 		// it in a one-element slice literal so it flows through the same
 		// []<RefType> resolver plumbing as an array-typed direct reference.
+		// ObjectRefField references are scalar-shaped too but resolve through
+		// their own plumbing, so they're excluded here.
 		var directScalarRef bool
-		if !nested {
+		if !nested && !objectRefField {
 			if prop := findAPISpecProperty(g.parsed, entityName, tail); prop != nil && prop.Type != "array" {
 				directScalarRef = true
 				refsExpr = "[]" + ref.TypeName() + "{obj.Spec.APISpec." + goFieldNameStr + "}"
 			}
 		}
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
-		var arrayGuardExprs []string
-		var arrayPath, arrayLeafName string
+		var nestedArrayList bool
+		var arrayGuardExprs, elementGuardExprs []string
+		var arrayPath, arrayLeafPath string
 		var arrayLeafPointer bool
 		if nestedArrayScalar {
+			arrayIdx := arraySegmentIndex(goPathSegments)
 			var pathBuilder strings.Builder
 			pathBuilder.WriteString("obj.Spec.APISpec")
-			for _, seg := range goPathSegments[:len(goPathSegments)-1] {
+			for _, seg := range goPathSegments[:arrayIdx+1] {
 				pathBuilder.WriteByte('.')
 				pathBuilder.WriteString(seg.Name)
 				if seg.Pointer {
@@ -4536,9 +4690,20 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				}
 			}
 			arrayPath = pathBuilder.String()
-			leaf := goPathSegments[len(goPathSegments)-1]
-			arrayLeafName = leaf.Name
-			arrayLeafPointer = leaf.Pointer
+			leafSegs := goPathSegments[arrayIdx+1:]
+			var leafBuilder strings.Builder
+			for j, seg := range leafSegs {
+				if j > 0 {
+					leafBuilder.WriteByte('.')
+				}
+				leafBuilder.WriteString(seg.Name)
+				if seg.Pointer && j < len(leafSegs)-1 {
+					elementGuardExprs = append(elementGuardExprs, leafBuilder.String())
+				}
+			}
+			arrayLeafPath = leafBuilder.String()
+			arrayLeafPointer = leafSegs[len(leafSegs)-1].Pointer
+			nestedArrayList = leafSegs[len(leafSegs)-1].LeafArray
 		}
 		var singleValueObjectRef bool
 		var objectWrapKey string
@@ -4546,11 +4711,28 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			singleValueObjectRef = true
 			objectWrapKey = ref.ResolvesTo
 		}
+		// Same-type ObjectRefField references (e.g. PortalPage's
+		// parentPageIDRef) resolve to an ID embedded in a request scoped to
+		// the referrer's parent, so the resolver guards against referencing
+		// the object itself or an object under a different parent.
+		sameTypeRef := objectRefField && len(ref.Kinds) == 1 && ref.Kinds[0] == entityName
+		var sameParentRefField, sameParentRefKind string
+		if sameTypeRef {
+			if rc := g.config.ReconcilerConfig[entityName]; rc != nil && rc.ParentRef != nil {
+				sameParentRefField = goFieldName(rc.ParentRef.FieldName)
+				sameParentRefKind = rc.ParentEntityKind()
+			} else if schema := findEntitySchema(g.parsed, entityName); schema != nil {
+				if dep := rootRefDependency(schema); dep != nil {
+					sameParentRefField = dep.FieldName
+					sameParentRefKind = dep.EntityName
+				}
+			}
+		}
 		result[i] = TemplateReferenceConfig{
 			ReferenceConfig:      ref,
 			GoFieldName:          goFieldNameStr,
 			JSONFieldName:        tail,
-			SDKJSONFieldName:     sdkJSONKey(tail),
+			SDKJSONFieldName:     sdkJSONFieldName,
 			DefaultKind:          defaultKind,
 			GoResolverName:       goResolverName,
 			NestedRef:            nested,
@@ -4559,13 +4741,19 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			MultiKind:            len(ref.Kinds) > 1,
 			ResolvesToName:       ref.ResolvesTo == "name",
 			NestedArrayScalar:    nestedArrayScalar,
+			NestedArrayList:      nestedArrayList,
 			ArrayGuardExprs:      arrayGuardExprs,
 			ArrayPath:            arrayPath,
-			ArrayLeafName:        arrayLeafName,
+			ElementGuardExprs:    elementGuardExprs,
+			ArrayLeafPath:        arrayLeafPath,
 			ArrayLeafPointer:     arrayLeafPointer,
 			SingleValueObjectRef: singleValueObjectRef,
 			ObjectWrapKey:        objectWrapKey,
 			DirectScalarRef:      directScalarRef,
+			ObjectRefField:       objectRefField,
+			SameTypeRef:          sameTypeRef,
+			SameParentRefField:   sameParentRefField,
+			SameParentRefKind:    sameParentRefKind,
 		}
 	}
 	return result
@@ -4672,6 +4860,14 @@ type TemplateRefInjection struct {
 	// overwrites each element's own LeafSDKKey in place, rather than
 	// overwriting TargetVar's own key wholesale.
 	ArrayKey string
+	// ElementNavs are the navigation hops applied to each array element
+	// (after ranging ArrayKey) down to the parent map of the leaf key, for
+	// leaves reached through plain-object hops after the array (e.g.
+	// "tools.access.acls.allow": elements navigate "access" then "acls").
+	// Empty when the leaf sits directly on the element. Unlike ParentNavs,
+	// a missing key skips the element (no map is created), because a tool
+	// without its own ACL config must not be populated.
+	ElementNavs []TemplateRefParentNav
 	// ObjectWrap is true when the reference resolves to a single object-typed
 	// leaf (e.g. "schemaValidation.config.json.schemaRegistry"). The write
 	// wraps the single resolved value as {"<ObjectWrapKey>": value} instead of
@@ -4720,6 +4916,8 @@ func newRefInjectionUsedVars() map[string]bool {
 	return map[string]bool{
 		"payload": true, "data": true, "err": true,
 		"obj": true, "ctx": true, "cl": true, "spec": true,
+		// Locals emitted by the array-element injection template itself.
+		"arr": true, "e": true, "el": true, "ri": true, "ok": true,
 	}
 }
 
@@ -4769,19 +4967,21 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 			}
 		}
 	case isArrayElement:
-		writeIdx = len(segs) - 2
+		writeIdx = arraySegmentIndex(segs)
 	default:
 		writeIdx = len(segs) - 1
 	}
 	if !isACL && !isObjectRefLeaf {
-		// A property-level union (a JSON key of its own, e.g.
-		// "access.acls") is unwrapped nowhere else in the SDK payload
-		// builder, so a non-ACL reference passing through one would
-		// leave its CRD-side "type" wrapper and variant-key nesting
-		// untouched.
+		// A non-discriminated property-level union (a JSON key of its own)
+		// is not unwrapped by flattenSDKUnions, so a non-ACL reference
+		// passing through one would leave its CRD-side "type" wrapper and
+		// variant-key nesting untouched. Discriminated property-level unions
+		// (e.g. the MCP server access union) are safe: injections run on the
+		// pre-flatten payload where the union wrapper and variant keys still
+		// exist, and flattenSDKUnions collapses the union afterward.
 		for _, seg := range segs[:writeIdx] {
-			if seg.UnionWrapper && seg.JSONKey != "" {
-				return nil, fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+			if seg.UnionWrapper && seg.JSONKey != "" && !seg.Discriminated {
+				return nil, fmt.Errorf("reference path %q: nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef", ref.Path)
 			}
 		}
 	}
@@ -4870,6 +5070,23 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		reversed = append(reversed, v)
 	}
 
+	// Element navs for array-element references whose leaf sits behind
+	// plain-object hops on the element (e.g. tools[].access.acls.allow
+	// navigates "access" then "acls" within each element).
+	var elementNavs []TemplateRefParentNav
+	if isArrayElement && writeIdx < len(segs)-2 {
+		elParent := "el"
+		for _, seg := range segs[writeIdx+1 : len(segs)-1] {
+			navVar := uniqueLocalVar(goLocalVarFromKey(seg.JSONKey), usedVars)
+			elementNavs = append(elementNavs, TemplateRefParentNav{
+				Var:    navVar,
+				Key:    sdkJSONKey(seg.JSONKey),
+				Parent: elParent,
+			})
+			elParent = navVar
+		}
+	}
+
 	injection := TemplateRefInjection{
 		Path:               ref.Path,
 		Cond:               strings.Join(conds, " && "),
@@ -4878,6 +5095,7 @@ func appendRefInjection(ref TemplateReferenceConfig, usedVars map[string]bool, g
 		ParentNavsReversed: reversed,
 		Variants:           []TemplateRefVariant{variant},
 		ArrayKey:           arrayKey,
+		ElementNavs:        elementNavs,
 	}
 	if isACL {
 		pathParts := strings.Split(ref.Path, ".")
@@ -4901,21 +5119,31 @@ func isSupportedAIGatewayACLRefPath(path string) bool {
 }
 
 // isNestedArrayScalar reports whether goPath resolves a scalar leaf sitting
-// directly inside exactly one non-leaf array of objects (e.g.
-// "api.targets.provider": ..., Array(targets), leaf(provider)). Any prefix of
-// object/union hops before the array is fine — they are already handled
-// generically by the pointer nil-guards in the generated accessor.
+// inside exactly one non-leaf array of objects (e.g. "api.targets.provider":
+// ..., Array(targets), leaf(provider)), either directly on the element or
+// through plain-object hops after it (e.g. "tools.access.acls.allow": ...,
+// Array(tools), access, acls, leaf(allow)). Any prefix of object/union hops
+// before the array is fine — they are already handled generically by the
+// pointer nil-guards in the generated accessor. validateReferences rejects
+// union hops between the array and the leaf.
 func isNestedArrayScalar(goPath []GoPathSegment) bool {
-	if len(goPath) < 2 {
-		return false
-	}
-	arrayCount := 0
-	for _, seg := range goPath {
+	arrayIdx := arraySegmentIndex(goPath)
+	return arrayIdx >= 0 && arrayIdx < len(goPath)-1
+}
+
+// arraySegmentIndex returns the index of the single descended non-leaf array
+// segment in goPath, or -1 if there is none or more than one.
+func arraySegmentIndex(goPath []GoPathSegment) int {
+	arrayIdx := -1
+	for i, seg := range goPath {
 		if seg.Array {
-			arrayCount++
+			if arrayIdx >= 0 {
+				return -1
+			}
+			arrayIdx = i
 		}
 	}
-	return arrayCount == 1 && goPath[len(goPath)-2].Array
+	return arrayIdx
 }
 
 // goLocalVarFromKey derives a Go local-variable name from a payload key, e.g.
@@ -5029,6 +5257,19 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 			if err != nil {
 				return err
 			}
+			if len(goPath) > 0 && goPath[len(goPath)-1].ObjectRefField {
+				// An ObjectRefField reference targets a single
+				// *commonv1alpha1.ObjectRef field. ObjectRef carries no Kind
+				// discriminator, so multi-kind references cannot be expressed;
+				// and the resolution/injection machinery only supports the
+				// top-level apiSpec shape.
+				if len(goPath) > 1 {
+					return fmt.Errorf("reference path %q: ObjectRef reference fields are only supported at the top level of spec.apiSpec", ref.Path)
+				}
+				if len(ref.Kinds) != 1 {
+					return fmt.Errorf("reference path %q: ObjectRef reference fields support exactly one kind, got %d", ref.Path, len(ref.Kinds))
+				}
+			}
 			if len(goPath) > 1 {
 				// Nested AIGatewayACLRef references reconstruct a discriminated
 				// "access.acls" sub-value (rather than overwriting a single key), so
@@ -5045,14 +5286,33 @@ func (g *Generator) validateReferences(parsed *parser.ParsedSpec) error {
 				// (see zz_generated_common_types.go) already collapses any number of
 				// ancestor type/value union wrappers generically, so no reconstruction
 				// is needed regardless of how many unions the path passes through.
+				// A DISCRIMINATED property-level union (e.g. the MCP server access
+				// union's consumer/oauthAccessToken arms) is exempt for the same
+				// reason: reference injections run on the pre-flatten payload where
+				// the union wrapper and variant keys still exist, and flattenSDKUnions
+				// collapses the union afterward. Non-discriminated anyOf wrappers are
+				// not flattened by that helper, so they stay rejected.
 				if ref.TypeName() == "AIGatewayACLRef" {
 					if !isSupportedAIGatewayACLRefPath(ref.Path) {
 						return fmt.Errorf("reference path %q: AIGatewayACLRef references only support paths ending in access.acls.allow.allow or access.acls.deny.deny", ref.Path)
 					}
 				} else if !goPath[len(goPath)-1].ObjectRefLeaf {
 					for _, seg := range goPath[:len(goPath)-1] {
-						if seg.UnionWrapper && seg.JSONKey != "" {
-							return fmt.Errorf("reference path %q: nested references through a property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						if seg.UnionWrapper && seg.JSONKey != "" && !seg.Discriminated {
+							return fmt.Errorf("reference path %q: nested references through a non-discriminated property-level union must use refTypeName AIGatewayACLRef", ref.Path)
+						}
+					}
+				}
+				// A nested array-scalar reference (scalar leaf reached through a
+				// non-leaf array of objects) only supports plain-object hops
+				// between the array and the leaf: a union hop inside the array
+				// elements is neither navigable in the SDK payload (which arm is
+				// selected varies per element) nor needed by any entity today.
+				if isNestedArrayScalar(goPath) {
+					arrayIdx := arraySegmentIndex(goPath)
+					for _, seg := range goPath[arrayIdx+1 : len(goPath)-1] {
+						if seg.UnionWrapper || seg.UnionVariant {
+							return fmt.Errorf("reference path %q: nested array references only support plain-object hops between the array and the leaf", ref.Path)
 						}
 					}
 				}
@@ -5250,7 +5510,11 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 
 		var prop *parser.Property
 		for _, p := range schema.Properties {
-			if jsonName(p.Name) == seg || p.Name == seg {
+			// Reference properties (IsReference) are rendered as a
+			// *commonv1alpha1.ObjectRef field whose JSON tag carries a "Ref"
+			// suffix (see jsonTagForProperty), so a path segment naming the CRD
+			// field (e.g. "parentPageIDRef") matches them too.
+			if jsonName(p.Name) == seg || p.Name == seg || (p.IsReference && jsonTagForProperty(p) == seg) {
 				prop = p
 				break
 			}
@@ -5274,14 +5538,23 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 			// (e.g. a nested config object with no reference semantics of its
 			// own) still isn't mistaken for a reference target.
 			directScalarLeaf := len(segments) == 1 && prop.Type == "string" && !objectRefLeaf
-			if prop.Type != "array" && !sawArray && !objectRefLeaf && !directScalarLeaf {
+			// An OAS reference property (string uuid marked IsReference) is a
+			// valid scalar leaf: its CRD field is a single *ObjectRef.
+			objectRefField := prop.IsReference && prop.Type != "array"
+			if prop.Type != "array" && !sawArray && !objectRefLeaf && !objectRefField && !directScalarLeaf {
 				return "", "", nil, fmt.Errorf("reference path %q must be an array property, got %q", ref.Path, prop.Type)
 			}
 			// A scalar leaf inside a non-leaf array (sawArray), or a single
 			// object-ref leaf, is a pointer when the leaf field itself is
-			// optional (an array-typed leaf is never a pointer).
-			leafPointer := prop.Type != "array" && (!prop.Required || prop.Nullable)
-			goPathSegments = append(goPathSegments, GoPathSegment{Name: goFieldName(prop.Name), Pointer: leafPointer, JSONKey: jsonName(prop.Name), ObjectRefLeaf: objectRefLeaf})
+			// optional (an array-typed leaf is never a pointer). An ObjectRef
+			// field is always rendered as a pointer.
+			leafPointer := objectRefField || (prop.Type != "array" && (!prop.Required || prop.Nullable))
+			leafName, leafJSONKey := goFieldName(prop.Name), jsonName(prop.Name)
+			if objectRefField {
+				leafName += "Ref"
+				leafJSONKey += "Ref"
+			}
+			goPathSegments = append(goPathSegments, GoPathSegment{Name: leafName, Pointer: leafPointer, JSONKey: leafJSONKey, ObjectRefLeaf: objectRefLeaf, LeafArray: prop.Type == "array", ObjectRefField: objectRefField})
 			return typeName, jsonName(prop.Name), goPathSegments, nil
 		}
 
@@ -5294,6 +5567,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 				Pointer:       true,
 				JSONKey:       jsonName(prop.Name),
 				UnionWrapper:  true,
+				Discriminated: prop.Discriminator != "",
 				UnionTypeName: generatedUnionTypeName(prop, typeName),
 			})
 			union = prop
@@ -5315,6 +5589,7 @@ func (g *Generator) refFieldTarget(entityName string, ref config.ReferenceConfig
 				Pointer:       true,
 				JSONKey:       jsonName(prop.Name),
 				UnionWrapper:  true,
+				Discriminated: u.Discriminator != "",
 				UnionTypeName: u.Name,
 			})
 			union = u
@@ -5529,6 +5804,18 @@ func schemaUsesObjectRef(schema *parser.Schema) bool {
 	if len(schema.Dependencies) > 0 {
 		return true
 	}
+	for _, prop := range schema.Properties {
+		if !skipProperty(prop) && prop.IsReference {
+			return true
+		}
+	}
+	return false
+}
+
+// schemaHasReferenceProperties returns true if the schema has reference
+// properties (as opposed to dependencies) that generate ObjectRef fields even
+// when the parent ref field uses a custom type.
+func schemaHasReferenceProperties(schema *parser.Schema) bool {
 	for _, prop := range schema.Properties {
 		if !skipProperty(prop) && prop.IsReference {
 			return true
@@ -5786,6 +6073,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
+	imports, objectRefTypePrefix := g.addObjectRefImportIfNeeded(imports, references)
 
 	secretReferences := g.templateSecretReferences(entityName)
 	data := struct {
@@ -5806,6 +6094,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasParentRefReplacement  bool
 		ParentRefReplacesField   string
 		ParentStatusEntityName   string
+		ObjectRefTypePrefix      string
 	}{
 		APIVersion:               g.config.APIVersion,
 		EntityName:               entityName,
@@ -5824,6 +6113,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 		HasParentRefReplacement:  hasParentRefReplacement,
 		ParentRefReplacesField:   parentRefReplacesField,
 		ParentStatusEntityName:   parentStatusEntityName,
+		ObjectRefTypePrefix:      objectRefTypePrefix,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -6089,6 +6379,7 @@ func (g *Generator) generateRootUnionSDKOps(
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
 	}
+	imports, objectRefTypePrefix := g.addObjectRefImportIfNeeded(imports, references)
 
 	tmpl := template.Must(template.New("sdkops-root-union").Parse(sdkOpsRootUnionTemplate))
 	var buf strings.Builder
@@ -6110,6 +6401,7 @@ func (g *Generator) generateRootUnionSDKOps(
 		References               []TemplateReferenceConfig
 		NeedsCrossNamespaceCheck bool
 		RefInjections            []TemplateRefInjection
+		ObjectRefTypePrefix      string
 	}{
 		APIVersion:               g.config.APIVersion,
 		EntityName:               entityName,
@@ -6127,11 +6419,44 @@ func (g *Generator) generateRootUnionSDKOps(
 		References:               references,
 		NeedsCrossNamespaceCheck: referencesNeedCrossNamespaceCheck(references),
 		RefInjections:            injections,
+		ObjectRefTypePrefix:      objectRefTypePrefix,
 	}
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return "", err
 	}
 	return buf.String(), nil
+}
+
+// addObjectRefImportIfNeeded appends the configured common ObjectRef import to
+// the sdkops import list when any reference is an ObjectRefField (whose
+// resolver switches on commonv1alpha1.ObjectRefType* constants), and returns
+// the qualifier prefix (e.g. "commonv1alpha1.") for those constants. When the
+// ObjectRef type is not imported (generated into the same package), the prefix
+// is empty and no import is added.
+func (g *Generator) addObjectRefImportIfNeeded(imports []*sdkOpsImport, references []TemplateReferenceConfig) ([]*sdkOpsImport, string) {
+	hasObjectRefField := false
+	for _, ref := range references {
+		if ref.ObjectRefField {
+			hasObjectRefField = true
+			break
+		}
+	}
+	if !hasObjectRefField || !g.objectRefImported() {
+		return imports, ""
+	}
+	imp := g.config.CommonTypes.ObjectRef.Import
+	found := false
+	for _, existing := range imports {
+		if existing.Path == imp.Path {
+			found = true
+			break
+		}
+	}
+	if !found {
+		imports = append(imports, &sdkOpsImport{Alias: imp.Alias, Path: imp.Path})
+		sort.Slice(imports, func(i, j int) bool { return imports[i].Path < imports[j].Path })
+	}
+	return imports, g.importedTypePrefix()
 }
 
 // generateSDKOpsTest generates a test file for the SDK ops conversion methods.

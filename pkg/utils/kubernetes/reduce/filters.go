@@ -12,6 +12,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha1 "github.com/kong/kong-operator/v2/api/konnect/v1alpha1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
@@ -269,6 +270,32 @@ func filterDataPlanes(dataplanes []operatorv1beta1.DataPlane) []operatorv1beta1.
 	}
 
 	return append(dataplanes[:best], dataplanes[best+1:]...)
+}
+
+// -----------------------------------------------------------------------------
+// Filter functions - ControlPlanes
+// -----------------------------------------------------------------------------
+
+// filterControlPlanes filters out the ControlPlane to be kept and returns all the ControlPlanes
+// to be deleted. The oldest ControlPlane is kept. When multiple ControlPlanes share the
+// oldest creation timestamp (it has a 1 second granularity), the one with the
+// lexicographically smallest name is kept, so that the choice is deterministic
+// regardless of the order in which the ControlPlanes are listed.
+func filterControlPlanes(controlplanes []operatorv2beta1.ControlPlane) []operatorv2beta1.ControlPlane {
+	if len(controlplanes) < 2 {
+		return []operatorv2beta1.ControlPlane{}
+	}
+
+	best := 0
+	for i, controlplane := range controlplanes {
+		bestCreationTimestamp := controlplanes[best].CreationTimestamp
+		if controlplane.CreationTimestamp.Before(&bestCreationTimestamp) ||
+			(controlplane.CreationTimestamp.Equal(&bestCreationTimestamp) && controlplane.Name < controlplanes[best].Name) {
+			best = i
+		}
+	}
+
+	return append(controlplanes[:best], controlplanes[best+1:]...)
 }
 
 // -----------------------------------------------------------------------------

@@ -86,7 +86,14 @@ Prefer the simplest option that the target API supports:
 When `ops.getForUID` is needed, the available knobs are:
 
 - `matchFields`: field-by-field equality checks between the Kubernetes object
-  and the SDK response item.
+  and the SDK response item. A field can set `skipWhenUnset: true` to be
+  compared only when the object-side value is non-empty; use it for optional
+  spec fields that Konnect may populate server-side, where requiring exact
+  equality would make conflict recovery fail for specs that legitimately leave
+  the field unset. It is only supported for plain string-like fields. When every
+  match field in a set is `skipWhenUnset`, generated code reports not-found up
+  front for an object that sets none of them, rather than comparing nothing and
+  adopting an arbitrary list entry.
 - `listItemsSource: slice`: use this when the SDK list response is a bare slice
   (`resp.<field>`) instead of the usual paginated `resp.<field>.Data` shape.
 - `rootUnion`: use this when the match depends on which root-union variant is

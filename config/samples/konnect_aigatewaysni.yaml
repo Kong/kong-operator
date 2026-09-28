@@ -49,7 +49,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:
@@ -73,7 +72,6 @@ metadata:
   namespace: default
 spec:
   aiGatewayRef:
-    type: namespacedRef
     namespacedRef:
       name: ai-gw-cp-1
   apiSpec:

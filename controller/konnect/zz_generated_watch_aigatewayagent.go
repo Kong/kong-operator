@@ -6,8 +6,10 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
@@ -23,7 +25,21 @@ func AIGatewayAgentReconciliationWatchOptions(
 ) []func(*ctrl.Builder) *ctrl.Builder {
 	return []func(*ctrl.Builder) *ctrl.Builder{
 		func(b *ctrl.Builder) *ctrl.Builder {
-			return b.For(&aiconfigurationv1alpha1.AIGatewayAgent{})
+			// Entities whose AIGatewayRef targets an OnPremAIGateway are owned
+			// by the on-prem machinery and must never be enqueued into the
+			// Konnect reconciler.
+			return b.For(
+				&aiconfigurationv1alpha1.AIGatewayAgent{},
+				builder.WithPredicates(
+					predicate.NewPredicateFuncs(func(object client.Object) bool {
+						ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayAgent)
+						if !ok {
+							return true
+						}
+						return !ent.SkipKonnectReconciliation()
+					}),
+				),
+			)
 		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(

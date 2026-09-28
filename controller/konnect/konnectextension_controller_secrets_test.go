@@ -14,6 +14,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
+	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -491,4 +492,108 @@ func assertExtensionDeleted(t *testing.T, cl client.Client, ext *konnectv1alpha2
 	var got konnectv1alpha2.KonnectExtension
 	err := cl.Get(t.Context(), client.ObjectKeyFromObject(ext), &got)
 	assert.True(t, apierrors.IsNotFound(err), "expected %s deletion, got %v", ext.Name, err)
+}
+
+// TestKonnectExtensionFinalizerPrecedesSecretFinalizers verifies the invariant that
+// protects against orphaned certificate Secrets in Terminating namespaces: by the time
+// the extension's reconcile stamps any cleanup finalizer on the certificate Secret, the
+// extension itself must already carry the konnect-cleanup finalizer. Only the extension's
+// own reconcile can release the Secret's finalizers, so an extension that could be
+// garbage-collected before acquiring its own finalizer would leave the Secret (and hence
+// the whole namespace) permanently stuck in Terminating.
+func TestKonnectExtensionFinalizerPrecedesSecretFinalizers(t *testing.T) {
+	const (
+		namespace = "default"
+		extName   = "extension"
+	)
+
+	secret := &corev1.Secret{
+		Name:      "certificate",
+		Namespace: namespace,
+		Labels:    map[string]string{SecretKonnectDataPlaneCertificateLabel: "true"},
+		Data:      map[string][]byte{consts.TLSCRT: []byte("certificate")},
+	}
+	ext := &konnectv1alpha2.KonnectExtension{
+		Name: extName, Namespace: namespace, UID: types.UID(extName),
+		Spec: konnectv1alpha2.KonnectExtensionSpec{
+			ClientAuth: &konnectv1alpha2.KonnectExtensionClientAuth{
+				CertificateSecret: konnectv1alpha2.CertificateSecret{
+					Provisioning:         new(konnectv1alpha2.ManualSecretProvisioning),
+					CertificateSecretRef: &konnectv1alpha2.SecretRef{Name: secret.Name},
+				},
+			},
+			Konnect: konnectv1alpha2.KonnectExtensionKonnectSpec{
+				ControlPlane: konnectv1alpha2.KonnectExtensionControlPlane{
+					Ref: commonv1alpha1.KonnectExtensionControlPlaneRef{
+						Type: commonv1alpha1.ControlPlaneRefKonnectNamespacedRef,
+						KonnectNamespacedRef: &commonv1alpha1.KonnectNamespacedRef{
+							Name: "control-plane",
+						},
+					},
+				},
+			},
+		},
+	}
+	cl := fake.NewClientBuilder().WithScheme(scheme.Get()).
+		WithObjects(
+			secret,
+			ext,
+			&konnectv1alpha2.KonnectGatewayControlPlane{
+				Name: "control-plane", Namespace: namespace,
+				Spec: konnectv1alpha2.KonnectGatewayControlPlaneSpec{
+					KonnectConfiguration: konnectv1alpha2.ControlPlaneKonnectConfiguration{
+						APIAuthConfigurationRef: konnectv1alpha2.ControlPlaneKonnectAPIAuthConfigurationRef{Name: "auth"},
+					},
+				},
+				Status: konnectv1alpha2.KonnectGatewayControlPlaneStatus{
+					KonnectEntityStatus: konnectv1alpha2.KonnectEntityStatus{ID: "control-plane-id"},
+					Conditions:          []metav1.Condition{{Type: konnectv1alpha1.KonnectEntityProgrammedConditionType, Status: metav1.ConditionTrue}},
+				},
+			},
+			&konnectv1alpha1.KonnectAPIAuthConfiguration{
+				Name: "auth", Namespace: namespace,
+				Status: konnectv1alpha1.KonnectAPIAuthConfigurationStatus{
+					Conditions: []metav1.Condition{{
+						Type:   konnectv1alpha1.KonnectEntityAPIAuthConfigurationValidConditionType,
+						Status: metav1.ConditionTrue,
+						Reason: konnectv1alpha1.KonnectEntityAPIAuthConfigurationReasonValid,
+					}},
+				},
+			},
+		).
+		WithStatusSubresource(ext).
+		WithIndex(&operatorv1beta1.DataPlane{}, index.KonnectExtensionIndex, func(client.Object) []string { return nil }).
+		WithIndex(&gwtypes.ControlPlane{}, index.KonnectExtensionIndex, func(client.Object) []string { return nil }).
+		WithIndex(&configurationv1alpha1.KongDataPlaneClientCertificate{}, index.IndexFieldKongDataPlaneClientCertificateOnKonnectExtensionOwner,
+			func(obj client.Object) []string {
+				var names []string
+				for _, owner := range obj.GetOwnerReferences() {
+					names = append(names, owner.Name)
+				}
+				return names
+			}).Build()
+	r := &KonnectExtensionReconciler{Client: cl, apiReader: cl}
+
+	extNN := client.ObjectKeyFromObject(ext)
+	secretNN := client.ObjectKeyFromObject(secret)
+	for range 16 {
+		var current konnectv1alpha2.KonnectExtension
+		require.NoError(t, r.Get(t.Context(), extNN, &current))
+		_, err := r.Reconcile(t.Context(), &current)
+		require.NoError(t, err)
+
+		var gotExt konnectv1alpha2.KonnectExtension
+		require.NoError(t, r.Get(t.Context(), extNN, &gotExt))
+
+		var gotSecret corev1.Secret
+		require.NoError(t, r.Get(t.Context(), secretNN, &gotSecret))
+		if controllerutil.ContainsFinalizer(&gotSecret, consts.KonnectExtensionSecretInUseFinalizer) ||
+			controllerutil.ContainsFinalizer(&gotSecret, KonnectCleanupFinalizer) {
+			require.Contains(t, gotExt.Finalizers, KonnectCleanupFinalizer,
+				"the certificate Secret gained a cleanup finalizer while the KonnectExtension had none: "+
+					"deleting the extension now would orphan the Secret in a Terminating namespace")
+			return
+		}
+	}
+	t.Fatal("the certificate Secret never gained a cleanup finalizer")
 }

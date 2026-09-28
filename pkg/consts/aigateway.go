@@ -33,6 +33,12 @@ const (
 	// SecretAIGatewayDataPlaneCertificateLabel marks a Secret as the mTLS certificate for an AI Gateway DataPlane.
 	SecretAIGatewayDataPlaneCertificateLabel = "konghq.com/aigw-dp-cert" //nolint:gosec
 
+	// SecretAIGatewayDataPlaneAdminCertificateLabel marks a Secret as the Admin API
+	// TLS server certificate for an AI Gateway DataPlane. Distinct from
+	// SecretAIGatewayDataPlaneCertificateLabel so the two Secrets never collide in
+	// the owner-scoped Secret listings performed during provisioning.
+	SecretAIGatewayDataPlaneAdminCertificateLabel = "konghq.com/aigw-dp-admin-cert" //nolint:gosec
+
 	// AIGatewayDataPlaneCertificateChecksumAnnotation records a checksum of the mTLS
 	// certificate Secret's tls.crt/tls.key content on the Pod template, so that an
 	// in-place edit to a manually-referenced Secret (whose name does not change)
@@ -55,7 +61,7 @@ const (
 	// DefaultAIGatewayDataPlaneBaseImage is the base image name for the AI Gateway container.
 	DefaultAIGatewayDataPlaneBaseImage = "kong/kong-ai-gateway"
 	// DefaultAIGatewayDataPlaneTag is the default image tag for the AI Gateway container.
-	DefaultAIGatewayDataPlaneTag = "2.0.3" // renovate: datasource=docker depName=kong/kong-ai-gateway
+	DefaultAIGatewayDataPlaneTag = "2.1.0" // renovate: datasource=docker depName=kong/kong-ai-gateway
 	// DefaultAIGatewayDataPlaneImage is the full default image reference for the AI Gateway container.
 	DefaultAIGatewayDataPlaneImage = DefaultAIGatewayDataPlaneBaseImage + ":" + DefaultAIGatewayDataPlaneTag
 )

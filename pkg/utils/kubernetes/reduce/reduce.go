@@ -15,6 +15,7 @@ import (
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
 	operatorv1beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v1beta1"
+	operatorv2beta1 "github.com/kong/kong-operator/v2/api/gateway-operator/v2beta1"
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	"github.com/kong/kong-operator/v2/controller/konnect/constraints"
 	"github.com/kong/kong-operator/v2/pkg/clientops"
@@ -148,6 +149,14 @@ func ReducePodDisruptionBudgets(ctx context.Context, k8sClient client.Client, pd
 func ReduceDataPlanes(ctx context.Context, k8sClient client.Client, dataplanes []operatorv1beta1.DataPlane) error {
 	filteredDataPlanes := filterDataPlanes(dataplanes)
 	return clientops.DeleteAll(ctx, k8sClient, filteredDataPlanes)
+}
+
+// +kubebuilder:rbac:groups=gateway-operator.konghq.com,resources=controlplanes,verbs=delete
+
+// ReduceControlPlanes detects the best ControlPlane in the set and deletes all the others.
+func ReduceControlPlanes(ctx context.Context, k8sClient client.Client, controlplanes []operatorv2beta1.ControlPlane) error {
+	filteredControlPlanes := filterControlPlanes(controlplanes)
+	return clientops.DeleteAll(ctx, k8sClient, filteredControlPlanes)
 }
 
 // +kubebuilder:rbac:groups=configuration.konghq.com,resources=kongpluginbindings,verbs=delete

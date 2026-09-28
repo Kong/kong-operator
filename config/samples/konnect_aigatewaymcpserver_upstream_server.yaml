@@ -1,0 +1,66 @@
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayConsumerGroup
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: mcp-dev-users
+    displayName: MCP Dev Users Group
+---
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-upstream-server
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: upstream-server
+    upstream-server:
+      name: flights-mcp-server-upstream-server
+      displayName: KongAir Flights MCP Server (upstream-server)
+      enabled: Enabled
+      config:
+        url: https://flights-mcp.kongair.example
+        route:
+          paths:
+          - /mcp/flights
+        # Refresh the cached tools list every 5 minutes; set to 0 to refresh
+        # on every client call.
+        toolsCacheTtlSeconds: 300
+      # Tool entries override the metadata of tools discovered on the remote
+      # MCP server. The per-tool consumer group ACLs reference
+      # AIGatewayConsumerGroup CRs (by metadata.name); the operator resolves
+      # each reference to the referenced CR's Konnect name at reconcile time.
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          access:
+            acls:
+              allow:
+                - kind: AIGatewayConsumerGroup
+                  name: ai-gw-mcp-consumer-group
+      labels:
+        domain: flights

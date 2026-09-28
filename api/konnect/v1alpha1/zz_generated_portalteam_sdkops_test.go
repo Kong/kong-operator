@@ -13,6 +13,7 @@ func TestPortalTeamAPISpec_ToPortalCreateTeamRequest(t *testing.T) {
 	spec := &PortalTeamAPISpec{
 		CanOwnApplications: "Enabled",
 		Description:        "test-value",
+		KonnectManaged:     "Enabled",
 		Name:               "test-value",
 	}
 	result, err := spec.ToPortalCreateTeamRequest()
@@ -27,6 +28,7 @@ func TestPortalTeamAPISpec_ToPortalCreateTeamRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, payload["can_own_applications"])
 	require.Equal(t, "test-value", payload["description"])
+	require.Equal(t, true, payload["konnect_managed"])
 	require.Equal(t, "test-value", payload["name"])
 }
 
@@ -34,6 +36,7 @@ func TestPortalTeamAPISpec_ToPortalUpdateTeamRequest(t *testing.T) {
 	spec := &PortalTeamAPISpec{
 		CanOwnApplications: "Enabled",
 		Description:        "test-value",
+		KonnectManaged:     "Enabled",
 		Name:               "test-value",
 	}
 	result, err := spec.ToPortalUpdateTeamRequest()
@@ -48,5 +51,6 @@ func TestPortalTeamAPISpec_ToPortalUpdateTeamRequest(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, true, payload["can_own_applications"])
 	require.Equal(t, "test-value", payload["description"])
+	require.Equal(t, true, payload["konnect_managed"])
 	require.Equal(t, "test-value", payload["name"])
 }

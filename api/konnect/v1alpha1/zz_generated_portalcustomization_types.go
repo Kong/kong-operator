@@ -176,22 +176,6 @@ type SpecRenderer struct {
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
 	TryItUi string `json:"tryItUi,omitzero"`
-	// The audience for the Try It UI feature.
-	//
-	// `all` means that the Try It UI will be available to all users, including
-	// unauthenticated users.
-	//
-	// `authenticated` means that the Try It UI will only be available to
-	// authenticated users.
-	//
-	// `registered` means that the Try It UI will only be available to users who
-	// have registered for the API.
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:MaxLength=253
-	// +kubebuilder:validation:Enum=all;authenticated;registered
-	TryItUiAudience string `json:"tryItUiAudience,omitzero"`
 }
 
 // Theme is a type alias.

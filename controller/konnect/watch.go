@@ -124,6 +124,11 @@ func objHasControlPlaneRef[
 }
 
 // objectListToReconcileRequests converts a list of objects to a list of reconcile requests.
+//
+// Entities whose parent reference resolves to a parent the Konnect reconciler
+// does not manage (an AIGatewayRef targeting an OnPremAIGateway, owned by the
+// on-prem machinery) are never enqueued: the watch criteria of the individual
+// types must keep them out of the Konnect reconciler's work queue.
 func objectListToReconcileRequests[
 	T any,
 	TPtr constraints.EntityTypeObject[T],
@@ -139,6 +144,9 @@ func objectListToReconcileRequests[
 itemLoop:
 	for _, item := range items {
 		var e TPtr = &item
+		if skipper, ok := any(e).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+			continue itemLoop
+		}
 		for _, filter := range filters {
 			if filter != nil && !filter(e) {
 				continue itemLoop
@@ -425,6 +433,12 @@ func enqueueObjectsForKongReferenceGrant[
 
 				ksPtr := TT(&ks)
 
+				// Skip entities owned by the on-prem machinery (see
+				// objectListToReconcileRequests).
+				if skipper, ok := any(ksPtr).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+					continue
+				}
+
 				ret = append(ret, reconcile.Request{
 					Namespace: ksPtr.GetNamespace(),
 					Name:      ksPtr.GetName(),
@@ -514,6 +528,13 @@ func enqueueObjectsForSecretRef[
 		items := lPtr.GetItems()
 		for i := range items {
 			itemPtr := TT(&items[i])
+
+			// Skip entities owned by the on-prem machinery (see
+			// objectListToReconcileRequests).
+			if skipper, ok := any(itemPtr).(konnectReconciliationSkipper); ok && skipper.SkipKonnectReconciliation() {
+				continue
+			}
+
 			refs, ok := secretRefsForSensitiveData(any(itemPtr))
 			if !ok {
 				continue

@@ -96,10 +96,10 @@ type {{.EntityName}}Spec struct {
 	Mirror *konnectv1alpha2.MirrorSpec ` + "`" + `json:"mirror,omitempty"` + "`" + `
 {{- end}}
 {{- if .ParentRef}}
-	// {{.ParentRefGoFieldName}} is the reference to the parent {{.SetParentIDEntityName}} object.
+	// {{.ParentRefGoFieldName}} is the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}} object.
 	//
 	// +required
-	{{.ParentRefGoFieldName}} {{objectRefTypeName}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
+	{{.ParentRefGoFieldName}} {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{objectRefTypeName}}{{end}} ` + "`" + `json:"{{.ParentRefJSONFieldName}},omitzero"` + "`" + `
 {{- else}}
 {{- with .ImmediateParentDependency}}
 	// {{.FieldName}} is the reference to the parent {{.EntityName}} object.
@@ -389,10 +389,33 @@ func (obj *{{$.EntityName}}) Set{{.EntityName}}ID(id string) {
 {{- if .RootRefDependency}}
 {{- if .ParentRef}}
 
-// Get{{.SetParentIDEntityName}}Ref returns the reference to the parent {{.SetParentIDEntityName}}.
-func (obj *{{.EntityName}}) Get{{.SetParentIDEntityName}}Ref() {{.RootRefTypeName}} {
+// Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}} returns the reference to the parent {{if .ParentRefCustomTypeName}}AI Gateway (control plane){{else}}{{.SetParentIDEntityName}}{{end}}.
+func (obj *{{.EntityName}}) Get{{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.SetParentIDEntityName}}Ref{{end}}() {{if .ParentRefCustomTypeName}}{{.ParentRefCustomTypeName}}{{else}}{{.RootRefTypeName}}{{end}} {
 	return obj.Spec.{{.ParentRefGoFieldName}}
 }
+{{- if .ParentRefCustomTypeName}}
+
+// GetParentRef returns the reference to the parent entity as a generic
+// ObjectRef. The custom parent ref type's Group/Kind discriminator has no
+// ObjectRef representation, so only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) GetParentRef() {{.ObjectRefTypeName}} {
+	return obj.Get{{.ParentRefCustomTypeName}}().ToObjectRef()
+}
+
+// SetParentRef sets the reference to the parent entity from a generic
+// ObjectRef. The parent ref defaults to the custom type's default Group/Kind
+// (Konnect): only the namespaced reference is carried over.
+func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
+	obj.Spec.{{.ParentRefGoFieldName}} = {{.ParentRefCustomTypeName}}FromObjectRef(ref)
+}
+
+// SkipKonnectReconciliation reports whether the entity's parent reference
+// resolves to a parent the Konnect reconciler does not manage (an
+// OnPremAIGateway): such entities are owned by the on-prem machinery.
+func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
+	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
+}
+{{- else}}
 
 // GetParentRef returns the reference to the parent entity.
 func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
@@ -403,6 +426,7 @@ func (obj *{{.EntityName}}) GetParentRef() {{.RootRefTypeName}} {
 func (obj *{{.EntityName}}) SetParentRef(ref {{.RootRefTypeName}}) {
 	obj.Spec.{{.ParentRefGoFieldName}} = ref
 }
+{{- end}}
 
 // SetParentID sets the Konnect ID of the immediate parent entity.
 func (obj *{{.EntityName}}) SetParentID(id string) {
@@ -444,11 +468,15 @@ func (obj *{{.EntityName}}) SetParentID(id string) {
 
 // GetParentGVK returns the GroupVersionKind of the parent entity.
 func (obj *{{.EntityName}}) GetParentGVK() schema.GroupVersionKind {
+{{- if .ParentRefCustomTypeName}}
+	return obj.Spec.{{.ParentRefGoFieldName}}.ParentGVK()
+{{- else}}
 	return schema.GroupVersionKind{
 		Group:   "{{.ParentGroup}}",
 		Version: {{if .ParentEntityVersion}}"{{.ParentEntityVersion}}"{{else}}GroupVersion.Version{{end}},
 		Kind:    "{{.ParentKind}}",
 	}
+{{- end}}
 }
 
 // GetStatusConditionTypeParentRefValid returns the status condition type
@@ -900,7 +928,17 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 		payload = map[string]any{}
 	}
 {{- range $.References}}
-{{- if not .NestedRef}}
+{{- if .ObjectRefField}}
+	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
+	if err != nil {
+		return nil, fmt.Errorf("resolving {{.Path}} reference: %w", err)
+	}
+	// A single ObjectRef resolves to at most one value; inject it as a plain
+	// string. An unset reference leaves the payload key absent.
+	if len(resolved{{.GoResolverName}}) > 0 {
+		payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+	}
+{{- else if not .NestedRef}}
 	resolved{{.GoResolverName}}, err := resolve{{$.EntityName}}{{.GoResolverName}}(ctx, cl, obj)
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
@@ -982,25 +1020,114 @@ const sdkOpsReferenceSharedDefines = `
 {{- define "sdkOpsReferenceResolvers"}}
 {{- range .References}}
 {{- $ref := .}}
+{{- if .ObjectRefField}}
+// resolve{{$.EntityName}}{{.GoResolverName}} resolves the ObjectRef at {{.Path}}
+// to a Konnect {{if .ResolvesToName}}name{{else}}ID{{end}}.
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
+	ref := obj.Spec.APISpec.{{.GoFieldName}}
+	if ref == nil {
+		return nil, nil
+	}
+	switch ref.Type {
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeKonnectID:
+		if ref.KonnectID == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type konnectID but no konnectID set")
+		}
+{{- if .SameTypeRef}}
+		// A same-type reference must not point at the object itself. The
+		// object's own Konnect ID is only known after it is programmed, so
+		// this cannot be rejected at admission time: guard here instead.
+		if id := obj.GetKonnectID(); id != "" && id == *ref.KonnectID {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: obj.GetNamespace(), Name: obj.GetName()}
+		}
+{{- end}}
+		return []string{*ref.KonnectID}, nil
+	case {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef:
+		if ref.NamespacedRef == nil {
+			return nil, fmt.Errorf("reference at {{.Path}} has type namespacedRef but no namespacedRef set")
+		}
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		name := ref.NamespacedRef.Name
+{{- if not .SupportCrossNamespaceReference}}
+		if ns != obj.GetNamespace() {
+			return nil, ReferenceCrossNamespaceError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ReferrerNamespace: obj.GetNamespace()}
+		}
+{{- end}}
+{{- if .SameTypeRef}}
+		// Rejected at admission time by a CEL rule on the CRD; guard here as
+		// well so the resolver stays correct when validation is bypassed.
+		if ns == obj.GetNamespace() && name == obj.GetName() {
+			return nil, ReferenceSelfError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+{{- end}}
+		var referenced {{.DefaultKind}}
+		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: name}, &referenced); err != nil {
+			if apierrors.IsNotFound(err) {
+				return nil, ReferenceNotFoundError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, Err: err}
+			}
+			return nil, fmt.Errorf("failed to get referenced {{.DefaultKind}} %s/%s: %w", ns, name, err)
+		}
+{{- if .SameParentRefField}}
+		// Same-type references embed the referenced object's Konnect ID in a
+		// request scoped to the referrer's parent, so both objects must belong
+		// to the same parent.
+		if {{$.ObjectRefTypePrefix}}ObjectRefsDiffer(obj.Spec.{{.SameParentRefField}}, referenced.Spec.{{.SameParentRefField}}, obj.GetNamespace(), ns) {
+			return nil, ReferenceDifferentParentError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name, ParentKind: "{{.SameParentRefKind}}"}
+		}
+{{- end}}
+{{- if .ResolvesToName}}
+		if referenced.GetKonnectID() == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{referenced.GetKonnectName()}, nil
+{{- else}}
+		id := referenced.GetKonnectID()
+		if id == "" {
+			return nil, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: name}
+		}
+		return []string{id}, nil
+{{- end}}
+	default:
+		return nil, fmt.Errorf("unsupported reference type %q at {{.Path}}", ref.Type)
+	}
+}
+{{- else}}
 {{- if .NestedRef}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
-func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeName}} {
+func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .NestedArrayList}}[][]{{else}}[]{{end}}{{.TypeName}} {
 {{- if .NestedArrayScalar}}
 {{- range .ArrayGuardExprs}}
 	if {{.}} == nil {
 		return nil
 	}
 {{- end}}
+{{- if .NestedArrayList}}
+	var refs [][]{{.TypeName}}
+{{- else}}
 	var refs []{{.TypeName}}
+{{- end}}
 	for i := range {{.ArrayPath}} {
-{{- if .ArrayLeafPointer}}
-		if {{.ArrayPath}}[i].{{.ArrayLeafName}} == nil {
+{{- range .ElementGuardExprs}}
+		if {{$ref.ArrayPath}}[i].{{.}} == nil {
 			continue
 		}
-		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafName}})
+{{- end}}
+{{- if .NestedArrayList}}
+		if len({{.ArrayPath}}[i].{{.ArrayLeafPath}}) == 0 {
+			continue
+		}
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
+{{- else if .ArrayLeafPointer}}
+		if {{.ArrayPath}}[i].{{.ArrayLeafPath}} == nil {
+			continue
+		}
+		refs = append(refs, *{{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- else}}
-		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafName}})
+		refs = append(refs, {{.ArrayPath}}[i].{{.ArrayLeafPath}})
 {{- end}}
 	}
 	return refs
@@ -1024,8 +1151,17 @@ func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) []{{.TypeN
 {{end}}
 // resolve{{$.EntityName}}{{.GoResolverName}} resolves the CR references in {{.Path}}
 // to Konnect {{if .ResolvesToName}}names{{else}}IDs{{end}}.
-func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ([]string, error) {
-{{- if or .NestedRef .DirectScalarRef}}
+func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.Client, obj *{{$.EntityName}}) ({{if .NestedArrayList}}[][]{{else}}[]{{end}}string, error) {
+{{- $collect := "resolved"}}
+{{- if .NestedArrayList}}
+	groups := {{.RefsExpr}}
+	resolved := make([][]string, 0, len(groups))
+	var errs []error
+	for _, refs := range groups {
+		group := make([]string, 0, len(refs))
+		for _, ref := range refs {
+{{- $collect = "group"}}
+{{- else if or .NestedRef .DirectScalarRef}}
 	refs := {{.RefsExpr}}
 	resolved := make([]string, 0, len(refs))
 	var errs []error
@@ -1086,7 +1222,7 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: kind, Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, resolvedValue)
+		{{$collect}} = append({{$collect}}, resolvedValue)
 {{- else}}
 		var referenced {{.DefaultKind}}
 		if err := cl.Get(ctx, client.ObjectKey{Namespace: ns, Name: ref.Name}, &referenced); err != nil {
@@ -1106,22 +1242,27 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, referenced.GetKonnectName())
+		{{$collect}} = append({{$collect}}, referenced.GetKonnectName())
 {{- else}}
 		id := referenced.GetKonnectID()
 		if id == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
 			continue
 		}
-		resolved = append(resolved, id)
+		{{$collect}} = append({{$collect}}, id)
 {{- end}}
 {{- end}}
 	}
+{{- if .NestedArrayList}}
+	resolved = append(resolved, group)
+	}
+{{- end}}
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
 	return resolved, nil
 }
+{{- end}}
 {{- end}}
 {{- if $.References}}
 
@@ -1145,7 +1286,29 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 	var checks []CrossNamespaceReferenceCheck
 	{{- range $.References}}
 	{{- if .SupportCrossNamespaceReference}}
+	{{- if .ObjectRefField}}
+	if ref := {{.RefsExpr}}; ref != nil && ref.Type == {{$.ObjectRefTypePrefix}}ObjectRefTypeNamespacedRef && ref.NamespacedRef != nil {
+		ns := obj.GetNamespace()
+		if ref.NamespacedRef.Namespace != nil && *ref.NamespacedRef.Namespace != "" {
+			ns = *ref.NamespacedRef.Namespace
+		}
+		if ns != obj.GetNamespace() {
+			checks = append(checks, CrossNamespaceReferenceCheck{
+				FromGVK:       metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{$.EntityName}}"},
+				ToGVK:         metav1.GroupVersionKind{Group: GroupVersion.Group, Version: GroupVersion.Version, Kind: "{{.DefaultKind}}"},
+				FromNamespace: obj.GetNamespace(),
+				ToNamespace:   ns,
+				ToName:        ref.NamespacedRef.Name,
+			})
+		}
+	}
+	{{- else}}
+	{{- if .NestedArrayList}}
+	for _, refs := range {{.RefsExpr}} {
+		for _, ref := range refs {
+	{{- else}}
 	for _, ref := range {{.RefsExpr}} {
+	{{- end}}
 		ns := ref.Namespace
 		if ns == "" {
 			ns = obj.GetNamespace()
@@ -1164,7 +1327,11 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 			ToNamespace:   ns,
 			ToName:        ref.Name,
 		})
+		{{- if .NestedArrayList}}
+		}
+		{{- end}}
 	}
+	{{- end}}
 	{{- end}}
 	{{- end}}
 	return checks
@@ -1231,11 +1398,19 @@ func (obj *{{$.EntityName}}) CrossNamespaceSiblingReferences() []CrossNamespaceR
 				if !ok {
 					continue
 				}
-				if _, has := el["{{.LeafSDKKey}}"]; !has {
+{{- $lp := "el"}}
+{{- range $inj.ElementNavs}}
+				{{.Var}}, ok := {{$lp}}["{{.Key}}"].(map[string]any)
+				if !ok {
+					continue
+				}
+{{- $lp = .Var}}
+{{- end}}
+				if _, has := {{$lp}}["{{.LeafSDKKey}}"]; !has {
 					continue
 				}
 				if ri < len(resolved{{.ResolverName}}) {
-					el["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
+					{{$lp}}["{{.LeafSDKKey}}"] = resolved{{.ResolverName}}[ri]
 					ri++
 				}
 			}
@@ -3093,8 +3268,15 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 	entry := resp.{{.ListResponseField}}
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 {{- range .MatchFields}}
-	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+	if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- end}}
@@ -3180,6 +3362,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3196,13 +3380,21 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .AllMatchFieldsSkipWhenUnset}}
+	// Every configured match field is optional, so an object that sets none of
+	// them would compare nothing and match an arbitrary entry.
+	if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(obj.{{$f.ObjectField}}) == ""{{end}} {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
+
 	// TODO: only the first page of results is scanned. When the parent has more
 	// entries than the SDK's default page size, a matching entry on a later
 	// page is missed and getForUID returns NotFound. Tracked in
 	// https://github.com/Kong/kong-operator/issues/3987.
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		{{- range .MatchFields}}
-		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
+		if !{{if .SliceMatch}}matchSliceField{{else if .SensitiveMatch}}matchSensitiveDataSourceField{{else if .SkipWhenUnset}}matchOptionalStringField{{else}}matchStringField{{end}}(obj.{{.ObjectField}}, entry.{{.ResponseField}}) {
 			continue
 		}
 		{{- end}}
@@ -3227,6 +3419,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3255,15 +3449,42 @@ func get{{.Entity}}ForUID(
 		if selected == nil {
 			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 		}
+		{{- if .AllMatchFieldsSkipWhenUnset}}
+		// Every configured match field is optional, so a variant that sets none
+		// of them would compare nothing and match an arbitrary entry.
+		if {{range $i, $f := .MatchFields}}{{if $i}} && {{end}}stringValueGeneric(selected.{{$f.ObjectField}}) == ""{{end}} {
+			return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+		}
+		{{- end}}
 		for _, entry := range {{$.ListResponseItemsExpr}} {
+			{{- if $.RootUnion.ResponseTypePointer}}
+			if responseType := entry.{{$.RootUnion.ResponseTypeField}}; responseType == nil || string(*responseType) != "{{.ResponseTypeValue}}" {
+				continue
+			}
+			{{- else}}
 			if entry.{{$.RootUnion.ResponseTypeField}} != "{{.ResponseTypeValue}}" {
 				continue
 			}
+			{{- end}}
+			{{- $matchTarget := "entry"}}
+			{{- if and $.RootUnion.ResponseVariantContainer .ResponseVariantField}}
+			entryContainer := entry.{{$.RootUnion.ResponseVariantContainer}}
+			if entryContainer == nil {
+				continue
+			}
+			entryVariant := entryContainer.{{.ResponseVariantField}}
+			if entryVariant == nil {
+				continue
+			}
+			{{- $matchTarget = "entryVariant"}}
+			{{- end}}
 			{{- range .MatchFields}}
 			{{- if .SliceMatch}}
-			if !matchSliceField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchSliceField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
+			{{- else if .SkipWhenUnset}}
+			if !matchOptionalStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- else}}
-			if !matchStringField(selected.{{.ObjectField}}, entry.{{.ResponseField}}) {
+			if !matchStringField(selected.{{.ObjectField}}, {{$matchTarget}}.{{.ResponseField}}) {
 			{{- end}}
 				continue
 			}
@@ -3296,6 +3517,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3333,6 +3556,8 @@ func get{{.Entity}}ForUID(
 		{{.SDKFieldName}}: {{.VarName}},
 		{{- end}}
 	})
+{{- else if .ListCallPositionalWithParent}}
+	resp, err := sdk.{{.ListSDKMethod}}(ctx, {{(index .Parents 0).VarName}}, nil)
 {{- else if .Parents}}
 	resp, err := sdk.{{.ListSDKMethod}}(ctx, sdkkonnectops.{{.ListSDKMethod}}Request{
 		{{.ParentIDField}}: {{(index .Parents 0).VarName}},
@@ -3700,6 +3925,17 @@ type ReferenceCrossNamespaceError = commonv1alpha1.ReferenceCrossNamespaceError
 // within the same Konnect Gateway because Konnect only accepts policy and ACL
 // references from the same AI Gateway.
 type ReferenceDifferentGatewayError = commonv1alpha1.ReferenceDifferentGatewayError
+
+// ReferenceDifferentParentError is returned when a same-type reference (e.g.
+// PortalPage's parentPageIDRef) points to a CR whose parent reference differs
+// from the referrer's. Konnect scopes child entities under their parent, so
+// such a reference can never resolve to a usable ID.
+type ReferenceDifferentParentError = commonv1alpha1.ReferenceDifferentParentError
+
+// ReferenceSelfError is returned when a same-type reference (e.g. PortalPage's
+// parentPageIDRef) points at the referencing object itself. Such a reference
+// can never resolve to a usable ID.
+type ReferenceSelfError = commonv1alpha1.ReferenceSelfError
 {{range .RefTypes}}
 // {{.TypeName}} references {{.KindsSentence}} in the cluster. The referenced
 // object's Konnect {{.ResolvesTo}} is used where the Konnect API accepts it.

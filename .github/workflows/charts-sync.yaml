@@ -11,7 +11,7 @@ on:
       - .github/charts-sync.yaml
       - .github/workflows/charts-sync.yaml
     branches:
-      - release/2.3.x
+      - release/2.4.0-rapid.1.x
   workflow_dispatch:
 permissions:
   contents: read
@@ -24,9 +24,21 @@ jobs:
         with:
           egress-policy: audit
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      # Mint the token in the same job that uses it: app tokens do not survive
+      # being passed between jobs or through reusable-workflow boundaries.
+      - uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        id: app-token
+        with:
+          client-id: ${{ vars.GH_APP__KONG_K8S__APP_ID }}
+          private-key: ${{ secrets.GH_APP__KONG_K8S__PRIVATE_KEY }}
+          owner: ${{ github.repository_owner }}
+          repositories: |
+            charts
       - uses: BetaHuhn/repo-file-sync-action@8b92be3375cf1d1b0cd579af488a9255572e4619 # v1.21.1
         with:
-          GH_PAT: ${{ secrets.PAT_GITHUB }}
+          # NOTE: use GH_INSTALLATION_TOKEN, not GH_PAT: only this input makes the
+          # action take the App installation path (API commits, instead of a force push).
+          GH_INSTALLATION_TOKEN: ${{ steps.app-token.outputs.token }}
           GIT_EMAIL: team-k8s+github-bot@konghq.com
           CONFIG_PATH: .github/charts-sync.yaml
           OVERWRITE_EXISTING_PR: true

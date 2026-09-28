@@ -25,8 +25,7 @@ func TestAIGatewayPolicy(t *testing.T) {
 			APIVersion: aiconfigurationv1alpha1.GroupVersion.String(),
 			ObjectMeta: common.CommonObjectMeta(ns.Name),
 			Spec: aiconfigurationv1alpha1.AIGatewayPolicySpec{
-				AIGatewayRef: commonv1alpha1.ObjectRef{
-					Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 					NamespacedRef: &commonv1alpha1.NamespacedRef{
 						Name: "aigateway-1",
 					},

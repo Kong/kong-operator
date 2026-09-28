@@ -89,6 +89,9 @@ const (
 	// GatewayStaticNamingAnnotation indicates that the gateway uses static naming for its resources.
 	// This means that the DataPlane, ControlPlane and KonnectGatewayControlPlane resources
 	// are named as the Gateway resource.
+	//
+	// NOTE: Kubernetes names only. The Control Plane in Konnect is named
+	// "<namespace>_<gateway-name>", as Konnect names are unique per org.
 	GatewayStaticNamingAnnotation = OperatorAnnotationPrefix + "static-naming"
 
 	// CertExpiresAtAnnotation is the annotation used to store the certificate expiration time

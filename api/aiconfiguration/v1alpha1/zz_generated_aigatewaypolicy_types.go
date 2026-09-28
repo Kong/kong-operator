@@ -3,7 +3,6 @@
 package v1alpha1
 
 import (
-	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	apiextensionsv1 "k8s.io/apiextensions-apiserver/pkg/apis/apiextensions/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
@@ -20,7 +19,7 @@ import (
 // +kubebuilder:storageversion
 // +apireference:kgo:include
 // +kong:channels=kong-operator
-// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
+// +kubebuilder:validation:XValidation:rule="!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == 'Programmed' && c.status == 'True') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef", message="spec.aiGatewayRef is immutable when an entity is already Programmed"
 type AIGatewayPolicy struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitzero"`
@@ -43,10 +42,10 @@ type AIGatewayPolicyList struct {
 
 // AIGatewayPolicySpec defines the desired state of AIGatewayPolicy.
 type AIGatewayPolicySpec struct {
-	// AIGatewayRef is the reference to the parent KonnectAIGateway object.
+	// AIGatewayRef is the reference to the parent AI Gateway (control plane) object.
 	//
 	// +required
-	AIGatewayRef commonv1alpha1.ObjectRef `json:"aiGatewayRef,omitzero"`
+	AIGatewayRef AIGatewayRef `json:"aiGatewayRef,omitzero"`
 
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
@@ -56,6 +55,16 @@ type AIGatewayPolicySpec struct {
 
 // AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 type AIGatewayPolicyAPISpec struct {
+	// An expression used for conditional control over plugin execution.
+	// If the expression evaluates to `true` during the request flow, the plugin is
+	// executed; otherwise, it is skipped.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=1024
+	Condition *string `json:"condition,omitempty"`
+
 	// Configuration for the policy.
 	// This is equivalent to the Kong 3 plugin configuration.
 	// Note: Plugins have been renamed to Policies in Kong AI Gateway.
@@ -116,7 +125,7 @@ type AIGatewayPolicyAPISpec struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 
 	// The type of the Policy. This is equivalent to the Kong 3 plugin name.

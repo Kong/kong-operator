@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"time"
 
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
@@ -93,7 +94,7 @@ func New(m metadata.Info) *CLI {
 
 	// feature gates
 	flagSet.Var(newValidatedValue(&cfg.FeatureGates, manager.NewFeatureGates, withDefault(manager.FeatureGates{})), "feature-gates", "Comma-separated list of feature gates to enable. Valid values: mcp-server.")
-	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
+	flagSet.DurationVar(&cfg.KonnectSyncPeriod, "konnect-sync-period", consts.DefaultKonnectSyncPeriod, "Sync period for Konnect entities. Must be greater than 0. After a successful reconciliation of Konnect entities the controller will wait this duration before enforcing configuration on Konnect once again.")
 	flagSet.DurationVar(&cfg.KonnectRequestTimeout, "konnect-request-timeout", consts.DefaultKonnectRequestTimeout, "Timeout for Konnect API requests.")
 	flagSet.UintVar(&cfg.KonnectControllerMaxConcurrentReconciles, "konnect-controller-max-concurrent-reconciles", consts.DefaultMaxConcurrentReconcilesKonnect, "Deprecated: Please use '--max-concurrent-reconciles-konnect-controller' instead.")
 	flagSet.UintVar(&cfg.MaxConcurrentReconcilesKonnect, "max-concurrent-reconciles-konnect-controller", consts.DefaultMaxConcurrentReconcilesKonnect, "Maximum number of concurrent reconciles for Konnect controllers.")
@@ -124,6 +125,13 @@ func New(m metadata.Info) *CLI {
 		deferFlagValues: &deferCfg,
 		metadata:        m,
 	}
+}
+
+func validateKonnectSyncPeriod(duration time.Duration) error {
+	if duration <= 0 {
+		return fmt.Errorf("must be greater than 0")
+	}
+	return nil
 }
 
 // DiscardFlagValue is a [flag.Value] implementation that discards any value set to it.
@@ -218,6 +226,10 @@ func (c *CLI) Parse(arguments []string) manager.Config {
 
 	if err := c.flagSet.Parse(arguments); err != nil {
 		fmt.Println(err.Error())
+		os.Exit(1)
+	}
+	if err := validateKonnectSyncPeriod(c.cfg.KonnectSyncPeriod); err != nil {
+		fmt.Printf("invalid value for --konnect-sync-period: %v\n", err)
 		os.Exit(1)
 	}
 

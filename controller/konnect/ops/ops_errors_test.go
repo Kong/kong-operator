@@ -426,14 +426,6 @@ func TestErrorIsDataPlaneGroupConflictProposedConfigIsTheSame(t *testing.T) {
 			want: false,
 		},
 		{
-			name: "ConflictError with non-string message",
-			err: &sdkkonnecterrs.ConflictError{
-				Status: 409,
-				Detail: 12345,
-			},
-			want: false,
-		},
-		{
 			name: "ConflictError with message missing expected substring",
 			err: &sdkkonnecterrs.ConflictError{
 				Status: 409,

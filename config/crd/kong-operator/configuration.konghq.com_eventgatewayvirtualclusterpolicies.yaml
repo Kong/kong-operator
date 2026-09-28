@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: eventgatewayvirtualclusterpolicies.configuration.konghq.com
 spec:
   group: configuration.konghq.com
@@ -65,7 +65,7 @@ spec:
                   spec fields.
                 properties:
                   acls:
-                    description: EventGatewayACLsPolicy configuration.
+                    description: ACLs configuration.
                     properties:
                       condition:
                         description: |-
@@ -208,10 +208,719 @@ spec:
                     required:
                     - config
                     type: object
+                  requestRuleValidator:
+                    description: RequestRuleValidator configuration.
+                    properties:
+                      condition:
+                        description: |-
+                          A string containing the boolean expression that determines whether the
+                          policy is applied.
+                        maxLength: 1000
+                        type: string
+                      config:
+                        description: The configuration of the policy.
+                        properties:
+                          requests:
+                            description: |-
+                              The rules to apply, grouped by Kafka request type.
+                              A request type can occur more than
+                              once in this list. Every entry for the type applies, in list order.
+                              Requests of a type that is not in this list are not validated.
+                            items:
+                              description: |-
+                                EventGatewayRequestRules represents a union type for EventGatewayRequestRules.
+                                Only one of the fields should be set based on the Type.
+                              properties:
+                                alterClientQuotas:
+                                  description: AlterClientQuotas configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each quota
+                                        operation in the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayAlterClientQuotasRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                alterConfigs:
+                                  description: AlterConfigs configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each resource in
+                                        the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayAlterConfigsRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                alterUserScramCredentials:
+                                  description: AlterUserScramCredentials configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each credential
+                                        in the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayAlterUserScramCredentialsRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                consumerGroupHeartbeat:
+                                  description: ConsumerGroupHeartbeat configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayConsumerGroupHeartbeatRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                createPartitions:
+                                  description: Partitions configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each topic in the
+                                        request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayCreatePartitionsRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                createTopics:
+                                  description: Topics configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each topic in the
+                                        request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayCreateTopicsRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                fetch:
+                                  description: Fetch configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayFetchRule is a type
+                                          alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                incrementalAlterConfigs:
+                                  description: IncrementalAlterConfigs configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against each
+                                        configuration entry in the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayIncrementalAlterConfigsRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                joinGroup:
+                                  description: JoinGroup configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayJoinGroupRule is
+                                          a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                offsetCommit:
+                                  description: OffsetCommit configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayOffsetCommitRule
+                                          is a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                offsetFetch:
+                                  description: OffsetFetch configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayOffsetFetchRule is
+                                          a type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                produce:
+                                  description: Produce configuration.
+                                  properties:
+                                    rules:
+                                      description: |-
+                                        Every rule in this list is evaluated independently against the request.
+                                        A rule that evaluates to `false` runs its action.
+                                      items:
+                                        description: EventGatewayProduceRule is a
+                                          type alias.
+                                        properties:
+                                          action:
+                                            description: |-
+                                              What to do when a rule evaluates to `false`.
+
+                                              `reject` fails the request with the `POLICY_VIOLATION` error code.
+                                              `passthrough` lets the request continue, but logs the violation in the same
+                                              way as `reject`.
+                                            enum:
+                                            - reject
+                                            - passthrough
+                                            maxLength: 253
+                                            minLength: 1
+                                            type: string
+                                          description:
+                                            description: |-
+                                              An explanation of the rule.
+                                              Event Gateway writes this text to the logs when the request
+                                              violates the rule, because the rule expression alone does not show the
+                                              intent.
+                                            maxLength: 255
+                                            minLength: 1
+                                            type: string
+                                          rule:
+                                            description: |-
+                                              A boolean expression that describes the valid state of the request.
+                                              The action runs when the expression evaluates to `false`.
+                                              An expression that cannot be evaluated, for example because a value has an
+                                              unexpected
+                                              format, also counts as `false`.
+                                            maxLength: 1000
+                                            minLength: 1
+                                            type: string
+                                        required:
+                                        - action
+                                        - description
+                                        - rule
+                                        type: object
+                                      type: array
+                                  required:
+                                  - rules
+                                  type: object
+                                type:
+                                  description: Type designates the type of configuration.
+                                  enum:
+                                  - alterClientQuotas
+                                  - alterConfigs
+                                  - alterUserScramCredentials
+                                  - consumerGroupHeartbeat
+                                  - createPartitions
+                                  - createTopics
+                                  - fetch
+                                  - incrementalAlterConfigs
+                                  - joinGroup
+                                  - offsetCommit
+                                  - offsetFetch
+                                  - produce
+                                  minLength: 1
+                                  type: string
+                              required:
+                              - type
+                              type: object
+                            type: array
+                        required:
+                        - requests
+                        type: object
+                      description:
+                        description: A human-readable description of the policy.
+                        maxLength: 512
+                        type: string
+                      enabled:
+                        description: Whether the policy is enabled.
+                        enum:
+                        - Enabled
+                        - Disabled
+                        type: string
+                      labels:
+                        additionalProperties:
+                          description: LabelsValue is the value type for Labels.
+                          maxLength: 63
+                          minLength: 1
+                          pattern: ^[a-z0-9A-Z]{1}([a-z0-9A-Z-._]*[a-z0-9A-Z]+)?$
+                          type: string
+                        description: |-
+                          Labels store metadata of an entity that can be used for filtering an entity
+                          list or for searching across entity types.
+
+                          Keys must be of length 1-63 characters, and cannot start with "kong",
+                          "konnect", "mesh", "kic", or "_".
+                        type: object
+                      name:
+                        description: A unique user-defined name of the policy.
+                        maxLength: 255
+                        type: string
+                    required:
+                    - config
+                    type: object
                   type:
                     description: Type designates the type of configuration.
                     enum:
                     - acls
+                    - requestRuleValidator
                     minLength: 1
                     type: string
                 required:

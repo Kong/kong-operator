@@ -930,6 +930,7 @@ failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime v
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 - [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 - [EventGatewayParsedRecordDecryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldsconfig)
@@ -948,6 +949,7 @@ to help to identify the clients violating schema.
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 - [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 
@@ -965,6 +967,7 @@ to help to identify the clients violating schema.
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)
 - [EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)
 
@@ -1285,6 +1288,105 @@ _Appears in:_
 
 - [EventGatewayKeySource](#configuration-konghq-com-v1alpha1-types-eventgatewaykeysource)
 
+#### EventGatewayAlterClientQuotasRequestRules
+
+
+EventGatewayAlterClientQuotasRequestRules The rules to apply to Kafka
+`AlterClientQuotas` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayAlterClientQuotasRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrule)_ | Every rule in this list is evaluated independently against each quota operation in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayAlterClientQuotasRule
+
+
+EventGatewayAlterClientQuotasRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayAlterClientQuotasRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrequestrules)
+
+#### EventGatewayAlterConfigsRequestRules
+
+
+EventGatewayAlterConfigsRequestRules The rules to apply to Kafka
+`AlterConfigs` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrule)_ | Every rule in this list is evaluated independently against each resource in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayAlterConfigsRule
+
+
+EventGatewayAlterConfigsRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayAlterConfigsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrequestrules)
+
+#### EventGatewayAlterUserScramCredentialsRequestRules
+
+
+EventGatewayAlterUserScramCredentialsRequestRules The rules to apply to Kafka
+`AlterUserScramCredentials` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayAlterUserScramCredentialsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrule)_ | Every rule in this list is evaluated independently against each credential in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayAlterUserScramCredentialsRule
+
+
+EventGatewayAlterUserScramCredentialsRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayAlterUserScramCredentialsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrequestrules)
+
 #### EventGatewayBackendClusterAPISpec
 
 
@@ -1415,6 +1517,7 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[EventGatewayConsumeSchemaValidationPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfigtype)_ | Type designates the type of configuration. |
 | `confluentSchemaRegistry` _[EventGatewayConsumeSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyschemaregistryconfig)_ | SchemaRegistry configuration. |
+| `inlineSchema` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)_ | InlineSchema configuration. |
 | `json` _[EventGatewayConsumeSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyjsonconfig)_ | JSON configuration. |
 
 _Appears in:_
@@ -1439,7 +1542,67 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `confluentSchemaRegistry` |  |
+| `inlineSchema` |  |
 | `json` |  |
+
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig
+
+
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig The configuration
+of the consume schema validation policy when using an inline schema.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ConsumeFailureMode](#configuration-konghq-com-v1alpha1-types-consumefailuremode)_ | Describes how to handle a failure in a policy applied to consumed records. * `error` - the batch is not delivered to the client. Use sparingly: erroring on a batch causes clients to get stuck on the problematic offset and requires manual intervention to skip it. * `skip` - the record is not delivered to the client. * `passthrough` - passes the record to the client even though policy execution failed. * `mark` - passes the record to the client but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ConsumeKeyValidationAction](#configuration-konghq-com-v1alpha1-types-consumekeyvalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record key is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+| `schemaRegistry` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `valueValidationAction` _[ConsumeValueValidationAction](#configuration-konghq-com-v1alpha1-types-consumevaluevalidationaction)_ | Deprecated. Use `failure_mode`.<br /><br />Defines a behavior when record value is not valid. * mark - marks a record with kong/server header and client ID value to help to identify the clients violating schema. * skip - skips delivering a record. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+
+
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfig)
+
+#### EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
 
 #### EventGatewayConsumeSchemaValidationPolicyJSONConfig
 
@@ -1483,6 +1646,105 @@ registry.
 _Appears in:_
 
 - [EventGatewayConsumeSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyconfig)
+
+#### EventGatewayConsumerGroupHeartbeatRequestRules
+
+
+EventGatewayConsumerGroupHeartbeatRequestRules The rules to apply to Kafka
+`ConsumerGroupHeartbeat` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayConsumerGroupHeartbeatRule](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayConsumerGroupHeartbeatRule
+
+
+EventGatewayConsumerGroupHeartbeatRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayConsumerGroupHeartbeatRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrequestrules)
+
+#### EventGatewayCreatePartitionsRequestRules
+
+
+EventGatewayCreatePartitionsRequestRules The rules to apply to Kafka
+`CreatePartitions` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayCreatePartitionsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayCreatePartitionsRule
+
+
+EventGatewayCreatePartitionsRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayCreatePartitionsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrequestrules)
+
+#### EventGatewayCreateTopicsRequestRules
+
+
+EventGatewayCreateTopicsRequestRules The rules to apply to Kafka
+`CreateTopics` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayCreateTopicsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrule)_ | Every rule in this list is evaluated independently against each topic in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayCreateTopicsRule
+
+
+EventGatewayCreateTopicsRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayCreateTopicsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrequestrules)
 
 #### EventGatewayDataPlaneCertificateAPISpec
 
@@ -1647,6 +1909,104 @@ Keys are therefore 256 bits long.
 _Appears in:_
 
 - [EventGatewayVirtualClusterProducePolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterproducepolicyconfig)
+
+#### EventGatewayFetchRequestRules
+
+
+EventGatewayFetchRequestRules The rules to apply to Kafka `Fetch` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayFetchRule
+
+
+EventGatewayFetchRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayFetchRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrequestrules)
+
+#### EventGatewayIncrementalAlterConfigsRequestRules
+
+
+EventGatewayIncrementalAlterConfigsRequestRules The rules to apply to Kafka
+`IncrementalAlterConfigs` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayIncrementalAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrule)_ | Every rule in this list is evaluated independently against each configuration entry in the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayIncrementalAlterConfigsRule
+
+
+EventGatewayIncrementalAlterConfigsRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayIncrementalAlterConfigsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrequestrules)
+
+#### EventGatewayJoinGroupRequestRules
+
+
+EventGatewayJoinGroupRequestRules The rules to apply to Kafka `JoinGroup`
+requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayJoinGroupRule](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayJoinGroupRule
+
+
+EventGatewayJoinGroupRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayJoinGroupRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprequestrules)
 
 #### EventGatewayKeySource
 
@@ -1938,6 +2298,72 @@ _Appears in:_
 
 - [EventGatewayModifyHeadersPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewaymodifyheaderspolicycreate)
 
+#### EventGatewayOffsetCommitRequestRules
+
+
+EventGatewayOffsetCommitRequestRules The rules to apply to Kafka
+`OffsetCommit` requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayOffsetCommitRule
+
+
+EventGatewayOffsetCommitRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayOffsetCommitRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrequestrules)
+
+#### EventGatewayOffsetFetchRequestRules
+
+
+EventGatewayOffsetFetchRequestRules The rules to apply to Kafka `OffsetFetch`
+requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayOffsetFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayOffsetFetchRule
+
+
+EventGatewayOffsetFetchRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayOffsetFetchRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrequestrules)
+
 #### EventGatewayParsedRecordDecryptFieldsConfig
 
 
@@ -2214,6 +2640,39 @@ _Appears in:_
 - [EventGatewayParsedRecordDecryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptionselectorpaths)
 - [EventGatewayParsedRecordEncryptionSelectorPaths](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptionselectorpaths)
 
+#### EventGatewayProduceRequestRules
+
+
+EventGatewayProduceRequestRules The rules to apply to Kafka `Produce`
+requests.
+
+
+
+| Field | Description |
+| --- | --- |
+| `rules` _[][EventGatewayProduceRule](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerule)_ | Every rule in this list is evaluated independently against the request. A rule that evaluates to `false` runs its action. |
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+#### EventGatewayProduceRule
+
+
+EventGatewayProduceRule is a type alias.
+
+
+
+| Field | Description |
+| --- | --- |
+| `action` _[EventGatewayRequestRuleAction](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestruleaction)_ | What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code. `passthrough` lets the request continue, but logs the violation in the same way as `reject`. |
+| `description` _string_ | An explanation of the rule. Event Gateway writes this text to the logs when the request violates the rule, because the rule expression alone does not show the intent. |
+| `rule` _string_ | A boolean expression that describes the valid state of the request. The action runs when the expression evaluates to `false`. An expression that cannot be evaluated, for example because a value has an unexpected format, also counts as `false`. |
+
+_Appears in:_
+
+- [EventGatewayProduceRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerequestrules)
+
 #### EventGatewayProduceSchemaValidationPolicy
 
 
@@ -2247,6 +2706,7 @@ Only one of the fields should be set based on the Type.
 | --- | --- |
 | `type` _[EventGatewayProduceSchemaValidationPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfigtype)_ | Type designates the type of configuration. |
 | `confluentSchemaRegistry` _[EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)_ | SchemaRegistry configuration. |
+| `inlineSchema` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)_ | InlineSchema configuration. |
 | `json` _[EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)_ | JSON configuration. |
 
 _Appears in:_
@@ -2271,7 +2731,67 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `confluentSchemaRegistry` |  |
+| `inlineSchema` |  |
 | `json` |  |
+
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig
+
+
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig The configuration
+of the produce schema validation policy when using an inline schema.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `failureMode` _[ProduceFailureMode](#configuration-konghq-com-v1alpha1-types-producefailuremode)_ | Describes how to handle a failure in a policy applied to produced records. * `reject` - rejects the record batch. * `passthrough` - passes the record silently to the backend cluster even though policy execution failed. * `mark` - passes the record to the backend cluster but marks it with a `kong/policy-failure-<id>` header whose value is the reason for the policy failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `keyValidationAction` _[ProduceKeyValidationAction](#configuration-konghq-com-v1alpha1-types-producekeyvalidationaction)_ | Defines a behavior when record key is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+| `schemaRegistry` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)_ | A reference to a schema Registry. |
+| `validateKey` _string_ | If true, validate the record key.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `validateValue` _string_ | If true, validate the record value.<br /><br />**Requires a minimum runtime version of `1.2`**. |
+| `valueValidationAction` _[ProduceValueValidationAction](#configuration-konghq-com-v1alpha1-types-producevaluevalidationaction)_ | Defines a behavior when record value is not valid. * reject - rejects a batch for topic partition. Only available for produce. * mark - marks a record with kong/server header and client ID value<br /><br />to help to identify the clients violating schema. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry
+
+
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry represents a union type for schema_registry.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistrytype)_ | Type designates the type of configuration. |
+| `id` _[SchemaRegistryReferenceByID](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyid)_ | ID configuration. |
+| `name` _[SchemaRegistryReferenceByName](#configuration-konghq-com-v1alpha1-types-schemaregistryreferencebyname)_ | Name configuration. |
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
+
+#### EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType
+
+_Underlying type:_ `string`
+
+EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryType represents the type of schema_registry.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `id` |  |
+| `name` |  |
 
 #### EventGatewayProduceSchemaValidationPolicyJSONConfig
 
@@ -2391,6 +2911,134 @@ Allowed values:
 | --- | --- |
 | `id` |  |
 | `name` |  |
+
+#### EventGatewayRequestRuleAction
+
+_Underlying type:_ `string`
+
+EventGatewayRequestRuleAction What to do when a rule evaluates to `false`.<br /><br />`reject` fails the request with the `POLICY_VIOLATION` error code.
+`passthrough` lets the request continue, but logs the violation in the same
+way as `reject`.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayAlterClientQuotasRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrule)
+- [EventGatewayAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrule)
+- [EventGatewayAlterUserScramCredentialsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrule)
+- [EventGatewayConsumerGroupHeartbeatRule](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrule)
+- [EventGatewayCreatePartitionsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrule)
+- [EventGatewayCreateTopicsRule](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrule)
+- [EventGatewayFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrule)
+- [EventGatewayIncrementalAlterConfigsRule](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrule)
+- [EventGatewayJoinGroupRule](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprule)
+- [EventGatewayOffsetCommitRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrule)
+- [EventGatewayOffsetFetchRule](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrule)
+- [EventGatewayProduceRule](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerule)
+
+#### EventGatewayRequestRuleValidatorConfig
+
+
+EventGatewayRequestRuleValidatorConfig The configuration of the request rule
+validator policy.
+
+
+
+| Field | Description |
+| --- | --- |
+| `requests` _[][EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)_ | The rules to apply, grouped by Kafka request type. A request type can occur more than once in this list. Every entry for the type applies, in list order. Requests of a type that is not in this list are not validated. |
+
+_Appears in:_
+
+- [EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)
+
+#### EventGatewayRequestRuleValidatorPolicy
+
+
+EventGatewayRequestRuleValidatorPolicy Validates the content of Kafka
+requests against a list of rules.<br /><br />Use this policy to enforce conventions that Kafka ACLs cannot express,
+because ACLs
+cannot read the content of a request.
+For example, a maximum number of partitions,
+a topic naming convention, or a minimum number of acknowledgements on
+produce.<br /><br />Each rule describes the valid state of the request.
+The action of the rule runs when
+the rule evaluates to `false`.<br /><br />**Requires a minimum runtime version of `1.3`**.
+
+
+
+| Field | Description |
+| --- | --- |
+| `condition` _string_ | A string containing the boolean expression that determines whether the policy is applied. |
+| `config` _[EventGatewayRequestRuleValidatorConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorconfig)_ | The configuration of the policy. |
+| `description` _string_ | A human-readable description of the policy. |
+| `enabled` _string_ | Whether the policy is enabled. |
+| `labels` _[Labels](#configuration-konghq-com-v1alpha1-types-labels)_ | Labels store metadata of an entity that can be used for filtering an entity list or for searching across entity types.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `name` _string_ | A unique user-defined name of the policy. |
+
+_Appears in:_
+
+- [EventGatewayVirtualClusterPolicyConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfig)
+
+#### EventGatewayRequestRules
+
+
+EventGatewayRequestRules represents a union type for EventGatewayRequestRules.
+Only one of the fields should be set based on the Type.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[EventGatewayRequestRulesType](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulestype)_ | Type designates the type of configuration. |
+| `alterClientQuotas` _[EventGatewayAlterClientQuotasRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalterclientquotasrequestrules)_ | AlterClientQuotas configuration. |
+| `alterConfigs` _[EventGatewayAlterConfigsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalterconfigsrequestrules)_ | AlterConfigs configuration. |
+| `alterUserScramCredentials` _[EventGatewayAlterUserScramCredentialsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayalteruserscramcredentialsrequestrules)_ | AlterUserScramCredentials configuration. |
+| `consumerGroupHeartbeat` _[EventGatewayConsumerGroupHeartbeatRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumergroupheartbeatrequestrules)_ | ConsumerGroupHeartbeat configuration. |
+| `createPartitions` _[EventGatewayCreatePartitionsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatepartitionsrequestrules)_ | Partitions configuration. |
+| `createTopics` _[EventGatewayCreateTopicsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewaycreatetopicsrequestrules)_ | Topics configuration. |
+| `fetch` _[EventGatewayFetchRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayfetchrequestrules)_ | Fetch configuration. |
+| `incrementalAlterConfigs` _[EventGatewayIncrementalAlterConfigsRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayincrementalalterconfigsrequestrules)_ | IncrementalAlterConfigs configuration. |
+| `joinGroup` _[EventGatewayJoinGroupRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayjoingrouprequestrules)_ | JoinGroup configuration. |
+| `offsetCommit` _[EventGatewayOffsetCommitRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetcommitrequestrules)_ | OffsetCommit configuration. |
+| `offsetFetch` _[EventGatewayOffsetFetchRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayoffsetfetchrequestrules)_ | OffsetFetch configuration. |
+| `produce` _[EventGatewayProduceRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayproducerequestrules)_ | Produce configuration. |
+
+_Appears in:_
+
+- [EventGatewayRequestRuleValidatorConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorconfig)
+
+#### EventGatewayRequestRulesType
+
+_Underlying type:_ `string`
+
+EventGatewayRequestRulesType represents the type of EventGatewayRequestRules.
+
+
+
+
+_Appears in:_
+
+- [EventGatewayRequestRules](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrules)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `alterClientQuotas` |  |
+| `alterConfigs` |  |
+| `alterUserScramCredentials` |  |
+| `consumerGroupHeartbeat` |  |
+| `createPartitions` |  |
+| `createTopics` |  |
+| `fetch` |  |
+| `incrementalAlterConfigs` |  |
+| `joinGroup` |  |
+| `offsetCommit` |  |
+| `offsetFetch` |  |
+| `produce` |  |
 
 #### EventGatewaySchemaRegistryAPISpec
 
@@ -2722,7 +3370,8 @@ Only one of the fields should be set based on the Type.
 | Field | Description |
 | --- | --- |
 | `type` _[EventGatewayVirtualClusterPolicyConfigType](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterpolicyconfigtype)_ | Type designates the type of configuration. |
-| `acls` _[EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)_ | EventGatewayACLsPolicy configuration. |
+| `acls` _[EventGatewayACLsPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayaclspolicy)_ | ACLs configuration. |
+| `requestRuleValidator` _[EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)_ | RequestRuleValidator configuration. |
 
 _Appears in:_
 
@@ -2746,6 +3395,7 @@ Allowed values:
 | Value | Description |
 | --- | --- |
 | `acls` |  |
+| `requestRuleValidator` |  |
 
 
 
@@ -4437,6 +5087,7 @@ _Appears in:_
 - [EventGatewayParsedRecordDecryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecorddecryptfieldspolicycreate)
 - [EventGatewayParsedRecordEncryptFieldsPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldspolicycreate)
 - [EventGatewayProduceSchemaValidationPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicy)
+- [EventGatewayRequestRuleValidatorPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewayrequestrulevalidatorpolicy)
 - [EventGatewaySkipRecordPolicyCreate](#configuration-konghq-com-v1alpha1-types-eventgatewayskiprecordpolicycreate)
 - [EventGatewayTLSListenerPolicy](#configuration-konghq-com-v1alpha1-types-eventgatewaytlslistenerpolicy)
 - [EventGatewayVirtualClusterAPISpec](#configuration-konghq-com-v1alpha1-types-eventgatewayvirtualclusterapispec)
@@ -4559,6 +5210,7 @@ failure (truncated to 512 characters).<br /><br />**Requires a minimum runtime v
 _Appears in:_
 
 - [EventGatewayParsedRecordEncryptFieldsConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayparsedrecordencryptfieldsconfig)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
@@ -4575,6 +5227,7 @@ ProduceKeyValidationAction Defines a behavior when record key is not valid.
 
 _Appears in:_
 
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
@@ -4592,6 +5245,7 @@ valid.
 
 _Appears in:_
 
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfig)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfig)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfig](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfig)
 
@@ -4754,6 +5408,8 @@ SchemaRegistryReferenceByID is a type alias.
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 
@@ -4770,6 +5426,8 @@ SchemaRegistryReferenceByName Reference a schema registry by its unique name.
 
 _Appears in:_
 
+- [EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayconsumeschemavalidationpolicyinlineschemaconfigschemaregistry)
+- [EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyinlineschemaconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicyJSONConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyjsonconfigschemaregistry)
 - [EventGatewayProduceSchemaValidationPolicySchemaRegistryConfigSchemaRegistry](#configuration-konghq-com-v1alpha1-types-eventgatewayproduceschemavalidationpolicyschemaregistryconfigschemaregistry)
 

@@ -33,10 +33,9 @@ func baseTLSSecret(namespace string) *corev1.Secret {
 }
 
 type secretCertReconcilerTestCase struct {
-	name                   string
-	adjust                 func(*corev1.Secret)
-	expectDeletion         bool
-	customExpirationMargin time.Duration
+	name           string
+	adjust         func(*corev1.Secret)
+	expectDeletion bool
 }
 
 func TestSecretCertReconciler(t *testing.T) {
@@ -46,13 +45,27 @@ func TestSecretCertReconciler(t *testing.T) {
 
 	tests := []secretCertReconcilerTestCase{
 		{
+			// Deletion is the renewal contract for every owner kind: the
+			// reconciler strips the wait-for-owner finalizer first so the
+			// delete can go through, and the owner controller recreates the
+			// secret with fresh certs.
 			name: "expired cert with DataPlane managed is deleted",
 			adjust: func(s *corev1.Secret) {
 				s.Annotations[consts.CertExpiresAtAnnotation] = expiredAnnotationValue
 				s.Labels[config.DefaultSecretLabelSelector] = config.LabelValueForSelectorTrue
 				s.Labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
 				s.Finalizers = []string{consts.DataPlaneOwnedWaitForOwnerFinalizer}
-
+			},
+			expectDeletion: true,
+		},
+		{
+			// A wait-for-owner finalizer alone must not trigger deletion.
+			name: "valid cert with DataPlane managed and wait-for-owner finalizer is not deleted",
+			adjust: func(s *corev1.Secret) {
+				s.Annotations[consts.CertExpiresAtAnnotation] = time.Now().Add(time.Hour).UTC().Format(time.RFC3339)
+				s.Labels[config.DefaultSecretLabelSelector] = config.LabelValueForSelectorTrue
+				s.Labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
+				s.Finalizers = []string{consts.DataPlaneOwnedWaitForOwnerFinalizer}
 			},
 			expectDeletion: false,
 		},
@@ -117,8 +130,9 @@ func TestSecretCertReconcilerCustomMargin(t *testing.T) {
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
 
 	reconciler := &secretcert.Reconciler{
-		Client:      mgr.GetClient(),
-		LoggingMode: logging.DevelopmentMode,
+		Client:               mgr.GetClient(),
+		LoggingMode:          logging.DevelopmentMode,
+		CertExpirationMargin: 2 * time.Second,
 	}
 	StartReconcilers(ctx, t, mgr, logs, reconciler)
 
@@ -130,8 +144,7 @@ func TestSecretCertReconcilerCustomMargin(t *testing.T) {
 			s.Labels[consts.GatewayOperatorManagedByLabel] = consts.DataPlaneManagedLabelValue
 			s.Finalizers = []string{consts.DataPlaneOwnedWaitForOwnerFinalizer}
 		},
-		customExpirationMargin: 2 * time.Second,
-		expectDeletion:         true,
+		expectDeletion: true,
 	}
 	secretCertReconcilerTest(t, ns, mgr.GetClient(), tc)
 }

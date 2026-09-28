@@ -33,6 +33,13 @@ import (
 func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 	t.Parallel()
 
+	// After the manager's cache sync (waited for below), readiness has been
+	// observed to take ~16s in CI under -race + parallel envtest load, so keep
+	// this window generous - same as assertExpectedEvents in
+	// configerrorevent_envtest_test.go. This const also sets the reconciler's
+	// CacheSyncTimeout, raising it from the package-default 20s.
+	const waitTime = time.Minute
+
 	ctx := t.Context()
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
@@ -108,6 +115,12 @@ func TestOnPremAIGatewayReconciler_BecomesReady(t *testing.T) {
 func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	t.Parallel()
 
+	// After the manager's cache sync (waited for below), readiness has been
+	// observed to take ~16s in CI under -race + parallel envtest load, so keep
+	// this window generous - same as assertExpectedEvents in
+	// configerrorevent_envtest_test.go.
+	const waitTime = time.Minute
+
 	ctx := t.Context()
 	cfg, ns := Setup(t, ctx, scheme.Get(), WithInstallGatewayCRDs(true))
 	mgr, logs := NewManager(t, ctx, cfg, scheme.Get())
@@ -154,8 +167,9 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-provider",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelProviderSpec{
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group:         aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
 				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelProviderAPISpec{
@@ -183,12 +197,12 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		Name:      "test-model",
 		Namespace: ns.Name,
 		Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
-			// TODO: fix this when on prem ai gateway ref is added
-			// https://github.com/Kong/kong-operator/issues/5666
-			AIGatewayRef: commonv1alpha1.ObjectRef{
-				Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
-				NamespacedRef: &commonv1alpha1.NamespacedRef{
-					Name: onprem.Name},
+			AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+				Group: aiconfigurationv1alpha1.AIGatewayRefGroupOnPrem,
+				//nolint:staticcheck
+				Type:          aiconfigurationv1alpha1.AIGatewayRefTypeNamespacedRef,
+				Kind:          aiconfigurationv1alpha1.AIGatewayRefKindOnPrem,
+				NamespacedRef: &commonv1alpha1.NamespacedRef{Name: onprem.Name},
 			},
 			APISpec: aiconfigurationv1alpha1.AIGatewayModelAPISpec{
 				AIGatewayModelConfig: &aiconfigurationv1alpha1.AIGatewayModelConfig{

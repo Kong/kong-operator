@@ -974,13 +974,6 @@ func TestKonnectGatewayControlPlane_CrossNamespaceRefNotPermitted(t *testing.T) 
 		konnect.NewKonnectEntityReconciler(factory, logging.DevelopmentMode, cl,
 			konnect.WithMetricRecorder[konnectv1alpha2.KonnectGatewayControlPlane](&metricsmocks.MockRecorder{})))
 
-	// Wait for the manager's cache to finish its initial sync before proceeding.
-	// StartReconcilers only launches mgr.Start(ctx) in a goroutine and returns
-	// immediately, so without this the controller's workers can start seconds
-	// after this point on a loaded machine, and the EventuallyWithT assertion
-	// below would run - and expire - before the reconciler has run even once.
-	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
-
 	// Create two namespaces: one for the CP, one for the auth config target.
 	cpNs := deploy.Namespace(t, ctx, cl)
 	authNs := deploy.Namespace(t, ctx, cl)

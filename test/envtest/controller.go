@@ -107,6 +107,13 @@ func StartReconcilers(
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
+
+	// Wait for the manager's cache to finish its initial sync before returning.
+	// mgr.Start(ctx) only launched in a goroutine above, so without this, on a
+	// loaded CI machine the controller's workers can start tens of seconds
+	// later, and the callers' EventuallyWithT/require.Never windows would run -
+	// and expire - before the reconciler has run even once.
+	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
 }
 
 // StartReconciler creates a controller manager and starts the provided reconciler
@@ -155,6 +162,10 @@ func StartReconciler(
 		wg.Wait()
 		DumpLogsIfTestFailed(t, logs)
 	})
+
+	// Wait for the manager's cache to finish its initial sync before returning.
+	// See the same wait in StartReconcilers() above for why this is needed.
+	require.True(t, mgr.GetCache().WaitForCacheSync(ctx), "manager caches failed to sync")
 }
 
 // NewControllerClient returns a new controller-runtime Client for provided runtime.Scheme and rest.Config.

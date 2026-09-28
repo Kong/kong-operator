@@ -152,6 +152,16 @@ func TestSetFlagFromEnvVar(t *testing.T) {
 	}
 }
 
+func TestValidateKonnectSyncPeriod(t *testing.T) {
+	require.NoError(t, validateKonnectSyncPeriod(30*time.Second))
+
+	for _, value := range []time.Duration{0, -time.Second} {
+		t.Run(value.String(), func(t *testing.T) {
+			require.EqualError(t, validateKonnectSyncPeriod(value), "must be greater than 0")
+		})
+	}
+}
+
 func TestParse(t *testing.T) {
 	testCases := []struct {
 		name        string

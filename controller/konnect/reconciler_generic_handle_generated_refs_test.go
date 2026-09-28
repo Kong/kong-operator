@@ -10,6 +10,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 
+	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	kcfgconsts "github.com/kong/kong-operator/v2/api/common/consts"
 	commonv1alpha1 "github.com/kong/kong-operator/v2/api/common/v1alpha1"
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
@@ -317,6 +318,48 @@ func TestHandleGeneratedTypeReferences(t *testing.T) {
 				require.True(t, ok)
 				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 				assert.Equal(t, konnectv1alpha1.PortalRefReasonInvalid, cond.Reason)
+			},
+		},
+		{
+			name: "resolves the parent ref for entities whose aiGatewayRef targets a KonnectAIGateway",
+			run: func(t *testing.T) {
+				ent := &aiconfigurationv1alpha1.AIGatewayModel{
+					Name:      "model",
+					Namespace: "default",
+					Spec: aiconfigurationv1alpha1.AIGatewayModelSpec{
+						AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
+							Group:         aiconfigurationv1alpha1.AIGatewayRefGroupKonnect,
+							NamespacedRef: &commonv1alpha1.NamespacedRef{Name: "gw"},
+						},
+					},
+				}
+
+				cl := fake.NewClientBuilder().
+					WithScheme(scheme.Get()).
+					WithStatusSubresource(ent).
+					WithObjects(ent).
+					Build()
+				r := &KonnectEntityReconciler[
+					aiconfigurationv1alpha1.AIGatewayModel, *aiconfigurationv1alpha1.AIGatewayModel,
+				]{Client: cl}
+
+				stop, res, err := r.handleGeneratedTypeParentReferences(t.Context(), ent)
+
+				// The referenced KonnectAIGateway does not exist, so reconciliation
+				// proceeds rather than being skipped: handleRefResult resolves the
+				// missing-parent error by reporting the ParentRefValid condition.
+				require.NoError(t, err)
+				assert.True(t, stop)
+				assert.True(t, res.IsZero())
+
+				updated := &aiconfigurationv1alpha1.AIGatewayModel{}
+				require.NoError(t, cl.Get(t.Context(), client.ObjectKeyFromObject(ent), updated))
+				cond, ok := k8sutils.GetCondition(
+					kcfgconsts.ConditionType(updated.GetStatusConditionTypeParentRefValid()),
+					updated,
+				)
+				require.True(t, ok)
+				assert.Equal(t, metav1.ConditionFalse, cond.Status)
 			},
 		},
 	}

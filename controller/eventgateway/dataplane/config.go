@@ -105,10 +105,15 @@ var config = shareddataplane.Config[
 		WaitingForAddressMessage: eventgatewayv1alpha1.WaitingForAddressMessage,
 	},
 
-	CertificateLabelKey: consts.SecretKEGDataPlaneCertificateLabel,
-	CertificateKind:     "EventGatewayDataPlaneCertificate",
-	BuildCertificate:    buildEventGatewayDataPlaneCertificate,
-	EnsureCertificate:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+	Certificate: shareddataplane.CertificateConfig[
+		*eventgatewayv1alpha1.KegDataPlane,
+		*configurationv1alpha1.EventGatewayDataPlaneCertificate,
+	]{
+		LabelKey: consts.SecretKEGDataPlaneCertificateLabel,
+		Kind:     "EventGatewayDataPlaneCertificate",
+		Build:    buildEventGatewayDataPlaneCertificate,
+		Ensure:   secrets.EnsureCertificate[*eventgatewayv1alpha1.KegDataPlane],
+	},
 
 	Deployment: shareddataplane.DeploymentConfig[*eventgatewayv1alpha1.KegDataPlane]{
 		ContainerName:       consts.KEGContainerName,
@@ -144,11 +149,12 @@ var config = shareddataplane.Config[
 		DefaultPort:         DefaultKafkaPort,
 		ManagedByLabelValue: consts.DataPlaneManagedByLabelValue,
 		Options:             serviceOptions,
+
+		SetStatusAddresses: setStatusAddresses,
 	},
 
-	HPAScalingSpec:     hpaScalingSpec,
-	SetStatusReplicas:  setStatusReplicas,
-	SetStatusAddresses: setStatusAddresses,
+	HPAScalingSpec:    hpaScalingSpec,
+	SetStatusReplicas: setStatusReplicas,
 }
 
 // replicas returns the replica count to seed on the Deployment: the static
@@ -265,6 +271,7 @@ func buildContainer(
 	cp shareddataplane.ResolvedControlPlane,
 	image string,
 	_ string, // certSecretName: KEG always provisions its certificate Secret.
+	_ string, // adminCertSecretName: KEG never provisions an admin certificate.
 ) (corev1.Container, []corev1.Volume, error) {
 	envVars, err := buildKEGEnvVars(egdp, konnectEventGatewayFromResolved(cp))
 	if err != nil {

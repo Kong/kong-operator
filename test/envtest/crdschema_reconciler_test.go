@@ -94,11 +94,6 @@ func TestCRDSchemaReconciler(t *testing.T) {
 		mock,
 	)
 
-	// Wait for the manager's cache to finish its initial sync before issuing
-	// any direct reads/writes below - otherwise they can race the cache
-	// startup and fail with "the cache is not started".
-	require.True(t, mgr.GetCache().WaitForCacheSync(ctx))
-
 	cl := mgr.GetClient()
 
 	// The watch's initial sync delivers a Create event for every pre-existing

@@ -11,11 +11,13 @@ import (
 
 func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 	spec := &KonnectAIGatewayAPISpec{
-		DeploymentType: "hybrid",
-		Description:    "test-value",
-		DisplayName:    "test-value",
-		Labels:         PublicLabels{"test-key": "test-value"},
-		Name:           "test-value",
+		DeploymentType:     "hybrid",
+		Description:        "test-value",
+		DisplayName:        "test-value",
+		Labels:             PublicLabels{"test-key": "test-value"},
+		MinRuntimeVersion:  AIGatewayMinRuntimeVersion("test-value"),
+		Name:               "test-value",
+		RuntimeAutoUpgrade: "Enabled",
 	}
 	result, err := spec.ToCreateAIGatewayRequest()
 	require.NoError(t, err)
@@ -31,16 +33,20 @@ func TestKonnectAIGatewayAPISpec_ToCreateAIGatewayRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
+	require.Equal(t, "test-value", payload["min_runtime_version"])
 	require.Equal(t, "test-value", payload["name"])
+	require.Equal(t, true, payload["runtime_auto_upgrade"])
 }
 
 func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 	spec := &KonnectAIGatewayAPISpec{
-		DeploymentType: "hybrid",
-		Description:    "test-value",
-		DisplayName:    "test-value",
-		Labels:         PublicLabels{"test-key": "test-value"},
-		Name:           "test-value",
+		DeploymentType:     "hybrid",
+		Description:        "test-value",
+		DisplayName:        "test-value",
+		Labels:             PublicLabels{"test-key": "test-value"},
+		MinRuntimeVersion:  AIGatewayMinRuntimeVersion("test-value"),
+		Name:               "test-value",
+		RuntimeAutoUpgrade: "Enabled",
 	}
 	result, err := spec.ToUpdateAIGatewayRequest()
 	require.NoError(t, err)
@@ -56,5 +62,7 @@ func TestKonnectAIGatewayAPISpec_ToUpdateAIGatewayRequest(t *testing.T) {
 	require.Equal(t, "test-value", payload["description"])
 	require.Equal(t, "test-value", payload["display_name"])
 	require.Equal(t, map[string]any{"test-key": "test-value"}, payload["labels"])
+	require.Equal(t, "test-value", payload["min_runtime_version"])
 	require.Equal(t, "test-value", payload["name"])
+	require.Equal(t, true, payload["runtime_auto_upgrade"])
 }

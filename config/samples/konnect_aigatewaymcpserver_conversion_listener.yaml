@@ -1,0 +1,103 @@
+kind: KonnectAIGateway
+apiVersion: konnect.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-cp-1
+  namespace: default
+spec:
+  apiSpec:
+    name: ai-gw-cp-1
+    displayName: My AI Gateway
+    description: AI Gateway control plane
+  konnect:
+    authRef:
+      name: konnect-api-auth-1
+---
+kind: AIGatewayAuthStrategy
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-auth-strategy
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: key-auth
+    key-auth:
+      name: mcp-key-auth
+      displayName: MCP Key Auth
+      config:
+        hideCredentials: Enabled
+---
+kind: AIGatewayConsumerGroup
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: ai-gw-mcp-consumer-group
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    name: mcp-dev-users
+    displayName: MCP Dev Users Group
+---
+kind: AIGatewayMCPServer
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+metadata:
+  name: flights-mcp-server-conversion-listener
+  namespace: default
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ai-gw-cp-1
+  apiSpec:
+    type: conversion-listener
+    conversion-listener:
+      name: flights-mcp-server-conversion-listener
+      displayName: KongAir Flights MCP Server (conversion-listener)
+      enabled: Enabled
+      # Access control. The consumer arm references AIGatewayAuthStrategy and
+      # AIGatewayConsumerGroup CRs (by metadata.name); the operator resolves
+      # each reference to the referenced CR's Konnect name at reconcile time.
+      access:
+        aclAttributeType: consumer
+        consumer:
+          authStrategies:
+            - name: ai-gw-mcp-auth-strategy
+          acls:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-mcp-consumer-group
+          # Default per-tool ACLs, applied to every tool without its own
+          # access.acls override.
+          defaultToolAcls:
+            allow:
+              - kind: AIGatewayConsumerGroup
+                name: ai-gw-mcp-consumer-group
+      config:
+        url: https://flights-api.kongair.example/openapi.json
+        route:
+          paths:
+          - /mcp/flights
+      tools:
+        - name: search_flights
+          description: Search available flights by origin, destination, and date
+          method: GET
+          path: /flights
+          # Per-tool consumer group ACLs (by metadata.name). Overrides the
+          # server-level defaultToolAcls.
+          access:
+            acls:
+              allow:
+                - kind: AIGatewayConsumerGroup
+                  name: ai-gw-mcp-consumer-group
+        - name: get_flight_status
+          description: Get real-time status for a given flight number
+          method: GET
+          path: /flights/{flightNumber}/status
+      labels:
+        domain: flights

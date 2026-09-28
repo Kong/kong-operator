@@ -209,7 +209,7 @@ type AIGatewayAuthStrategyKeyAuth struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -335,7 +335,7 @@ type AIGatewayAuthStrategyOpenIDConnect struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -977,11 +977,11 @@ type AIGatewayMCPACLs struct {
 	// List of consumer groups that are permitted access.
 	//
 	// +optional
-	Allow []string `json:"allow,omitempty"`
+	Allow []AIGatewayMCPACLRef `json:"allow,omitempty"`
 	// List of consumer groups that are denied access.
 	//
 	// +optional
-	Deny []string `json:"deny,omitempty"`
+	Deny []AIGatewayMCPACLRef `json:"deny,omitempty"`
 }
 
 // AIGatewayMCPConversionTool A tool exposed by an MCP Server in
@@ -1103,16 +1103,38 @@ type AIGatewayMCPPassthroughTool struct {
 	Name string `json:"name,omitzero"`
 }
 
+// AIGatewayMCPServerCacheHint A cache hint Kong emits on a cacheable operation
+// it serves.
+type AIGatewayMCPServerCacheHint struct {
+	// Whether the result may be cached across authorization contexts.
+	// `public` is rejected when
+	// the server's tool list is filtered per subject by `default_tool_acls` or a
+	// tool's own
+	// `access.acls`.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=public;private
+	CacheScope string `json:"cacheScope,omitzero"`
+	// How long a client may treat the result as fresh, in milliseconds.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	TtlMs int `json:"ttlMs,omitzero"`
+}
+
 // AIGatewayMCPServerConversionListener is a type alias.
 type AIGatewayMCPServerConversionListener struct {
 	//
 	//
 	// +optional
 	Access *AIGatewayMCPServerConversionListenerAccess `json:"access,omitempty"`
-	// Routing, logging, and server configuration for the MCP Server.
+	// Server-side configuration specific to modes where Kong answers as the MCP
+	// server.
 	//
 	// +required
-	Config AIGatewayMCPServerWithUpstreamNoProxyConfig `json:"config,omitzero"`
+	Config AIGatewayMCPServerConversionListenerConfig `json:"config,omitzero"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -1153,7 +1175,7 @@ type AIGatewayMCPServerConversionListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1168,6 +1190,100 @@ type AIGatewayMCPServerConversionListener struct {
 	//
 	// +required
 	Tools []AIGatewayMCPConversionTool `json:"tools,omitempty"`
+}
+
+// AIGatewayMCPServerConversionListenerConfig Server-side configuration specific
+// to modes where Kong answers as the MCP server.
+type AIGatewayMCPServerConversionListenerConfig struct {
+	// The MCP protocol revisions this server accepts.
+	// Leave unset to accept every revision Kong
+	// implements, which is the default.
+	// When set, `server/discover` advertises exactly this
+	// list and a request declaring anything else is rejected.
+	// Listing only per-request
+	// revisions refuses handshake clients.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// Cache hints Kong emits on the cacheable operations it serves.
+	// Only clients on a protocol
+	// revision that defines them receive them.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	Cache AIGatewayMCPServerConversionListenerConfigCache `json:"cache,omitzero"`
+	//
+	//
+	// +optional
+	Logging AIGatewayMCPServerConversionListenerConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
+	//
+	//
+	// +optional
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	// Configuration applied when proxying to the upstream service, including
+	// authentication.
+	//
+	// +optional
+	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
+	// Helper field to set protocol, host, port and path of the upstream service
+	// using a URL.
+	// This is the same as a Kong Gateway Service URL:
+	// ${scheme}://${host}:${port}/${path}
+	//
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	URL string `json:"url,omitzero"`
+}
+
+// AIGatewayMCPServerConversionListenerConfigCache Cache hints Kong emits on the
+// cacheable operations it serves.
+// Only clients on a protocol
+// revision that defines them receive them.
+//
+// **Requires a minimum runtime version of `2.1`**.
+type AIGatewayMCPServerConversionListenerConfigCache struct {
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
+}
+
+// AIGatewayMCPServerConversionListenerConfigLogging is a type alias.
+type AIGatewayMCPServerConversionListenerConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
 }
 
 // AIGatewayMCPServerConversionListenerAccess represents a union type for access.
@@ -1333,7 +1449,7 @@ type AIGatewayMCPServerConversionOnly struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1351,10 +1467,11 @@ type AIGatewayMCPServerListener struct {
 	//
 	// +optional
 	Access *AIGatewayMCPServerListenerAccess `json:"access,omitempty"`
-	// Routing, logging, and server configuration for the MCP Server.
+	// Server-side configuration specific to modes where Kong answers as the MCP
+	// server.
 	//
 	// +required
-	Config AIGatewayMCPServerNoUpstreamConfig `json:"config,omitzero"`
+	Config AIGatewayMCPServerListenerConfig `json:"config,omitzero"`
 	// The display name for the MCP Server.
 	//
 	// +required
@@ -1395,7 +1512,7 @@ type AIGatewayMCPServerListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1409,7 +1526,86 @@ type AIGatewayMCPServerListener struct {
 	//
 	//
 	// +required
-	Sources []AIGatewayEntityIdentifier `json:"sources,omitempty"`
+	Sources []AIGatewayMCPServerRef `json:"sources,omitempty"`
+}
+
+// AIGatewayMCPServerListenerConfig Server-side configuration specific to modes
+// where Kong answers as the MCP server.
+type AIGatewayMCPServerListenerConfig struct {
+	// The MCP protocol revisions this server accepts.
+	// Leave unset to accept every revision Kong
+	// implements, which is the default.
+	// When set, `server/discover` advertises exactly this
+	// list and a request declaring anything else is rejected.
+	// Listing only per-request
+	// revisions refuses handshake clients.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	AllowedVersions []string `json:"allowedVersions,omitempty"`
+	// Cache hints Kong emits on the cacheable operations it serves.
+	// Only clients on a protocol
+	// revision that defines them receive them.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	Cache AIGatewayMCPServerListenerConfigCache `json:"cache,omitzero"`
+	//
+	//
+	// +optional
+	Logging AIGatewayMCPServerListenerConfigLogging `json:"logging,omitzero"`
+	// Maximum size of request body to parse. Set to 0 for unlimited.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
+	// Route configuration for an MCP Server that terminates its own listener.
+	// At least one
+	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
+	// match
+	// incoming requests.
+	//
+	//
+	// +optional
+	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
+	// Server-side configuration for the MCP Server.
+	//
+	// +optional
+	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+}
+
+// AIGatewayMCPServerListenerConfigCache Cache hints Kong emits on the cacheable
+// operations it serves.
+// Only clients on a protocol
+// revision that defines them receive them.
+//
+// **Requires a minimum runtime version of `2.1`**.
+type AIGatewayMCPServerListenerConfigCache struct {
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	Discover AIGatewayMCPServerCacheHint `json:"discover,omitzero"`
+	// A cache hint Kong emits on a cacheable operation it serves.
+	//
+	// +optional
+	ToolsList AIGatewayMCPServerCacheHint `json:"toolsList,omitzero"`
+}
+
+// AIGatewayMCPServerListenerConfigLogging is a type alias.
+type AIGatewayMCPServerListenerConfigLogging struct {
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Audits string `json:"audits,omitzero"`
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	Payloads string `json:"payloads,omitzero"`
 }
 
 // UnmarshalJSON implements json.Unmarshaler.
@@ -1550,7 +1746,7 @@ type AIGatewayMCPServerListenerConsumer struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// Default per-tool access control rules for allowing or denying consumer
 	// groups access to
 	// tools.
@@ -1612,7 +1808,7 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	// +kubebuilder:validation:MaxItems=1
-	AuthStrategies []AIGatewayAuthStrategyReference `json:"authStrategies,omitempty"`
+	AuthStrategies []AIGatewayAuthStrategyRef `json:"authStrategies,omitempty"`
 	// Default per-tool access control rules for allowing or denying callers access
 	// to tools,
 	// evaluated against the value of the configured `access_token_claim_field`.
@@ -1640,49 +1836,6 @@ type AIGatewayMCPServerListenerOauth struct {
 	//
 	// +optional
 	Metadata AIGatewayMCPServerProtectedResourceMetadata `json:"metadata,omitzero"`
-}
-
-// AIGatewayMCPServerNoUpstreamConfig Routing, logging, and server configuration
-// for the MCP Server.
-type AIGatewayMCPServerNoUpstreamConfig struct {
-	// Configuration for AI Gateway logging.
-	//
-	// +optional
-	Logging AIGatewayMCPServerNoUpstreamConfigLogging `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
-	//
-	// +optional
-	// +kubebuilder:validation:Minimum=0
-	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	// Route configuration for an MCP Server that terminates its own listener.
-	// At least one
-	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
-	// match
-	// incoming requests.
-	//
-	//
-	// +optional
-	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
-	// Server-side configuration for the MCP Server.
-	//
-	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
-}
-
-// AIGatewayMCPServerNoUpstreamConfigLogging Configuration for AI Gateway
-// logging.
-type AIGatewayMCPServerNoUpstreamConfigLogging struct {
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Audits string `json:"audits,omitzero"`
-	//
-	//
-	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
 }
 
 // AIGatewayMCPServerPassthroughListener is a type alias.
@@ -1735,7 +1888,7 @@ type AIGatewayMCPServerPassthroughListener struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -1906,7 +2059,94 @@ type AIGatewayMCPServerProtectedResourceMetadata struct {
 // of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
 // match
 // incoming requests.
-type AIGatewayMCPServerRouteWithMatcher map[string]string
+type AIGatewayMCPServerRouteWithMatcher struct {
+	// One or more lists of values indexed by header name that will cause this
+	// route to match if present in the request.
+	// The `Host` header cannot be used with this attribute: hosts should be
+	// specified using the `hosts` attribute.
+	// When `headers` contains only one value and that value starts with the
+	// special prefix `~*`, the value is interpreted as a regular expression.
+	//
+	// +optional
+	Headers apiextensionsv1.JSON `json:"headers,omitzero"`
+	// A list of domain names that match this route.
+	// Note that the hosts value is case sensitive.
+	//
+	// +optional
+	Hosts []string `json:"hosts,omitempty"`
+	// The status code Kong responds with when all properties of a route match
+	// except the protocol i.e.
+	// if the protocol of the request is `HTTP` instead of `HTTPS`.
+	// `Location` header is injected by Kong if the field is set to 301, 302, 307
+	// or 308.
+	// Note: This config applies only if the route is configured to only accept the
+	// `https` protocol.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=100
+	// +kubebuilder:validation:Maximum=599
+	HTTPSRedirectStatusCode int `json:"httpsRedirectStatusCode,omitzero"`
+	// A list of HTTP methods that match this route.
+	//
+	// +optional
+	Methods []string `json:"methods,omitempty"`
+	// A list of paths that match this route.
+	//
+	// +optional
+	Paths []string `json:"paths,omitempty"`
+	// When matching a route via one of the `hosts` domain names, use the request
+	// `Host` header in the upstream request headers.
+	// If set to `false`, the upstream `Host` header will be that of the service's
+	// `host`.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	PreserveHost string `json:"preserveHost,omitzero"`
+	// An array of the protocols this route should allow.
+	// See the [route Object](#route-object) section for a list of accepted
+	// protocols.
+	// When set to only `https`, HTTP requests are answered with an upgrade error.
+	// When set to only `http`, HTTPS requests are answered with an error.
+	//
+	// +optional
+	Protocols []string `json:"protocols,omitempty"`
+	// A number used to choose which route resolves a given request when several
+	// routes match it using regexes simultaneously.
+	// When two routes match the path and have the same `regex_priority`, the older
+	// one (lowest `created_at`) is used.
+	// Note that the priority for non-regex routes is different (longer non-regex
+	// routes are matched before shorter ones).
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=-2147483648
+	// +kubebuilder:validation:Maximum=2147483647
+	RegexPriority int `json:"regexPriority,omitzero"`
+	// Whether to enable request body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that receive
+	// data with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	RequestBuffering string `json:"requestBuffering,omitzero"`
+	// Whether to enable response body buffering or not.
+	// With HTTP 1.1, it may make sense to turn this off on services that send data
+	// with chunked transfer encoding.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ResponseBuffering string `json:"responseBuffering,omitzero"`
+	// When matching a route via one of the `paths`, strip the matching prefix from
+	// the upstream request URL.
+	//
+	// +optional
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	StripPath string `json:"stripPath,omitzero"`
+	// An optional set of strings associated with the route for grouping and
+	// filtering.
+	//
+	// +optional
+	Tags []string `json:"tags,omitempty"`
+}
 
 // AIGatewayMCPServerServerConfigBase Server-side configuration for the MCP
 // Server.
@@ -2029,7 +2269,7 @@ type AIGatewayMCPServerUpstreamServer struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -2145,6 +2385,20 @@ type AIGatewayMCPServerUpstreamServerServerConfig struct {
 	//
 	// +optional
 	ToolsListAuth *AIGatewayMCPServerUpstreamServerServerConfigToolsListAuth `json:"toolsListAuth,omitempty"`
+	// The MCP protocol revision Kong speaks to the upstream MCP server.
+	// Leave unset to
+	// negotiate a handshake revision with an `initialize` exchange, which is the
+	// default.
+	// Set a
+	// per-request revision to reach an upstream that answers no handshake and
+	// mints no session.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=2026-07-28;2025-11-25;2025-06-18;2025-03-26
+	UpstreamProtocolVersion string `json:"upstreamProtocolVersion,omitzero"`
 }
 
 // AIGatewayMCPServerUpstreamServerServerConfigSession Enable managed session
@@ -2532,7 +2786,7 @@ type AIGatewayMCPServerWithUpstreamConfig struct {
 	// Server-side configuration for the MCP Server.
 	//
 	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
+	Server AIGatewayMCPServerWithUpstreamConfigServer `json:"server,omitzero"`
 	// Configuration applied when proxying to the upstream service, including
 	// authentication.
 	//
@@ -2565,62 +2819,79 @@ type AIGatewayMCPServerWithUpstreamConfigLogging struct {
 	Payloads string `json:"payloads,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfig Routing, logging, and server
-// configuration for the MCP Server.
-type AIGatewayMCPServerWithUpstreamNoProxyConfig struct {
-	// Configuration for AI Gateway logging.
+// AIGatewayMCPServerWithUpstreamConfigServer Server-side configuration for the
+// MCP Server.
+type AIGatewayMCPServerWithUpstreamConfigServer struct {
+	// Whether to forward the client request headers to the upstream server when
+	// calling the tools.
 	//
 	// +optional
-	Logging AIGatewayMCPServerWithUpstreamNoProxyConfigLogging `json:"logging,omitzero"`
-	// Maximum size of request body to parse. Set to 0 for unlimited.
+	// +kubebuilder:validation:Enum=Enabled;Disabled
+	ForwardClientHeaders string `json:"forwardClientHeaders,omitzero"`
+	// Enable managed session when Kong responds as MCP server in listener,
+	// conversion-listener, or upstream-server modes.
+	// This doesn't affect the passthrough-listener mode as the state in that mode
+	// is maintained by the upstream MCP servers.
+	//
+	//
+	// +optional
+	Session AIGatewayMCPServerWithUpstreamConfigServerSession `json:"session,omitzero"`
+	// The timeout for calling the tools in milliseconds.
 	//
 	// +optional
 	// +kubebuilder:validation:Minimum=0
 	// +kubebuilder:validation:Maximum=2147483646
-	MaxRequestBodySize int `json:"maxRequestBodySize,omitzero"`
-	// Route configuration for an MCP Server that terminates its own listener.
-	// At least one
-	// of `hosts`, `paths`, `methods`, or `headers` must be set so the route can
-	// match
-	// incoming requests.
-	//
-	//
-	// +optional
-	Route AIGatewayMCPServerRouteWithMatcher `json:"route,omitzero"`
-	// Server-side configuration for the MCP Server.
-	//
-	// +optional
-	Server AIGatewayMCPServerServerConfigBase `json:"server,omitzero"`
-	// Configuration applied when proxying to the upstream service, including
-	// authentication.
-	//
-	// +optional
-	Upstream AIGatewayUpstreamConfig `json:"upstream,omitzero"`
-	// Helper field to set protocol, host, port and path of the upstream service
-	// using a URL.
-	// This is the same as a Kong Gateway Service URL:
-	// ${scheme}://${host}:${port}/${path}
-	//
-	//
-	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=253
-	URL string `json:"url,omitzero"`
+	Timeout int `json:"timeout,omitzero"`
 }
 
-// AIGatewayMCPServerWithUpstreamNoProxyConfigLogging Configuration for AI
-// Gateway logging.
-type AIGatewayMCPServerWithUpstreamNoProxyConfigLogging struct {
+// AIGatewayMCPServerWithUpstreamConfigServerSession Enable managed session when
+// Kong responds as MCP server in listener, conversion-listener, or
+// upstream-server modes.
+// This doesn't affect the passthrough-listener mode as the state in that mode
+// is maintained by the upstream MCP servers.
+type AIGatewayMCPServerWithUpstreamConfigServerSession struct {
+	// The configuration for client-side session storage.
 	//
+	// +optional
+	Client AIGatewayMCPServerWithUpstreamConfigServerSessionClient `json:"client,omitzero"`
+	// If enabled, Kong will maintain managed sessions with the MCP server.
 	//
 	// +optional
 	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Audits string `json:"audits,omitzero"`
+	Managed string `json:"managed,omitzero"`
+	// Config for connecting to a Cloud Provider's Redis instance.
+	//
+	// +optional
+	Redis AIGatewayRedisCloudConfiguration `json:"redis,omitzero"`
+	// The time-to-live (TTL) for each session in seconds.
+	//
+	// +optional
+	// +kubebuilder:validation:Minimum=0
+	// +kubebuilder:validation:Maximum=2147483646
+	SessionTtl int `json:"sessionTtl,omitzero"`
+	// The strategy for the session.
+	// If the value is 'client', the session is encrypted into MCP session id
+	// assigned to the client.
+	// If the value is not 'client', the session is stored in the configured
+	// database.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=client;redis
+	Strategy string `json:"strategy,omitzero"`
+}
+
+// AIGatewayMCPServerWithUpstreamConfigServerSessionClient The configuration for
+// client-side session storage.
+type AIGatewayMCPServerWithUpstreamConfigServerSessionClient struct {
+	// The secrets that are used in session encryption.
+	// Required when the strategy is 'client'.
+	// The first secret is used for encryption, while all secrets are used for
+	// decryption to support key rotation.
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:Enum=Enabled;Disabled
-	Payloads string `json:"payloads,omitzero"`
+	Secrets []string `json:"secrets,omitempty"`
 }
 
 // AIGatewayMCPServerWithUpstreamNoProxyConfigNoServerConfig Routing, logging,
@@ -2843,6 +3114,22 @@ type AIGatewayMistralEmbeddingsModelConfig struct {
 	UpstreamURL string `json:"upstreamURL,omitzero"`
 }
 
+// AIGatewayModalCostList is a type alias.
+type AIGatewayModalCostList struct {
+	// Cost per 1M tokens for this modal type.
+	//
+	// +required
+	// +kubebuilder:validation:Minimum=0
+	Cost float64 `json:"cost,omitzero"`
+	// The modal type this price applies to.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	// +kubebuilder:validation:Enum=text;audio;image;video
+	Modal string `json:"modal,omitzero"`
+}
+
 // AIGatewayModelAPI Configuration for proxying asynchronous requests/responses
 // to/from an AI Gateway model using the files and batches APIs.
 type AIGatewayModelAPI struct {
@@ -2903,7 +3190,7 @@ type AIGatewayModelAPI struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -4445,7 +4732,7 @@ type AIGatewayModelModel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 	// List of policy references.
 	//
@@ -4778,7 +5065,7 @@ type AIGatewayModelProviderAnthropic struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -4832,7 +5119,7 @@ type AIGatewayModelProviderAzure struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5040,7 +5327,7 @@ type AIGatewayModelProviderBedrock struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5210,7 +5497,7 @@ type AIGatewayModelProviderCerebras struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5264,7 +5551,7 @@ type AIGatewayModelProviderCohere struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5639,7 +5926,7 @@ type AIGatewayModelProviderDashscope struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5694,7 +5981,7 @@ type AIGatewayModelProviderDatabricks struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5748,7 +6035,7 @@ type AIGatewayModelProviderDeepseek struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5802,7 +6089,7 @@ type AIGatewayModelProviderGemini struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -5973,7 +6260,7 @@ type AIGatewayModelProviderHuggingface struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6027,7 +6314,7 @@ type AIGatewayModelProviderKimi struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6081,7 +6368,7 @@ type AIGatewayModelProviderLlama2 struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6135,7 +6422,7 @@ type AIGatewayModelProviderMistral struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6189,7 +6476,7 @@ type AIGatewayModelProviderOllama struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6243,7 +6530,7 @@ type AIGatewayModelProviderOpenai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6301,7 +6588,7 @@ type AIGatewayModelProviderSagemaker struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6471,7 +6758,7 @@ type AIGatewayModelProviderVercel struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6525,7 +6812,7 @@ type AIGatewayModelProviderVllm struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6579,7 +6866,7 @@ type AIGatewayModelProviderXai struct {
 	// +required
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
-	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:-]{1,256}$`
+	// +kubebuilder:validation:Pattern=`^[A-Za-z0-9._:@-]{1,256}$`
 	Name AIGatewayEntityIdentifier `json:"name,omitzero"`
 }
 
@@ -6713,13 +7000,12 @@ type AIGatewayModelSelectorConfig struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=253
 	PathParam string `json:"pathParam,omitzero"`
-	// An optional model alias. When omitted, the model name is used.
+	// Optional model aliases. When omitted, the model name is used.
 	// When no selector location is configured, the format default selector is
 	// used.
 	//
 	//
 	// +optional
-	// +kubebuilder:validation:MaxItems=1
 	Values []string `json:"values,omitempty"`
 }
 
@@ -8296,6 +8582,14 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8321,6 +8615,13 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8331,6 +8632,13 @@ type AIGatewayTargetAnthropicConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8376,6 +8684,14 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8420,6 +8736,13 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8430,6 +8753,13 @@ type AIGatewayTargetAzureConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8470,6 +8800,14 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8500,6 +8838,13 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8510,6 +8855,13 @@ type AIGatewayTargetBedrockConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Latency performance configuration for the model invocation.
 	//
 	// +optional
@@ -8562,6 +8914,14 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8587,6 +8947,13 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8597,6 +8964,13 @@ type AIGatewayTargetCerebrasConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -8640,6 +9014,14 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -8671,6 +9053,13 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -8681,6 +9070,13 @@ type AIGatewayTargetCohereConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9212,6 +9608,14 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9237,6 +9641,13 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// Whether to use the international DashScope endpoint.
 	//
 	// +optional
@@ -9252,6 +9663,13 @@ type AIGatewayTargetDashscopeConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9288,6 +9706,14 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9313,6 +9739,13 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9323,6 +9756,13 @@ type AIGatewayTargetDatabricksConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9364,6 +9804,14 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9389,6 +9837,13 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9399,6 +9854,13 @@ type AIGatewayTargetDeepseekConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9434,6 +9896,14 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9463,6 +9933,13 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9473,6 +9950,13 @@ type AIGatewayTargetGeminiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9509,6 +9993,14 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9534,6 +10026,13 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9544,6 +10043,13 @@ type AIGatewayTargetHuggingfaceConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9590,6 +10096,14 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9615,6 +10129,13 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// When `true`, requests are sent to `api.moonshot.ai` (international).
 	// When `false`, requests are sent to `api.moonshot.cn` (mainland China).
 	//
@@ -9632,6 +10153,13 @@ type AIGatewayTargetKimiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9667,6 +10195,14 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9699,6 +10235,13 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9709,6 +10252,13 @@ type AIGatewayTargetLlama2Config struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9745,6 +10295,14 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9777,6 +10335,13 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9787,6 +10352,13 @@ type AIGatewayTargetMistralConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9822,6 +10394,14 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9847,6 +10427,13 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9857,6 +10444,13 @@ type AIGatewayTargetOllamaConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9892,6 +10486,14 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9917,6 +10519,13 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -9927,6 +10536,13 @@ type AIGatewayTargetOpenaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -9967,6 +10583,14 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -9992,6 +10616,13 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10002,6 +10633,13 @@ type AIGatewayTargetSagemakerConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10088,6 +10726,14 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10113,6 +10759,13 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10123,6 +10776,13 @@ type AIGatewayTargetVercelConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10158,6 +10818,14 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10183,6 +10851,13 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10193,6 +10868,13 @@ type AIGatewayTargetVllmConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//
@@ -10229,6 +10911,14 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	CacheReadCost float64 `json:"cacheReadCost,omitzero"`
+	// Per-modality override of `cache_read_cost`, in cost per 1M cache-read prompt
+	// tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	CacheReadCostList []AIGatewayModalCostList `json:"cacheReadCostList,omitempty"`
 	// Cost per 1M cache-write prompt tokens for billing and cost tracking.
 	//
 	// +optional
@@ -10254,6 +10944,13 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	InputCost float64 `json:"inputCost,omitzero"`
+	// Per-modality override of `input_cost`, in cost per 1M prompt tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	InputCostList []AIGatewayModalCostList `json:"inputCostList,omitempty"`
 	// The maximum number of tokens to generate in the response.
 	//
 	// +optional
@@ -10264,6 +10961,13 @@ type AIGatewayTargetXaiConfig struct {
 	//
 	// +optional
 	OutputCost float64 `json:"outputCost,omitzero"`
+	// Per-modality override of `output_cost`, in cost per 1M output tokens.
+	// Set it for models that price each modality separately.
+	//
+	// **Requires a minimum runtime version of `2.1`**.
+	//
+	// +optional
+	OutputCostList []AIGatewayModalCostList `json:"outputCostList,omitempty"`
 	// Multiplier applied to the whole request for a service tier.
 	// The default factor is 1.0 when no tier matches.
 	//

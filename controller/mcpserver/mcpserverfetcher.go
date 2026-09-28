@@ -51,7 +51,16 @@ type MCPServersFetcher struct {
 	// NotifySignal, or nil if none has arrived yet. It is consumed and
 	// propagated to mirrored MCPServers on the next fetch/sync pass.
 	lastSignal atomic.Pointer[mcpSignal]
+
+	// pageRetryBackoffMin is the initial delay between retries of a failed
+	// page request in fetchAll. Zero means defaultPageRetryBackoffMin; tests
+	// shorten it so the retry path can be exercised without sleeping.
+	pageRetryBackoffMin time.Duration
 }
+
+// defaultPageRetryBackoffMin is the initial delay fetchAll waits before
+// retrying a page request that failed.
+const defaultPageRetryBackoffMin = time.Second
 
 // mcpSignal carries the last-seen offset/version pair from a Konnect MCP
 // signal (see signal.go), to be stamped onto mirrored MCPServer objects so
@@ -236,8 +245,12 @@ func (f *MCPServersFetcher) syncMCPServers(ctx context.Context, servers []sdkkon
 // backoff on transient errors.
 func (f *MCPServersFetcher) fetchAll(ctx context.Context) ([]sdkkonnectcomp.MCPServerCPInfo, error) {
 	logger := log.GetLogger(ctx, "mcpserver-fetcher", f.loggingMode)
+	minBackoff := f.pageRetryBackoffMin
+	if minBackoff <= 0 {
+		minBackoff = defaultPageRetryBackoffMin
+	}
 	b := &backoff.Backoff{
-		Min:    time.Second,
+		Min:    minBackoff,
 		Max:    time.Minute,
 		Factor: 2,
 	}

@@ -1,0 +1,34 @@
+# An AIGatewayPolicy resource with a `condition` that gates plugin execution
+# on the request path, adding a custom header to the response of an API only
+# when the condition matches. Requires AI Gateway runtime >= 2.1.
+# `condition` compiles as kcel (a CEL dialect), not the ATC-router expression
+# grammar used for Kong route matching - use CEL syntax/methods (e.g.
+# `startsWith`), not ATC-router operators like `^=`.
+# Required bindings:
+#   - namespace: The namespace where the AIGatewayPolicy resource will be created.
+#   - aigw_cp_name: The name of the AIGateway control plane resource to which this policy will be applied. Should be in the same namespace as the AIGatewayPolicy resource.
+#   - aigw_policy_name: The name of the AIGatewayPolicy resource to be created.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: ($aigw_policy_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    type: namespacedRef
+    namespacedRef:
+      name: ($aigw_cp_name)
+      namespace: ($namespace)
+  apiSpec:
+    type: response-transformer
+    displayName: "AIGateway Policy Condition"
+    enabled: "Enabled"
+    global: "Disabled"
+    name: ($aigw_policy_name)
+    condition: 'http.path.startsWith("/aigw11/chat")'
+    config:
+      type: inline
+      value:
+        add:
+          headers:
+            - "Modified-By-Policy-Condition:Kong-Operator-Chainsaw-Test"

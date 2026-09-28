@@ -11,6 +11,8 @@ import (
 const (
 	// IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef is the index field for AIGatewayPolicy -> KonnectAIGateway.
 	IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef = "aiGatewayPolicyOnKonnectAIGatewayRef"
+	// IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef is the index field for AIGatewayPolicy -> OnPremAIGateway.
+	IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef = "aiGatewayPolicyOnOnPremAIGatewayRef"
 )
 
 // OptionsForAIGatewayPolicy returns required Index options for AIGatewayPolicy reconciler.
@@ -21,6 +23,11 @@ func OptionsForAIGatewayPolicy() []Option {
 			Field:          IndexFieldAIGatewayPolicyOnKonnectAIGatewayRef,
 			ExtractValueFn: aiGatewayPolicyOnKonnectAIGatewayRef,
 		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayPolicy{},
+			Field:          IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef,
+			ExtractValueFn: aiGatewayPolicyOnOnPremAIGatewayRef,
+		},
 	}
 }
 
@@ -30,6 +37,32 @@ func aiGatewayPolicyOnKonnectAIGatewayRef(object client.Object) []string {
 		return nil
 	}
 	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting a KonnectAIGateway are visible to the Konnect
+	// reconciler: on-prem-targeted ones are indexed separately.
+	if !ent.Spec.AIGatewayRef.TargetsKonnectAIGateway() {
+		return nil
+	}
+
+	refNamespace := ent.GetNamespace()
+	if ent.Spec.AIGatewayRef.NamespacedRef.Namespace != nil && *ent.Spec.AIGatewayRef.NamespacedRef.Namespace != "" {
+		refNamespace = *ent.Spec.AIGatewayRef.NamespacedRef.Namespace
+	}
+
+	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+func aiGatewayPolicyOnOnPremAIGatewayRef(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+	if !ok {
+		return nil
+	}
+	if ent.Spec.AIGatewayRef.NamespacedRef == nil {
+		return nil
+	}
+	// Only entities targeting an OnPremAIGateway are visible to the on-prem
+	// reconciler: Konnect-targeted ones stay in the KonnectAIGateway index.
+	if !ent.Spec.AIGatewayRef.TargetsOnPremAIGateway() {
 		return nil
 	}
 

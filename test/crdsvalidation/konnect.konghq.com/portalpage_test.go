@@ -56,8 +56,7 @@ func TestPortalPage(t *testing.T) {
 				},
 			},
 			{
-				// TODO: https://github.com/Kong/kong-operator/issues/4008
-				Name: "parentPageIDRef cannot be set",
+				Name: "parentPageIDRef can reference another PortalPage by namespacedRef",
 				TestObject: &konnectv1alpha1.PortalPage{
 					ObjectMeta: common.CommonObjectMeta(ns.Name),
 					Spec: konnectv1alpha1.PortalPageSpec{
@@ -74,7 +73,44 @@ func TestPortalPage(t *testing.T) {
 						},
 					},
 				},
-				ExpectedErrorMessage: new("cannot set parentPageIDRef"),
+			},
+			{
+				Name: "parentPageIDRef can reference another PortalPage by konnectID",
+				TestObject: &konnectv1alpha1.PortalPage{
+					ObjectMeta: common.CommonObjectMeta(ns.Name),
+					Spec: konnectv1alpha1.PortalPageSpec{
+						PortalRef: portalRef,
+						APISpec: konnectv1alpha1.PortalPageAPISpec{
+							Content: "Page content",
+							Slug:    "slug-2",
+							ParentPageIDRef: &commonv1alpha1.ObjectRef{
+								Type:      commonv1alpha1.ObjectRefTypeKonnectID,
+								KonnectID: new("f6b7c8d9-0000-0000-0000-000000000000"),
+							},
+						},
+					},
+				},
+			},
+			{
+				Name: "parentPageIDRef cannot reference the PortalPage itself",
+				TestObject: &konnectv1alpha1.PortalPage{
+					Name:      "self-ref-page",
+					Namespace: ns.Name,
+					Spec: konnectv1alpha1.PortalPageSpec{
+						PortalRef: portalRef,
+						APISpec: konnectv1alpha1.PortalPageAPISpec{
+							Content: "Page content",
+							Slug:    "slug-3",
+							ParentPageIDRef: &commonv1alpha1.ObjectRef{
+								Type: commonv1alpha1.ObjectRefTypeNamespacedRef,
+								NamespacedRef: &commonv1alpha1.NamespacedRef{
+									Name: "self-ref-page",
+								},
+							},
+						},
+					},
+				},
+				ExpectedErrorMessage: new("parentPageIDRef must not reference the PortalPage itself"),
 			},
 		}.
 			RunWithConfig(t, cfg, scheme)

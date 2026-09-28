@@ -167,8 +167,7 @@ func TestAIGatewayAgent(t *testing.T) {
 		consumerGroup := &aiconfigurationv1alpha1.AIGatewayConsumerGroup{
 			Name: "acl-consumer-group", Namespace: ns.Name,
 			Spec: aiconfigurationv1alpha1.AIGatewayConsumerGroupSpec{
-				AIGatewayRef: commonv1alpha1.ObjectRef{
-					Type:          commonv1alpha1.ObjectRefTypeNamespacedRef,
+				AIGatewayRef: aiconfigurationv1alpha1.AIGatewayRef{
 					NamespacedRef: &commonv1alpha1.NamespacedRef{Name: gateway.Name},
 				},
 				APISpec: aiconfigurationv1alpha1.AIGatewayConsumerGroupAPISpec{

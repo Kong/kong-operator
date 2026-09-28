@@ -4,7 +4,7 @@ kind: CustomResourceDefinition
 metadata:
   annotations:
     kubernetes-configuration.konghq.com/channels: kong-operator
-    kubernetes-configuration.konghq.com/version: v2.3.0
+    kubernetes-configuration.konghq.com/version: v2.4.0-rapid.1
   name: mcpserverdataplanes.mcp.konghq.com
 spec:
   group: mcp.konghq.com
@@ -287,9 +287,6 @@ spec:
                                       For example, if autoscaling is configured with a memory consumption target of 100Mi,
                                       and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                       triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
-
-                                      This is an beta field and requires the HPAConfigurableTolerance feature
-                                      gate to be enabled.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                 type: object
@@ -363,9 +360,6 @@ spec:
                                       For example, if autoscaling is configured with a memory consumption target of 100Mi,
                                       and scale-down and scale-up tolerances of 5% and 1% respectively, scaling will be
                                       triggered when the actual consumption falls below 95Mi or exceeds 101Mi.
-
-                                      This is an beta field and requires the HPAConfigurableTolerance feature
-                                      gate to be enabled.
                                     pattern: ^(\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))(([KMGTPE]i)|[numkMGTPE]|([eE](\+|-)?(([0-9]+(\.[0-9]*)?)|(\.[0-9]+))))?$
                                     x-kubernetes-int-or-string: true
                                 type: object

@@ -15,8 +15,17 @@ limitations under the License.
 */
 
 // Package onpremconfig holds the reconcilers for the AI Gateway configuration
-// entities (AIGatewayModel, and its sibling kinds as they are added) that feed
-// the on-prem AI Gateway control plane instances with configuration.
+// entities (AIGatewayModel, and its sibling kinds) that feed the on-prem AI
+// Gateway control plane instances with configuration.
+//
+// Only entities whose aiGatewayRef resolves to an OnPremAIGateway are managed
+// here; entities referencing a KonnectAIGateway are owned by the generic
+// Konnect reconciler, which skips the on-prem-targeted ones in turn.
+//
+// Entity status reuses the Programmed condition with on-prem semantics
+// ("included in the last successfully pushed configuration"): the generated
+// reconcilers report it through the DataplaneClient once the configuration push
+// machinery is wired. Until then no on-prem status is written.
 package onpremconfig
 
 import (
@@ -41,14 +50,39 @@ type Controllers struct {
 	ChangeNotifier   *changenotifier.ChangeNotifier
 }
 
+// commonFieldsReconciler is implemented by every generated configuration-entity
+// reconciler in this package.
+type commonFieldsReconciler interface {
+	SetCommonFields(
+		client.Client,
+		*runtime.Scheme,
+		logr.Logger,
+		time.Duration,
+		*changenotifier.ChangeNotifier,
+	)
+	SetupWithManager(ctrl.Manager) error
+}
+
 // SetupWithManager sets up the configuration-entity controllers with the Manager.
 func (cs *Controllers) SetupWithManager(_ context.Context, mgr ctrl.Manager) error {
-	r := &AIGatewayModelReconciler{
-		Client:           cs.Client,
-		Log:              cs.Log,
-		Scheme:           cs.Scheme,
-		CacheSyncTimeout: cs.CacheSyncTimeout,
-		ChangeNotifier:   cs.ChangeNotifier,
+	for _, r := range []commonFieldsReconciler{
+		&AIGatewayAgentReconciler{},
+		&AIGatewayAuthStrategyReconciler{},
+		&AIGatewayCACertificateReconciler{},
+		&AIGatewayCertificateReconciler{},
+		&AIGatewayConsumerReconciler{},
+		&AIGatewayConsumerGroupReconciler{},
+		&AIGatewayDataPlaneCertificateReconciler{},
+		&AIGatewayMCPServerReconciler{},
+		&AIGatewayModelReconciler{},
+		&AIGatewayModelProviderReconciler{},
+		&AIGatewayPolicyReconciler{},
+		&AIGatewaySNIReconciler{},
+	} {
+		r.SetCommonFields(cs.Client, cs.Scheme, cs.Log, cs.CacheSyncTimeout, cs.ChangeNotifier)
+		if err := r.SetupWithManager(mgr); err != nil {
+			return err
+		}
 	}
-	return r.SetupWithManager(mgr)
+	return nil
 }

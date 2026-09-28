@@ -421,6 +421,52 @@ func Test_generateDeployment(t *testing.T) {
 	assert.Equal(t, mcpDataPlane.Name, deploy.OwnerReferences[0].Name)
 }
 
+func Test_generateDeployment_SecurityContext(t *testing.T) {
+	mcpDataPlane := minimalMCPServerDataPlane()
+	apiAuth := minimalAPIAuth()
+	metadata := mcpServerMetadataWithContainers()
+
+	tokenSecret := tokenSecret(mcpDataPlane)
+	deploy := generateDeployment(logr.Discard(), mcpDataPlane, metadata, tokenSecret, apiAuth.Spec.ServerURL)
+
+	expectedSecurityContext := &corev1.SecurityContext{
+		AllowPrivilegeEscalation: new(false),
+		ReadOnlyRootFilesystem:   new(true),
+		RunAsNonRoot:             new(true),
+		RunAsUser:                new(int64(65532)),
+		RunAsGroup:               new(int64(65532)),
+		Capabilities: &corev1.Capabilities{
+			Drop: []corev1.Capability{"ALL"},
+		},
+	}
+
+	require.Len(t, deploy.Spec.Template.Spec.InitContainers, 1)
+	initContainer := deploy.Spec.Template.Spec.InitContainers[0]
+	assert.Equal(t, expectedSecurityContext, initContainer.SecurityContext)
+
+	require.Len(t, deploy.Spec.Template.Spec.Containers, 1)
+	mainContainer := deploy.Spec.Template.Spec.Containers[0]
+	assert.Equal(t, expectedSecurityContext, mainContainer.SecurityContext)
+
+	// Hardening the MCP Server containers must not add any volume mounts, env
+	// vars nor Pod volumes on top of the ones the operator sets itself: the
+	// containers don't run Kong Gateway, so they need neither /tmp nor
+	// /var/kong (and thus no KONG_PREFIX).
+	assert.Equal(t, []corev1.VolumeMount{
+		{Name: "mcp-server-code", MountPath: "/mcp-server"},
+	}, initContainer.VolumeMounts)
+	assert.Equal(t, []corev1.EnvVar{patEnvVarFromAuth(tokenSecret)}, initContainer.Env)
+
+	assert.Equal(t, []corev1.VolumeMount{
+		{Name: "mcp-server-code", MountPath: "/mcp-server"},
+	}, mainContainer.VolumeMounts)
+	assert.Empty(t, mainContainer.Env)
+
+	assert.Equal(t, []corev1.Volume{
+		{Name: "mcp-server-code", EmptyDir: &corev1.EmptyDirVolumeSource{}},
+	}, deploy.Spec.Template.Spec.Volumes)
+}
+
 func Test_generateDeployment_LabelsAndAnnotations(t *testing.T) {
 	mcpDataPlane := minimalMCPServerDataPlane()
 	mcpDataPlane.Spec.Deployment = &mcpv1alpha1.DeploymentOptions{

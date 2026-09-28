@@ -1,0 +1,129 @@
+name: Kong license
+description: >
+  Resolve the Kong Enterprise license, preferring the cached KONG_LICENSE_DATA
+  repository secret and only falling back to Kong/kong-license - which calls the
+  1Password API - when the cache is missing, malformed or expired. The 1Password
+  service account is shared company-wide and rate limited, so every avoided call
+  matters. The cache is kept fresh by .github/workflows/kong-license-refresh.yaml.
+
+inputs:
+  cached-license:
+    description: >
+      Cached license JSON, normally the KONG_LICENSE_DATA repository secret. When empty,
+      malformed or expired, the license is fetched from 1Password instead.
+    required: false
+    default: ""
+  op-token:
+    description: >
+      1Password service account token, used only when the cached license cannot be
+      used. Callers that always want the cache to be authoritative can leave it empty.
+    required: false
+    default: ""
+  allow-empty:
+    description: >
+      When "true", resolving no license at all is not an error and the license output
+      is empty. Used by the release workflow, which tolerates running without a license.
+    required: false
+    default: "false"
+
+outputs:
+  license:
+    description: "Kong license JSON, or an empty string when allow-empty is true and nothing could be resolved"
+    value: ${{ steps.select.outputs.license }}
+
+runs:
+  using: composite
+  steps:
+    - name: Check cached license
+      id: check
+      shell: bash
+      env:
+        CACHED_LICENSE: ${{ inputs.cached-license }}
+      run: |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+
+        use_cache=false
+
+        # Every branch below must leave $reason free of license material: the cached
+        # license is masked as one exact string, so its individual fields are not.
+        if [[ -z "${CACHED_LICENSE}" ]]; then
+          reason="no cached license provided"
+        elif ! expiration="$(jq -er '.license.payload.license_expiration_date' <<<"${CACHED_LICENSE}" 2>/dev/null)"; then
+          reason="cached license is not valid Kong license JSON"
+        elif ! expiration_epoch="$(date -u -d "${expiration}" +%s 2>/dev/null)"; then
+          reason="cached license has an unparsable expiration date"
+        else
+          # Compare UTC midnights so the last day of validity never reads as negative.
+          today_epoch="$(date -u -d "$(date -u +%Y-%m-%d)" +%s)"
+          days_left=$(( (expiration_epoch - today_epoch) / 86400 ))
+          if (( days_left < 0 )); then
+            reason="cached license expired ${days_left#-} day(s) ago"
+          else
+            use_cache=true
+            reason="cached license valid for ${days_left} more day(s)"
+          fi
+        fi
+
+        echo "use-cache=${use_cache}" >> "${GITHUB_OUTPUT}"
+        echo "reason=${reason}" >> "${GITHUB_OUTPUT}"
+        echo "${reason}"
+
+    - name: Fetch license from 1Password
+      id: fetch
+      if: steps.check.outputs.use-cache != 'true' && inputs.op-token != ''
+      uses: Kong/kong-license@ddccb487a0b319cef85f348b16a1ad2b6d9c1df7 # master @ 20260529
+      with:
+        op-token: ${{ inputs.op-token }}
+
+    - name: Select license
+      id: select
+      shell: bash
+      env:
+        CACHED_LICENSE: ${{ inputs.cached-license }}
+        FETCHED_LICENSE: ${{ steps.fetch.outputs.license }}
+        USE_CACHE: ${{ steps.check.outputs.use-cache }}
+        REASON: ${{ steps.check.outputs.reason }}
+        ALLOW_EMPTY: ${{ inputs.allow-empty }}
+      run: |
+        set -o errexit
+        set -o nounset
+        set -o pipefail
+
+        if [[ "${USE_CACHE}" == "true" ]]; then
+          license="${CACHED_LICENSE}"
+          source="cache"
+        else
+          license="${FETCHED_LICENSE}"
+          source="1password"
+        fi
+
+        if [[ -z "${license}" ]]; then
+          source="none"
+          if [[ "${ALLOW_EMPTY}" != "true" ]]; then
+            echo "::error::Could not resolve a Kong Enterprise license: ${REASON}, and no license was fetched from 1Password. Run the 'kong license refresh' workflow to repopulate the KONG_LICENSE_DATA secret."
+            exit 1
+          fi
+        else
+          # Mirror the masking Kong/kong-license applies. GitHub masks a secret only as
+          # one exact string, so these fields stay exposed if anything re-emits part of
+          # the license (pretty-printed, base64'd, ...).
+          for field in '.license.signature' '.license.payload.license_key'; do
+            value="$(jq -r "${field} // empty" <<<"${license}" 2>/dev/null || true)"
+            if [[ -n "${value}" ]]; then
+              echo "::add-mask::${value}"
+            fi
+          done
+        fi
+
+        delimiter="$(openssl rand -hex 16)"
+        {
+          echo "license<<${delimiter}"
+          echo "${license}"
+          echo "${delimiter}"
+        } >> "${GITHUB_OUTPUT}"
+
+        # Without this line a silent fallback is invisible: CI stays green while every
+        # job keeps hitting the rate-limited 1Password API.
+        echo "Kong license source: ${source} (${REASON})" >> "${GITHUB_STEP_SUMMARY}"

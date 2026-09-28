@@ -1,0 +1,15 @@
+# Unqualified Kubernetes name, namespace-qualified Konnect name.
+apiVersion: konnect.konghq.com/v1alpha2
+kind: KonnectGatewayControlPlane
+metadata:
+  name: ($gateway_name)
+  namespace: ($staging_namespace)
+spec:
+  createControlPlaneRequest:
+    name: (join('_', [($staging_namespace), ($gateway_name)]))
+status:
+  # Programmed plus a Konnect ID: the Control Plane was created, not merely requested.
+  (conditions[?type == 'Programmed']):
+    - status: 'True'
+      reason: Programmed
+  (id != null): true
