@@ -294,6 +294,14 @@
 
 ### Fixes
 
+- Hybridgateway: preserve Gateway API precedence for overlapping path, method,
+  and header matches by retaining native PathPrefix matching and generating
+  specialized Kong Routes for conflicting match combinations. This enables the
+  `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
+  gateway. Generated priorities stay below `1 << 20` (`1048576`) because Kong's
+  traditional-compatible router only retains the low 20 bits when calculating
+  route precedence.
+  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 - Konnect: fix hot retry loop when Konnect returns 5xx on entity update
   (e.g. Event Gateway update returning 500). The Konnect trace ID is now
   cleared from Konnect 5xx API errors in the `Programmed` condition
@@ -774,14 +782,6 @@ by the operator's semver:
   was treated as authoritative and deleted the in-cluster `MCPServer`s missing
   from it.
   [#5727](https://github.com/Kong/kong-operator/pull/5727)
-- Hybridgateway: preserve Gateway API precedence for overlapping path, method,
-  and header matches by retaining native PathPrefix matching and generating
-  specialized Kong Routes for conflicting match combinations. This enables the
-  `HTTPRouteMethodMatching` Gateway API conformance test for the hybrid
-  gateway. Generated priorities stay below `1 << 20` (`1048576`) because Kong's
-  traditional-compatible router only retains the low 20 bits when calculating
-  route precedence.
-  [#4715](https://github.com/Kong/kong-operator/pull/4715)
 
 ## [v2.3.2]
 
