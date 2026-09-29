@@ -918,7 +918,6 @@ func TestAIGatewayDataPlaneReconciler_KongLicense(t *testing.T) {
 	// Mirror the production wiring: the reconciler must read the license from
 	// the manager's informer cache, not from the KongLicense reconciler's own cache.
 	licenseGetter := shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
-	require.NoError(t, err)
 
 	StartReconcilers(ctx, t, mgr, logs,
 		&aigwdataplane.Reconciler{
