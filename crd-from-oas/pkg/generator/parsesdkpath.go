@@ -270,6 +270,19 @@ func resolveGoPackageDir(importPath string) (string, error) {
 		return dir, nil
 	}
 
+	// Prefer the version pinned by a module graph we belong to (walking up to
+	// find one, e.g. the repository root module). The module-cache scan below
+	// only sees whatever versions happen to be cached and picks the newest,
+	// which can be a release that predates or postdates the pinned version —
+	// e.g. the repo pins a v0.69.0-dev.2 prerelease while a v0.69.0 release
+	// without the same types is also cached.
+	if dir, err := resolveGoPackageDirFromGoMod(importPath); err == nil {
+		sdkCacheMu.Lock()
+		sdkPackageDirCache[importPath] = dir
+		sdkCacheMu.Unlock()
+		return dir, nil
+	}
+
 	if dir, err := resolveGoPackageDirFromModuleCache(importPath); err == nil {
 		sdkCacheMu.Lock()
 		sdkPackageDirCache[importPath] = dir
@@ -277,19 +290,33 @@ func resolveGoPackageDir(importPath string) (string, error) {
 		return dir, nil
 	}
 
-	cmd := exec.Command("go", "list", "-f", "{{.Dir}}", importPath)
-	out, err := cmd.Output()
+	return "", fmt.Errorf("package %q not found in module graph or module cache", importPath)
+}
+
+// resolveGoPackageDirFromGoMod resolves importPath using the module graph of
+// the nearest enclosing module that has the package's module in its build
+// list, honoring replace directives. It walks up from the working directory.
+func resolveGoPackageDirFromGoMod(importPath string) (string, error) {
+	dir, err := os.Getwd()
 	if err != nil {
-		return "", fmt.Errorf("go list %q: %w", importPath, err)
+		return "", fmt.Errorf("get working directory: %w", err)
 	}
-	dir = strings.TrimSpace(string(out))
-	if dir == "" {
-		return "", fmt.Errorf("go list %q returned empty directory", importPath)
+	for {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			cmd := exec.Command("go", "list", "-f", "{{.Dir}}", importPath)
+			cmd.Dir = dir
+			if out, err := cmd.Output(); err == nil {
+				if packageDir := strings.TrimSpace(string(out)); packageDir != "" {
+					return packageDir, nil
+				}
+			}
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			return "", fmt.Errorf("no module in the working directory or its parents provides %q", importPath)
+		}
+		dir = parent
 	}
-	sdkCacheMu.Lock()
-	sdkPackageDirCache[importPath] = dir
-	sdkCacheMu.Unlock()
-	return dir, nil
 }
 
 func resolveGoPackageDirFromModuleCache(importPath string) (string, error) {

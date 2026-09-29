@@ -24,13 +24,12 @@ import (
 	"io"
 	"strings"
 
+	"github.com/kong/go-kong/kong"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
-
-	"github.com/kong/go-kong/kong"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
