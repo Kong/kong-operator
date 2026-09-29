@@ -18,6 +18,7 @@ package aigateway
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/go-logr/logr"
@@ -145,14 +146,11 @@ func (r *AdminAPIEndpointsReconciler) Reconcile(ctx context.Context, _ reconcile
 		if !referencesOnPremAIGateway(dp, r.GatewayNN) {
 			continue
 		}
-		discovered, err := r.Discoverer.GetAdminAPIsForService(
-			ctx,
-			r.Client,
-			types.NamespacedName{
-				Namespace: dp.Namespace,
-				Name:      dp.Name + dataplaneconsts.AdminServiceNameSuffix,
-			},
-		)
+		serviceNN := types.NamespacedName{
+			Namespace: dp.Namespace,
+			Name:      dp.Name + dataplaneconsts.AdminServiceNameSuffix,
+		}
+		discovered, err := r.Discoverer.GetAdminAPIsForService(ctx, r.Client, serviceNN)
 		if err != nil {
 			// A partial set must never replace the last known complete
 			// one: skip the notification and requeue, so the next
@@ -161,7 +159,7 @@ func (r *AdminAPIEndpointsReconciler) Reconcile(ctx context.Context, _ reconcile
 				"dataplane", client.ObjectKeyFromObject(dp))
 			return ctrl.Result{}, err
 		}
-		adminAPIs = adminAPIs.Union(discovered)
+		adminAPIs = adminAPIs.Union(withTLSServerName(discovered, serviceNN))
 	}
 
 	r.Log.V(1).Info(
@@ -190,4 +188,33 @@ func referencesOnPremAIGateway(
 	// The onpremNamespacedRef references an OnPremAIGateway in the same
 	// namespace as the AIGatewayDataPlane.
 	return dp.Namespace == gatewayNN.Namespace && ref.OnPremNamespacedRef.Name == gatewayNN.Name
+}
+
+// adminAPIServiceTLSServerName returns the TLS ServerName used to verify the
+// Admin API server certificate of the given Admin API Service. It is the
+// Service's plain in-cluster DNS name, which must equal the AIGatewayDataPlane
+// Admin API certificate subject (AdminAPIConfig.certificateSubject,
+// <name>-admin.<namespace>.svc).
+//
+// The shared discovery (internal/adminapi) emits a pod.<service>.<namespace>.svc
+// server name instead, which is covered only by the wildcard certificate of the
+// regular DataPlane. The AIGatewayDataPlane certificate is issued for the plain
+// Service DNS name, so the on-prem push path overrides it.
+func adminAPIServiceTLSServerName(serviceNN types.NamespacedName) string {
+	return fmt.Sprintf("%s.%s.svc", serviceNN.Name, serviceNN.Namespace)
+}
+
+// withTLSServerName returns a copy of the set with every endpoint's
+// TLSServerName replaced by the plain in-cluster DNS name of the Admin API
+// Service the endpoints belong to (see adminAPIServiceTLSServerName).
+func withTLSServerName(
+	apis sets.Set[adminapidiscovery.DiscoveredAdminAPI],
+	serviceNN types.NamespacedName,
+) sets.Set[adminapidiscovery.DiscoveredAdminAPI] {
+	overridden := make(sets.Set[adminapidiscovery.DiscoveredAdminAPI], apis.Len())
+	for api := range apis {
+		api.TLSServerName = adminAPIServiceTLSServerName(serviceNN)
+		overridden.Insert(api)
+	}
+	return overridden
 }

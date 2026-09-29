@@ -338,3 +338,23 @@ func ConditionsNeedsUpdate(current, updated ConditionsAware) bool {
 func conditionNeedsUpdate(current, updated metav1.Condition) bool {
 	return updated.Reason != current.Reason || updated.Message != current.Message || updated.Status != current.Status || updated.ObservedGeneration != current.ObservedGeneration
 }
+
+// UpdatedConditionPreservingLastTransitionTime returns the condition to persist for the
+// type of the provided updated condition: the stored one of the same type when
+// status, reason, message and observed generation are unchanged (keeping its
+// LastTransitionTime), the updated one otherwise. The bool reports whether the
+// condition changed.
+// Unlike SetCondition, it operates on a condition slice instead of a whole
+// ConditionsAware object, so it suits writers that apply a single condition
+// (e.g. via server-side apply) without touching the conditions owned by others.
+func UpdatedConditionPreservingLastTransitionTime(conditions []metav1.Condition, updated metav1.Condition) (metav1.Condition, bool) {
+	for _, c := range conditions {
+		if c.Type == updated.Type {
+			if conditionNeedsUpdate(c, updated) {
+				return updated, true
+			}
+			return c, false
+		}
+	}
+	return updated, true
+}

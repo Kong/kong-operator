@@ -49,49 +49,36 @@ func NewDiscoverer(
 // GetAdminAPIsForService performs an endpoint lookup, using provided kubeClient
 // to list provided Admin API Service EndpointSlices.
 // The retrieved EndpointSlices' ports are compared with the provided portNames set.
+//
+// The list is not paginated: the label selector scopes it to a single Service's
+// EndpointSlices, and pagination options (Limit/Continue) are not supported by
+// controller-runtime's cache-backed clients, which this is also called with.
 func (d *Discoverer) GetAdminAPIsForService(
 	ctx context.Context,
 	kubeClient client.Client,
 	service k8stypes.NamespacedName,
 ) (sets.Set[DiscoveredAdminAPI], error) {
-	const (
-		defaultEndpointSliceListPagingLimit = 100
-	)
-
 	// Get all the EndpointSlices assigned to the provided service.
 	labelReq, err := labels.NewRequirement("kubernetes.io/service-name", selection.Equals, []string{service.Name})
 	if err != nil {
 		return nil, err
 	}
 
-	var (
-		addresses     = sets.New[DiscoveredAdminAPI]()
-		continueToken string
-		labelSelector = labels.NewSelector().Add(*labelReq)
-	)
-	for {
-		var endpointsList discoveryv1.EndpointSliceList
-		if err := kubeClient.List(ctx, &endpointsList, &client.ListOptions{
-			LabelSelector: labelSelector,
-			Namespace:     service.Namespace,
-			Continue:      continueToken,
-			Limit:         defaultEndpointSliceListPagingLimit,
-		}); err != nil {
+	addresses := sets.New[DiscoveredAdminAPI]()
+	var endpointsList discoveryv1.EndpointSliceList
+	if err := kubeClient.List(ctx, &endpointsList, &client.ListOptions{
+		LabelSelector: labels.NewSelector().Add(*labelReq),
+		Namespace:     service.Namespace,
+	}); err != nil {
+		return nil, err
+	}
+
+	for _, es := range endpointsList.Items {
+		adminAPI, err := d.AdminAPIsFromEndpointSlice(es)
+		if err != nil {
 			return nil, err
 		}
-
-		for _, es := range endpointsList.Items {
-			adminAPI, err := d.AdminAPIsFromEndpointSlice(es)
-			if err != nil {
-				return nil, err
-			}
-			addresses = addresses.Union(adminAPI)
-		}
-
-		if endpointsList.Continue == "" {
-			break
-		}
-		continueToken = endpointsList.Continue
+		addresses = addresses.Union(adminAPI)
 	}
 	return addresses, nil
 }

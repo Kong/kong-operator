@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
@@ -16,7 +17,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/test/util/builder"
 )
 
-func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddressesCorrectlyPagingThroughResults(t *testing.T) {
+func TestDiscoverer_GetAdminAPIsForServiceReturnsAllAddresses(t *testing.T) {
 	t.Parallel()
 
 	ctx := t.Context()
@@ -125,4 +126,98 @@ func testPodReference(name, ns string) *corev1.ObjectReference {
 		Namespace: ns,
 		Name:      name,
 	}
+}
+
+// TestDiscoverer_GetAdminAPIsForServiceWithCacheClient verifies that the discoverer
+// works with a controller-runtime cache-backed client: cache-backed List calls reject
+// the Continue option and always return a sentinel Continue token in the result, so
+// any pagination in the discoverer wedges the discovery loop with
+// "continue list option is not supported by the cache".
+func TestDiscoverer_GetAdminAPIsForServiceWithCacheClient(t *testing.T) {
+	t.Parallel()
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	const (
+		serviceName = "cache-client-test-service"
+		portName    = "admin"
+		portNumber  = 8444
+	)
+	scheme := Scheme(t)
+	cfg, _ := Setup(t, ctx, scheme)
+	directClient := NewControllerClient(t, scheme, cfg)
+	mgr, _ := NewManager(t, ctx, cfg, scheme)
+	cacheClient := mgr.GetClient()
+
+	ns := CreateNamespace(ctx, t, directClient)
+	serviceObj := corev1.Service{
+		Namespace: ns.Name,
+		Name:      serviceName,
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "v1",
+				Kind:       "Service",
+				Name:       ns.Name,
+				UID:        ns.UID,
+			},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:     portName,
+					Protocol: corev1.ProtocolTCP,
+					Port:     portNumber,
+				},
+			},
+		},
+	}
+	require.NoError(t, directClient.Create(ctx, &serviceObj))
+
+	es := discoveryv1.EndpointSlice{
+		GenerateName: "endpointslice-",
+		Namespace:    ns.Name,
+		Labels: map[string]string{
+			"kubernetes.io/service-name": serviceName,
+		},
+		OwnerReferences: []metav1.OwnerReference{
+			{
+				APIVersion: "v1",
+				Kind:       "Service",
+				Name:       serviceName,
+				UID:        serviceObj.UID,
+			},
+		},
+		AddressType: discoveryv1.AddressTypeIPv4,
+		Endpoints: []discoveryv1.Endpoint{
+			{
+				Addresses: []string{"10.0.0.1"},
+				Conditions: discoveryv1.EndpointConditions{
+					Ready:       new(true),
+					Terminating: new(false),
+				},
+				TargetRef: testPodReference("pod-1", ns.Name),
+			},
+		},
+		Ports: builder.NewEndpointPort(portNumber).WithName(portName).IntoSlice(),
+	}
+	require.NoError(t, directClient.Create(ctx, &es))
+
+	go func() {
+		_ = mgr.Start(ctx)
+	}()
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.True(ct, mgr.GetCache().WaitForCacheSync(ctx))
+	}, waitTime, tickTime)
+
+	discoverer, err := adminapi.NewDiscoverer(sets.New(portName))
+	require.NoError(t, err)
+
+	// With paginated discovery this fails with "continue list option is not
+	// supported by the cache".
+	got, err := discoverer.GetAdminAPIsForService(
+		ctx, cacheClient, k8stypes.NamespacedName{Name: serviceName, Namespace: ns.Name},
+	)
+	require.NoError(t, err)
+	require.Len(t, got, 1, "GetAdminAPIsForService should return the single valid address via the cache client")
 }
