@@ -24,6 +24,7 @@ import (
 	konnectv1alpha2 "github.com/kong/kong-operator/v2/api/konnect/v1alpha2"
 	aigwdataplane "github.com/kong/kong-operator/v2/controller/aigateway/dataplane"
 	"github.com/kong/kong-operator/v2/controller/crdschema"
+	shareddataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	kiccontrollers "github.com/kong/kong-operator/v2/ingress-controller/pkg/controllers"
 	"github.com/kong/kong-operator/v2/modules/manager/scheme"

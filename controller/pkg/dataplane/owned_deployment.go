@@ -179,11 +179,10 @@ func BuildDeployment[T Object, Cert CertificateObject](
 				})
 			}
 		}
-			if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.Deployment.ContainerName); c != nil {
-				c.Env = slices.DeleteFunc(c.Env, func(e corev1.EnvVar) bool {
-					return slices.Contains(cfg.Deployment.ReassertEnvVars, e.Name)
-				})
-			}
+		if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.Deployment.ContainerName); c != nil {
+			c.Env = slices.DeleteFunc(c.Env, func(e corev1.EnvVar) bool {
+				return slices.Contains(cfg.Deployment.ReassertEnvVars, e.Name)
+			})
 		}
 
 		u, err = controllerpkgssa.MergeObjects(tc, base, userDeployment)

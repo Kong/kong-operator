@@ -22,6 +22,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/kong/go-kong/kong"
 	"github.com/samber/mo"
+	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	configurationv1alpha1 "github.com/kong/kong-operator/v2/api/configuration/v1alpha1"
