@@ -92,6 +92,10 @@ Download the SBOMs and `SHA256SUMS` from the Release page, then check them:
 sha256sum -c SHA256SUMS
 ```
 
+`SHA256SUMS` proves the files were not corrupted in transit; it is not signed, so it does not prove who
+produced them. Authorship is carried by the image: the signature and the provenance above cover the
+index digest, and each image SBOM names the platform digest it describes.
+
 If a release publishes its signature and provenance next to the image rather than in `kong/notary`,
 omit `COSIGN_REPOSITORY` and `--provenance-repository`.
 

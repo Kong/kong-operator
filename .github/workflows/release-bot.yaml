@@ -148,9 +148,19 @@ jobs:
           asset_prefix: source
 
       - uses: ./.github/actions/setup-mise
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
         with:
           # The backend prefix is required: a plain `syft` would not match the pinned entry.
           install_args: github:anchore/syft
+
+      # syft and `imagetools inspect` read ~/.docker/config.json; anonymous Docker Hub pulls are
+      # rate limited, and this job is blocking. Pull-scoped on purpose: no push rights here.
+      - name: Log in to Docker Hub
+        if: ${{ vars.DISABLE_SBOM_SCAN != 'true' }}
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
+        with:
+          username: ${{ vars.DOCKERHUB_PULL_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_PULL_TOKEN_KO }}
 
       # Subject is the index digest the tag resolves to, never the tag. Each file is per-platform,
       # selected by `--platform`. Blocking: this job publishes the release, so a missing image
@@ -173,10 +183,10 @@ jobs:
               -o "cyclonedx-json=image-linux-${arch}-sbom.cyclonedx.json"
           done
 
-      - name: Warn when the image SBOM is missing
+      - name: Warn when the SBOMs are skipped
         # Only reachable through the kill switch: a failure stops the job before this step.
         if: ${{ steps.image_sbom.outcome == 'skipped' }}
-        run: echo "::warning::image SBOM generation was skipped; publishing the release with the files that were produced"
+        run: echo "::warning::DISABLE_SBOM_SCAN is set; publishing the release without source and image SBOMs"
 
       # A skipped producer leaves this set empty; nullglob keeps the glob from failing.
       - name: Generate SBOM checksums
