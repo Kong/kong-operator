@@ -85,10 +85,10 @@ func validateConfigMapDataSourceRef(
 	var configMap corev1.ConfigMap
 	if err := cl.Get(ctx, client.ObjectKey{Namespace: namespace, Name: ref.Name}, &configMap); err != nil {
 		if apierrors.IsNotFound(err) {
-			// A ConfigMap excluded by --configmap-label-selector is absent from
+			// A ConfigMap excluded by --config-map-label-selector is absent from
 			// the cache and reads as not found.
 			return fmt.Sprintf(
-				"ConfigMap %s/%s not found: if it exists, it is not matched by --configmap-label-selector (%s=true by default)",
+				"ConfigMap %s/%s not found: if it exists, it is not matched by --config-map-label-selector (%s=true by default)",
 				namespace, ref.Name, mgrconfig.DefaultConfigMapLabelSelector,
 			), nil
 		}

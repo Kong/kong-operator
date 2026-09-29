@@ -216,7 +216,7 @@ const (
 const configMapDataSourceStructType = `// ConfigMapDataSourceRef is a reference to a key in a ConfigMap in the same
 // namespace as the referencing object.
 //
-// The operator only sees ConfigMaps matching its --configmap-label-selector,
+// The operator only sees ConfigMaps matching its --config-map-label-selector,
 // so the referenced ConfigMap must carry that label (konghq.com/configmap:
 // "true" by default).
 //

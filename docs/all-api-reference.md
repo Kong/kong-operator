@@ -6513,7 +6513,7 @@ _Appears in:_
 
 
 ConfigMapDataSourceRef is a reference to a key in a ConfigMap in the same
-namespace as the referencing object.<br /><br />The operator only sees ConfigMaps matching its --configmap-label-selector,
+namespace as the referencing object.<br /><br />The operator only sees ConfigMaps matching its --config-map-label-selector,
 so the referenced ConfigMap must carry that label (konghq.com/configmap:
 "true" by default).<br /><br />Write access to the referenced ConfigMap equals write access to this
 field: its content ships to Konnect on the next sync and runs on the

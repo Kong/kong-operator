@@ -17,7 +17,7 @@ metadata:
   name: (join('-', [$aigw_custom_policy_name, 'lua']))
   namespace: ($namespace)
   labels:
-    # Required by the operator's default --configmap-label-selector.
+    # Required by the operator's default --config-map-label-selector.
     konghq.com/configmap: "true"
 data:
   # Schema and handler are kept on one line so the bindings can be interpolated.
