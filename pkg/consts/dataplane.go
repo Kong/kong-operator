@@ -167,6 +167,33 @@ const (
 	// Listening on both wildcards is what makes a port reachable on IPv4-only
 	// and IPv6-only clusters alike.
 	ListenAddressIPv6 = "::"
+
+	// ListenOff is the value of KONG_*_LISTEN settings that disables the listener.
+	ListenOff = "off"
+
+	// Kong default ports from https://developer.konghq.com/gateway/network/
+	// that are not covered by the operator specific ports defined above
+	// (proxy 8000/8443 and Admin API over HTTPS 8444).
+
+	// DataPlaneKongAdminAPIPortHTTP is the Kong default port for Admin API over HTTP (admin_listen).
+	DataPlaneKongAdminAPIPortHTTP = 8001
+
+	// DataPlaneKongManagerGUIPortHTTP is the Kong default port for Kong Manager over HTTP (admin_gui_listen).
+	DataPlaneKongManagerGUIPortHTTP = 8002
+
+	// DataPlaneKongManagerGUIPortHTTPS is the Kong default port for Kong Manager over HTTPS (admin_gui_listen).
+	DataPlaneKongManagerGUIPortHTTPS = 8445
+
+	// DataPlaneKongClusterPort is the Kong default port on which a hybrid mode
+	// control plane receives traffic from data plane nodes (cluster_listen).
+	DataPlaneKongClusterPort = 8005
+
+	// DataPlaneKongClusterTelemetryPort is the Kong default port on which a hybrid mode
+	// control plane receives telemetry data from data plane nodes (cluster_telemetry_listen).
+	DataPlaneKongClusterTelemetryPort = 8006
+
+	// DataPlaneKongStatusPort is the Kong default port for the status listener (status_listen).
+	DataPlaneKongStatusPort = 8007
 )
 
 // -----------------------------------------------------------------------------

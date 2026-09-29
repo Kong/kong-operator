@@ -3,6 +3,7 @@ package config
 import (
 	"fmt"
 	"net"
+	"slices"
 	"sort"
 	"strconv"
 	"strings"
@@ -44,16 +45,33 @@ func ListenValue(family ipfamily.IPFamily, port int, options ...string) (string,
 	}
 }
 
+var (
+	defaultOptionsHTTP  = []string{"http2", "reuseport", "backlog=16384"}
+	defaultOptionsHTTPS = []string{"http2", "ssl", "reuseport", "backlog=16384"}
+)
+
+// DefaultOptionsHTTP returns the default Kong
+// proxy listen options for an HTTP listener.
+func DefaultOptionsHTTP() []string {
+	return slices.Clone(defaultOptionsHTTP)
+}
+
+// DefaultOptionsHTTPS returns the default Kong
+// proxy listen options for an HTTPS listener.
+func DefaultOptionsHTTPS() []string {
+	return slices.Clone(defaultOptionsHTTPS)
+}
+
 // KongDefaults returns the baseline Kong proxy configuration options needed
 // for the proxy to function, with its listen addresses rendered for the
 // given IP family. It returns an error for ipfamily.Auto and any
 // unrecognized family (see ListenValue).
 func KongDefaults(family ipfamily.IPFamily) (map[string]string, error) {
-	proxyListenHTTP, err := ListenValue(family, consts.DataPlaneProxyPort, "http2", "reuseport", "backlog=16384")
+	proxyListenHTTP, err := ListenValue(family, consts.DataPlaneProxyPort, DefaultOptionsHTTP()...)
 	if err != nil {
 		return nil, err
 	}
-	proxyListenHTTPS, err := ListenValue(family, consts.DataPlaneProxySSLPort, "http2", "ssl", "reuseport", "backlog=16384")
+	proxyListenHTTPS, err := ListenValue(family, consts.DataPlaneProxySSLPort, DefaultOptionsHTTPS()...)
 	if err != nil {
 		return nil, err
 	}
