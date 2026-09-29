@@ -41,7 +41,7 @@ func SetupKongLicense(
 	mgr ctrl.Manager,
 	cacheSyncTimeout time.Duration,
 	log logr.Logger,
-) (LicenseGetter, error) {
+) error {
 	licenseController := ctrllicense.NewKongV1Alpha1KongLicenseReconciler(
 		mgr.GetClient(),
 		log,
@@ -58,7 +58,7 @@ func SetupKongLicense(
 	)
 	dynamic.SetLogger(log)
 	if err := dynamic.SetupWithManager(mgr); err != nil {
-		return nil, fmt.Errorf("failed to start KongLicense controller: %w", err)
+		return fmt.Errorf("failed to start KongLicense controller: %w", err)
 	}
-	return licenseController, nil
+	return nil
 }

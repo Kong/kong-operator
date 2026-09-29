@@ -105,6 +105,8 @@ const (
 	ConditionReasonPickedAsLatest = "PickedAsLatest"
 	// ConditionReasonReplacedByNewer represents that the KongLicense is replaced by other one that is newer.
 	ConditionReasonReplacedByNewer = "ReplacedByNewer"
+	// ConditionReasonDisabled represents that the KongLicense is disabled.
+	ConditionReasonDisabled = "Disabled"
 
 	// ConditionTypeLicenseValid is the type of condition for the license validation.
 	ConditionTypeLicenseValid = "LicenseValid"

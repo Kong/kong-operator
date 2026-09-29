@@ -722,7 +722,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	var aigwLicenseGetter shareddataplane.LicenseGetter
 	if c.OnPremAIGatewayControllerEnabled || c.AIGatewayDataPlaneControllerEnabled {
 		aigwLicenseGetter = shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
-		if _, err := kiccontrollers.SetupKongLicense(
+		if err := kiccontrollers.SetupKongLicense(
 			context.Background(),
 			mgr,
 			c.CacheSyncTimeout,

@@ -913,8 +913,7 @@ func TestAIGatewayDataPlaneReconciler_KongLicense(t *testing.T) {
 	ssaProvider, err := controllerpkgssa.NewTypeConverterProvider(ctx, mgr.GetLogger(), mgr, aigwCRDGroups)
 	require.NoError(t, err)
 
-	_, err = kiccontrollers.SetupKongLicense(ctx, mgr, 10*time.Second, mgr.GetLogger())
-	require.NoError(t, err)
+	require.NoError(t, kiccontrollers.SetupKongLicense(ctx, mgr, 10*time.Second, mgr.GetLogger()))
 	// Mirror the production wiring: the reconciler must read the license from
 	// the manager's informer cache, not from the KongLicense reconciler's own cache.
 	licenseGetter := shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
