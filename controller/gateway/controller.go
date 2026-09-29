@@ -724,8 +724,9 @@ func (r *Reconciler) provisionDataPlane(
 	// so it cannot be overridden by spec.infrastructure).
 	setGatewayNameLabelInDataPlane(expectedDataPlaneOptions, gateway.Name)
 
-	err = setDataPlaneOptionsForListeners(expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig.Spec.ListenersOptions, r.DataPlaneIPFamily)
-	if err != nil {
+	if err = setDataPlaneOptionsForListeners(
+		expectedDataPlaneOptions, gateway.Spec.Listeners, gatewayConfig, r.DataPlaneIPFamily,
+	); err != nil {
 		errWrap := fmt.Errorf("dataplane creation failed - error: %w", err)
 		k8sutils.SetCondition(
 			createDataPlaneCondition(metav1.ConditionFalse, kcfgdataplane.UnableToProvisionReason, errWrap.Error(), gateway.Generation),
