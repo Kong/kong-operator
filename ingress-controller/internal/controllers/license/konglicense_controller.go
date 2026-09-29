@@ -94,6 +94,10 @@ type KongV1Alpha1KongLicenseReconciler struct {
 const (
 	// LicenseControllerTypeKIC annotates the controller type.
 	LicenseControllerTypeKIC = "konghq.com/kong-ingress-controller"
+	// LicenseControllerTypeKongOperator annotates the Kong operator's own
+	// license controller, which runs in the operator's main manager and feeds
+	// licenses to DataPlanes it manages directly (e.g. AIGatewayDataPlane).
+	LicenseControllerTypeKongOperator = "konghq.com/kong-operator"
 )
 
 const (

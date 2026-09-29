@@ -28,6 +28,8 @@ import (
 	"time"
 
 	"github.com/go-logr/logr"
+	"github.com/kong/go-kong/kong"
+	"github.com/samber/mo"
 	appsv1 "k8s.io/api/apps/v1"
 	autoscalingv2 "k8s.io/api/autoscaling/v2"
 	certificatesv1 "k8s.io/api/certificates/v1"
@@ -86,6 +88,14 @@ type EnsureCertificateFunc[T Object] func(
 	certTTL time.Duration,
 ) (op.Result, *corev1.Secret, error)
 
+// LicenseGetter provides the effective Kong license for DataPlane
+// deployments. It is satisfied by the KongLicense reconciler
+// (ingress-controller/internal/controllers/license); the local interface
+// keeps this shared package decoupled from the KIC internals.
+type LicenseGetter interface {
+	GetLicense() mo.Option[kong.License]
+}
+
 // Conditions carries the condition types, reasons and messages used by the
 // reconciler. Values are supplied by each specialized controller from its API
 // package constants so the shared logic stays bound to the API definitions.
@@ -136,6 +146,18 @@ type Conditions struct {
 	// AdminCertificateProvisionedReason is the reason used when the Admin
 	// API certificate Secret has been provisioned.
 	AdminCertificateProvisionedReason string
+
+	// LicenseValidType is the type of the license condition. When empty, the
+	// license condition is disabled (the reconciler never sets it and the
+	// Ready computation ignores the feature).
+	LicenseValidType string
+	// LicenseValidReason is the reason used when a license is available.
+	LicenseValidReason string
+	// LicenseMissingReason is the reason used when no license is available.
+	LicenseMissingReason string
+	// LicenseInvalidReason is the reason used when the license is invalid.
+	// Currently unused: the operator does not wire a license validator yet.
+	LicenseInvalidReason string
 }
 
 // DeploymentConfig carries the type specific bits of the owned Deployment.
@@ -419,6 +441,12 @@ type Reconciler[T Object, Cert CertificateObject] struct {
 	// EventRecorder records Kubernetes events on the DataPlane objects.
 	EventRecorder events.EventRecorder
 
+	// LicenseGetter, when non-nil, provides the effective Kong license: the
+	// reconciler propagates it to the gateway (via the type-specific
+	// DeploymentConfig.BuildContainer) and reports its availability in the
+	// license condition configured in Config.Conditions.
+	LicenseGetter LicenseGetter
+
 	// Config wires the type specific behavior.
 	Config Config[T, Cert]
 }
@@ -513,6 +541,12 @@ func (r *Reconciler[T, Cert]) Reconcile(ctx context.Context, dp T) (res ctrl.Res
 	// ref.Name is empty when the DataPlane has no control plane reference
 	// configured; in that case resolution and Konnect certificate automation
 	// are skipped.
+	SetLicenseStatusCondition(
+		dp, r.LicenseGetter,
+		r.Config.Conditions.LicenseValidType,
+		r.Config.Conditions.LicenseValidReason,
+		r.Config.Conditions.LicenseMissingReason,
+	)
 	var cp ResolvedControlPlane
 	ref := r.Config.ControlPlaneRef(dp)
 	if ref.Name != "" {

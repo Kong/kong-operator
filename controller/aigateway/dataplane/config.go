@@ -154,6 +154,11 @@ var config = shareddataplane.Config[
 
 		AdminCertificateProvisionedType:   string(aigatewayv1alpha1.AdminCertificateProvisionedType),
 		AdminCertificateProvisionedReason: string(aigatewayv1alpha1.AdminCertificateProvisionedReason),
+
+		LicenseValidType:     string(aigatewayv1alpha1.LicenseValidType),
+		LicenseValidReason:   string(aigatewayv1alpha1.LicenseValidReason),
+		LicenseMissingReason: string(aigatewayv1alpha1.LicenseMissingReason),
+		LicenseInvalidReason: string(aigatewayv1alpha1.LicenseInvalidReason),
 	},
 
 	Certificate: shareddataplane.CertificateConfig[
@@ -379,6 +384,38 @@ func buildContainer(
 	}
 	container, volumes := k8sresources.HardenContainerWithSecurityContext(container, k8sresources.DataPlaneTypeAIGateway)
 	return container, volumes, nil
+}
+
+// withLicenseEnvVar wraps a DeploymentConfig BuildContainer function so the
+// gateway container carries the effective Kong license (from the KongLicense
+// resource) in KONG_LICENSE_DATA. When no license is available the env var is
+// omitted and SSA apply removes a previously-owned value on the next
+// reconcile, rolling the pods.
+func withLicenseEnvVar(
+	next func(
+		*aigatewayv1alpha1.AIGatewayDataPlane,
+		shareddataplane.ResolvedControlPlane,
+		string, string, string,
+	) (corev1.Container, []corev1.Volume, error),
+	getter shareddataplane.LicenseGetter,
+) func(
+	*aigatewayv1alpha1.AIGatewayDataPlane,
+	shareddataplane.ResolvedControlPlane,
+	string, string, string,
+) (corev1.Container, []corev1.Volume, error) {
+	return func(aigwdp *aigatewayv1alpha1.AIGatewayDataPlane, cp shareddataplane.ResolvedControlPlane, image, certSecretName, adminCertSecretName string) (corev1.Container, []corev1.Volume, error) {
+		container, volumes, err := next(aigwdp, cp, image, certSecretName, adminCertSecretName)
+		if err != nil {
+			return container, volumes, err
+		}
+		if license, ok := getter.GetLicense().Get(); ok && license.Payload != nil {
+			container.Env = append(container.Env, corev1.EnvVar{
+				Name:  EnvKongLicenseData,
+				Value: *license.Payload,
+			})
+		}
+		return container, volumes, nil
+	}
 }
 
 // konnectAIGatewayFromResolved returns the KonnectAIGateway carried by the

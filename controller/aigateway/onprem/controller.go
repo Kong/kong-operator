@@ -40,6 +40,7 @@ import (
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	ctrlconsts "github.com/kong/kong-operator/v2/controller/consts"
+	dataplane "github.com/kong/kong-operator/v2/controller/pkg/dataplane"
 	"github.com/kong/kong-operator/v2/controller/pkg/finalizer"
 	log "github.com/kong/kong-operator/v2/controller/pkg/log"
 	"github.com/kong/kong-operator/v2/controller/pkg/op"
@@ -86,6 +87,13 @@ type Reconciler struct {
 
 	// CertTTL is the TTL of the certificates provisioned by this controller.
 	CertTTL time.Duration
+
+	// LicenseGetter, when non-nil, provides the effective Kong license
+	// (from the KongLicense resource): its availability is reported in the
+	// LicenseValid status condition. The license itself is propagated to the
+	// gateway pods by the AIGatewayDataPlane controller (KONG_LICENSE_DATA
+	// env var).
+	LicenseGetter dataplane.LicenseGetter
 }
 
 // SetupWithManager sets up the controller with the Manager.
@@ -170,6 +178,19 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		// AddFinalizer calls returned true but the update resulted in a noop.
 		return ctrl.Result{RequeueAfter: ctrlconsts.RequeueWithoutBackoff}, nil
 	}
+
+	// Report license availability on the gateway. The condition never gates
+	// Ready; the license itself is propagated to the gateway pods by the
+	// AIGatewayDataPlane controller (KONG_LICENSE_DATA env var). No KongLicense
+	// watch is needed here: a license change updates the AIGatewayDataPlane
+	// Deployments, whose events re-trigger this reconcile via the existing
+	// DataPlane watch.
+	dataplane.SetLicenseStatusCondition(
+		onprem, r.LicenseGetter,
+		string(aigatewayv1alpha1.LicenseValidType),
+		string(aigatewayv1alpha1.LicenseValidReason),
+		string(aigatewayv1alpha1.LicenseMissingReason),
+	)
 
 	// The mTLS client certificate is what the instance presents to the data planes'
 	// Admin API when pushing configuration. Provision it before scheduling the
