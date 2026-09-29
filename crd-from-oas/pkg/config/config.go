@@ -1043,7 +1043,7 @@ func (tc *TypeConfig) validate() error {
 		}
 		seenAssocNames[a.Name] = true
 	}
-	seenSecretPaths := make(map[string]bool)
+	seenDataSourcePaths := make(map[string]bool)
 	for i, sr := range tc.DataSources {
 		if !strings.HasPrefix(sr.Path, "spec.apiSpec.") {
 			return fmt.Errorf("dataSources[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
@@ -1051,10 +1051,10 @@ func (tc *TypeConfig) validate() error {
 		if sr.Type != DataSourceTypeSecret && sr.Type != DataSourceTypeConfigMap {
 			return fmt.Errorf("dataSources[%d].type %q is not supported; must be one of %q or %q", i, sr.Type, DataSourceTypeSecret, DataSourceTypeConfigMap)
 		}
-		if seenSecretPaths[sr.Path] {
+		if seenDataSourcePaths[sr.Path] {
 			return fmt.Errorf("dataSources[%d]: duplicate path %q", i, sr.Path)
 		}
-		seenSecretPaths[sr.Path] = true
+		seenDataSourcePaths[sr.Path] = true
 	}
 	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil {
 		if deleteOp.AsPUT {

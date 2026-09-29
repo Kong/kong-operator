@@ -6515,7 +6515,9 @@ _Appears in:_
 ConfigMapDataSourceRef is a reference to a key in a ConfigMap in the same
 namespace as the referencing object.<br /><br />The operator only sees ConfigMaps matching its --configmap-label-selector,
 so the referenced ConfigMap must carry that label (konghq.com/configmap:
-"true" by default).
+"true" by default).<br /><br />Write access to the referenced ConfigMap equals write access to this
+field: its content ships to Konnect on the next sync and runs on the
+data plane. Grant ConfigMap write accordingly.
 
 
 
@@ -6778,7 +6780,9 @@ _Appears in:_
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 
@@ -14274,7 +14278,9 @@ Allowed values:
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 

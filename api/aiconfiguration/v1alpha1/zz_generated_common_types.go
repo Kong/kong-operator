@@ -127,6 +127,10 @@ const (
 // The operator only sees ConfigMaps matching its --configmap-label-selector,
 // so the referenced ConfigMap must carry that label (konghq.com/configmap:
 // "true" by default).
+//
+// Write access to the referenced ConfigMap equals write access to this
+// field: its content ships to Konnect on the next sync and runs on the
+// data plane. Grant ConfigMap write accordingly.
 type ConfigMapDataSourceRef struct {
 	// Name is the name of the ConfigMap.
 	//
