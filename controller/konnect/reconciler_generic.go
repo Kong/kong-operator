@@ -485,6 +485,15 @@ func (r *KonnectEntityReconciler[T, TEnt]) Reconcile(ctx context.Context, ent TE
 		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
 	}
 
+	// If a type has ConfigMap data sources, handle them.
+	res, stop, err = handleConfigMapRef(ctx, r.Client, ent)
+	if err != nil || !res.IsZero() {
+		return res, err
+	}
+	if stop {
+		return patchWithProgrammedStatusConditionBasedOnOtherConditions(ctx, r.Client, ent)
+	}
+
 	// If a type has a KonnectConfigStore ref (KongVault), handle it.
 	var resolvedConfigStoreID string
 	res, stop, resolvedConfigStoreID, err = handleConfigStoreRef(ctx, r.Client, ent)

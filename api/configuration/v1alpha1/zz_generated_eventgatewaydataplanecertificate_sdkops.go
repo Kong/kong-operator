@@ -71,7 +71,10 @@ func (obj *EventGatewayDataPlaneCertificate) sdkOpsAPISpec(ctx context.Context, 
 		return nil, fmt.Errorf("EventGatewayDataPlaneCertificate is nil")
 	}
 
-	apiSpec := obj.Spec.APISpec
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
 	// Resolve spec.apiSpec.certificate
 	{
 		src := apiSpec.Certificate

@@ -6,6 +6,12 @@ package generator
 // but for now it's a constant since it applies uniformly to all string fields in the SensitiveDataSource struct.
 const sensitiveDataSourceValueMaxLength = 4096
 
+// configMapDataSourceValueMaxLength defines the maximum length for inline
+// values in the ConfigMapDataSource struct. ConfigMap references are used for
+// large non-sensitive sources (e.g. Lua plugin code), so the limit is well
+// above sensitiveDataSourceValueMaxLength.
+const configMapDataSourceValueMaxLength = 262144
+
 const objectRefTypeEnum = `// ObjectRefType is the enum type for the ObjectRef.
 //
 // +kubebuilder:validation:Enum=namespacedRef
@@ -194,6 +200,83 @@ type %[1]s struct {
 	SecretRef *SensitiveDataSecretRef ` + "`" + `json:"secretRef,omitempty"` + "`" + `
 }`
 
+const configMapDataSourceType = `// ConfigMapDataSourceType is the type of source for ConfigMap-backed data.
+type ConfigMapDataSourceType string
+
+const (
+	// ConfigMapDataSourceTypeInline indicates that the data is provided inline in the APISpec.
+	ConfigMapDataSourceTypeInline ConfigMapDataSourceType = "inline"
+	// ConfigMapDataSourceTypeConfigMapRef indicates that the data is sourced from a Kubernetes ConfigMap.
+	ConfigMapDataSourceTypeConfigMapRef ConfigMapDataSourceType = "configMapRef"
+)`
+
+// configMapDataSourceStructType uses Go template syntax for the Value length
+// limit and any configured validations. It is parsed as part of
+// commonTypesTemplate.
+const configMapDataSourceStructType = `// ConfigMapDataSourceRef is a reference to a key in a ConfigMap in the same
+// namespace as the referencing object.
+//
+// The operator only sees ConfigMaps matching its --configmap-label-selector,
+// so the referenced ConfigMap must carry that label (konghq.com/configmap:
+// "true" by default).
+//
+// Write access to the referenced ConfigMap equals write access to this
+// field: its content ships to Konnect on the next sync and runs on the
+// data plane. Grant ConfigMap write accordingly.
+type ConfigMapDataSourceRef struct {
+	// Name is the name of the ConfigMap.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Name string ` + "`" + `json:"name"` + "`" + `
+
+	// Key is the key within the ConfigMap's data (or binaryData) holding the value.
+	//
+	// +required
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength=253
+	Key string ` + "`" + `json:"key"` + "`" + `
+}
+
+// ConfigMapDataSource holds a string value that can be provided either inline
+// or sourced from a Kubernetes ConfigMap.
+//
+// +kubebuilder:validation:XValidation:rule="self.type == 'inline' ? has(self.value) : has(self.configMapRef)",message="value required when type=inline; configMapRef required when type=configMapRef"
+// +kubebuilder:validation:XValidation:rule="!(has(self.value) && has(self.configMapRef))",message="only one of value and configMapRef can be set"
+type ConfigMapDataSource struct {
+	// Type indicates the source of the data: 'inline' or 'configMapRef'.
+	//
+	// +kubebuilder:validation:Enum=inline;configMapRef
+	// +kubebuilder:default=inline{{range .ConfigMapDataSourceTypeValidations}}
+	// {{ . }}{{end}}
+	Type ConfigMapDataSourceType ` + "`" + `json:"type"` + "`" + `
+
+	// Value contains the data provided inline.
+	// Required when type is 'inline'.
+	//
+	// +optional
+	// +kubebuilder:validation:MinLength=1
+	// +kubebuilder:validation:MaxLength={{ .ConfigMapDataSourceValueMaxLength }}
+	Value *string ` + "`" + `json:"value,omitempty"` + "`" + `
+
+	// ConfigMapRef is a reference to a Kubernetes ConfigMap containing the data.
+	// Required when type is 'configMapRef'.
+	//
+	// +optional{{range .ConfigMapDataSourceConfigMapRefValidations}}
+	// {{ . }}{{end}}
+	ConfigMapRef *ConfigMapDataSourceRef ` + "`" + `json:"configMapRef,omitempty"` + "`" + `
+}
+
+// GetValue returns the value if it is provided inline (or already resolved),
+// or an empty string otherwise.
+func (s ConfigMapDataSource) GetValue() string {
+	if s.Value == nil {
+		return ""
+	}
+	return *s.Value
+}`
+
 const konnectEntityRefType = `// KonnectEntityRef is a reference to a Konnect entity.
 type KonnectEntityRef struct {
 	// ID is the unique identifier of the Konnect entity as assigned by Konnect API.
@@ -210,8 +293,8 @@ type KonnectEntityRef struct {
 // the structured CRD representation. X may be a string, number, boolean,
 // object, or array — the shape check only inspects "type", not "value"'s kind.
 const flattenSensitiveDataHelper = `// flattenSensitiveData recursively replaces any SensitiveDataSource (or
-// dedicated per-field DataSource) JSON object shape
-// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// dedicated per-field DataSource, or ConfigMapDataSource) JSON object shape
+// {"type": "inline|secretRef|configMapRef", "value": X, ...} with the bare value X,
 // translating the CRD wire format to the Konnect SDK wire format which
 // expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
@@ -221,7 +304,7 @@ func flattenSensitiveData(v any) any {
 			x[k] = flattenSensitiveData(val)
 		}
 		typ, _ := x["type"].(string)
-		if typ != "inline" && typ != "secretRef" {
+		if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 			return x
 		}
 		if rawVal, hasVal := x["value"]; hasVal {
@@ -240,7 +323,7 @@ func flattenSensitiveData(v any) any {
 // flattenSensitiveDataExceptHelper is a runtime helper emitted into
 // common_types.go for entities that have free-form fields. It scopes the
 // SensitiveDataSource collapse so that free-form (user-data) subtrees are
-// never rewritten, while a free-form leaf that is itself a secretReference
+// never rewritten, while a free-form leaf that is itself a dataSource
 // target still gets its own DataSource wrapper collapsed.
 const flattenSensitiveDataExceptHelper = `// advanceFreeformKeyFields mirrors advanceFreeformKeyPaths over typed
 // free-form fields, reporting whether the matched leaf is sensitive.
@@ -275,7 +358,7 @@ func unwrapSensitiveDataSource(v any) any {
 		return v
 	}
 	typ, _ := m["type"].(string)
-	if typ != "inline" && typ != "secretRef" {
+	if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 		return v
 	}
 	if rawVal, hasVal := m["value"]; hasVal {
@@ -315,7 +398,7 @@ func flattenSensitiveDataWalk(v any, fields []sdkOpsFreeformKeyField) any {
 			x[k] = flattenSensitiveDataWalk(val, sub)
 		}
 		typ, _ := x["type"].(string)
-		if typ != "inline" && typ != "secretRef" {
+		if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 			return x
 		}
 		if rawVal, hasVal := x["value"]; hasVal {
@@ -518,7 +601,7 @@ func isSDKDiscriminatorKey(key string) bool {
 // not be camelCase→snake_case renamed by renameKeysToSDK.
 type sdkOpsFreeformKeyField struct {
 	Path []string
-	// Sensitive marks a free-form leaf that is itself a secretReference
+	// Sensitive marks a free-form leaf that is itself a dataSource
 	// target: the generator wraps it in a SensitiveDataSource, so
 	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
 	// leaving everything below it (user data) verbatim.

@@ -43,7 +43,7 @@ func CreateGeneratedOps[
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return createAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
-		return createAIGatewayCustomPolicy(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
+		return createAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return createAIGatewayDataPlaneCertificate(ctx, cl, sdk.GetAIGatewayDataPlaneCertificatesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:

@@ -43,23 +43,26 @@ spec:
       # Unique, immutable identifier of the custom policy.
       name: my-installed-custom-policy
       displayName: My installed custom policy
-      # Lua schema definition, equivalent to a Kong plugin's schema.lua.
-      schema: |
-        local typedefs = require "kong.db.schema.typedefs"
+      # Lua schema definition, equivalent to a Kong plugin's schema.lua,
+      # provided inline.
+      schema:
+        type: inline
+        value: |
+          local typedefs = require "kong.db.schema.typedefs"
 
-        return {
-          name = "my-installed-custom-policy",
-          fields = {
-            { protocols = typedefs.protocols_http },
-            { config = {
-                type = "record",
-                fields = {
-                  { header_name = { type = "string", default = "X-Custom-Policy" } },
+          return {
+            name = "my-installed-custom-policy",
+            fields = {
+              { protocols = typedefs.protocols_http },
+              { config = {
+                  type = "record",
+                  fields = {
+                    { header_name = { type = "string", default = "X-Custom-Policy" } },
+                  },
                 },
               },
             },
-          },
-        }
+          }
 ---
 # A "streaming" custom policy ships both the Lua schema and handler, which
 # Konnect distributes to the data plane.
@@ -79,35 +82,41 @@ spec:
       # Unique, immutable identifier of the custom policy.
       name: my-streaming-custom-policy
       displayName: My streaming custom policy
-      # Lua schema definition, equivalent to a Kong plugin's schema.lua.
-      schema: |
-        local typedefs = require "kong.db.schema.typedefs"
+      # Lua schema definition, equivalent to a Kong plugin's schema.lua,
+      # provided inline.
+      schema:
+        type: inline
+        value: |
+          local typedefs = require "kong.db.schema.typedefs"
 
-        return {
-          name = "my-streaming-custom-policy",
-          fields = {
-            { protocols = typedefs.protocols_http },
-            { config = {
-                type = "record",
-                fields = {
-                  { header_name = { type = "string", default = "X-Custom-Policy" } },
+          return {
+            name = "my-streaming-custom-policy",
+            fields = {
+              { protocols = typedefs.protocols_http },
+              { config = {
+                  type = "record",
+                  fields = {
+                    { header_name = { type = "string", default = "X-Custom-Policy" } },
+                  },
                 },
               },
             },
-          },
-        }
-      # Lua handler implementation, equivalent to a Kong plugin's handler.lua.
-      handler: |
-        local MyStreamingCustomPolicy = {
-          PRIORITY = 1000,
-          VERSION = "1.0.0",
-        }
+          }
+      # Lua handler implementation, equivalent to a Kong plugin's handler.lua,
+      # provided inline.
+      handler:
+        type: inline
+        value: |
+          local MyStreamingCustomPolicy = {
+            PRIORITY = 1000,
+            VERSION = "1.0.0",
+          }
 
-        function MyStreamingCustomPolicy:header_filter(conf)
-          kong.response.set_header(conf.header_name, "applied")
-        end
+          function MyStreamingCustomPolicy:header_filter(conf)
+            kong.response.set_header(conf.header_name, "applied")
+          end
 
-        return MyStreamingCustomPolicy
+          return MyStreamingCustomPolicy
 ---
 # An AIGatewayPolicy using the streaming custom policy above. customPolicyRef
 # references the AIGatewayCustomPolicy in the cluster: the operator waits until

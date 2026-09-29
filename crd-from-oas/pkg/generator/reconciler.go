@@ -24,7 +24,7 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-{{- if .HasSecretRefs}}
+{{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -94,6 +94,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
+{{- end}}
+{{- if .HasConfigMapRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.ConfigMap{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForConfigMapRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
 				),
 			)
 		},
@@ -358,7 +368,7 @@ import (
 	"context"
 
 	ctrl "sigs.k8s.io/controller-runtime"
-{{- if .HasSecretRefs}}
+{{- if or .HasSecretRefs .HasConfigMapRefs}}
 	corev1 "k8s.io/api/core/v1"
 {{- end}}
 {{- if .ParentRefCustomTypeName}}
@@ -454,6 +464,16 @@ func {{.EntityName}}ReconciliationWatchOptions(
 				&corev1.Secret{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForSecretRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
+				),
+			)
+		},
+{{- end}}
+{{- if .HasConfigMapRefs}}
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.ConfigMap{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForConfigMapRef[{{.APIGroupPackageAlias}}.{{.EntityName}}List](cl),
 				),
 			)
 		},
@@ -838,9 +858,12 @@ type reconcilerEntityMetadata struct {
 	ParentAPIGroupPackagePath  string
 	ParentAPIGroupPackageAlias string
 	// HasSecretRefs is true when the entity has at least one configured
-	// secretReferences entry (string-valued or dedicated-type), so the
+	// dataSources entry (string-valued or dedicated-type), so the
 	// generated watch file should also watch corev1.Secret.
 	HasSecretRefs bool
+	// HasConfigMapRefs is true when the entity has at least one configured
+	// dataSource of type ConfigMap. Used to emit a ConfigMap watch.
+	HasConfigMapRefs bool
 }
 
 type reconcilerConditionGroup struct {
@@ -1083,6 +1106,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		CrossRefs                  []crossRefWatchData
 		ReverseRefs                []reverseWatchReferrer
 		HasSecretRefs              bool
+		HasConfigMapRefs           bool
 	}{
 		EntityName:           metadata.EntityName,
 		EntityNameLowerCamel: metadata.EntityNameLowerCamel,
@@ -1105,6 +1129,7 @@ func (g *Generator) generateWatch(metadata reconcilerEntityMetadata, rc *config.
 		CrossRefs:                  crossRefs,
 		ReverseRefs:                reverseRefs,
 		HasSecretRefs:              metadata.HasSecretRefs,
+		HasConfigMapRefs:           metadata.HasConfigMapRefs,
 	}
 
 	if err := tmpl.Execute(&buf, data); err != nil {
@@ -1271,6 +1296,7 @@ func (g *Generator) reconcilerEntityMetadata(
 		ParentAPIGroupPackagePath:  g.config.APIGroupPackagePath,
 		ParentAPIGroupPackageAlias: g.config.APIGroupPackageAlias,
 		HasSecretRefs:              g.hasSecretRefs(entityName),
+		HasConfigMapRefs:           g.hasConfigMapRefs(entityName),
 	}
 
 	if rc.GetIsRoot() {

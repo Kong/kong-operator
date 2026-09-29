@@ -44,8 +44,8 @@ func TestAIGatewayPolicy_CustomPolicyRef(t *testing.T) {
 						Streaming: &CreateAIGatewayCustomPolicyStreamingRequest{
 							Name:        "my-streaming-custom-policy",
 							DisplayName: "My streaming custom policy",
-							Schema:      "return {}",
-							Handler:     "return {}",
+							Schema:      ConfigMapDataSource{Type: ConfigMapDataSourceTypeInline, Value: new("return {}")},
+							Handler:     ConfigMapDataSource{Type: ConfigMapDataSourceTypeInline, Value: new("return {}")},
 						},
 					},
 				},

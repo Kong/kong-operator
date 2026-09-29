@@ -229,8 +229,8 @@ func nestedSDKUnionMemberForKey(object map[string]any, key string) (string, any,
 }
 
 // flattenSensitiveData recursively replaces any SensitiveDataSource (or
-// dedicated per-field DataSource) JSON object shape
-// {"type": "inline|secretRef", "value": X, ...} with the bare value X,
+// dedicated per-field DataSource, or ConfigMapDataSource) JSON object shape
+// {"type": "inline|secretRef|configMapRef", "value": X, ...} with the bare value X,
 // translating the CRD wire format to the Konnect SDK wire format which
 // expects plain values (of whatever type X is) for sensitive fields.
 func flattenSensitiveData(v any) any {
@@ -240,7 +240,7 @@ func flattenSensitiveData(v any) any {
 			x[k] = flattenSensitiveData(val)
 		}
 		typ, _ := x["type"].(string)
-		if typ != "inline" && typ != "secretRef" {
+		if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 			return x
 		}
 		if rawVal, hasVal := x["value"]; hasVal {
@@ -289,7 +289,7 @@ func unwrapSensitiveDataSource(v any) any {
 		return v
 	}
 	typ, _ := m["type"].(string)
-	if typ != "inline" && typ != "secretRef" {
+	if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 		return v
 	}
 	if rawVal, hasVal := m["value"]; hasVal {
@@ -329,7 +329,7 @@ func flattenSensitiveDataWalk(v any, fields []sdkOpsFreeformKeyField) any {
 			x[k] = flattenSensitiveDataWalk(val, sub)
 		}
 		typ, _ := x["type"].(string)
-		if typ != "inline" && typ != "secretRef" {
+		if typ != "inline" && typ != "secretRef" && typ != "configMapRef" {
 			return x
 		}
 		if rawVal, hasVal := x["value"]; hasVal {
@@ -389,7 +389,7 @@ func isSDKDiscriminatorKey(key string) bool {
 // not be camelCase→snake_case renamed by renameKeysToSDK.
 type sdkOpsFreeformKeyField struct {
 	Path []string
-	// Sensitive marks a free-form leaf that is itself a secretReference
+	// Sensitive marks a free-form leaf that is itself a dataSource
 	// target: the generator wraps it in a SensitiveDataSource, so
 	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
 	// leaving everything below it (user data) verbatim.

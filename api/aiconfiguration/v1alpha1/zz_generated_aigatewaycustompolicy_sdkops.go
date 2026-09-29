@@ -3,8 +3,12 @@
 package v1alpha1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
+
+	corev1 "k8s.io/api/core/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
 
 	sdkkonnectcomp "github.com/Kong/sdk-konnect-go/models/components"
 )
@@ -49,6 +53,7 @@ func (s *AIGatewayCustomPolicyAPISpec) marshalSDKOpsPayload() (map[string]any, e
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayCustomPolicyAPISpec: %w", err)
 	}
+	rawPayload = flattenSensitiveDataExcept(rawPayload, AIGatewayCustomPolicySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayCustomPolicySDKOpsFreeformKeyFields)
@@ -178,4 +183,144 @@ func (s *AIGatewayCustomPolicyAPISpec) ToUpdateAIGatewayCustomPolicyRequest() (*
 	default:
 		return nil, fmt.Errorf("unsupported AIGatewayCustomPolicy config variant %q", variant)
 	}
+}
+
+func (obj *AIGatewayCustomPolicy) sdkOpsAPISpec(ctx context.Context, cl client.Client) (*AIGatewayCustomPolicyAPISpec, error) {
+	if obj == nil {
+		return nil, fmt.Errorf("AIGatewayCustomPolicy is nil")
+	}
+
+	// Resolve against a deep copy: resolved values are written into the spec
+	// being walked, and union variants and slices are shared by reference, so
+	// a shallow copy would leak them into obj (e.g. the informer cache).
+	apiSpec := *obj.Spec.APISpec.DeepCopy()
+	// Resolve spec.apiSpec.installed.schema
+	if apiSpec.AIGatewayCustomPolicyConfig != nil {
+		if apiSpec.AIGatewayCustomPolicyConfig.Installed != nil {
+			{
+				src := apiSpec.AIGatewayCustomPolicyConfig.Installed.Schema
+				if src.Type == ConfigMapDataSourceTypeConfigMapRef {
+					if src.ConfigMapRef == nil {
+						return nil, fmt.Errorf("configMapRef is nil for spec.apiSpec.installed.schema")
+					}
+					var configMap corev1.ConfigMap
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: src.ConfigMapRef.Name}, &configMap); err != nil {
+						return nil, fmt.Errorf("failed to fetch ConfigMap %s/%s: %w", obj.GetNamespace(), src.ConfigMapRef.Name, err)
+					}
+					resolved, ok := configMap.Data[src.ConfigMapRef.Key]
+					if !ok {
+						binaryValue, ok := configMap.BinaryData[src.ConfigMapRef.Key]
+						if !ok {
+							return nil, fmt.Errorf("configmap %s/%s is missing key %q", obj.GetNamespace(), src.ConfigMapRef.Name, src.ConfigMapRef.Key)
+						}
+						resolved = string(binaryValue)
+					}
+					apiSpec.AIGatewayCustomPolicyConfig.Installed.Schema.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.streaming.schema
+	if apiSpec.AIGatewayCustomPolicyConfig != nil {
+		if apiSpec.AIGatewayCustomPolicyConfig.Streaming != nil {
+			{
+				src := apiSpec.AIGatewayCustomPolicyConfig.Streaming.Schema
+				if src.Type == ConfigMapDataSourceTypeConfigMapRef {
+					if src.ConfigMapRef == nil {
+						return nil, fmt.Errorf("configMapRef is nil for spec.apiSpec.streaming.schema")
+					}
+					var configMap corev1.ConfigMap
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: src.ConfigMapRef.Name}, &configMap); err != nil {
+						return nil, fmt.Errorf("failed to fetch ConfigMap %s/%s: %w", obj.GetNamespace(), src.ConfigMapRef.Name, err)
+					}
+					resolved, ok := configMap.Data[src.ConfigMapRef.Key]
+					if !ok {
+						binaryValue, ok := configMap.BinaryData[src.ConfigMapRef.Key]
+						if !ok {
+							return nil, fmt.Errorf("configmap %s/%s is missing key %q", obj.GetNamespace(), src.ConfigMapRef.Name, src.ConfigMapRef.Key)
+						}
+						resolved = string(binaryValue)
+					}
+					apiSpec.AIGatewayCustomPolicyConfig.Streaming.Schema.Value = &resolved
+				}
+			}
+		}
+	}
+	// Resolve spec.apiSpec.streaming.handler
+	if apiSpec.AIGatewayCustomPolicyConfig != nil {
+		if apiSpec.AIGatewayCustomPolicyConfig.Streaming != nil {
+			{
+				src := apiSpec.AIGatewayCustomPolicyConfig.Streaming.Handler
+				if src.Type == ConfigMapDataSourceTypeConfigMapRef {
+					if src.ConfigMapRef == nil {
+						return nil, fmt.Errorf("configMapRef is nil for spec.apiSpec.streaming.handler")
+					}
+					var configMap corev1.ConfigMap
+					if err := cl.Get(ctx, client.ObjectKey{Namespace: obj.GetNamespace(), Name: src.ConfigMapRef.Name}, &configMap); err != nil {
+						return nil, fmt.Errorf("failed to fetch ConfigMap %s/%s: %w", obj.GetNamespace(), src.ConfigMapRef.Name, err)
+					}
+					resolved, ok := configMap.Data[src.ConfigMapRef.Key]
+					if !ok {
+						binaryValue, ok := configMap.BinaryData[src.ConfigMapRef.Key]
+						if !ok {
+							return nil, fmt.Errorf("configmap %s/%s is missing key %q", obj.GetNamespace(), src.ConfigMapRef.Name, src.ConfigMapRef.Key)
+						}
+						resolved = string(binaryValue)
+					}
+					apiSpec.AIGatewayCustomPolicyConfig.Streaming.Handler.Value = &resolved
+				}
+			}
+		}
+	}
+	return &apiSpec, nil
+}
+
+// GetConfigMapDataSourceRefs returns all ConfigMap references used to populate SDK payload fields.
+func (obj *AIGatewayCustomPolicy) GetConfigMapDataSourceRefs() []ConfigMapDataSourceRef {
+	if obj == nil {
+		return nil
+	}
+	var refs []ConfigMapDataSourceRef
+	if obj.Spec.APISpec.AIGatewayCustomPolicyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Installed != nil {
+			if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Installed.Schema.Type == ConfigMapDataSourceTypeConfigMapRef && obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Installed.Schema.ConfigMapRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Installed.Schema.ConfigMapRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayCustomPolicyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming != nil {
+			if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Schema.Type == ConfigMapDataSourceTypeConfigMapRef && obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Schema.ConfigMapRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Schema.ConfigMapRef)
+			}
+		}
+	}
+	if obj.Spec.APISpec.AIGatewayCustomPolicyConfig != nil {
+		if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming != nil {
+			if obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Handler.Type == ConfigMapDataSourceTypeConfigMapRef && obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Handler.ConfigMapRef != nil {
+				refs = append(refs, *obj.Spec.APISpec.AIGatewayCustomPolicyConfig.Streaming.Handler.ConfigMapRef)
+			}
+		}
+	}
+	return refs
+}
+
+// ToCreateAIGatewayCustomPolicyRequest converts the AIGatewayCustomPolicy to the SDK type
+// sdkkonnectcomp.CreateAIGatewayCustomPolicyRequest, resolving referenced ConfigMaps via the provided client.
+func (obj *AIGatewayCustomPolicy) ToCreateAIGatewayCustomPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.CreateAIGatewayCustomPolicyRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToCreateAIGatewayCustomPolicyRequest()
+}
+
+// ToUpdateAIGatewayCustomPolicyRequest converts the AIGatewayCustomPolicy to the SDK type
+// sdkkonnectcomp.UpdateAIGatewayCustomPolicyRequest, resolving referenced ConfigMaps via the provided client.
+func (obj *AIGatewayCustomPolicy) ToUpdateAIGatewayCustomPolicyRequest(ctx context.Context, cl client.Client) (*sdkkonnectcomp.UpdateAIGatewayCustomPolicyRequest, error) {
+	spec, err := obj.sdkOpsAPISpec(ctx, cl)
+	if err != nil {
+		return nil, err
+	}
+	return spec.ToUpdateAIGatewayCustomPolicyRequest()
 }

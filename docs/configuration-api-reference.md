@@ -7009,7 +7009,9 @@ Allowed values:
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 

@@ -108,6 +108,15 @@
   `type` is now immutable, as Konnect rejects switching between `installed`
   and `streaming`.
   [#5901](https://github.com/Kong/kong-operator/pull/5901)
+- `AIGatewayCustomPolicy`: the Lua `schema` and `handler` sources can be
+  provided inline (`type: inline` with `value`) or read from a key of a
+  `ConfigMap` in the same namespace (`type: configMapRef` with
+  `configMapRef.name` and `configMapRef.key`). The `ConfigMap` must match the
+  operator's `--configmap-label-selector` (`konghq.com/configmap: "true"` by
+  default). The `ConfigMapRefValid` condition reports missing `ConfigMap`s or
+  keys. Changes to a referenced `ConfigMap` are applied to Konnect on the next
+  sync (`--konnect-sync-period`).
+  [#5907](https://github.com/Kong/kong-operator/pull/5907)
 - `AIGatewayPolicy`: added `spec.apiSpec.customPolicyRef` to use an
   `AIGatewayCustomPolicy` from the cluster instead of setting `spec.apiSpec.type`
   to the custom policy's Konnect name. The operator waits until the referenced
@@ -123,6 +132,9 @@
 
 ### Fixes
 
+- Resolving `Secret`-sourced fields no longer writes the resolved values into
+  the cached object when they sit under a union variant or in a list.
+  [#5907](https://github.com/Kong/kong-operator/pull/5907)
 - Gateway: when more than one `ControlPlane` is found for a `Gateway`, the
   extra ones are now deleted and the oldest is kept. Previously, two
   reconciliations running close together could each create a `ControlPlane`.

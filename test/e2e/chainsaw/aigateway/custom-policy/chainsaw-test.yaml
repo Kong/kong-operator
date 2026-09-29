@@ -175,9 +175,10 @@ spec:
 
     - name: Create-streaming-custom-policy
       description: |
-        Create a "streaming" AIGatewayCustomPolicy and verify it on the
-        Konnect side: ID matching the CR's status.id, type, display name,
-        handler, user labels, managed_by, and the CR's Kubernetes UID label.
+        Create a "streaming" AIGatewayCustomPolicy, with its Lua sources in a
+        ConfigMap, and verify it on the Konnect side: ID matching the CR's
+        status.id, type, display name, handler resolved from the ConfigMap,
+        user labels, managed_by, and the CR's Kubernetes UID label.
       bindings:
         - name: aigw_custom_policy_name
           value: ($streaming_cr_name)
@@ -266,9 +267,10 @@ spec:
 
     - name: Update-streaming-custom-policy
       description: |
-        Change the streaming policy's display name, handler and labels, and
-        verify Konnect holds the new values under the same ID (updated in
-        place, not deleted and recreated), still owned by the CR.
+        Change the streaming policy's display name and labels, and its handler
+        through the referenced ConfigMap, and verify Konnect holds the new
+        values under the same ID (updated in place, not deleted and
+        recreated), still owned by the CR.
       bindings:
         - name: aigw_custom_policy_name
           value: ($streaming_cr_name)

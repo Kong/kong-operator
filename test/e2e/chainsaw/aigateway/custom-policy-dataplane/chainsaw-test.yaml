@@ -158,8 +158,12 @@ spec:
             streaming:
               name: ($streaming_konnect_name)
               displayName: Chainsaw streaming custom policy
-              schema: (join('', [$plugin_schema_prefix, $streaming_konnect_name, $plugin_schema_suffix]))
-              handler: ($streaming_plugin_handler)
+              schema:
+                type: inline
+                value: (join('', [$plugin_schema_prefix, $streaming_konnect_name, $plugin_schema_suffix]))
+              handler:
+                type: inline
+                value: ($streaming_plugin_handler)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
     - name: Create-installed-custom-policy
@@ -172,7 +176,9 @@ spec:
             installed:
               name: ($installed_konnect_name)
               displayName: Chainsaw installed custom policy
-              schema: (join('', [$plugin_schema_prefix, $installed_konnect_name, $plugin_schema_suffix]))
+              schema:
+                type: inline
+                value: (join('', [$plugin_schema_prefix, $installed_konnect_name, $plugin_schema_suffix]))
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
     - name: Phase-A-streaming-policy-via-customPolicyRef
@@ -448,8 +454,12 @@ spec:
             streaming:
               name: ($late_konnect_name)
               displayName: Chainsaw custom policy created later
-              schema: (join('', [$plugin_schema_prefix, $late_konnect_name, $plugin_schema_suffix]))
-              handler: ($streaming_plugin_handler)
+              schema:
+                type: inline
+                value: (join('', [$plugin_schema_prefix, $late_konnect_name, $plugin_schema_suffix]))
+              handler:
+                type: inline
+                value: ($streaming_plugin_handler)
       use:
         template: ../../common/_step_templates/apply-assert-aigatewayCustomPolicy.yaml
     - name: Policy-is-programmed-once-the-custom-policy-appears
