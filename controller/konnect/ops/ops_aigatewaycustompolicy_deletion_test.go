@@ -1,6 +1,7 @@
 package ops
 
 import (
+	"context"
 	"errors"
 	"testing"
 
@@ -13,6 +14,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
+	"sigs.k8s.io/controller-runtime/pkg/client/interceptor"
 
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
 	"github.com/kong/kong-operator/v2/internal/utils/index"
@@ -267,6 +269,41 @@ func TestDeleteAIGatewayCustomPolicyGuarded(t *testing.T) {
 		require.Error(t, err)
 		_, blocked := errors.AsType[DeletionBlockedError](err)
 		assert.False(t, blocked)
+	})
+
+	t.Run("in-use deletion does not claim who manages the Konnect policies when the cluster lookup fails", func(t *testing.T) {
+		t.Parallel()
+
+		customPoliciesSDK := sdkmocks.NewMockAIGatewayCustomPoliciesSDK(t)
+		policiesSDK := sdkmocks.NewMockAIGatewayPoliciesSDK(t)
+		customPoliciesSDK.EXPECT().
+			DeleteAiGatewayCustomPolicy(mock.Anything, gatewayID, customPolicyID).
+			Return(nil, newBadRequestErr()).
+			Once()
+		policiesSDK.EXPECT().
+			ListAiGatewayPolicies(mock.Anything, mock.Anything).
+			Return(listPolicies(sdkkonnectcomp.AIGatewayPolicy{ID: "id-uses-it", Name: "uses-it", Type: customPolicyKon}), nil).
+			Once()
+		failingClient := fake.NewClientBuilder().
+			WithScheme(managerscheme.Get()).
+			WithInterceptorFuncs(interceptor.Funcs{
+				List: func(context.Context, client.WithWatch, client.ObjectList, ...client.ListOption) error {
+					return errors.New("cache not synced")
+				},
+			}).
+			Build()
+
+		err := deleteAIGatewayCustomPolicyGuarded(t.Context(), customPoliciesSDK, policiesSDK, failingClient, newCustomPolicy())
+
+		var inUse AIGatewayCustomPolicyInUseError
+		require.ErrorAs(t, err, &inUse)
+		assert.Empty(t, inUse.Users)
+		assert.Empty(t, inUse.UnmanagedKonnectPolicies)
+		assert.Equal(t,
+			"deletion blocked: the custom policy is in use by Konnect policies uses-it; "+
+				"delete them or stop using the custom policy and the deletion will proceed automatically",
+			inUse.DeletionBlockedMessage(),
+		)
 	})
 
 	t.Run("failure to list policies returns the delete error", func(t *testing.T) {

@@ -70,7 +70,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones a {{.Referrer}} uses whenever it changes or is deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
@@ -172,8 +172,8 @@ func enqueue{{$.EntityName}}For{{.Referrer}}(
 			reqs = append(reqs, reconcile.Request{NamespacedName: key})
 		}
 {{- if .LiteralGoField}}
-		// A {{.Referrer}} can also set {{.LiteralGoField}} literally to a
-		// {{$.EntityName}}'s Konnect key: find it through the index.
+		// {{.Referrer}} objects can also set {{.LiteralGoField}} literally to the
+		// Konnect key of {{$.EntityName}} objects: find them through the index.
 		value, gatewayID := referrer.Spec.APISpec.{{.LiteralGoField}}, referrer.GetGatewayID()
 		if value == "" || gatewayID == "" {
 			return reqs
@@ -430,7 +430,7 @@ func {{.EntityName}}ReconciliationWatchOptions(
 		{{- end}}
 		{{- range .ReverseRefs}}
 		// {{.Referrer}} objects reference {{$.EntityName}} (reverseWatch):
-		// re-reconcile the ones a {{.Referrer}} uses whenever it changes or is deleted.
+		// re-reconcile the ones {{.Referrer}} objects use whenever they change or are deleted.
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&{{$.APIGroupPackageAlias}}.{{.Referrer}}{},
@@ -532,8 +532,8 @@ func enqueue{{$.EntityName}}For{{.Referrer}}(
 			reqs = append(reqs, reconcile.Request{NamespacedName: key})
 		}
 {{- if .LiteralGoField}}
-		// A {{.Referrer}} can also set {{.LiteralGoField}} literally to a
-		// {{$.EntityName}}'s Konnect key: find it through the index.
+		// {{.Referrer}} objects can also set {{.LiteralGoField}} literally to the
+		// Konnect key of {{$.EntityName}} objects: find them through the index.
 		value, gatewayID := referrer.Spec.APISpec.{{.LiteralGoField}}, referrer.GetGatewayID()
 		if value == "" || gatewayID == "" {
 			return reqs

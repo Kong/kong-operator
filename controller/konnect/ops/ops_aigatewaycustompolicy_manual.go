@@ -72,11 +72,19 @@ func (e AIGatewayCustomPolicyInUseError) DeletionBlockedMessage() string {
 				"delete them or stop using the custom policy and the deletion will proceed automatically",
 			strings.Join(e.Users, ", "),
 		)
+	case len(e.UnmanagedKonnectPolicies) == 0:
+		// The lookup of the AIGatewayPolicy objects in the cluster failed: do
+		// not claim which side manages the Konnect policies.
+		return fmt.Sprintf(
+			"deletion blocked: the custom policy is in use by Konnect policies %s; "+
+				"delete them or stop using the custom policy and the deletion will proceed automatically",
+			strings.Join(e.KonnectPolicies, ", "),
+		)
 	default:
 		return fmt.Sprintf(
 			"deletion blocked: the custom policy is in use by Konnect policies %s, which are not managed "+
 				"from this cluster; delete them in Konnect and the deletion will proceed automatically",
-			strings.Join(e.KonnectPolicies, ", "),
+			strings.Join(e.UnmanagedKonnectPolicies, ", "),
 		)
 	}
 }

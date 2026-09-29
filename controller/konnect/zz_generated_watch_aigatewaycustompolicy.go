@@ -52,7 +52,7 @@ func AIGatewayCustomPolicyReconciliationWatchOptions(
 			)
 		},
 		// AIGatewayPolicy objects reference AIGatewayCustomPolicy (reverseWatch):
-		// re-reconcile the ones a AIGatewayPolicy uses whenever it changes or is deleted.
+		// re-reconcile the ones AIGatewayPolicy objects use whenever they change or are deleted.
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&aiconfigurationv1alpha1.AIGatewayPolicy{},
@@ -105,8 +105,8 @@ func enqueueAIGatewayCustomPolicyForAIGatewayPolicy(
 		for _, key := range aiconfigurationv1alpha1.AIGatewayPolicyRefsToAIGatewayCustomPolicy(referrer) {
 			reqs = append(reqs, reconcile.Request{NamespacedName: key})
 		}
-		// A AIGatewayPolicy can also set Type literally to a
-		// AIGatewayCustomPolicy's Konnect key: find it through the index.
+		// AIGatewayPolicy objects can also set Type literally to the
+		// Konnect key of AIGatewayCustomPolicy objects: find them through the index.
 		value, gatewayID := referrer.Spec.APISpec.Type, referrer.GetGatewayID()
 		if value == "" || gatewayID == "" {
 			return reqs
