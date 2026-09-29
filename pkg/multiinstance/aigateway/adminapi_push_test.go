@@ -286,4 +286,27 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		require.Equal(t, metav1.ConditionFalse, condition.Status)
 		require.Equal(t, string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason), condition.Reason)
 	})
+
+	t.Run("caches push clients across syncs and prunes churned endpoints", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444"), adminAPI("https://10.0.0.2:8444")))
+
+		// The first sync builds one client per endpoint; the retry loop re-runs
+		// the sync, so the second one must reuse the cached clients.
+		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		require.Len(t, factory.built, 2)
+		for addr, c := range factory.clients {
+			require.Len(t, c.payloads, 2, "expected exactly two pushes to %s", addr)
+		}
+
+		// Endpoints no longer discovered get their cached clients pruned, and
+		// newly discovered ones get fresh clients.
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.2:8444"), adminAPI("https://10.0.0.3:8444")))
+		require.NoError(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		require.Len(t, factory.built, 3)
+		require.Len(t, instance.pushClients, 2)
+	})
 }

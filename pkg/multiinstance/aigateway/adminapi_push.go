@@ -29,6 +29,7 @@ import (
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
+	"k8s.io/apimachinery/pkg/util/sets"
 	"sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -59,6 +60,19 @@ func newMTLSClientAdapter(address, serverName string, certPEM, keyPEM, caPEM []b
 // sets and never drops the conditions owned by the controller.
 const instanceFieldManager = "gateway-operator-aigateway-instance"
 
+// pushClientCacheKey keys the Instance's push client cache. It includes the
+// certificate material so that a renewed Secret (even one replaced in place,
+// under the same reference) invalidates the cached clients.
+func pushClientCacheKey(
+	endpoint adminapi.DiscoveredAdminAPI,
+	certPEM, keyPEM, caPEM []byte,
+) string {
+	return strings.Join([]string{
+		endpoint.Address, endpoint.TLSServerName,
+		string(certPEM), string(keyPEM), string(caPEM),
+	}, "\x00")
+}
+
 // sendConfigToDataPlanes pushes the rendered dbless YAML payload to the Admin API of
 // every data plane endpoint discovered for the gateway (see Instance.AdminAPIs).
 // A failure on any endpoint does not prevent the remaining endpoints from being
@@ -87,12 +101,22 @@ func (i *Instance) sendConfigToDataPlanes(
 	}
 
 	var failures []string
+	currentKeys := sets.New[string]()
 	for endpoint := range endpoints {
 		desc := endpointDesc(endpoint)
-		pushClient, err := i.newPushClient(endpoint.Address, endpoint.TLSServerName, certPEM, keyPEM, caPEM)
-		if err != nil {
-			failures = append(failures, fmt.Sprintf("%s: %s", desc, err))
-			continue
+		key := pushClientCacheKey(endpoint, certPEM, keyPEM, caPEM)
+		currentKeys.Insert(key)
+		pushClient, ok := i.pushClients[key]
+		if !ok {
+			pushClient, err = i.newPushClient(endpoint.Address, endpoint.TLSServerName, certPEM, keyPEM, caPEM)
+			if err != nil {
+				failures = append(failures, fmt.Sprintf("%s: %s", desc, err))
+				continue
+			}
+			if i.pushClients == nil {
+				i.pushClients = map[string]pusher{}
+			}
+			i.pushClients[key] = pushClient
 		}
 		if err := pushClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(payload), true, true); err != nil {
 			errKong, ok := errors.AsType[*kong.APIError](err)
@@ -112,6 +136,14 @@ func (i *Instance) sendConfigToDataPlanes(
 		}
 		log.Debug(i.logger, "pushed configuration to Admin API endpoint",
 			"endpoint", desc, "address", endpoint.Address)
+	}
+
+	// Prune the clients of endpoints that are no longer discovered (e.g. pod
+	// IPs that churn over time), so the cache does not grow without bound.
+	for key := range i.pushClients {
+		if !currentKeys.Has(key) {
+			delete(i.pushClients, key)
+		}
 	}
 
 	if err := i.reportPushStatus(ctx, gwNN, endpoints.Len(), failures); err != nil {

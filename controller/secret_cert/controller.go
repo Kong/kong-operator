@@ -21,11 +21,11 @@ import (
 	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
-// Reconciler reconciles TLS Secrets managed by DataPlane, ControlPlane or
-// AIGatewayDataPlane. Certs in these Secrets expires after a certain time, and
-// the controller is responsible for renewing them by deleting the expiring
-// Secret, which will trigger the creation of a new Secret with renewed certs
-// by the respective owner controllers.
+// Reconciler renews TLS Secrets managed by DataPlane, ControlPlane,
+// AIGatewayDataPlane or OnPremAIGateway. Certs in these Secrets expire after
+// a certain time, and the controller is responsible for renewing them by
+// deleting the expiring Secret, which will trigger the creation of a new
+// Secret with renewed certs by the respective owner controllers.
 type Reconciler struct {
 	client.Client
 

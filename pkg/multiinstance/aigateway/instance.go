@@ -13,6 +13,7 @@ import (
 	"github.com/go-logr/logr"
 	corev1 "k8s.io/api/core/v1"
 	discoveryv1 "k8s.io/api/discovery/v1"
+	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/apimachinery/pkg/util/managedfields"
@@ -116,6 +117,13 @@ type Instance struct {
 	// eventRecorder records events on the instance's OnPremAIGateway. It is set in
 	// Run once the instance's manager is built, and may be nil in tests.
 	eventRecorder events.EventRecorder
+
+	// pushClients caches the Admin API push clients per endpoint address, TLS
+	// server name and certificate material: building a client parses the key
+	// pair, builds a transport and performs a TLS handshake, which the retry
+	// loop would otherwise repeat on every sync. Only the sync loop goroutine
+	// touches it, so no locking.
+	pushClients map[string]pusher
 }
 
 var _ instances.Instance = &Instance{}
@@ -154,8 +162,8 @@ func (i *Instance) ConfigHash() (string, error) {
 
 // IsReady returns an error if the instance is not ready yet.
 //
-// There is nothing to wait for yet: the instance does not talk to anything on startup. Once configuration
-// assembly and push land, this has to report the actual readiness of the pushing machinery.
+// The instance reports push failures on the gateway's DataPlanesConfigured
+// condition, so there is nothing to wait for here yet.
 // TODO: https://github.com/Kong/kong-operator/issues/5569
 func (i *Instance) IsReady() error {
 	return nil
@@ -232,7 +240,9 @@ func (i *Instance) newCtrlManager() (ctrl.Manager, error) {
 // cluster-wide: they may reference the gateway from any namespace. EndpointSlices,
 // AIGatewayDataPlanes, the Admin API client certificate Secret and the OnPremAIGateway
 // itself are scoped to the gateway's namespace: the onpremNamespacedRef is
-// same-namespace and only objects in it are read there.
+// same-namespace and only objects in it are read there. The Secret cache is further
+// bounded to the Admin API client certificate Secrets by label, as those are the only
+// Secrets the instance reads.
 func (i *Instance) cacheOpts() cache.Options {
 	opts := cache.Options{}
 	if i.env.GatewayNN.Namespace == "" {
@@ -243,9 +253,18 @@ func (i *Instance) cacheOpts() cache.Options {
 		&discoveryv1.EndpointSlice{}:            {Namespaces: namespaces},
 		&aigatewayv1alpha1.AIGatewayDataPlane{}: {Namespaces: namespaces},
 		&aigatewayv1alpha1.OnPremAIGateway{}:    {Namespaces: namespaces},
-		&corev1.Secret{}:                        {Namespaces: namespaces},
+		&corev1.Secret{}:                        {Namespaces: namespaces, Label: adminClientCertSecretSelector()},
 	}
 	return opts
+}
+
+// adminClientCertSecretSelector matches the OnPremAIGateway Admin API client
+// certificate Secrets - the only Secrets the instance reads - so unrelated
+// Secrets in the gateway namespace stay out of the instance's cache.
+func adminClientCertSecretSelector() labels.Selector {
+	return labels.SelectorFromSet(labels.Set{
+		consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
+	})
 }
 
 func (i *Instance) sendConfig(
