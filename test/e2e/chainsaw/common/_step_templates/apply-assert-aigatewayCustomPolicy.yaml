@@ -9,7 +9,9 @@
 #       installed:
 #         name: my-plugin
 #         displayName: My plugin
-#         schema: <Lua schema>
+#         schema:
+#           type: inline
+#           value: <Lua schema>
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:

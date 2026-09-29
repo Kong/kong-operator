@@ -11569,9 +11569,7 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	// plugin's `schema.lua`.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=262144
-	Schema string `json:"schema,omitzero"`
+	Schema ConfigMapDataSource `json:"schema,omitzero"`
 }
 
 // CreateAIGatewayCustomPolicyStreamingRequest is a type alias.
@@ -11586,9 +11584,7 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	// plugin's `handler.lua`.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=262144
-	Handler string `json:"handler,omitzero"`
+	Handler ConfigMapDataSource `json:"handler,omitzero"`
 	// Public labels store information about an entity that can be used for
 	// filtering a list of objects.
 	//
@@ -11625,9 +11621,7 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	// plugin's `schema.lua`.
 	//
 	// +required
-	// +kubebuilder:validation:MinLength=1
-	// +kubebuilder:validation:MaxLength=262144
-	Schema string `json:"schema,omitzero"`
+	Schema ConfigMapDataSource `json:"schema,omitzero"`
 }
 
 // GCPModelConfig Configuration for a model hosted on Google Cloud Project.

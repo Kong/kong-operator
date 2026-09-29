@@ -88,7 +88,7 @@ apiGroupVersions:
   konnect.konghq.com/v1alpha1:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
         ops:
@@ -105,9 +105,9 @@ apiGroupVersions:
 		konnect := cfg.APIGroupVersions["konnect.konghq.com/v1alpha1"]
 		require.NotNil(t, konnect)
 		require.Len(t, konnect.Types, 1)
-		require.Len(t, konnect.Types[0].SecretReferences, 1)
-		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].SecretReferences[0].Path)
-		assert.Equal(t, "Secret", konnect.Types[0].SecretReferences[0].Type)
+		require.Len(t, konnect.Types[0].DataSources, 1)
+		assert.Equal(t, "spec.apiSpec.certificate", konnect.Types[0].DataSources[0].Path)
+		assert.Equal(t, "Secret", konnect.Types[0].DataSources[0].Type)
 		assert.True(t, konnect.Types[0].OpsRequireClient)
 		require.NotNil(t, konnect.Types[0].Ops)
 		assert.Equal(t,
@@ -738,6 +738,24 @@ func TestTypeConfig_ValidateAssociations(t *testing.T) {
 	})
 }
 
+func TestTypeConfig_ValidateDataSources(t *testing.T) {
+	t.Run("Secret and ConfigMap types are valid", func(t *testing.T) {
+		tc := &TypeConfig{DataSources: []DataSourceConfig{
+			{Path: "spec.apiSpec.apiKey", Type: DataSourceTypeSecret},
+			{Path: "spec.apiSpec.schema", Type: DataSourceTypeConfigMap},
+		}}
+		require.NoError(t, tc.validate())
+		require.False(t, tc.DataSources[0].IsConfigMap())
+		require.True(t, tc.DataSources[1].IsConfigMap())
+	})
+	t.Run("unknown type errors", func(t *testing.T) {
+		tc := &TypeConfig{DataSources: []DataSourceConfig{
+			{Path: "spec.apiSpec.schema", Type: "Other"},
+		}}
+		require.ErrorContains(t, tc.validate(), `dataSources[0].type "Other" is not supported`)
+	})
+}
+
 func TestAPIGroupVersionConfig_AssociationsConfig(t *testing.T) {
 	agv := &APIGroupVersionConfig{
 		Types: []*TypeConfig{
@@ -922,7 +940,7 @@ func TestAPIGroupVersionConfig_OpsConfig(t *testing.T) {
 					Ops: map[string]*OpConfig{
 						"create": {Path: "github.com/Kong/sdk-konnect-go/models/components.CreateEventGatewayDataPlaneCertificateRequest"},
 					},
-					SecretReferences: []SecretReferenceConfig{
+					DataSources: []DataSourceConfig{
 						{Path: "spec.apiSpec.certificate", Type: "Secret"},
 					},
 				},

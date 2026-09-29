@@ -242,9 +242,11 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			continue
 		}
 		if leafType, ok := g.entityAPISpecFieldSensitiveType(entityName, jsonName(prop.Name)); ok {
-			typeName := "SensitiveDataSource"
+			typeName, inlineConst := sensitiveDataSourceTypeName, "SensitiveDataSourceTypeInline"
 			innerValue := `"test-value"`
-			if leafType.DedicatedTypeName != "" {
+			if leafType.ConfigMap {
+				typeName, inlineConst = configMapDataSourceTypeName, "ConfigMapDataSourceTypeInline"
+			} else if leafType.DedicatedTypeName != "" {
 				typeName = leafType.DedicatedTypeName
 				innerValue = controllerOpsTestValueForProperty(prop, leafType.ValueGoType, g.config.APIGroupPackageAlias)
 				if innerValue == "" {
@@ -257,10 +259,11 @@ func (g *Generator) buildOpsControllerTestFields(entityName string, props []*par
 			testFields = append(testFields, opsControllerTestField{
 				FieldName: goFieldName(prop.Name),
 				TestValue: fmt.Sprintf(
-					`%s.%s{Type: %s.SensitiveDataSourceTypeInline, Value: new(%s)}`,
+					`%s.%s{Type: %s.%s, Value: new(%s)}`,
 					g.config.APIGroupPackageAlias,
 					typeName,
 					g.config.APIGroupPackageAlias,
+					inlineConst,
 					innerValue,
 				),
 			})
@@ -383,7 +386,7 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantField:    "Installed",
 			VariantTypeName: "CreateAIGatewayCustomPolicyInstalledRequest",
 			VariantValue: fmt.Sprintf(
-				`&%[1]s.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}`,
+				`&%[1]s.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: %[1]s.ConfigMapDataSource{Type: %[1]s.ConfigMapDataSourceTypeInline, Value: new("return {}")}}`,
 				apiAlias,
 			),
 		}

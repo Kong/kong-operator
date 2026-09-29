@@ -26,7 +26,7 @@ func TestEnqueueAIGatewayCustomPolicyForAIGatewayPolicy(t *testing.T) {
 						Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{
 							Name:        aiconfigurationv1alpha1.AIGatewayEntityIdentifier(konnectName),
 							DisplayName: konnectName,
-							Schema:      "return {}",
+							Schema:      aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")},
 						},
 					},
 				},
@@ -95,7 +95,7 @@ func TestEnqueueAIGatewayPolicyForAIGatewayCustomPolicy(t *testing.T) {
 					Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{
 						Name:        "custom-konnect",
 						DisplayName: "custom-konnect",
-						Schema:      "return {}",
+						Schema:      aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")},
 					},
 				},
 			},

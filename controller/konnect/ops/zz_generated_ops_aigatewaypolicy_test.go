@@ -51,7 +51,7 @@ func TestCreateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
-		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}}}}}
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
 		r.SetKonnectID("test-customPolicyRef" + "-kid")
 		return r
 	}()).Build()
@@ -98,7 +98,7 @@ func TestCreateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
-		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}}}}}
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
 		r.SetKonnectID("test-customPolicyRef" + "-kid")
 		return r
 	}()).Build()
@@ -129,7 +129,7 @@ func TestUpdateAIGatewayPolicy_UsesSDKOpsConversion(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
-		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}}}}}
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
 		r.SetKonnectID("test-customPolicyRef" + "-kid")
 		return r
 	}()).Build()
@@ -162,7 +162,7 @@ func TestUpdateAIGatewayPolicy_PropagatesSDKError(t *testing.T) {
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayPoliciesSDK(t)
 	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).WithObjects(func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
-		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}}}}}
+		r := &aiconfigurationv1alpha1.AIGatewayCustomPolicy{ObjectMeta: metav1.ObjectMeta{Name: "test-customPolicyRef", Namespace: "default"}, Spec: aiconfigurationv1alpha1.AIGatewayCustomPolicySpec{APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{Type: aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled, Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}}}}}}
 		r.SetKonnectID("test-customPolicyRef" + "-kid")
 		return r
 	}()).Build()
