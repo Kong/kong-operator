@@ -32,8 +32,8 @@ type LicenseGetter = license.Getter
 // ControlPlanes, reusing its license picking and status reporting. It reports
 // under the operator's own controller type (LicenseControllerTypeKongOperator)
 // so entries in the KongLicense status do not collide with the embedded KIC's.
-// The reconciler only starts once the KongLicense CRD exists, so a cluster
-// without the CRD does not abort the manager.
+// The operator requires the KongLicense CRD up front via requiredCRDChecks;
+// the dynamic wrapper only covers consumers without that check.
 // NOTE: no license validator is wired, so the license validity is not
 // verified; only its availability is reported.
 func SetupKongLicense(
