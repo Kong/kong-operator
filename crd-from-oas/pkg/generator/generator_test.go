@@ -498,7 +498,7 @@ func TestGenerateCommonTypes(t *testing.T) {
 	t.Run("with secret refs adds hardcoded SensitiveDataSource value max length marker", func(t *testing.T) {
 		g := NewGenerator(Config{
 			APIVersion: "v1alpha1",
-			SecretReferences: map[string][]config.SecretReferenceConfig{
+			DataSources: map[string][]config.DataSourceConfig{
 				"Entity": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 			},
 		})
@@ -2653,7 +2653,7 @@ func TestBuildSchemaCursors_SecretReferenceDoesNotRecordOriginalLeafTypeCursor(t
 	gen := NewGenerator(Config{
 		APIVersion:  "v1alpha1",
 		FieldConfig: fieldCfg,
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"BackendCluster": {{Path: "spec.apiSpec.certificate", Type: "Secret"}},
 		},
 	})
@@ -3315,7 +3315,7 @@ func TestGenerateSDKOps_FlattenSkipsFreeformFields(t *testing.T) {
 }
 
 func TestGenerateSDKOps_SensitiveFreeformLeaf(t *testing.T) {
-	// A free-form leaf that is itself a secretReference target (like
+	// A free-form leaf that is itself a dataSource target (like
 	// AIGatewayPolicy spec.apiSpec.config) must be emitted with Sensitive: true
 	// so flattenSensitiveDataExcept unwraps its own DataSource wrapper while
 	// leaving the user data below it verbatim. Non-sensitive free-form leaves
@@ -3323,7 +3323,7 @@ func TestGenerateSDKOps_SensitiveFreeformLeaf(t *testing.T) {
 	// DataSource wrapper is not collapsed.
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"Portal": {{Path: "spec.apiSpec.config", Type: "Secret"}},
 		},
 	})
@@ -3872,7 +3872,7 @@ func TestGenerateSDKOpsTest_AssertsNormalizedPayload(t *testing.T) {
 func TestGenerateSDKOpsTest_UsesRawConfiguredSensitiveFields(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"EventGatewayBackendCluster": {
 				{
 					Path: "spec.apiSpec.key",
@@ -5838,7 +5838,7 @@ func TestGenerateOpsUpdate_NonRootEntityWithParentTypeOverride(t *testing.T) {
 func TestGenerateSDKOps_ClientRequestMethodsResolveSecretRef(t *testing.T) {
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"KonnectEventDataPlaneCertificate": {
 				{Path: "spec.apiSpec.certificate", Type: "Secret"},
 				{Path: "spec.apiSpec.key", Type: "Secret"},

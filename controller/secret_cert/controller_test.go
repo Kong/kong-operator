@@ -41,6 +41,14 @@ func Test_secretMatchesFilter(t *testing.T) {
 			want: true,
 		},
 		{
+			name: "OnPremAIGateway managed TLS secret matches",
+			secret: newTLSSecret(map[string]string{
+				config.DefaultSecretLabelSelector:    config.LabelValueForSelectorTrue,
+				consts.GatewayOperatorManagedByLabel: consts.OnPremAIGatewayManagedByLabelValue,
+			}),
+			want: true,
+		},
+		{
 			name: "unrecognized managed-by value does not match",
 			secret: newTLSSecret(map[string]string{
 				config.DefaultSecretLabelSelector:    config.LabelValueForSelectorTrue,

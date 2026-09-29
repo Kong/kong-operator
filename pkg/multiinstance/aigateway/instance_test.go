@@ -71,3 +71,36 @@ func TestOnAdminAPIsDiscovered(t *testing.T) {
 	require.Equal(t, gatewayNN, *change.ParentNN)
 	require.True(t, instance.AdminAPIs().Equal(otherEndpoint))
 }
+
+// TestHash verifies that the instance config hash covers both the rendered payload
+// and the client certificate Secret reference, and that an empty config keeps the
+// historical sha256("") value (the reconciler compares it against the running
+// instance's hash to detect drift, e.g. after a certificate renewal re-creates the
+// Secret under a new name).
+func TestHash(t *testing.T) {
+	// sha256 of empty input, the value produced before AdminClientCertSecretNN
+	// was added to Config.
+	const emptySHA256 = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+
+	hashOf := func(cfg Config) string {
+		h, err := Hash(cfg)
+		require.NoError(t, err)
+		return h
+	}
+
+	require.Equal(t, emptySHA256, hashOf(Config{}))
+
+	base := Config{
+		DBLessConfig:            []byte("payload"),
+		AdminClientCertSecretNN: types.NamespacedName{Namespace: "default", Name: "cert-1"},
+	}
+	require.Equal(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: base.AdminClientCertSecretNN,
+	}), "identical configs must produce identical hashes")
+
+	require.NotEqual(t, hashOf(base), hashOf(Config{
+		DBLessConfig:            base.DBLessConfig,
+		AdminClientCertSecretNN: types.NamespacedName{Namespace: "default", Name: "cert-2"},
+	}), "a renewed Secret under a new name must drift the hash")
+}

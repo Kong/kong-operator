@@ -13,6 +13,9 @@ const (
 	IndexFieldAIGatewayCustomPolicyOnKonnectAIGatewayRef = "aiGatewayCustomPolicyOnKonnectAIGatewayRef"
 	// IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef is the index field for AIGatewayCustomPolicy -> OnPremAIGateway.
 	IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef = "aiGatewayCustomPolicyOnOnPremAIGatewayRef"
+	// IndexFieldAIGatewayCustomPolicyOnKonnectName is the index field for AIGatewayCustomPolicy by
+	// "<gatewayID>/<Konnect key>", used to find the objects referrers name literally (reverseWatch).
+	IndexFieldAIGatewayCustomPolicyOnKonnectName = "aiGatewayCustomPolicyOnKonnectName"
 )
 
 // OptionsForAIGatewayCustomPolicy returns required Index options for AIGatewayCustomPolicy reconciler.
@@ -27,6 +30,11 @@ func OptionsForAIGatewayCustomPolicy() []Option {
 			Object:         &aiconfigurationv1alpha1.AIGatewayCustomPolicy{},
 			Field:          IndexFieldAIGatewayCustomPolicyOnOnPremAIGatewayRef,
 			ExtractValueFn: aiGatewayCustomPolicyOnOnPremAIGatewayRef,
+		},
+		{
+			Object:         &aiconfigurationv1alpha1.AIGatewayCustomPolicy{},
+			Field:          IndexFieldAIGatewayCustomPolicyOnKonnectName,
+			ExtractValueFn: aiGatewayCustomPolicyOnKonnectName,
 		},
 	}
 }
@@ -72,4 +80,16 @@ func aiGatewayCustomPolicyOnOnPremAIGatewayRef(object client.Object) []string {
 	}
 
 	return []string{refNamespace + "/" + ent.Spec.AIGatewayRef.NamespacedRef.Name}
+}
+
+func aiGatewayCustomPolicyOnKonnectName(object client.Object) []string {
+	ent, ok := object.(*aiconfigurationv1alpha1.AIGatewayCustomPolicy)
+	if !ok {
+		return nil
+	}
+	gatewayID, value := ent.GetGatewayID(), ent.GetKonnectName()
+	if gatewayID == "" || value == "" {
+		return nil
+	}
+	return []string{gatewayID + "/" + value}
 }

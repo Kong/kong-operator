@@ -11,6 +11,23 @@ import (
 	"github.com/kong/kong-operator/v2/test/envtest"
 )
 
+func inlineLua(src string) aiconfigurationv1alpha1.ConfigMapDataSource {
+	return aiconfigurationv1alpha1.ConfigMapDataSource{
+		Type:  aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
+		Value: new(src),
+	}
+}
+
+func luaFromConfigMap(key string) aiconfigurationv1alpha1.ConfigMapDataSource {
+	return aiconfigurationv1alpha1.ConfigMapDataSource{
+		Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeConfigMapRef,
+		ConfigMapRef: &aiconfigurationv1alpha1.ConfigMapDataSourceRef{
+			Name: "custom-policy-lua",
+			Key:  key,
+		},
+	}
+}
+
 func validAIGatewayCustomPolicyInstalled(ns string) *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 	return &aiconfigurationv1alpha1.AIGatewayCustomPolicy{
 		ObjectMeta: common.CommonObjectMeta(ns),
@@ -26,7 +43,7 @@ func validAIGatewayCustomPolicyInstalled(ns string) *aiconfigurationv1alpha1.AIG
 					Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{
 						Name:        "my-installed-policy",
 						DisplayName: "My installed policy",
-						Schema:      "return {}",
+						Schema:      inlineLua("return {}"),
 					},
 				},
 			},
@@ -41,8 +58,8 @@ func validAIGatewayCustomPolicyStreaming(ns string) *aiconfigurationv1alpha1.AIG
 		Streaming: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyStreamingRequest{
 			Name:        "my-streaming-policy",
 			DisplayName: "My streaming policy",
-			Schema:      "return {}",
-			Handler:     "return {}",
+			Schema:      inlineLua("return {}"),
+			Handler:     inlineLua("return {}"),
 		},
 	}
 	return obj
@@ -95,16 +112,76 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				Name: "Lua sources longer than the default string limit are valid",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 					obj := validAIGatewayCustomPolicyStreaming(ns.Name)
-					obj.Spec.APISpec.Streaming.Schema = "-- " + strings.Repeat("a", 4096)
-					obj.Spec.APISpec.Streaming.Handler = "-- " + strings.Repeat("a", 4096)
+					obj.Spec.APISpec.Streaming.Schema = inlineLua("-- " + strings.Repeat("a", 4096))
+					obj.Spec.APISpec.Streaming.Handler = inlineLua("-- " + strings.Repeat("a", 4096))
 					return obj
 				}(),
+			},
+			{
+				Name: "inline Lua sources longer than 256KiB are invalid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Schema = inlineLua(strings.Repeat("a", 262145))
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.apiSpec.installed.schema.value: Too long"),
+			},
+			{
+				Name: "Lua sources from a ConfigMap are valid",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyStreaming(ns.Name)
+					obj.Spec.APISpec.Streaming.Schema = luaFromConfigMap("schema.lua")
+					obj.Spec.APISpec.Streaming.Handler = luaFromConfigMap("handler.lua")
+					return obj
+				}(),
+			},
+			{
+				Name: "configMapRef type requires configMapRef",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Schema = aiconfigurationv1alpha1.ConfigMapDataSource{
+						Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeConfigMapRef,
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("value required when type=inline; configMapRef required when type=configMapRef"),
+			},
+			{
+				Name: "inline type requires value",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Schema = aiconfigurationv1alpha1.ConfigMapDataSource{
+						Type:         aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline,
+						ConfigMapRef: &aiconfigurationv1alpha1.ConfigMapDataSourceRef{Name: "cm", Key: "schema.lua"},
+					}
+					return obj
+				}(),
+				ExpectedErrorMessage: new("value required when type=inline; configMapRef required when type=configMapRef"),
+			},
+			{
+				Name: "value and configMapRef cannot both be set",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Schema = luaFromConfigMap("schema.lua")
+					obj.Spec.APISpec.Installed.Schema.Value = new("return {}")
+					return obj
+				}(),
+				ExpectedErrorMessage: new("only one of value and configMapRef can be set"),
+			},
+			{
+				Name: "configMapRef requires a key",
+				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
+					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
+					obj.Spec.APISpec.Installed.Schema = luaFromConfigMap("")
+					return obj
+				}(),
+				ExpectedErrorMessage: new("spec.apiSpec.installed.schema.configMapRef.key"),
 			},
 			{
 				Name: "installed variant requires schema",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 					obj := validAIGatewayCustomPolicyInstalled(ns.Name)
-					obj.Spec.APISpec.Installed.Schema = ""
+					obj.Spec.APISpec.Installed.Schema = aiconfigurationv1alpha1.ConfigMapDataSource{}
 					return obj
 				}(),
 				ExpectedErrorMessage: new("spec.apiSpec.installed.schema: Required value"),
@@ -113,7 +190,7 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				Name: "streaming variant requires handler",
 				TestObject: func() *aiconfigurationv1alpha1.AIGatewayCustomPolicy {
 					obj := validAIGatewayCustomPolicyStreaming(ns.Name)
-					obj.Spec.APISpec.Streaming.Handler = ""
+					obj.Spec.APISpec.Streaming.Handler = aiconfigurationv1alpha1.ConfigMapDataSource{}
 					return obj
 				}(),
 				ExpectedErrorMessage: new("spec.apiSpec.streaming.handler: Required value"),
@@ -208,8 +285,16 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				TestObject: validAIGatewayCustomPolicyStreaming(ns.Name),
 				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
 					obj.Spec.APISpec.Streaming.DisplayName = "Renamed display"
-					obj.Spec.APISpec.Streaming.Schema = "return { name = \"updated\" }"
-					obj.Spec.APISpec.Streaming.Handler = "return { VERSION = \"1.0.0\" }"
+					obj.Spec.APISpec.Streaming.Schema = inlineLua("return { name = \"updated\" }")
+					obj.Spec.APISpec.Streaming.Handler = inlineLua("return { VERSION = \"1.0.0\" }")
+				},
+			},
+			{
+				Name:       "Lua sources can switch from inline to a ConfigMap",
+				TestObject: validAIGatewayCustomPolicyStreaming(ns.Name),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
+					obj.Spec.APISpec.Streaming.Schema = luaFromConfigMap("schema.lua")
+					obj.Spec.APISpec.Streaming.Handler = luaFromConfigMap("handler.lua")
 				},
 			},
 		}.RunWithConfig(t, cfg, scheme)

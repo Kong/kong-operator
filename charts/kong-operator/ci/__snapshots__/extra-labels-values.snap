@@ -2339,9 +2339,39 @@ spec:
                         - message: name is immutable
                           rule: self == oldSelf
                       schema:
-                        maxLength: 262144
-                        minLength: 1
-                        type: string
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
                     required:
                     - displayName
                     - name
@@ -2354,9 +2384,39 @@ spec:
                         minLength: 1
                         type: string
                       handler:
-                        maxLength: 262144
-                        minLength: 1
-                        type: string
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
                       labels:
                         additionalProperties:
                           maxLength: 63
@@ -2380,9 +2440,39 @@ spec:
                         - message: name is immutable
                           rule: self == oldSelf
                       schema:
-                        maxLength: 262144
-                        minLength: 1
-                        type: string
+                        properties:
+                          configMapRef:
+                            properties:
+                              key:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                              name:
+                                maxLength: 253
+                                minLength: 1
+                                type: string
+                            required:
+                            - key
+                            - name
+                            type: object
+                          type:
+                            default: inline
+                            enum:
+                            - inline
+                            - configMapRef
+                            type: string
+                          value:
+                            maxLength: 262144
+                            minLength: 1
+                            type: string
+                        required:
+                        - type
+                        type: object
+                        x-kubernetes-validations:
+                        - message: value required when type=inline; configMapRef required when type=configMapRef
+                          rule: 'self.type == ''inline'' ? has(self.value) : has(self.configMapRef)'
+                        - message: only one of value and configMapRef can be set
+                          rule: '!(has(self.value) && has(self.configMapRef))'
                     required:
                     - displayName
                     - handler
@@ -18203,6 +18293,21 @@ spec:
                     x-kubernetes-validations:
                     - message: value required when type=inline; secretRef required when type=secretRef
                       rule: 'self.type == ''inline'' ? has(self.value) : has(self.secretRef)'
+                  customPolicyRef:
+                    properties:
+                      kind:
+                        default: AIGatewayCustomPolicy
+                        enum:
+                        - AIGatewayCustomPolicy
+                        type: string
+                      name:
+                        minLength: 1
+                        type: string
+                      namespace:
+                        type: string
+                    required:
+                    - name
+                    type: object
                   datastores:
                     items:
                       properties:
@@ -18254,7 +18359,6 @@ spec:
                 - config
                 - displayName
                 - name
-                - type
                 type: object
             required:
             - aiGatewayRef
@@ -18324,6 +18428,8 @@ spec:
         x-kubernetes-validations:
         - message: spec.aiGatewayRef is immutable when an entity is already Programmed
           rule: '!has(self.spec.aiGatewayRef) || !has(self.status) || !has(self.status.conditions) || !self.status.conditions.exists(c, c.type == ''Programmed'' && c.status == ''True'') || oldSelf.spec.aiGatewayRef == self.spec.aiGatewayRef'
+        - message: exactly one of spec.apiSpec.type and spec.apiSpec.customPolicyRef must be set
+          rule: '!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.type) != has(self.spec.apiSpec.customPolicyRef)'
     served: true
     storage: true
     subresources:

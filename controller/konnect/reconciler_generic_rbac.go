@@ -27,6 +27,7 @@ package konnect
 //+kubebuilder:rbac:groups=konnect.konghq.com,resources=konnectcloudgatewaynetworks/finalizers,verbs=update;patch
 
 //+kubebuilder:rbac:groups=core,resources=secrets,verbs=get;list;watch
+//+kubebuilder:rbac:groups=core,resources=configmaps,verbs=get;list;watch
 
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcacertificates,verbs=get;list;watch;update;patch
 //+kubebuilder:rbac:groups=configuration.konghq.com,resources=kongcacertificates/status,verbs=update;patch

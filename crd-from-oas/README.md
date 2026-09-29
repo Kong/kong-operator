@@ -34,10 +34,9 @@ apiGroupVersions:
     types:
       - path: /v1/event-gateways/{gatewayId}/data-plane-certificates
         name: EventGatewayDataPlaneCertificate
-        secretReferences:
+        dataSources:
           - path: spec.apiSpec.certificate
             type: Secret
-            key: tls.crt
       - path: /v1/event-gateways/{gatewayId}/virtual-clusters/{virtualClusterId}/consume-policies
         name: EventGatewayVirtualClusterConsumePolicy
         # Omit fields from generated nested schema types for this API only.
@@ -46,8 +45,23 @@ apiGroupVersions:
             - parentPolicyID
 ```
 
+`dataSources` lets a field be provided inline or read from a Kubernetes
+object in the same (or, for Secrets, a granted) namespace. The field becomes a
+union struct with a `type` discriminator:
+
+- `type: Secret`: for sensitive values. The field becomes `SensitiveDataSource`
+  (`inline` with `value`, or `secretRef`), or a dedicated per-field type when
+  the OAS field isn't a string.
+- `type: ConfigMap`: for non-sensitive values such as Lua sources. The field
+  becomes `ConfigMapDataSource` (`inline` with `value`, or `configMapRef` with
+  `name` and `key`, in the same namespace). Only string fields are supported.
+
+Referenced objects are resolved when building SDK requests, validated by the
+reconciler (`SecretRefValid`/`ConfigMapRefValid` conditions) and watched, so
+fixing a missing object retriggers reconciliation.
+
 Generated ops infer that a controller-runtime client is needed when
-`secretReferences` are configured. For other entities that need to
+`dataSources` are configured. For other entities that need to
 read cluster state while building SDK requests, set `ops.requireClient: true`
 under the type configuration.
 

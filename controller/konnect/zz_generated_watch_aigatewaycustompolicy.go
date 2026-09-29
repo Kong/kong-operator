@@ -5,6 +5,7 @@ package konnect
 import (
 	"context"
 
+	corev1 "k8s.io/api/core/v1"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -51,11 +52,29 @@ func AIGatewayCustomPolicyReconciliationWatchOptions(
 				),
 			)
 		},
+		// AIGatewayPolicy objects reference AIGatewayCustomPolicy (reverseWatch):
+		// re-reconcile the ones AIGatewayPolicy objects use whenever they change or are deleted.
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&aiconfigurationv1alpha1.AIGatewayPolicy{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueAIGatewayCustomPolicyForAIGatewayPolicy(cl),
+				),
+			)
+		},
 		func(b *ctrl.Builder) *ctrl.Builder {
 			return b.Watches(
 				&configurationv1alpha1.KongReferenceGrant{},
 				handler.EnqueueRequestsFromMapFunc(
 					enqueueObjectsForKongReferenceGrant[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](cl),
+				),
+			)
+		},
+		func(b *ctrl.Builder) *ctrl.Builder {
+			return b.Watches(
+				&corev1.ConfigMap{},
+				handler.EnqueueRequestsFromMapFunc(
+					enqueueObjectsForConfigMapRef[aiconfigurationv1alpha1.AIGatewayCustomPolicyList](cl),
 				),
 			)
 		},
@@ -77,5 +96,36 @@ func enqueueAIGatewayCustomPolicyForKonnectAIGateway(
 			return nil
 		}
 		return objectListToReconcileRequests(l.Items)
+	}
+}
+
+// enqueueAIGatewayCustomPolicyForAIGatewayPolicy enqueues the AIGatewayCustomPolicy objects
+// AIGatewayPolicy objects use.
+func enqueueAIGatewayCustomPolicyForAIGatewayPolicy(
+	cl client.Client,
+) func(ctx context.Context, obj client.Object) []reconcile.Request {
+	return func(ctx context.Context, obj client.Object) []reconcile.Request {
+		referrer, ok := obj.(*aiconfigurationv1alpha1.AIGatewayPolicy)
+		if !ok {
+			return nil
+		}
+		var reqs []reconcile.Request
+		// References name their targets: no lookup needed.
+		for _, key := range aiconfigurationv1alpha1.AIGatewayPolicyRefsToAIGatewayCustomPolicy(referrer) {
+			reqs = append(reqs, reconcile.Request{NamespacedName: key})
+		}
+		// AIGatewayPolicy objects can also set Type literally to the
+		// Konnect key of AIGatewayCustomPolicy objects: find them through the index.
+		value, gatewayID := referrer.Spec.APISpec.Type, referrer.GetGatewayID()
+		if value == "" || gatewayID == "" {
+			return reqs
+		}
+		var l aiconfigurationv1alpha1.AIGatewayCustomPolicyList
+		if err := cl.List(ctx, &l, client.MatchingFields{
+			index.IndexFieldAIGatewayCustomPolicyOnKonnectName: gatewayID + "/" + value,
+		}); err != nil {
+			return reqs
+		}
+		return append(reqs, objectListToReconcileRequests(l.Items)...)
 	}
 }

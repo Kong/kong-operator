@@ -8,9 +8,11 @@ import (
 	sdkkonnectops "github.com/Kong/sdk-konnect-go/models/operations"
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	aiconfigurationv1alpha1 "github.com/kong/kong-operator/v2/api/aiconfiguration/v1alpha1"
+	managerscheme "github.com/kong/kong-operator/v2/modules/manager/scheme"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 	"testing"
 )
 
@@ -30,7 +32,7 @@ func testGeneratedAIGatewayCustomPolicyForSDKOps() *aiconfigurationv1alpha1.AIGa
 			APISpec: aiconfigurationv1alpha1.AIGatewayCustomPolicyAPISpec{
 				AIGatewayCustomPolicyConfig: &aiconfigurationv1alpha1.AIGatewayCustomPolicyConfig{
 					Type:      aiconfigurationv1alpha1.AIGatewayCustomPolicyConfigTypeInstalled,
-					Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"},
+					Installed: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")}},
 				},
 			},
 		},
@@ -42,10 +44,11 @@ func TestCreateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayCustomPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayCustomPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayCustomPolicyRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayCustomPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest != nil {
 		expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels)
@@ -70,7 +73,7 @@ func TestCreateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 		}, nil).
 		Once()
 
-	require.NoError(t, createAIGatewayCustomPolicy(ctx, sdk, obj))
+	require.NoError(t, createAIGatewayCustomPolicy(ctx, cl, sdk, obj))
 	require.Equal(t, expectedID, obj.GetKonnectID())
 }
 
@@ -79,10 +82,11 @@ func TestCreateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayCustomPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayCustomPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
-	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayCustomPolicyRequest()
+	expectedRequest, err := obj.ToCreateAIGatewayCustomPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest != nil {
 		expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels)
@@ -101,7 +105,7 @@ func TestCreateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = createAIGatewayCustomPolicy(ctx, sdk, obj)
+	err = createAIGatewayCustomPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 
@@ -110,11 +114,12 @@ func TestUpdateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayCustomPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayCustomPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaycustompolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayCustomPolicyRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayCustomPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest != nil {
 		expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels)
@@ -135,7 +140,7 @@ func TestUpdateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 		Return(&sdkkonnectops.UpdateAiGatewayCustomPolicyResponse{}, nil).
 		Once()
 
-	require.NoError(t, updateAIGatewayCustomPolicy(ctx, sdk, obj))
+	require.NoError(t, updateAIGatewayCustomPolicy(ctx, cl, sdk, obj))
 }
 
 func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
@@ -143,11 +148,12 @@ func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 
 	ctx := t.Context()
 	sdk := mocks.NewMockAIGatewayCustomPoliciesSDK(t)
+	cl := fake.NewClientBuilder().WithScheme(managerscheme.Get()).Build()
 	obj := testGeneratedAIGatewayCustomPolicyForSDKOps()
 	parentID := "parentID-1"
 	obj.SetGatewayID(parentID)
 	obj.SetKonnectID("aigatewaycustompolicy-id")
-	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayCustomPolicyRequest()
+	expectedRequest, err := obj.ToUpdateAIGatewayCustomPolicyRequest(ctx, cl)
 	require.NoError(t, err)
 	if expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest != nil {
 		expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels)
@@ -169,7 +175,7 @@ func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 		Return(nil, sdkErr).
 		Once()
 
-	err = updateAIGatewayCustomPolicy(ctx, sdk, obj)
+	err = updateAIGatewayCustomPolicy(ctx, cl, sdk, obj)
 	require.ErrorContains(t, err, sdkErr.Error())
 }
 

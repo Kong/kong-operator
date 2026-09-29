@@ -43,7 +43,7 @@ func UpdateGeneratedOps[
 	case *aiconfigurationv1alpha1.AIGatewayConsumerGroup:
 		return updateAIGatewayConsumerGroup(ctx, cl, sdk.GetAIGatewayConsumerGroupsSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayCustomPolicy:
-		return updateAIGatewayCustomPolicy(ctx, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
+		return updateAIGatewayCustomPolicy(ctx, cl, sdk.GetAIGatewayCustomPoliciesSDK(), ent)
 	case *aiconfigurationv1alpha1.AIGatewayDataPlaneCertificate:
 		return nil // Entity does not support update.
 	case *aiconfigurationv1alpha1.AIGatewayMCPServer:

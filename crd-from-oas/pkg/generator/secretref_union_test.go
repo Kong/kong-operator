@@ -71,7 +71,7 @@ func TestBuildSensitiveLeaves_WildcardFanOutAcrossOneOfVariants(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeUnionEntity": {
 				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
 			},
@@ -79,7 +79,7 @@ func TestBuildSensitiveLeaves_WildcardFanOutAcrossOneOfVariants(t *testing.T) {
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeUnionEntity")
+	tmpls := g.templateDataSources("FakeUnionEntity")
 	require.Len(t, tmpls, 1, "only FakeBasic has the field; FakeCloud must be skipped, not error")
 	tmpl := tmpls[0]
 	assert.True(t, tmpl.IsSlice)
@@ -108,7 +108,7 @@ func TestBuildSensitiveLeaves_WildcardFanOutZeroMatches_Errors(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeUnionEntity": {
 				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
 			},
@@ -168,7 +168,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeCloudEntity": {
 				{Path: "spec.apiSpec.config.auth.aws.secretAccessKey", Type: "Secret"},
 			},
@@ -176,7 +176,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent(t *testing.T) {
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeCloudEntity")
+	tmpls := g.templateDataSources("FakeCloudEntity")
 	require.Len(t, tmpls, 1)
 	tmpl := tmpls[0]
 	assert.False(t, tmpl.IsSlice)
@@ -209,7 +209,7 @@ func TestBuildSensitiveLeaves_MidPathUnionDescent_UnknownVariant_Errors(t *testi
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeCloudEntity": {
 				{Path: "spec.apiSpec.config.auth.azure.secretAccessKey", Type: "Secret"},
 			},
@@ -261,7 +261,7 @@ func TestBuildSensitiveLeaves_ArrayOfScalarSecretLeaf(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeIdentityProvider": {
 				{Path: "spec.apiSpec.openid-connect.config.clientSecret", Type: "Secret"},
 			},
@@ -269,7 +269,7 @@ func TestBuildSensitiveLeaves_ArrayOfScalarSecretLeaf(t *testing.T) {
 	})
 	require.NoError(t, g.buildSensitiveLeaves(parsed))
 
-	tmpls := g.templateSecretReferences("FakeIdentityProvider")
+	tmpls := g.templateDataSources("FakeIdentityProvider")
 	require.Len(t, tmpls, 1)
 	tmpl := tmpls[0]
 	assert.True(t, tmpl.IsSlice)
@@ -317,7 +317,7 @@ func TestGenerateSDKOps_ArrayOfScalarSecretLeaf_ProducesValidGo(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeIdentityProvider": {
 				{Path: "spec.apiSpec.openid-connect.config.clientSecret", Type: "Secret"},
 			},
@@ -412,7 +412,7 @@ func TestGenerateSDKOps_WildcardAndMidPathUnion_ProducesValidGo(t *testing.T) {
 	}
 	g := NewGenerator(Config{
 		APIVersion: "v1alpha1",
-		SecretReferences: map[string][]config.SecretReferenceConfig{
+		DataSources: map[string][]config.DataSourceConfig{
 			"FakeProvider": {
 				{Path: "spec.apiSpec.*.config.auth.headers[].value", Type: "Secret"},
 				{Path: "spec.apiSpec.*.config.auth.basic.headers[].value", Type: "Secret"},

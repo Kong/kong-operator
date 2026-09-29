@@ -104,6 +104,29 @@ type ReferenceConfig struct {
 	// false: a mismatched namespace is rejected with
 	// ReferenceCrossNamespaceError, exactly as today.
 	SupportCrossNamespaceReference bool `yaml:"supportCrossNamespaceReference,omitempty"`
+	// InjectInto makes this an additive, optional reference: Path names a new
+	// top-level apiSpec field that does not exist in the OAS (e.g.
+	// "spec.apiSpec.customPolicyRef"), and the resolved value is sent in the
+	// SDK request as the existing apiSpec field named here (its CRD JSON name,
+	// e.g. "type") instead. The target field becomes optional, and a generated
+	// CEL rule requires exactly one of the target field and the reference to be
+	// set, so the target keeps accepting literal values (e.g. built-in plugin
+	// names) while the reference offers an in-cluster alternative.
+	InjectInto string `yaml:"injectInto,omitempty"`
+	// Description is the doc comment of the field added for an InjectInto
+	// reference. Ignored otherwise: other references reuse the OAS field's
+	// description.
+	Description string `yaml:"description,omitempty"`
+	// ReverseWatch makes the referenced kind's controller watch the referring
+	// kind and re-reconcile the objects it references whenever a referrer
+	// changes or is deleted (the referrer always reacts to its references).
+	// Use it when the referenced object's reconciliation depends on its
+	// referrers, e.g. a deletion Konnect blocks while they still use it. The
+	// generator also emits <Referrer>Uses<Kind>(obj, referenced) in the API
+	// package; for an InjectInto reference it also matches referrers setting
+	// the InjectInto target to the referenced object's Konnect name on the
+	// same gateway. Requires a single kind.
+	ReverseWatch bool `yaml:"reverseWatch,omitempty"`
 }
 
 // TypeName returns the Go type name of the generated ref struct.
@@ -160,11 +183,16 @@ type SourceConfig struct {
 	SupportsMirror bool `yaml:"supportsMirror,omitempty"`
 }
 
-// SecretReferenceConfig configures a single sensitive field that can be provided
-// inline or sourced from a Kubernetes Secret.
+// DataSourceConfig configures a single field whose value can be provided
+// inline or sourced from a Kubernetes object, selected by Type:
+//   - "Secret": for sensitive values. The field becomes an inline|secretRef
+//     union, described below.
+//   - "ConfigMap": for non-sensitive but large or externally managed values
+//     (e.g. Lua sources). The field becomes the shared ConfigMapDataSource
+//     type (inline|configMapRef). Only string-valued leaves are supported.
 //
-// The Go type backing the inline value is inferred from the OAS field at Path,
-// not configured here:
+// For "Secret", the Go type backing the inline value is inferred from the OAS
+// field at Path, not configured here:
 //   - When the field resolves to a string (OAS booleans included, since this
 //     generator represents them as Go string), it becomes the shared
 //     SensitiveDataSource type (Value *string) — unchanged regardless of this change.
@@ -178,7 +206,7 @@ type SourceConfig struct {
 //   - A leaf that is itself a oneOf union or an object with nested properties
 //     (inline or via $ref) is rejected at generation time: there's no single
 //     unambiguous value to wrap in inline-vs-secretRef.
-type SecretReferenceConfig struct {
+type DataSourceConfig struct {
 	// Path is the dot-separated field path within the spec
 	// (e.g. "spec.apiSpec.tls.clientIdentity.certificate").
 	// Must start with "spec.apiSpec.".
@@ -187,9 +215,21 @@ type SecretReferenceConfig struct {
 	// emits a list of secret sources ([]SensitiveDataSource, one per element)
 	// instead of a single one — no separate array notation is needed in Path.
 	Path string `yaml:"path"`
-	// Type is the Kubernetes resource type that holds the sensitive data.
-	// Currently only "Secret" is supported.
+	// Type is the Kubernetes resource type that holds the data: "Secret" or
+	// "ConfigMap" (see the type's doc comment).
 	Type string `yaml:"type"`
+}
+
+const (
+	// DataSourceTypeSecret sources the field's value from a Kubernetes Secret.
+	DataSourceTypeSecret = "Secret"
+	// DataSourceTypeConfigMap sources the field's value from a Kubernetes ConfigMap.
+	DataSourceTypeConfigMap = "ConfigMap"
+)
+
+// IsConfigMap reports whether the data source reads its value from a ConfigMap.
+func (c DataSourceConfig) IsConfigMap() bool {
+	return c.Type == DataSourceTypeConfigMap
 }
 
 // TypeConfig holds configuration for a single CRD type (identified by its OpenAPI path).
@@ -240,13 +280,13 @@ type TypeConfig struct {
 	// OpsResponseStatusFields configures fields to copy from the SDK create
 	// response into the CRD status struct.
 	OpsResponseStatusFields []ResponseStatusFieldConfig `yaml:"-"`
-	// SecretReferences lists sensitive field paths whose values can be provided
-	// either inline or sourced from a Kubernetes Secret. Each entry causes the
+	// DataSources lists field paths whose values can be provided either inline
+	// or sourced from a Kubernetes Secret or ConfigMap. Each entry causes the
 	// OAS-derived field at Path to become a union struct supporting inline and
-	// secretRef variants at runtime — the shared SensitiveDataSource type for
-	// string fields, or a dedicated generated type for non-string fields (see
-	// SecretReferenceConfig's doc comment).
-	SecretReferences []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	// secretRef/configMapRef variants at runtime — SensitiveDataSource (or a
+	// dedicated generated type for non-string fields) for Secrets, and
+	// ConfigMapDataSource for ConfigMaps (see DataSourceConfig's doc comment).
+	DataSources []DataSourceConfig `yaml:"dataSources,omitempty"`
 	// Reconciler holds configuration for reconciler code generation.
 	// When set, reconciler wiring files (interface methods, watch options,
 	// index files) are generated for this entity.
@@ -589,7 +629,7 @@ type typeConfigYAML struct {
 	CEL                  map[string]*FieldConfig `yaml:"cel,omitempty"`
 	References           []ReferenceConfig       `yaml:"references,omitempty"`
 	Associations         []AssociationConfig     `yaml:"associations,omitempty"`
-	SecretReferences     []SecretReferenceConfig `yaml:"secretReferences,omitempty"`
+	DataSources          []DataSourceConfig      `yaml:"dataSources,omitempty"`
 	Ops                  *typeOpsYAML            `yaml:"ops,omitempty"`
 	Reconciler           *ReconcilerConfig       `yaml:"reconciler,omitempty"`
 	Source               *SourceConfig           `yaml:"source,omitempty"`
@@ -613,7 +653,7 @@ func (tc *TypeConfig) UnmarshalYAML(value *yaml.Node) error {
 		CEL:                        raw.CEL,
 		References:                 raw.References,
 		Associations:               raw.Associations,
-		SecretReferences:           raw.SecretReferences,
+		DataSources:                raw.DataSources,
 		Reconciler:                 raw.Reconciler,
 		Source:                     raw.Source,
 		OneOfVariantNamesFromTitle: raw.OneOfVariantNamesFromTitle,
@@ -701,36 +741,19 @@ func (c *APIGroupVersionConfig) FieldConfig(pathToEntityName map[string]string) 
 	return &Config{Entities: entities}
 }
 
-// SecretRefEntities returns the set of entity names that have at least one
-// SecretReference configured, using the provided pathToEntityName mapping.
-func (c *APIGroupVersionConfig) SecretRefEntities(pathToEntityName map[string]string) map[string]bool {
-	result := make(map[string]bool)
-	for _, tc := range c.Types {
-		if len(tc.SecretReferences) == 0 {
-			continue
-		}
-		entityName, ok := pathToEntityName[tc.Path]
-		if !ok {
-			continue
-		}
-		result[entityName] = true
-	}
-	return result
-}
-
-// SecretReferencesConfig builds a mapping from entity name to secret reference configs using the
+// DataSourcesConfig builds a mapping from entity name to data source configs using the
 // provided pathToEntityName mapping (built after parsing the OpenAPI spec).
-func (c *APIGroupVersionConfig) SecretReferencesConfig(pathToEntityName map[string]string) map[string][]SecretReferenceConfig {
-	result := make(map[string][]SecretReferenceConfig)
+func (c *APIGroupVersionConfig) DataSourcesConfig(pathToEntityName map[string]string) map[string][]DataSourceConfig {
+	result := make(map[string][]DataSourceConfig)
 	for _, tc := range c.Types {
-		if len(tc.SecretReferences) == 0 {
+		if len(tc.DataSources) == 0 {
 			continue
 		}
 		entityName, ok := pathToEntityName[tc.Path]
 		if !ok {
 			continue
 		}
-		result[entityName] = tc.SecretReferences
+		result[entityName] = tc.DataSources
 	}
 	return result
 }
@@ -797,7 +820,7 @@ func (c *APIGroupVersionConfig) OpsConfig(pathToEntityName map[string]string) ma
 		if !ok {
 			continue
 		}
-		requireClient := tc.OpsRequireClient || len(tc.SecretReferences) > 0
+		requireClient := tc.OpsRequireClient || len(tc.DataSources) > 0
 		result[entityName] = &EntityOpsConfig{
 			Ops:                         tc.Ops,
 			RequireClient:               requireClient,
@@ -976,6 +999,30 @@ func (tc *TypeConfig) validate() error {
 		if len(ref.Kinds) > 1 && ref.RefTypeName == "" {
 			return fmt.Errorf("reference %q: refTypeName is required when multiple kinds are configured", ref.Path)
 		}
+		if ref.InjectInto != "" {
+			if strings.Contains(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".") {
+				return fmt.Errorf("reference %q: injectInto is only supported for top-level apiSpec fields", ref.Path)
+			}
+			if strings.Contains(ref.InjectInto, ".") {
+				return fmt.Errorf("reference %q: injectInto must name a top-level apiSpec field, got %q", ref.Path, ref.InjectInto)
+			}
+			if ref.SupportCrossNamespaceReference {
+				return fmt.Errorf("reference %q: supportCrossNamespaceReference is not supported with injectInto", ref.Path)
+			}
+		}
+		if ref.ReverseWatch && len(ref.Kinds) != 1 {
+			return fmt.Errorf("reference %q: reverseWatch requires exactly one kind", ref.Path)
+		}
+	}
+	seenReverseWatchKinds := make(map[string]string)
+	for _, ref := range tc.References {
+		if !ref.ReverseWatch {
+			continue
+		}
+		if prev, ok := seenReverseWatchKinds[ref.Kinds[0]]; ok {
+			return fmt.Errorf("references %q and %q: reverseWatch is supported for at most one reference per referenced kind", prev, ref.Path)
+		}
+		seenReverseWatchKinds[ref.Kinds[0]] = ref.Path
 	}
 	seenAssocNames := make(map[string]bool)
 	for i, a := range tc.Associations {
@@ -996,18 +1043,18 @@ func (tc *TypeConfig) validate() error {
 		}
 		seenAssocNames[a.Name] = true
 	}
-	seenSecretPaths := make(map[string]bool)
-	for i, sr := range tc.SecretReferences {
+	seenDataSourcePaths := make(map[string]bool)
+	for i, sr := range tc.DataSources {
 		if !strings.HasPrefix(sr.Path, "spec.apiSpec.") {
-			return fmt.Errorf("secretReferences[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
+			return fmt.Errorf("dataSources[%d].path must start with \"spec.apiSpec.\", got %q", i, sr.Path)
 		}
-		if sr.Type != "Secret" {
-			return fmt.Errorf("secretReferences[%d].type %q is not supported; only \"Secret\" is currently allowed", i, sr.Type)
+		if sr.Type != DataSourceTypeSecret && sr.Type != DataSourceTypeConfigMap {
+			return fmt.Errorf("dataSources[%d].type %q is not supported; must be one of %q or %q", i, sr.Type, DataSourceTypeSecret, DataSourceTypeConfigMap)
 		}
-		if seenSecretPaths[sr.Path] {
-			return fmt.Errorf("secretReferences[%d]: duplicate path %q", i, sr.Path)
+		if seenDataSourcePaths[sr.Path] {
+			return fmt.Errorf("dataSources[%d]: duplicate path %q", i, sr.Path)
 		}
-		seenSecretPaths[sr.Path] = true
+		seenDataSourcePaths[sr.Path] = true
 	}
 	if deleteOp, ok := tc.Ops["delete"]; ok && deleteOp != nil {
 		if deleteOp.AsPUT {

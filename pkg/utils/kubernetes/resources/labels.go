@@ -107,6 +107,17 @@ func GetManagedLabelForOwner(owner metav1.Object) client.MatchingLabels {
 		return client.MatchingLabels{
 			consts.GatewayOperatorManagedByLabel: consts.AIGatewayDataPlaneManagedByLabelValue,
 		}
+	case *aigatewayv1alpha1.OnPremAIGateway:
+		return client.MatchingLabels{
+			consts.GatewayOperatorManagedByLabel: consts.OnPremAIGatewayManagedByLabelValue,
+		}
 	}
 	return client.MatchingLabels{}
+}
+
+// LabelObjectAsOnPremAIGatewayManaged ensures that labels are set on the
+// provided object to signal that it's owned by an OnPremAIGateway resource
+// and that its lifecycle is managed by this operator.
+func LabelObjectAsOnPremAIGatewayManaged(obj metav1.Object) {
+	SetLabel(obj, consts.GatewayOperatorManagedByLabel, consts.OnPremAIGatewayManagedByLabelValue)
 }

@@ -175,8 +175,8 @@ func testAIGatewayCustomPolicy() *aiconfigurationv1alpha1.AIGatewayCustomPolicy 
 					Streaming: &aiconfigurationv1alpha1.CreateAIGatewayCustomPolicyStreamingRequest{
 						Name:        "my-streaming-policy",
 						DisplayName: "My streaming policy",
-						Schema:      "return {}",
-						Handler:     "return {}",
+						Schema:      aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")},
+						Handler:     aiconfigurationv1alpha1.ConfigMapDataSource{Type: aiconfigurationv1alpha1.ConfigMapDataSourceTypeInline, Value: new("return {}")},
 					},
 				},
 			},

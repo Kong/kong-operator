@@ -1178,6 +1178,24 @@ Allowed values:
 | `installed` |  |
 | `streaming` |  |
 
+#### AIGatewayCustomPolicyRef
+
+
+AIGatewayCustomPolicyRef references an AIGatewayCustomPolicy in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+
 #### AIGatewayCustomPolicySpec
 
 
@@ -4973,6 +4991,7 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this policy instance, used as a stable human-readable reference. This value is immutable after creation. |
 | `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'rate-limiting'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `customPolicyRef` _[AIGatewayCustomPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicyref)_ | CustomPolicyRef references the AIGatewayCustomPolicy this policy uses, as an alternative to setting type to the custom policy's Konnect name. The referenced custom policy must be programmed in the same AI Gateway; its Konnect name is sent as the policy type. Exactly one of type and customPolicyRef must be set. |
 
 _Appears in:_
 
@@ -6471,6 +6490,66 @@ Allowed values:
 | --- | --- |
 | `awsIam` |  |
 
+#### ConfigMapDataSource
+
+
+ConfigMapDataSource holds a string value that can be provided either inline
+or sourced from a Kubernetes ConfigMap.
+
+
+
+| Field | Description |
+| --- | --- |
+| `type` _[ConfigMapDataSourceType](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasourcetype)_ | Type indicates the source of the data: 'inline' or 'configMapRef'. |
+| `value` _*string_ | Value contains the data provided inline. Required when type is 'inline'. |
+| `configMapRef` _[ConfigMapDataSourceRef](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasourceref)_ | ConfigMapRef is a reference to a Kubernetes ConfigMap containing the data. Required when type is 'configMapRef'. |
+
+_Appears in:_
+
+- [CreateAIGatewayCustomPolicyInstalledRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicyinstalledrequest)
+- [CreateAIGatewayCustomPolicyStreamingRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicystreamingrequest)
+
+#### ConfigMapDataSourceRef
+
+
+ConfigMapDataSourceRef is a reference to a key in a ConfigMap in the same
+namespace as the referencing object.<br /><br />The operator only sees ConfigMaps matching its --configmap-label-selector,
+so the referenced ConfigMap must carry that label (konghq.com/configmap:
+"true" by default).<br /><br />Write access to the referenced ConfigMap equals write access to this
+field: its content ships to Konnect on the next sync and runs on the
+data plane. Grant ConfigMap write accordingly.
+
+
+
+| Field | Description |
+| --- | --- |
+| `name` _string_ | Name is the name of the ConfigMap. |
+| `key` _string_ | Key is the key within the ConfigMap's data (or binaryData) holding the value. |
+
+_Appears in:_
+
+- [ConfigMapDataSource](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasource)
+
+#### ConfigMapDataSourceType
+
+_Underlying type:_ `string`
+
+ConfigMapDataSourceType is the type of source for ConfigMap-backed data.
+
+
+
+
+_Appears in:_
+
+- [ConfigMapDataSource](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasource)
+
+Allowed values:
+
+| Value | Description |
+| --- | --- |
+| `inline` | ConfigMapDataSourceTypeInline indicates that the data is provided inline in the APISpec.<br /> |
+| `configMapRef` | ConfigMapDataSourceTypeConfigMapRef indicates that the data is sourced from a Kubernetes ConfigMap.<br /> |
+
 
 
 #### CreateAIGatewayCustomPolicyInstalledRequest
@@ -6486,7 +6565,7 @@ CreateAIGatewayCustomPolicyInstalledRequest is a type alias.
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this custom policy, used as a stable human-readable reference. This value is immutable after creation. |
-| `schema` _string_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
+| `schema` _[ConfigMapDataSource](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasource)_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
 
 _Appears in:_
 
@@ -6502,11 +6581,11 @@ CreateAIGatewayCustomPolicyStreamingRequest is a type alias.
 | Field | Description |
 | --- | --- |
 | `displayName` _string_ | The display name for this custom policy. |
-| `handler` _string_ | The Lua handler implementation for the custom policy, equivalent to a Kong plugin's `handler.lua`. |
+| `handler` _[ConfigMapDataSource](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasource)_ | The Lua handler implementation for the custom policy, equivalent to a Kong plugin's `handler.lua`. |
 | `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this custom policy, used as a stable human-readable reference. This value is immutable after creation. |
-| `schema` _string_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
+| `schema` _[ConfigMapDataSource](#aiconfiguration-konghq-com-v1alpha1-types-configmapdatasource)_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
 
 _Appears in:_
 
@@ -6701,7 +6780,9 @@ _Appears in:_
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 
@@ -14197,7 +14278,9 @@ Allowed values:
 
 
 SensitiveDataSecretRef identifies a specific key inside a Kubernetes Secret
-that holds a sensitive value for a CRD field.
+that holds a sensitive value for a CRD field.<br /><br />Write access to the referenced Secret equals write access to this field:
+its value ships to Konnect on the next sync. Grant Secret write
+accordingly.
 
 
 
