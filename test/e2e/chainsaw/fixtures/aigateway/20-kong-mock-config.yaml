@@ -10,6 +10,14 @@ data:
   #   Provider A: route /provider-a, key test-ai-gateway-key   (ACL group provider-a)
   #   Provider B: route /provider-b, key test-ai-gateway-key-b (ACL group provider-b)
   # The ACL plugin ensures each key only works on its own provider's route.
+  #
+  # A mock Headroom compressor for the ai-prompt-compressor policy's headroom
+  # provider: route /headroom/v1/compress, token test-headroom-token. A
+  # pre-function answers in place of a real Headroom, following the contract
+  # the AI Gateway plugin speaks: 401 unless X-Headroom-Proxy-Token carries
+  # the token, 400 unless the body carries messages, model, config.session_id
+  # and the gateway block, and otherwise 200 with the request body handed back
+  # uncompressed (minus the plugin's control keys) plus a session block.
   kong.yml: |
     _format_version: "3.0"
     services:
@@ -45,6 +53,40 @@ data:
                 config:
                   allow:
                     - provider-b
+      # Never reached: the pre-function answers every request on the route.
+      - name: headroom
+        url: http://127.0.0.1:8100
+        routes:
+          - name: headroom-compress
+            paths:
+              - /headroom/v1/compress
+            methods:
+              - POST
+            plugins:
+              - name: pre-function
+                config:
+                  access:
+                    - |
+                      if kong.request.get_header("X-Headroom-Proxy-Token") ~= "test-headroom-token" then
+                        return kong.response.exit(401, { error = { type = "unauthorized" } })
+                      end
+                      local body = kong.request.get_body("application/json")
+                      if type(body) ~= "table" or type(body.messages) ~= "table" or #body.messages == 0
+                        or type(body.model) ~= "string"
+                        or type(body.config) ~= "table" or type(body.config.session_id) ~= "string"
+                        or type(body.gateway) ~= "table" then
+                        return kong.response.exit(400, { error = { type = "invalid_request" } })
+                      end
+                      body.config = nil
+                      body.gateway = nil
+                      return kong.response.exit(200, {
+                        body = body,
+                        session = { frozen_message_count = 0, cached_prefix_replayed = false },
+                        tokens_before = 10,
+                        tokens_after = 10,
+                        tokens_saved = 0,
+                        transforms_applied = { "mock" },
+                      })
     consumers:
       - username: ai-gateway-a
         keyauth_credentials:

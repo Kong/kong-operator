@@ -49,6 +49,10 @@
 #                 convention). Set "false" to omit it for the same reason as
 #                 INCLUDE_HEADER — isolate a route.model selector that is NOT
 #                 `bodyParam` on the "model" field (e.g. headerParam, pathParam).
+#   REQUEST_HEADERS
+#                 Extra request headers, one "Name:value" pair per line
+#                 (e.g. "apikey:<key>" for a key-auth protected model). Each
+#                 line is passed to curl as a separate -H flag. Default: none.
 #   PORT          Ingress Service port. Default: 443.
 #   MAX_RETRIES   Retry attempts. Default: 180.
 #   RETRY_DELAY   Seconds between retries. Default: 1.
@@ -65,6 +69,7 @@ EXPECTED_SUCCESS="${EXPECTED_SUCCESS:-true}"
 REJECT_CONFIRMATIONS="${REJECT_CONFIRMATIONS:-3}"
 INCLUDE_HEADER="${INCLUDE_HEADER:-true}"
 INCLUDE_BODY_MODEL="${INCLUDE_BODY_MODEL:-true}"
+REQUEST_HEADERS="${REQUEST_HEADERS:-}"
 PORT="${PORT:-443}"
 MAX_RETRIES="${MAX_RETRIES:-180}"
 RETRY_DELAY="${RETRY_DELAY:-1}"
@@ -128,6 +133,12 @@ print_result() {
 EOF
 }
 
+# Single-quotes $1 for the eval'd curl command, escaping embedded single
+# quotes, so that a header value containing one cannot break the command.
+shell_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 # Build the curl command as a single string, both to execute (via eval, as
 # the other *_connectivity_test.sh scripts do) and to show verbatim in the
 # JSON result for debugging.
@@ -136,6 +147,11 @@ build_curl_cmd() {
   if [ "${INCLUDE_HEADER}" = "true" ]; then
     CMD="${CMD} -H 'X-Kong-LLM-Model: ${MODEL_ALIAS}'"
   fi
+  while IFS= read -r h; do
+    [ -n "${h}" ] && CMD="${CMD} -H $(shell_quote "${h}")"
+  done <<EOF
+${REQUEST_HEADERS}
+EOF
   CMD="${CMD} -H 'Content-Type: application/json' --data '${REQUEST_BODY}' '${URL}'"
   echo "${CMD}"
 }
