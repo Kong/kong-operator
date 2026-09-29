@@ -53,9 +53,11 @@ func SetupKongLicense(
 		mo.None[string](),
 		mo.None[ctrllicense.ValidatorFunc](),
 	)
-	if err := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
+	dynamic := ctrllicense.WrapKongLicenseReconcilerToDynamicCRDController(
 		ctx, mgr, licenseController,
-	).SetupWithManager(mgr); err != nil {
+	)
+	dynamic.SetLogger(log)
+	if err := dynamic.SetupWithManager(mgr); err != nil {
 		return nil, fmt.Errorf("failed to start KongLicense controller: %w", err)
 	}
 	return licenseController, nil
