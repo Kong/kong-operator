@@ -166,6 +166,16 @@
   refused with `no such key: status` by the rule keeping its parent reference
   once Programmed.
   [#6550](https://github.com/Kong/kong-operator/pull/6550)
+- Gateway API: `Gateway` listeners on different ports that share a hostname
+  are no longer reported as conflicted (`HostnameConflict`) and not accepted.
+  Listeners now conflict on a hostname only when they also share a port.
+  [#5918](https://github.com/Kong/kong-operator/pull/5918)
+- Gateway API: an `HTTPRoute` without hostnames attached to a `Gateway` by
+  `parentRefs[].port` now gets only the hostnames of the listeners on that
+  port. Before, it got the hostnames of all listeners, and listeners sharing a
+  hostname made Kong reject the whole configuration with a route name
+  uniqueness violation.
+  [#5918](https://github.com/Kong/kong-operator/pull/5918)
 
 ### Added
 

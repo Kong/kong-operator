@@ -2,17 +2,21 @@ package subtranslator
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
 	"github.com/go-logr/logr"
 	"github.com/samber/lo"
+	gatewayv1 "sigs.k8s.io/gateway-api/apis/v1"
 
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/annotations"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/kongstate"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/dataplane/translator/atc"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/gatewayapi"
+	"github.com/kong/kong-operator/v2/ingress-controller/internal/store"
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/util"
+	gatewayutils "github.com/kong/kong-operator/v2/pkg/utils/gateway"
 )
 
 func generateMatcherFromHTTPRouteMatch(match gatewayapi.HTTPRouteMatch, containReplacePrefixMatchURLRewriteFilter bool) atc.Matcher {
@@ -182,12 +186,38 @@ type SplitHTTPRouteMatch struct {
 	OptionalNamedRouteRule string
 	RuleIndex              int
 	MatchIndex             int
+	// Ports represents the set of ports from the parent Gateway
+	// listeners associated with this HTTPRoute.
+	Ports []int32
 }
 
 // SplitHTTPRoute splits HTTPRoutes into matches with at most one hostname, and one rule
 // with exactly one match. It will split one rule with multiple hostnames and multiple matches
 // to one hostname and one match per each HTTPRoute.
-func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
+func SplitHTTPRoute(storer store.Storer, httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
+	portSet := make(map[int32]struct{})
+	for _, pr := range httproute.Spec.ParentRefs {
+		// isParentRefEqualToParent
+		ns := httproute.Namespace
+		if pr.Namespace != nil && string(*pr.Namespace) != "" {
+			ns = string(*pr.Namespace)
+		}
+		if pr.Kind != nil && *pr.Kind != "Gateway" {
+			continue
+		}
+		gw, err := storer.GetGateway(ns, string(pr.Name))
+		if err != nil {
+			continue // Gateway not found, skip this parentRef.
+		}
+		for _, p := range gatewayutils.ProtocolPortsFromListeners(
+			gw, pr.SectionName, pr.Port, gatewayv1.HTTPProtocolType, gatewayv1.HTTPSProtocolType,
+		) {
+			portSet[p] = struct{}{}
+		}
+	}
+	ports := lo.Keys(portSet)
+	slices.Sort(ports)
+
 	splitHTTPRouteByMatch := func(hostname string) []SplitHTTPRouteMatch {
 		ret := []SplitHTTPRouteMatch{}
 		for ruleIndex, rule := range httproute.Spec.Rules {
@@ -200,6 +230,7 @@ func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
 					OptionalNamedRouteRule: optionalNamedRouteRule,
 					RuleIndex:              ruleIndex,
 					MatchIndex:             0,
+					Ports:                  ports,
 				})
 			}
 			for matchIndex, match := range rule.Matches {
@@ -210,6 +241,7 @@ func SplitHTTPRoute(httproute *gatewayapi.HTTPRoute) []SplitHTTPRouteMatch {
 					OptionalNamedRouteRule: optionalNamedRouteRule,
 					RuleIndex:              ruleIndex,
 					MatchIndex:             matchIndex,
+					Ports:                  ports,
 				})
 			}
 		}
@@ -535,6 +567,13 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 	// generate ATC matcher from split HTTPRouteMatch itself.
 	matchers = append(matchers, generateMatcherFromHTTPRouteMatch(match.Match, containReplacePrefixMatchURLRewriteFilter))
 
+	portMatchers := make([]atc.Matcher, 0, len(httpRouteMatchWithPriority.Match.Ports))
+	for _, p := range httpRouteMatchWithPriority.Match.Ports {
+		portMatcher, _ := atc.NewPredicate(atc.FieldNetDstPort, atc.OpEqual, atc.IntLiteral(int(p)))
+		portMatchers = append(portMatchers, portMatcher)
+	}
+	matchers = append(matchers, atc.Or(portMatchers...))
+
 	atc.ApplyExpression(&r.Route, atc.And(matchers...), httpRouteMatchWithPriority.Priority)
 
 	// generate a "catch-all" route if the generated expression is empty.
@@ -565,11 +604,11 @@ func kongExpressionRouteFromHTTPRouteMatchWithPriority(
 
 // groupHTTPRouteMatchesWithPrioritiesByRule groups split HTTPRoute matches that has priorities assigned by the source HTTPRoute rule,.
 func groupHTTPRouteMatchesWithPrioritiesByRule(
-	logger logr.Logger, routes []*gatewayapi.HTTPRoute,
+	logger logr.Logger, storer store.Storer, routes []*gatewayapi.HTTPRoute,
 ) splitHTTPRouteMatchesWithPrioritiesGroupedByRule {
 	splitHTTPRouteMatches := []SplitHTTPRouteMatch{}
 	for _, route := range routes {
-		splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(route)...)
+		splitHTTPRouteMatches = append(splitHTTPRouteMatches, SplitHTTPRoute(storer, route)...)
 	}
 	// assign priorities to split HTTPRoutes.
 	splitHTTPRouteMatchesWithPriorities := assignRoutePriorityToSplitHTTPRouteMatches(logger, splitHTTPRouteMatches)
