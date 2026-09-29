@@ -54,7 +54,7 @@ func NewMTLSClient(address, serverName string, certPEM, keyPEM, caPEM []byte) (*
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
 
-	client, err := kong.NewClient(&address, &http.Client{Transport: transport})
+	client, err := kong.NewClient(&address, &http.Client{Transport: transport, Timeout: 30 * time.Second})
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}
