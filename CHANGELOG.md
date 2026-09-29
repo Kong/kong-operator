@@ -98,6 +98,16 @@
   custom policy types. `OnPremAIGateway` references are not supported yet
   and are rejected at admission.
   [#5896](https://github.com/Kong/kong-operator/pull/5896)
+- `AIGatewayCustomPolicy`: `labels` and `managedBy` can now be set on both the
+  `installed` and `streaming` custom policy types and are propagated to Konnect.
+  The operator now labels custom policies with the owning object's Kubernetes
+  metadata and, on a create conflict, only adopts a Konnect custom policy
+  carrying the object's UID label (previously it matched by type and name).
+  This prevents two objects declaring the same policy name from sharing, and
+  overwriting or deleting, the same Konnect custom policy. The custom policy
+  `type` is now immutable, as Konnect rejects switching between `installed`
+  and `streaming`.
+  [#5901](https://github.com/Kong/kong-operator/pull/5901)
 
 ### Fixes
 

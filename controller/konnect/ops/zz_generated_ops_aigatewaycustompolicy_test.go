@@ -47,6 +47,12 @@ func TestCreateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayCustomPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest != nil {
+		expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest != nil {
+		expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 	expectedID := "aigatewaycustompolicy-id"
 
 	sdk.EXPECT().
@@ -78,6 +84,12 @@ func TestCreateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 	obj.SetGatewayID(parentID)
 	expectedRequest, err := obj.Spec.APISpec.ToCreateAIGatewayCustomPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest != nil {
+		expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest != nil {
+		expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.CreateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().
@@ -104,6 +116,12 @@ func TestUpdateAIGatewayCustomPolicy_UsesSDKOpsConversion(t *testing.T) {
 	obj.SetKonnectID("aigatewaycustompolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayCustomPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest != nil {
+		expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest != nil {
+		expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 
 	sdk.EXPECT().
 		UpdateAiGatewayCustomPolicy(
@@ -131,6 +149,12 @@ func TestUpdateAIGatewayCustomPolicy_PropagatesSDKError(t *testing.T) {
 	obj.SetKonnectID("aigatewaycustompolicy-id")
 	expectedRequest, err := obj.Spec.APISpec.ToUpdateAIGatewayCustomPolicyRequest()
 	require.NoError(t, err)
+	if expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest != nil {
+		expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest != nil {
+		expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, expectedRequest.UpdateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 	sdkErr := errors.New("sdk error")
 
 	sdk.EXPECT().

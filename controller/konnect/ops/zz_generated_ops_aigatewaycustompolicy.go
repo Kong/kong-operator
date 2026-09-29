@@ -26,6 +26,12 @@ func createAIGatewayCustomPolicy(
 	if err != nil {
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
+	if req.CreateAIGatewayCustomPolicyInstalledRequest != nil {
+		req.CreateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, req.CreateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if req.CreateAIGatewayCustomPolicyStreamingRequest != nil {
+		req.CreateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, req.CreateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 
 	resp, err := sdk.CreateAiGatewayCustomPolicy(ctx, parentID, *req)
 	if errWrap := wrapErrIfKonnectOpFailed(err, CreateOp, obj); errWrap != nil {
@@ -71,6 +77,12 @@ func updateAIGatewayCustomPolicy(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+	if req.UpdateAIGatewayCustomPolicyInstalledRequest != nil {
+		req.UpdateAIGatewayCustomPolicyInstalledRequest.Labels = WithKubernetesMetadataLabels(obj, req.UpdateAIGatewayCustomPolicyInstalledRequest.Labels)
+	}
+	if req.UpdateAIGatewayCustomPolicyStreamingRequest != nil {
+		req.UpdateAIGatewayCustomPolicyStreamingRequest.Labels = WithKubernetesMetadataLabels(obj, req.UpdateAIGatewayCustomPolicyStreamingRequest.Labels)
+	}
 
 	_, err = sdk.UpdateAiGatewayCustomPolicy(ctx, sdkkonnectops.UpdateAiGatewayCustomPolicyRequest{
 		GatewayID:                          parentID,
@@ -101,4 +113,58 @@ func deleteAIGatewayCustomPolicy(
 		return handleDeleteError(ctx, errWrap, obj)
 	}
 	return nil
+}
+
+func getAIGatewayCustomPolicyForUID(
+	ctx context.Context,
+	sdk sdkkonnectgo.AIGatewayCustomPoliciesSDK,
+	obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy,
+) (string, error) {
+	parentID := obj.GetGatewayID()
+	if parentID == "" {
+		return "", CantPerformOperationWithoutParentIDError{Entity: obj, Parent: "KonnectAIGateway", Op: GetOp}
+	}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+
+	// TODO: pass a Filter to ListAiGatewayCustomPolicies (e.g. by name/labels) so we
+	// do not page through every entity in the tenant. Filter types and
+	// fields are entity-specific; derive from OpenAPI schema.
+	resp, err := sdk.ListAiGatewayCustomPolicies(ctx, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+		GatewayID: parentID,
+	})
+	if err != nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), err)
+	}
+	if resp == nil || resp.ListAIGatewayCustomPoliciesResponse == nil {
+		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
+	}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range resp.ListAIGatewayCustomPoliciesResponse.Data {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		case entry.AIGatewayCustomPolicyInstalled != nil:
+			id, labels = entry.AIGatewayCustomPolicyInstalled.GetID(), entry.AIGatewayCustomPolicyInstalled.GetLabels()
+		case entry.AIGatewayCustomPolicyStreaming != nil:
+			id, labels = entry.AIGatewayCustomPolicyStreaming.GetID(), entry.AIGatewayCustomPolicyStreaming.GetLabels()
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
+
+	return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 }

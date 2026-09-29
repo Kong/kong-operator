@@ -15,7 +15,7 @@ import (
 )
 
 func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
-	t.Run("matches by type and name", func(t *testing.T) {
+	t.Run("matches by Kubernetes UID label", func(t *testing.T) {
 		ctx := t.Context()
 		sdk := sdkmocks.NewMockAIGatewayCustomPoliciesSDK(t)
 		policy := testAIGatewayCustomPolicy()
@@ -28,23 +28,26 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 				ListAIGatewayCustomPoliciesResponse: &sdkkonnectcomp.ListAIGatewayCustomPoliciesResponse{
 					Data: []sdkkonnectcomp.AIGatewayCustomPolicy{
 						{
-							AIGatewayCustomPolicyInstalled: &sdkkonnectcomp.AIGatewayCustomPolicyInstalled{
-								ID:   "wrong-variant",
+							// Same name but no UID label: must not be adopted.
+							AIGatewayCustomPolicyStreaming: &sdkkonnectcomp.AIGatewayCustomPolicyStreaming{
+								ID:   "same-name-no-label",
 								Name: "my-streaming-policy",
+							},
+							Type: sdkkonnectcomp.AIGatewayCustomPolicyTypeStreaming,
+						},
+						{
+							AIGatewayCustomPolicyInstalled: &sdkkonnectcomp.AIGatewayCustomPolicyInstalled{
+								ID:     "other-uid",
+								Name:   "other-policy",
+								Labels: map[string]string{KubernetesUIDLabelKey: "other-uid"},
 							},
 							Type: sdkkonnectcomp.AIGatewayCustomPolicyTypeInstalled,
 						},
 						{
 							AIGatewayCustomPolicyStreaming: &sdkkonnectcomp.AIGatewayCustomPolicyStreaming{
-								ID:   "other-id",
-								Name: "other-policy",
-							},
-							Type: sdkkonnectcomp.AIGatewayCustomPolicyTypeStreaming,
-						},
-						{
-							AIGatewayCustomPolicyStreaming: &sdkkonnectcomp.AIGatewayCustomPolicyStreaming{
-								ID:   "matched-by-name",
-								Name: "my-streaming-policy",
+								ID:     "matched-by-uid",
+								Name:   "my-streaming-policy",
+								Labels: map[string]string{KubernetesUIDLabelKey: string(policy.GetUID())},
 							},
 							Type: sdkkonnectcomp.AIGatewayCustomPolicyTypeStreaming,
 						},
@@ -55,7 +58,43 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 
 		id, err := getAIGatewayCustomPolicyForUID(ctx, sdk, policy)
 		require.NoError(t, err)
-		assert.Equal(t, "matched-by-name", id)
+		assert.Equal(t, "matched-by-uid", id)
+	})
+
+	// Regression: a second CR declaring the same name as an existing one gets
+	// a 409 on create. The conflict lookup must not adopt the entity owned by
+	// the other CR, otherwise both CRs would share (and overwrite, and on
+	// deletion remove) the same Konnect entity.
+	t.Run("does not adopt a same-named policy owned by another CR", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockAIGatewayCustomPoliciesSDK(t)
+		policy := testAIGatewayCustomPolicy()
+
+		sdk.EXPECT().
+			ListAiGatewayCustomPolicies(mock.Anything, sdkkonnectops.ListAiGatewayCustomPoliciesRequest{
+				GatewayID: "gateway-1",
+			}).
+			Return(&sdkkonnectops.ListAiGatewayCustomPoliciesResponse{
+				ListAIGatewayCustomPoliciesResponse: &sdkkonnectcomp.ListAIGatewayCustomPoliciesResponse{
+					Data: []sdkkonnectcomp.AIGatewayCustomPolicy{
+						{
+							AIGatewayCustomPolicyStreaming: &sdkkonnectcomp.AIGatewayCustomPolicyStreaming{
+								ID:     "owned-by-other-cr",
+								Name:   "my-streaming-policy",
+								Labels: map[string]string{KubernetesUIDLabelKey: "other-cr-uid"},
+							},
+							Type: sdkkonnectcomp.AIGatewayCustomPolicyTypeStreaming,
+						},
+					},
+				},
+			}, nil).
+			Once()
+
+		id, err := getAIGatewayCustomPolicyForUID(ctx, sdk, policy)
+		require.Empty(t, id)
+
+		var notFoundErr EntityWithMatchingUIDNotFoundError
+		require.ErrorAs(t, err, &notFoundErr)
 	})
 
 	t.Run("returns not found when no matching entry exists", func(t *testing.T) {
@@ -81,6 +120,19 @@ func TestGetAIGatewayCustomPolicyForUID(t *testing.T) {
 				},
 			}, nil).
 			Once()
+
+		id, err := getAIGatewayCustomPolicyForUID(ctx, sdk, policy)
+		require.Empty(t, id)
+
+		var notFoundErr EntityWithMatchingUIDNotFoundError
+		require.ErrorAs(t, err, &notFoundErr)
+	})
+
+	t.Run("returns not found without listing when the object has no UID", func(t *testing.T) {
+		ctx := t.Context()
+		sdk := sdkmocks.NewMockAIGatewayCustomPoliciesSDK(t)
+		policy := testAIGatewayCustomPolicy()
+		policy.UID = ""
 
 		id, err := getAIGatewayCustomPolicyForUID(ctx, sdk, policy)
 		require.Empty(t, id)

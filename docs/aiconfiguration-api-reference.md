@@ -740,6 +740,7 @@ a model.
 | `region` _string_ | The AWS region for the model. Setting this option overrides the AWS_REGION environment variable. |
 | `upstreamURL` _string_ | The URL of the embeddings model. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -5723,6 +5724,7 @@ AIGatewayTargetBedrockConfig AWS Bedrock-specific configuration for a model.
 | `topP` _float64_ | Nucleus sampling probability mass. Tokens with cumulative probability up to top_p are considered. |
 | `upstreamURL` _string_ | The upstream URL for the model endpoint. |
 | `videoOutputS3URI` _string_ | S3 URI for storing video generation outputs. |
+| `vpcEndpoint` _string_ | Hostname of an AWS PrivateLink VPC endpoint to use instead of the public Bedrock endpoint. Ignored if `upstream_url` is set.<br /><br />**Requires a minimum runtime version of `2.3`**. |
 
 _Appears in:_
 
@@ -6469,6 +6471,8 @@ CreateAIGatewayCustomPolicyInstalledRequest is a type alias.
 | Field | Description |
 | --- | --- |
 | `displayName` _string_ | The display name for this custom policy. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this custom policy, used as a stable human-readable reference. This value is immutable after creation. |
 | `schema` _string_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
 
@@ -6487,6 +6491,8 @@ CreateAIGatewayCustomPolicyStreamingRequest is a type alias.
 | --- | --- |
 | `displayName` _string_ | The display name for this custom policy. |
 | `handler` _string_ | The Lua handler implementation for the custom policy, equivalent to a Kong plugin's `handler.lua`. |
+| `labels` _[PublicLabels](#aiconfiguration-konghq-com-v1alpha1-types-publiclabels)_ | Public labels store information about an entity that can be used for filtering a list of objects.<br /><br />Public labels are intended to store **PUBLIC** metadata.<br /><br />Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_". |
+| `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this custom policy, used as a stable human-readable reference. This value is immutable after creation. |
 | `schema` _string_ | The Lua schema definition for the custom policy, equivalent to a Kong plugin's `schema.lua`. |
 
@@ -6594,6 +6600,8 @@ _Appears in:_
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+- [CreateAIGatewayCustomPolicyInstalledRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicyinstalledrequest)
+- [CreateAIGatewayCustomPolicyStreamingRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicystreamingrequest)
 
 #### ManagedByValue
 
@@ -6659,6 +6667,8 @@ _Appears in:_
 - [AIGatewayModelProviderXai](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaymodelproviderxai)
 - [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
 - [AIGatewaySNIAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaysniapispec)
+- [CreateAIGatewayCustomPolicyInstalledRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicyinstalledrequest)
+- [CreateAIGatewayCustomPolicyStreamingRequest](#aiconfiguration-konghq-com-v1alpha1-types-createaigatewaycustompolicystreamingrequest)
 
 #### PublicLabelsValue
 

@@ -592,10 +592,14 @@ apiGroupVersions:
         name: AIGatewayCustomPolicy
         # The OAS declares no maxLength for the Lua schema/handler sources, so
         # the generator's default string limit (253) would reject any realistic
-        # plugin. The name is documented as immutable after creation.
+        # plugin. The name is documented as immutable after creation, and so is
+        # the type: Konnect rejects an update switching between installed and
+        # streaming, so a type change requires recreating the object.
         cel:
           spec:
             apiSpec:
+              _validations:
+                - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.type) || self.type == oldSelf.type\",message=\"type is immutable\""
               installed:
                 name:
                   _validations:
@@ -617,14 +621,6 @@ apiGroupVersions:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayCustomPoliciesSDK
             fieldName: AIGatewayCustomPolicies
-          # List responses are root unions whose wrapper does not expose top-level
-          # GetID/GetName accessors, so conflict lookup (matching on the
-          # variant's type and immutable name, as the variants carry no
-          # labels/tags) stays hand-written for now.
-          # Root-union metadata detection is left enabled: the installed and
-          # streaming variants declare no labels/tags, so there is nothing to
-          # inject on create/update.
-          skipGetForUID: true
           create:
             path: github.com/Kong/sdk-konnect-go/models/components.CreateAIGatewayCustomPolicyRequest
           update:

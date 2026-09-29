@@ -652,6 +652,15 @@ type AIGatewayBedrockEmbeddingsModelConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+	// Bedrock endpoint.
+	// Ignored if `upstream_url` is set.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
 // AIGatewayCacheWriteCost is a type alias.
@@ -9068,6 +9077,15 @@ type AIGatewayTargetBedrockConfig struct {
 	// +optional
 	// +kubebuilder:validation:MaxLength=253
 	VideoOutputS3URI string `json:"videoOutputS3URI,omitzero"`
+	// Hostname of an AWS PrivateLink VPC endpoint to use instead of the public
+	// Bedrock endpoint.
+	// Ignored if `upstream_url` is set.
+	//
+	// **Requires a minimum runtime version of `2.3`**.
+	//
+	// +optional
+	// +kubebuilder:validation:MaxLength=253
+	VpcEndpoint string `json:"vpcEndpoint,omitzero"`
 }
 
 // AIGatewayTargetCerebrasConfig Cerebras-specific configuration for a model.
@@ -11515,6 +11533,28 @@ type CreateAIGatewayCustomPolicyInstalledRequest struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=256
 	DisplayName string `json:"displayName,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.
@@ -11549,6 +11589,28 @@ type CreateAIGatewayCustomPolicyStreamingRequest struct {
 	// +kubebuilder:validation:MinLength=1
 	// +kubebuilder:validation:MaxLength=262144
 	Handler string `json:"handler,omitzero"`
+	// Public labels store information about an entity that can be used for
+	// filtering a list of objects.
+	//
+	// Public labels are intended to store **PUBLIC** metadata.
+	//
+	// Keys must be of length 1-63 characters, and cannot start with "kong",
+	// "konnect", "mesh", "kic", or "_".
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=50
+	Labels PublicLabels `json:"labels,omitzero"`
+	// Stores information about what manages this entity, such as the tool or
+	// system responsible for its lifecycle (for example, `terraform`).
+	//
+	// Keys must be 1–63 characters long and start with an alphanumeric
+	// character.
+	//
+	//
+	// +optional
+	// +kubebuilder:validation:MaxProperties=5
+	ManagedBy ManagedBy `json:"managedBy,omitzero"`
 	// A user-defined unique identifier for this custom policy, used as a stable
 	// human-readable reference.
 	// This value is immutable after creation.

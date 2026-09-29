@@ -1222,6 +1222,15 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
+// apiSpecCursorValidations returns the validations configured directly on the
+// spec.apiSpec cursor, or nil when there are none.
+func apiSpecCursorValidations(apiSpecCursor *config.FieldConfig) []string {
+	if apiSpecCursor == nil || len(apiSpecCursor.Validations) == 0 {
+		return nil
+	}
+	return append([]string(nil), apiSpecCursor.Validations...)
+}
+
 // childFieldConfig returns a deep copy of fc containing only descendant field
 // configuration. Direct validations on the current field are intentionally
 // dropped because they are applied at the field site, not on the nested shared
@@ -2816,6 +2825,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TypeXValidations          []string
+		// APISpecValidations are the markers configured directly on
+		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
+		// field, e.g. transition rules spanning a root union's discriminator.
+		APISpecValidations        []string
 		SupportsMirror            bool
 		NeedsCommonV1Alpha1Import bool
 	}{
@@ -2841,6 +2854,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
+		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
 		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}

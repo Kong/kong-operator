@@ -53,6 +53,11 @@ type opsGetForUIDFuncData struct {
 	// field, so list response items are expected to expose GetLabels() and
 	// the generator can match by the Kubernetes UID label.
 	HasLabels bool
+	// LabelsResponseVariantFields lists, when HasLabels is set and the list
+	// response items are root-level discriminated unions, the union member
+	// fields of a list item. The wrapper itself exposes no GetID()/GetLabels(),
+	// so the generated lookup reads them from whichever member is set.
+	LabelsResponseVariantFields []string
 	// UseUIDTagFilter indicates the API supports filtering list requests by the
 	// Kubernetes UID tag, so getForUID can avoid full scans.
 	UseUIDTagFilter bool
@@ -250,6 +255,18 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		}
 	}
 
+	var labelsResponseVariantFields []string
+	usesLabelsMatch := hasLabels && !isParentScopedSingleton(schema) &&
+		(opsConfig == nil || (!opsConfig.UseUIDTagFilter && len(matchFields) == 0 && rootUnion == nil))
+	listItemsFromData := opsConfig == nil || opsConfig.GetForUID == nil ||
+		opsConfig.GetForUID.ListItemsSource != config.GetForUIDListItemsSourceSlice
+	if usesLabelsMatch && listItemsFromData {
+		labelsResponseVariantFields, err = resolveListItemLabelsVariantFields(listResponseField)
+		if err != nil {
+			return nil, fmt.Errorf("entity %q: %w; set ops.skipGetForUID to opt out", entityName, err)
+		}
+	}
+
 	return &opsGetForUIDFuncData{
 		Entity:                  entityName,
 		APIAlias:                g.config.APIGroupPackageAlias,
@@ -266,6 +283,7 @@ func (g *Generator) generateOpsGetForUIDFuncBody(
 		ListCallPositionalWithParent: opsConfig != nil && opsConfig.ListCallStylePositional &&
 			len(parents) == 1,
 		HasLabels:                   hasLabels,
+		LabelsResponseVariantFields: labelsResponseVariantFields,
 		UseUIDTagFilter:             opsConfig != nil && opsConfig.UseUIDTagFilter,
 		MatchFields:                 matchFields,
 		AllMatchFieldsSkipWhenUnset: allMatchFieldsSkipWhenUnset(matchFields),
@@ -365,4 +383,53 @@ func GenerateOpsGetForUIDDispatcher(infos []*OpsGetForUIDFileInfo) (*GeneratedFi
 		})
 	}
 	return buildDispatcherFile("zz_generated_ops_getforuid.go", opsGetForUIDDispatcherTemplate, "controller/konnect/ops", flat)
+}
+
+// resolveListItemLabelsVariantFields returns the union member fields of the
+// list response item type (the element type of listResponseType's Data
+// field) when that item is a root-level discriminated union, or nil when it
+// is a plain struct. Every member must declare an ID field and a
+// map[string]string Labels field, as the generated lookup reads them from
+// whichever member is set.
+func resolveListItemLabelsVariantFields(listResponseType string) ([]string, error) {
+	const importPath = "github.com/Kong/sdk-konnect-go/models/components"
+	itemType, ok, err := sdkSliceFieldElemTypeName(importPath, listResponseType, "Data")
+	if err != nil {
+		return nil, fmt.Errorf("inspect list response %q: %w", listResponseType, err)
+	}
+	if !ok {
+		return nil, nil
+	}
+	memberFields, err := ParseSDKUnionMemberFieldNames(importPath, itemType)
+	if err != nil {
+		return nil, fmt.Errorf("inspect list item union %q: %w", itemType, err)
+	}
+	if len(memberFields) == 0 {
+		return nil, nil
+	}
+	memberTypes, err := ParseSDKUnionMemberTypeNames(importPath, itemType)
+	if err != nil {
+		return nil, fmt.Errorf("inspect list item union %q member types: %w", itemType, err)
+	}
+	for _, memberType := range memberTypes {
+		for _, field := range []string{"ID", "Labels"} {
+			has, err := sdkStructHasField(importPath, memberType, field)
+			if err != nil {
+				return nil, fmt.Errorf("inspect list item union member %q: %w", memberType, err)
+			}
+			if !has {
+				return nil, fmt.Errorf("list item union member %q has no %s field", memberType, field)
+			}
+		}
+		// The generated lookup reads labels into a map[string]string; other
+		// shapes (e.g. map[string]*string) would not compile.
+		isStringMap, err := sdkStructFieldIsStringMap(memberType, "Labels")
+		if err != nil {
+			return nil, fmt.Errorf("inspect list item union member %q: %w", memberType, err)
+		}
+		if !isStringMap {
+			return nil, fmt.Errorf("list item union member %q Labels field is not a map[string]string", memberType)
+		}
+	}
+	return memberFields, nil
 }
