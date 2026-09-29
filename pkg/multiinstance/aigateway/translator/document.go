@@ -128,5 +128,15 @@ func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedNam
 		return nil, err
 	}
 
+	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayConsumerGroupList{},
+		index.IndexFieldAIGatewayConsumerGroupOnOnPremAIGatewayRef, doc,
+		func(ctx context.Context, cl client.Client, g *aiconfigurationv1alpha1.AIGatewayConsumerGroup) (*aigw.ConsumerGroup, error) {
+			return g.ToAIGWConsumerGroup(ctx, cl)
+		},
+		func(d *aigw.Document, g *aigw.ConsumerGroup) { d.ConsumerGroups = append(d.ConsumerGroups, *g) },
+	); err != nil {
+		return nil, err
+	}
+
 	return doc, nil
 }
