@@ -61,7 +61,7 @@ const LicenseMissingMessage = "No enabled KongLicense resource found; the gatewa
 // fires; wire a ValidatorFunc into the KongLicense reconciler and map
 // GetValidatedLicense().IsValid here when validation is needed.
 func SetLicenseStatusCondition(
-	dp k8sutils.ConditionsAware,
+	dp k8sutils.ConditionsAndGenerationAware,
 	getter LicenseGetter,
 	condType, validReason, missingReason string,
 ) {
@@ -70,19 +70,22 @@ func SetLicenseStatusCondition(
 	}
 	if _, ok := getter.GetLicense().Get(); !ok {
 		setStatusCondition(dp, metav1.Condition{
-			Type:    condType,
-			Status:  metav1.ConditionFalse,
-			Reason:  missingReason,
-			Message: LicenseMissingMessage,
+			Type:               condType,
+			Status:             metav1.ConditionFalse,
+			Reason:             missingReason,
+			Message:            LicenseMissingMessage,
+			ObservedGeneration: dp.GetGeneration(),
 		})
 		return
 	}
 	setStatusCondition(dp, metav1.Condition{
-		Type:    condType,
-		Status:  metav1.ConditionTrue,
-		Reason:  validReason,
-		Message: "License applied",
+		Type:               condType,
+		Status:             metav1.ConditionTrue,
+		Reason:             validReason,
+		Message:            "License applied",
+		ObservedGeneration: dp.GetGeneration(),
 	})
+}
 }
 
 // ensureReadyStatus computes the Ready condition for a DataPlane.
