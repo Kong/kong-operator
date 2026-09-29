@@ -31,9 +31,11 @@ import (
 	"k8s.io/apimachinery/pkg/util/managedfields"
 	"k8s.io/client-go/rest"
 	ctrl "sigs.k8s.io/controller-runtime"
+	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller/controllerutil"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
+	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
@@ -95,7 +97,34 @@ func (r *Reconciler) SetupWithManager(_ context.Context, mgr ctrl.Manager) error
 			&aigatewayv1alpha1.AIGatewayDataPlane{},
 			handler.EnqueueRequestsFromMapFunc(mapAIGatewayDataPlaneToOnPremAIGateway),
 		).
+		// Watch the mTLS client certificate Secret: the secretcert controller renews
+		// expiring certificates by deleting the Secret, and EnsureCertificate recreates
+		// it under a new GenerateName. Without this watch the reconciler would never
+		// learn about the new Secret and the running instance would keep pushing with
+		// the stale reference.
+		Watches(
+			&corev1.Secret{},
+			handler.EnqueueRequestForOwner(
+				mgr.GetScheme(), mgr.GetRESTMapper(),
+				&aigatewayv1alpha1.OnPremAIGateway{},
+				handler.OnlyControllerOwner(),
+			),
+			builder.WithPredicates(clientCertSecretPredicate()),
+		).
 		Complete(reconcile.AsReconciler(r.Client, r))
+}
+
+// clientCertSecretPredicate filters Secret events to only those carrying the
+// OnPremAIGateway Admin API client certificate label. Only this controller
+// provisions Secrets with that label, so no further filtering is needed.
+func clientCertSecretPredicate() predicate.Predicate {
+	return predicate.NewPredicateFuncs(func(obj client.Object) bool {
+		secret, ok := obj.(*corev1.Secret)
+		if !ok {
+			return false
+		}
+		return secret.Labels[consts.SecretOnPremAIGatewayAdminClientCertificateLabel] == "true"
+	})
 }
 
 // Reconcile moves the current state of an OnPremAIGateway toward the desired state.
@@ -178,6 +207,9 @@ func (r *Reconciler) Reconcile(ctx context.Context, onprem *aigatewayv1alpha1.On
 		// keep the no-requeue path only for reference-resolution errors.
 		return ctrl.Result{}, nil
 	}
+	// Part of the hashed instance config: when the Secret is renewed under a new
+	// name, the hash drifts and the instance restarts with the new reference.
+	cfg.AdminClientCertSecretNN = client.ObjectKeyFromObject(adminClientCertSecret)
 
 	log.Trace(logger, "checking readiness of the AI Gateway control plane instance")
 	if err := r.InstancesManager.IsInstanceReady(mgrID); err != nil {

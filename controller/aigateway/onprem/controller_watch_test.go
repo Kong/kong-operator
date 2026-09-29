@@ -21,9 +21,14 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	corev1 "k8s.io/api/core/v1"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"sigs.k8s.io/controller-runtime/pkg/client"
+	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
+	"github.com/kong/kong-operator/v2/pkg/consts"
 )
 
 func TestMapAIGatewayDataPlaneToOnPremAIGateway(t *testing.T) {
@@ -72,6 +77,44 @@ func TestMapAIGatewayDataPlaneToOnPremAIGateway(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			got := mapAIGatewayDataPlaneToOnPremAIGateway(context.Background(), tt.dp)
 			require.Equal(t, tt.want, got)
+		})
+	}
+}
+
+func TestClientCertSecretPredicate(t *testing.T) {
+	clientCertSecret := func(labels map[string]string) *corev1.Secret {
+		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "cert", Labels: labels}}
+	}
+
+	tests := []struct {
+		name   string
+		secret *corev1.Secret
+		want   bool
+	}{
+		{
+			name: "client certificate Secret matches",
+			secret: clientCertSecret(map[string]string{
+				consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
+			}),
+			want: true,
+		},
+		{
+			name:   "secret without the client certificate label does not match",
+			secret: clientCertSecret(map[string]string{"konghq.com/secret": "true"}),
+			want:   false,
+		},
+		{
+			name:   "secret without labels does not match",
+			secret: clientCertSecret(nil),
+			want:   false,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			p := clientCertSecretPredicate()
+			require.Equal(t, tt.want, p.Create(event.TypedCreateEvent[client.Object]{Object: tt.secret}))
+			require.Equal(t, tt.want, p.Update(event.TypedUpdateEvent[client.Object]{ObjectNew: tt.secret}))
+			require.Equal(t, tt.want, p.Delete(event.TypedDeleteEvent[client.Object]{Object: tt.secret}))
 		})
 	}
 }

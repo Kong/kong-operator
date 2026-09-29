@@ -55,6 +55,7 @@ var certOwnerManagedByLabelValues = map[string]struct{}{
 	consts.DataPlaneManagedLabelValue:            {},
 	consts.ControlPlaneManagedLabelValue:         {},
 	consts.AIGatewayDataPlaneManagedByLabelValue: {},
+	consts.OnPremAIGatewayManagedByLabelValue:    {},
 }
 
 // secretMatchesFilter returns true if the Secret has the required labels and type.

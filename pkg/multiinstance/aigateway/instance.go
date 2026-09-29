@@ -42,12 +42,24 @@ type Config struct {
 	// DBLessConfig is the rendered dbless declarative payload for this gateway, ready to be
 	// pushed to its data planes' Admin API.
 	DBLessConfig []byte
+
+	// AdminClientCertSecretNN is the reference to the mTLS client certificate Secret the
+	// instance reads when pushing configuration to its data planes. It is part of the
+	// hashed config so that a renewed Secret - recreated under a new GenerateName by
+	// EnsureCertificate - drifts the hash and restarts the instance with the new reference.
+	AdminClientCertSecretNN types.NamespacedName
 }
 
 // Hash computes a hash of the given config. It's used to detect configuration drift of running instances.
 func Hash(cfg Config) (string, error) {
-	sum := sha256.Sum256(cfg.DBLessConfig)
-	return hex.EncodeToString(sum[:]), nil
+	h := sha256.New()
+	h.Write(cfg.DBLessConfig)
+	// Skip the zero value so an empty config keeps hashing to sha256(""): the
+	// zero NN's String() is "/", which would otherwise shift every hash.
+	if cfg.AdminClientCertSecretNN != (types.NamespacedName{}) {
+		h.Write([]byte(cfg.AdminClientCertSecretNN.String()))
+	}
+	return hex.EncodeToString(h.Sum(nil)), nil
 }
 
 // Env carries the process-level dependencies an instance needs to build and run its own
