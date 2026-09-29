@@ -95,6 +95,9 @@ func appendEntities[Entity any, AIGWEntity any, List interface {
 func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedName) (*aigw.Document, error) {
 	doc := &aigw.Document{}
 
+	// TODO: dedup the per-kind appendEntities blocks below, tracked in
+	// https://github.com/Kong/kong-operator/issues/5909.
+
 	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayModelList{},
 		index.IndexFieldAIGatewayModelOnOnPremAIGatewayRef, doc,
 		func(ctx context.Context, cl client.Client, m *aiconfigurationv1alpha1.AIGatewayModel) (*aigw.Model, error) {

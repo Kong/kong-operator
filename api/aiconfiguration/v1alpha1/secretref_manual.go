@@ -25,6 +25,8 @@ type crossNamespaceSecretRefChecker interface {
 // reconciler_secretref.go handleSecretRef), which the error-only translation functions cannot
 // express. Grant-based cross-namespace access can be added here as a deliberate feature once
 // the on-prem path grows status conditions.
+// TODO: cross-namespace secretRefs are rejected, tracked in
+// https://github.com/Kong/kong-operator/issues/5908.
 func rejectCrossNamespaceSecretRefs(entity crossNamespaceSecretRefChecker) error {
 	for _, ref := range entity.GetSensitiveDataSecretRefs() {
 		if ref.Namespace != nil && *ref.Namespace != "" && *ref.Namespace != entity.GetNamespace() {
