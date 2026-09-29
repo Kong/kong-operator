@@ -23,9 +23,14 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 
-	secret := &corev1.Secret{
-		Name: "policy-config", Namespace: "default",
-		Data: map[string][]byte{"config": []byte(`{"limit_by_header":"x-api-key"}`)},
+	// newConfigSecret returns a fresh object per subtest: the fake client's tracker mutates the
+	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
+	// instance race.
+	newConfigSecret := func() *corev1.Secret {
+		return &corev1.Secret{
+			Name: "policy-config", Namespace: "default",
+			Data: map[string][]byte{"config": []byte(`{"limit_by_header":"x-api-key"}`)},
+		}
 	}
 
 	tests := []struct {
@@ -121,7 +126,7 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newConfigSecret()).Build()
 			got, err := tt.obj.ToAIGWPolicy(t.Context(), cl)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
@@ -142,7 +147,7 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 	// sdkOpsAPISpec resolves into a copy of the APISpec (config is a value field); pin that the
 	// caller's object still holds the secretRef after conversion.
 	obj := tests[1].obj
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newConfigSecret()).Build()
 	_, err := obj.ToAIGWPolicy(t.Context(), cl)
 	require.NoError(t, err)
 	require.Nil(t, obj.Spec.APISpec.Config.Value,

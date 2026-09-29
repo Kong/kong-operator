@@ -22,9 +22,14 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 
-	secret := &corev1.Secret{
-		Name: "azure-creds", Namespace: "default",
-		Data: map[string][]byte{"client-secret": []byte("hunter2")},
+	// newAzureSecret returns a fresh object per subtest: the fake client's tracker mutates the
+	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
+	// instance race.
+	newAzureSecret := func() *corev1.Secret {
+		return &corev1.Secret{
+			Name: "azure-creds", Namespace: "default",
+			Data: map[string][]byte{"client-secret": []byte("hunter2")},
+		}
 	}
 
 	tests := []struct {
@@ -140,7 +145,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newAzureSecret()).Build()
 			got, err := tt.obj.ToAIGWProvider(t.Context(), cl)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)
@@ -154,7 +159,7 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 	// sdkOpsAPISpec writes resolved values back into the spec it walks; ToAIGWProvider must do
 	// that on a copy. Pin that the caller's object still holds the secretRef after conversion.
 	obj := tests[1].obj
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newAzureSecret()).Build()
 	_, err := obj.ToAIGWProvider(t.Context(), cl)
 	require.NoError(t, err)
 	require.Nil(t, obj.Spec.APISpec.Azure.Config.Auth.Azure.ClientSecret.Value,

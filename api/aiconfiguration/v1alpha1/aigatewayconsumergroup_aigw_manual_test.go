@@ -22,14 +22,19 @@ func TestAIGatewayConsumerGroup_ToAIGWConsumerGroup(t *testing.T) {
 	scheme := runtime.NewScheme()
 	require.NoError(t, AddToScheme(scheme))
 
-	policy := &AIGatewayPolicy{
-		Name: "ai-gw-policy", Namespace: "default",
-		Spec: AIGatewayPolicySpec{
-			APISpec: AIGatewayPolicyAPISpec{
-				Name: "aigw-policy",
-				Type: "rate-limiting",
+	// newReferencedPolicy returns a fresh object per subtest: the fake client's tracker mutates
+	// the objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
+	// instance race.
+	newReferencedPolicy := func() *AIGatewayPolicy {
+		return &AIGatewayPolicy{
+			Name: "ai-gw-policy", Namespace: "default",
+			Spec: AIGatewayPolicySpec{
+				APISpec: AIGatewayPolicyAPISpec{
+					Name: "aigw-policy",
+					Type: "rate-limiting",
+				},
 			},
-		},
+		}
 	}
 
 	tests := []struct {
@@ -95,7 +100,7 @@ func TestAIGatewayConsumerGroup_ToAIGWConsumerGroup(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(policy).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newReferencedPolicy()).Build()
 			got, err := tt.obj.ToAIGWConsumerGroup(t.Context(), cl)
 			if tt.wantErr != "" {
 				require.ErrorContains(t, err, tt.wantErr)

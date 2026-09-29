@@ -35,9 +35,14 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 	require.NoError(t, AddToScheme(scheme))
 	require.NoError(t, corev1.AddToScheme(scheme))
 
-	secret := &corev1.Secret{
-		Name: "oidc-creds", Namespace: "default",
-		Data: map[string][]byte{"client-secret": []byte("hunter2")},
+	// newOIDCSecret returns a fresh object per subtest: the fake client's tracker mutates the
+	// objects it's given (SetResourceVersion on Build), so parallel subtests sharing one
+	// instance race.
+	newOIDCSecret := func() *corev1.Secret {
+		return &corev1.Secret{
+			Name: "oidc-creds", Namespace: "default",
+			Data: map[string][]byte{"client-secret": []byte("hunter2")},
+		}
 	}
 
 	tests := []struct {
@@ -106,6 +111,7 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 				strategy := doc.AuthStrategies[0]
 				require.Equal(t, "openid-connect", strategy.Type)
 				require.Equal(t, "oidc-strategy", strategy.Name)
+				require.Equal(t, "OIDC", strategy.DisplayName)
 				require.Contains(t, strategy.Config, "client_secret")
 				require.Equal(t, []any{"hunter2"}, strategy.Config["client_secret"])
 			},
@@ -116,7 +122,7 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newOIDCSecret()).Build()
 			payload, err := tt.obj.MarshalAIGWAuthStrategy(t.Context(), cl)
 			require.NoError(t, err)
 			tt.want(t, parseAuthStrategy(t, payload))
@@ -127,7 +133,7 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 	// must do that on a copy. Pin that the caller's object still holds the secretRef after
 	// conversion.
 	obj := tests[1].obj
-	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(secret).Build()
+	cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newOIDCSecret()).Build()
 	_, err := obj.MarshalAIGWAuthStrategy(t.Context(), cl)
 	require.NoError(t, err)
 	require.Empty(t, obj.Spec.APISpec.AIGatewayAuthStrategyConfig.OpenIDConnect.Config.ClientSecret[0].GetValue(),
