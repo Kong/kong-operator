@@ -305,11 +305,16 @@ func resolveGoPackageDirFromGoMod(importPath string) (string, error) {
 		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
 			cmd := exec.Command("go", "list", "-f", "{{.Dir}}", importPath)
 			cmd.Dir = dir
+			// Surface transient go list failures (e.g. a module download
+			// blocked by the sandbox) instead of silently degrading to the
+			// newest version found in the module cache.
+			cmd.Stderr = os.Stderr
 			if out, err := cmd.Output(); err == nil {
 				if packageDir := strings.TrimSpace(string(out)); packageDir != "" {
 					return packageDir, nil
 				}
 			}
+		}
 		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
