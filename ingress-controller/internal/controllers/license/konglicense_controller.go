@@ -18,11 +18,9 @@ import (
 	k8stypes "k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/tools/cache"
 	ctrl "sigs.k8s.io/controller-runtime"
-	"sigs.k8s.io/controller-runtime/pkg/builder"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/controller"
 	"sigs.k8s.io/controller-runtime/pkg/handler"
-	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 	"sigs.k8s.io/controller-runtime/pkg/source"
 
@@ -158,7 +156,6 @@ func (r *KongV1Alpha1KongLicenseReconciler) SetupWithManager(mgr ctrl.Manager) e
 	}
 	return blder.Watches(&configurationv1alpha1.KongLicense{},
 		&handler.EnqueueRequestForObject{},
-		builder.WithPredicates(predicate.NewPredicateFuncs(isKongLicenseEnabled)),
 	).
 		Complete(r)
 }
@@ -223,6 +220,27 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 				return ctrl.Result{}, err
 			}
 			return ctrl.Result{Requeue: true}, nil // wait until the object is no longer present in the cache
+		}
+		return ctrl.Result{}, nil
+	}
+
+	// A disabled KongLicense must not serve as the effective license: evict it
+	// from the cache and repick. Without this, a license disabled after being
+	// cached would keep being served: KONG_LICENSE_DATA and LicenseValid=True
+	// would persist after the user disables the license.
+	if !obj.Enabled {
+		_, objectExistsInCache, err := r.LicenseCache.Get(obj)
+		if err != nil {
+			return ctrl.Result{}, err
+		}
+		if objectExistsInCache {
+			log.V(logging.DebugLevel).Info("KongLicense disabled in cluster, delete it in cache")
+			if err := r.LicenseCache.Delete(obj); err != nil {
+				return ctrl.Result{}, err
+			}
+			if err := r.repickLicenseOnDelete(ctx, obj); err != nil {
+				return ctrl.Result{}, err
+			}
 		}
 		return ctrl.Result{}, nil
 	}
@@ -300,14 +318,6 @@ func (r *KongV1Alpha1KongLicenseReconciler) GetLicense() mo.Option[kong.License]
 // -----------------------------------------------------------------------------
 // KongV1Alpha1 KongLicense - Private Methods of Reconciler
 // -----------------------------------------------------------------------------
-
-func isKongLicenseEnabled(obj client.Object) bool {
-	kongLicense, ok := obj.(*configurationv1alpha1.KongLicense)
-	if !ok {
-		return false
-	}
-	return kongLicense.Enabled
-}
 
 // compareKongLicense returns true if license1 is newer than license2 (compared by metadata.creationTimestamp).
 // If the creationTimestamp equals or not comparable, returns the one with lexical smaller name.

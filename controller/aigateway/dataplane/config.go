@@ -195,6 +195,11 @@ var config = shareddataplane.Config[
 		Replicas:              replicas,
 		BuildContainer:        buildContainer,
 		LabelManaged:          k8sresources.LabelObjectAsAIGatewayDataPlaneManaged,
+		// KONG_LICENSE_DATA is injected by withLicenseEnvVar below and must
+		// survive a user pod template overlay: LicenseValid=True reports the
+		// KongLicense as applied, so an overlay value must not silently
+		// replace it in the pods.
+		ReassertEnvVars: []string{EnvKongLicenseData},
 	},
 
 	// The primary (ingress) Service always exists. The Admin API Service and

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"slices"
 
 	"github.com/go-logr/logr"
 	appsv1 "k8s.io/api/apps/v1"
@@ -161,6 +162,17 @@ func BuildDeployment[T Object, Cert CertificateObject](
 				},
 				Template: *pts,
 			},
+		}
+
+		// The user overlay wins on env conflicts in MergeObjects, so drop the
+		// overlay's copies of the operator-injected env vars: the operator value
+		// must survive the merge, like the checksum annotation re-asserted below.
+		if len(cfg.Deployment.ReassertEnvVars) > 0 {
+			if c := k8sutils.GetPodContainerByName(&userDeployment.Spec.Template.Spec, cfg.Deployment.ContainerName); c != nil {
+				c.Env = slices.DeleteFunc(c.Env, func(e corev1.EnvVar) bool {
+					return slices.Contains(cfg.Deployment.ReassertEnvVars, e.Name)
+				})
+			}
 		}
 
 		u, err = controllerpkgssa.MergeObjects(tc, base, userDeployment)

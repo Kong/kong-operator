@@ -188,6 +188,13 @@ type DeploymentConfig[T Object] struct {
 	// not empty. cp.Object is nil when the DataPlane has no control plane
 	// reference configured.
 	BuildContainer func(dp T, cp ResolvedControlPlane, image, certSecretName, adminCertSecretName string) (corev1.Container, []corev1.Volume, error)
+	// ReassertEnvVars lists env var names that the operator injects into the
+	// DataPlane container and that must win over a user pod template overlay
+	// (e.g. KONG_LICENSE_DATA): MergeObjects lets the overlay win on conflicts,
+	// so the overlay's conflicting entries are dropped before the merge, like
+	// the certificate checksum annotation is re-asserted after it. Leave it
+	// empty for DataPlanes that inject no such env vars.
+	ReassertEnvVars []string
 	// LabelManaged, when non-nil, marks the Deployment and its pod template as
 	// managed (e.g. k8sresources.LabelObjectAsAIGatewayDataPlaneManaged).
 	LabelManaged func(metav1.Object)
