@@ -315,7 +315,6 @@ func resolveGoPackageDirFromGoMod(importPath string) (string, error) {
 				}
 			}
 		}
-		}
 		parent := filepath.Dir(dir)
 		if parent == dir {
 			return "", fmt.Errorf("no module in the working directory or its parents provides %q", importPath)

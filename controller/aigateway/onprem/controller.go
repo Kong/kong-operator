@@ -366,7 +366,14 @@ func (r *Reconciler) initStatusToWaitingToBecomeReady(
 }
 
 // applyStatus patches the OnPremAIGateway status subresource via SSA.
+//
+// The instance (pkg/multiinstance/aigateway) owns the DataPlanesConfigured condition
+// under its own field manager (instanceFieldManager), so it is excluded from the
+// controller's apply payload: applying the full cached status under ForceOwnership
+// would steal that condition's ownership on every reconcile with a stale cache, and
+// the instance would steal it back (flapping ownership, duplicate Warning events).
 func (r *Reconciler) applyStatus(ctx context.Context, logger logr.Logger, onprem *aigatewayv1alpha1.OnPremAIGateway) error {
+	k8sutils.RemoveCondition(aigatewayv1alpha1.OnPremAIGatewayDataPlanesConfiguredType, onprem)
 	result, err := controllerpkgssa.ApplyStatusIfChanged(ctx, logger, r.Client, r.TypeConverter, onprem, controllerpkgssa.FieldManager)
 	if err != nil {
 		log.Error(logger, err, "failed to patch OnPremAIGateway status")
