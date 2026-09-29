@@ -87,9 +87,10 @@ const (
 	EnvKongNginxAdminSSLVerifyClient = "KONG_NGINX_ADMIN_SSL_VERIFY_CLIENT"
 	// EnvKongLicenseData is the AI Gateway environment variable carrying the raw
 	// Kong Enterprise license JSON, propagated from the KongLicense resource.
-	// Note: the operator owns this env var whenever a license getter is wired;
-	// a value supplied via a PodTemplateSpec overlay is overridden on every
-	// reconcile.
+	// Note: a value supplied via a PodTemplateSpec overlay wins over this env
+	// var: MergeObjects lets the overlay win on conflicts, and nothing
+	// re-asserts the operator value after the merge (unlike the certificate
+	// checksum annotation re-asserted in owned_deployment.go).
 	EnvKongLicenseData = "KONG_LICENSE_DATA"
 )
 
