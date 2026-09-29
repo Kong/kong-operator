@@ -281,6 +281,12 @@ func (r *Reconciler) ensureAdminClientCertificateSecret(
 	ctx context.Context,
 	onprem *aigatewayv1alpha1.OnPremAIGateway,
 ) (*corev1.Secret, error) {
+	matchingLabels := client.MatchingLabels{
+		consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
+	}
+	if r.SecretLabelSelector != "" {
+		matchingLabels[r.SecretLabelSelector] = "true"
+	}
 	_, secret, err := secrets.EnsureCertificate(
 		ctx,
 		onprem,
@@ -295,9 +301,7 @@ func (r *Reconciler) ensureAdminClientCertificateSecret(
 			certificatesv1.UsageClientAuth,
 		},
 		r.Client,
-		client.MatchingLabels{
-			consts.SecretOnPremAIGatewayAdminClientCertificateLabel: "true",
-		},
+		matchingLabels,
 		r.CertTTL,
 	)
 	if err != nil {
