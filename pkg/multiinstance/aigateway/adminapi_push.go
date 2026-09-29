@@ -24,13 +24,13 @@ import (
 	"strings"
 
 	corev1 "k8s.io/api/core/v1"
+	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
-	"github.com/kong/kong-operator/v2/controller/pkg/op"
 	controllerpkgssa "github.com/kong/kong-operator/v2/controller/pkg/ssa"
 	adminapi "github.com/kong/kong-operator/v2/internal/adminapi"
 	k8sutils "github.com/kong/kong-operator/v2/pkg/utils/kubernetes"
@@ -177,6 +177,21 @@ func (i *Instance) reportPushStatus(
 		)
 	}
 
+	// NewCondition stamps a fresh LastTransitionTime on every call. Reuse the
+	// stored one when the condition state is unchanged, so that recurring
+	// failures on the retry loop are not seen as changes by ApplyStatusIfChanged
+	// (which would rewrite the status on every attempt). Whether the condition
+	// actually changed is decided from the stored state, not from the apply
+	// result: the comparison behind ApplyStatusIfChanged can report a change
+	// even when the applied content is identical.
+	var changed bool
+	existing := &aigatewayv1alpha1.OnPremAIGateway{}
+	if err := i.client.Get(ctx, gwNN, existing); err == nil {
+		condition, changed = k8sutils.UpdatedConditionPreservingLastTransitionTime(existing.Status.Conditions, condition)
+	} else if !apierrors.IsNotFound(err) {
+		return fmt.Errorf("getting OnPremAIGateway %s: %w", gwNN, err)
+	}
+
 	gw := &aigatewayv1alpha1.OnPremAIGateway{
 		Namespace: gwNN.Namespace,
 		Name:      gwNN.Name,
@@ -186,15 +201,14 @@ func (i *Instance) reportPushStatus(
 	gw.SetGroupVersionKind(aigatewayv1alpha1.GroupVersion.WithKind("OnPremAIGateway"))
 	gw.Status.Conditions = []metav1.Condition{condition}
 
-	result, err := controllerpkgssa.ApplyStatusIfChanged(
+	if _, err := controllerpkgssa.ApplyStatusIfChanged(
 		ctx, i.logger, i.client, i.env.TypeConverter, gw, instanceFieldManager,
-	)
-	if err != nil {
+	); err != nil {
 		return fmt.Errorf("patching OnPremAIGateway status with the configuration push result: %w", err)
 	}
 	// Only emit events when the condition actually changed, so that recurring
 	// failures on the retry loop do not spam the event recorder.
-	if result == op.Updated && len(failures) > 0 && i.eventRecorder != nil {
+	if changed && len(failures) > 0 && i.eventRecorder != nil {
 		i.eventRecorder.Eventf(
 			gw, nil, corev1.EventTypeWarning,
 			string(aigatewayv1alpha1.OnPremAIGatewayConfigurationPushFailedReason),

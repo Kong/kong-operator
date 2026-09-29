@@ -224,6 +224,38 @@ func TestSendConfigToDataPlanes(t *testing.T) {
 		}
 	})
 
+	t.Run("recurring failures emit a single event and keep the transition time", func(t *testing.T) {
+		instance := testPushInstance(t, adminClientCertSecret())
+		factory := &fakePushClientFactory{
+			failures: map[string]error{"https://10.0.0.1:8444": fmt.Errorf("connection refused")},
+		}
+		instance.newPushClient = factory.newPushClient
+		instance.setAdminAPIs(sets.New(adminAPI("https://10.0.0.1:8444")))
+
+		require.Error(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		first := getGatewayPushCondition(t, instance)
+
+		// The first failed push emits its Warning event; drain it.
+		recorder := instance.eventRecorder.(*events.FakeRecorder)
+		select {
+		case <-recorder.Events:
+		default:
+			t.Fatal("expected a Warning event for the first failed push")
+		}
+
+		// The retry loop re-attempts the push on the next tick: the unchanged
+		// failure must not be reported as a change (no event, same timestamp).
+		require.Error(t, instance.sendConfigToDataPlanes(ctx, gwNN, yamlPayload))
+		second := getGatewayPushCondition(t, instance)
+
+		require.Equal(t, first.LastTransitionTime, second.LastTransitionTime)
+		select {
+		case event := <-recorder.Events:
+			t.Fatal("expected no additional Warning event for the unchanged failure", event)
+		default:
+		}
+	})
+
 	t.Run("no discovered endpoints is a no-op", func(t *testing.T) {
 		instance := testPushInstance(t, adminClientCertSecret())
 		factory := &fakePushClientFactory{}
