@@ -115,5 +115,15 @@ func BuildDocument(ctx context.Context, cl client.Client, gw types.NamespacedNam
 		return nil, err
 	}
 
+	if err := appendEntities(ctx, cl, gw, &aiconfigurationv1alpha1.AIGatewayPolicyList{},
+		index.IndexFieldAIGatewayPolicyOnOnPremAIGatewayRef, doc,
+		func(ctx context.Context, cl client.Client, p *aiconfigurationv1alpha1.AIGatewayPolicy) (*aigw.Policy, error) {
+			return p.ToAIGWPolicy(ctx, cl)
+		},
+		func(d *aigw.Document, p *aigw.Policy) { d.Policies = append(d.Policies, *p) },
+	); err != nil {
+		return nil, err
+	}
+
 	return doc, nil
 }
