@@ -712,20 +712,24 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 	}
 
 	// aigwLicenseGetter provides the effective Kong license to the AIGateway
-	// controllers. It reuses the KongLicense reconciler from the embedded KIC,
-	// run once in the operator's own manager (not per AI gateway instance).
+	// controllers. It picks the newest enabled KongLicense straight from the
+	// manager's shared informer cache, so a reconcile triggered by a
+	// KongLicense add/update/delete can never observe a stale license: the
+	// cache is updated before watch events are dispatched, unlike the
+	// KongLicense reconciler's own cache (updated in a separate workqueue).
+	// The KongLicense reconciler is still set up below for its KongLicense
+	// status reporting.
 	var aigwLicenseGetter shareddataplane.LicenseGetter
 	if c.OnPremAIGatewayControllerEnabled || c.AIGatewayDataPlaneControllerEnabled {
-		getter, err := kiccontrollers.SetupKongLicense(
+		aigwLicenseGetter = shareddataplane.NewKongLicenseCacheGetter(mgr.GetClient())
+		if _, err := kiccontrollers.SetupKongLicense(
 			context.Background(),
 			mgr,
 			c.CacheSyncTimeout,
 			mgr.GetLogger().WithName("controllers").WithName("KongLicense"),
-		)
-		if err != nil {
+		); err != nil {
 			return nil, err
 		}
-		aigwLicenseGetter = getter
 	}
 
 	ctrlOpts := controller.Options{

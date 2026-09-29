@@ -86,7 +86,6 @@ func SetLicenseStatusCondition(
 		ObservedGeneration: dp.GetGeneration(),
 	})
 }
-}
 
 // ensureReadyStatus computes the Ready condition for a DataPlane.
 // It first checks whether any non-Ready condition is False; if so it sets

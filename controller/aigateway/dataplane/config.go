@@ -419,7 +419,6 @@ func withLicenseEnvVar(
 				Value: *license.Payload,
 			})
 		}
-		}
 		return container, volumes, nil
 	}
 }

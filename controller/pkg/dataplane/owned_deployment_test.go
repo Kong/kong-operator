@@ -423,6 +423,67 @@ func Test_BuildDeployment(t *testing.T) {
 	}
 }
 
+// Test_BuildDeployment_ReassertEnvVars verifies that a user PodTemplateSpec
+// overlay cannot override operator-injected env vars: the overlay's copies of
+// the ReassertEnvVars entries are dropped before MergeObjects, so the operator
+// value survives the merge.
+func Test_BuildDeployment_ReassertEnvVars(t *testing.T) {
+	tc := managedfields.NewDeducedTypeConverter()
+
+	cfg := testConfig
+	cfg.Deployment.ReassertEnvVars = []string{"KONG_LICENSE_DATA"}
+
+	aigwdp := &aigatewayv1alpha1.AIGatewayDataPlane{
+		Spec: aigatewayv1alpha1.AIGatewayDataPlaneSpec{
+			Deployment: &aigatewayv1alpha1.DeploymentOptions{
+				PodTemplateSpec: &corev1.PodTemplateSpec{
+					Spec: corev1.PodSpec{
+						Containers: []corev1.Container{
+							{
+								Name: consts.AIGatewayDataPlaneContainerName,
+								Env: []corev1.EnvVar{
+									{Name: "KONG_LICENSE_DATA", Value: "overlay-bogus-license"},
+									{Name: "KONG_DATABASE", Value: "overlay-value"},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	u, err := BuildDeployment(logr.Discard(), tc, aigwdp, resolvedTestCP(testKonnectAIGateway()), "kong/aigw:test", "cert-secret", "", "", cfg)
+	require.NoError(t, err)
+	require.NotNil(t, u)
+
+	containersRaw, found, err := unstructured.NestedFieldNoCopy(u.Object, "spec", "template", "spec", "containers")
+	require.NoError(t, err)
+	require.True(t, found)
+	containers := containersRaw.([]any)
+	require.NotEmpty(t, containers)
+	envRaw, found, err := unstructured.NestedFieldNoCopy(containers[0].(map[string]any), "env")
+	require.NoError(t, err)
+	require.True(t, found)
+	env := envRaw.([]any)
+
+	for _, e := range env {
+		envVar := e.(map[string]any)
+		require.NotEqual(t, "overlay-bogus-license", envVar["value"],
+			"overlay value for reasserted env var %v must be dropped", envVar["name"])
+	}
+	// The overlay env var not listed in ReassertEnvVars must survive the merge.
+	found = false
+	for _, e := range env {
+		envVar := e.(map[string]any)
+		if envVar["name"] == "KONG_DATABASE" {
+			found = true
+			assert.Equal(t, "overlay-value", envVar["value"])
+		}
+	}
+	assert.True(t, found, "overlay env var not in ReassertEnvVars must survive the merge")
+}
+
 // -----------------------------------------------------------------
 // ensureDeployment
 // -----------------------------------------------------------------
