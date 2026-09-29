@@ -959,7 +959,14 @@ func (obj *{{$.EntityName}}) {{.MethodName}}(ctx context.Context, cl client.Clie
 	if err != nil {
 		return nil, fmt.Errorf("resolving {{.Path}} references: %w", err)
 	}
-{{- if .DirectScalarRef}}
+{{- if .OptionalRef}}
+	// {{.Path}} has no Konnect counterpart: its resolved value is sent as
+	// {{.InjectIntoSDKJSONFieldName}}. An unset reference leaves {{.InjectIntoSDKJSONFieldName}} as set in the spec.
+	delete(payload, "{{.SDKJSONFieldName}}")
+	if len(resolved{{.GoResolverName}}) > 0 {
+		payload["{{.InjectIntoSDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
+	}
+{{- else if .DirectScalarRef}}
 	payload["{{.SDKJSONFieldName}}"] = resolved{{.GoResolverName}}[0]
 {{- else}}
 	// Always set: an empty list must explicitly clear the field in Konnect.
@@ -1111,11 +1118,21 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	}
 }
 {{- else}}
-{{- if .NestedRef}}
+{{- if or .NestedRef .OptionalRef}}
+{{- if .OptionalRef}}
+// RefsAt{{$.EntityName}}{{.GoResolverName}} returns the reference at {{.Path}},
+// or nil when it is unset.
+{{- else}}
 // RefsAt{{$.EntityName}}{{.GoResolverName}} returns the references at {{.Path}},
 // or nil when any ancestor is unset.
+{{- end}}
 func RefsAt{{$.EntityName}}{{.GoResolverName}}(obj *{{$.EntityName}}) {{if .NestedArrayList}}[][]{{else}}[]{{end}}{{.TypeName}} {
-{{- if .NestedArrayScalar}}
+{{- if .OptionalRef}}
+	if obj.Spec.APISpec.{{.GoFieldName}}.Name == "" {
+		return nil
+	}
+	return []{{.TypeName}}{obj.Spec.APISpec.{{.GoFieldName}}}
+{{- else if .NestedArrayScalar}}
 {{- range .ArrayGuardExprs}}
 	if {{.}} == nil {
 		return nil
@@ -1253,6 +1270,15 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 			errs = append(errs, ReferenceDifferentGatewayError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name, ReferrerGatewayID: obj.GetGatewayID(), ReferencedGatewayID: referenced.GetGatewayID()})
 			continue
 		}
+{{- if .OptionalRef}}
+		// The resolved value replaces {{.InjectInto}}: {{.DefaultKind}} objects
+		// being deleted must not gain new users, which could keep their deletion
+		// blocked.
+		if !referenced.GetDeletionTimestamp().IsZero() {
+			errs = append(errs, ReferenceBeingDeletedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
+			continue
+		}
+{{- end}}
 {{- if .ResolvesToName}}
 		if referenced.GetKonnectID() == "" {
 			errs = append(errs, ReferenceNotProgrammedError{Kind: "{{.DefaultKind}}", Namespace: ns, Name: ref.Name})
@@ -1278,6 +1304,28 @@ func resolve{{$.EntityName}}{{.GoResolverName}}(ctx context.Context, cl client.C
 	}
 	return resolved, nil
 }
+{{- end}}
+{{- end}}
+{{- range .References}}
+{{- if .ReverseWatch}}
+
+// {{$.EntityName}}RefsTo{{.DefaultKind}} returns the keys of the {{.DefaultKind}}
+// objects obj references through {{.Path}}, with the default namespace applied.
+func {{$.EntityName}}RefsTo{{.DefaultKind}}(obj *{{$.EntityName}}) []client.ObjectKey {
+	var keys []client.ObjectKey
+	for _, ref := range {{.RefsExpr}} {
+		if ref.Kind != "" && ref.Kind != "{{.DefaultKind}}" {
+			continue
+		}
+		ns := ref.Namespace
+		if ns == "" {
+			ns = obj.GetNamespace()
+		}
+		keys = append(keys, client.ObjectKey{Namespace: ns, Name: ref.Name})
+	}
+	return keys
+}
+
 {{- end}}
 {{- end}}
 {{- if $.References}}
@@ -2068,6 +2116,9 @@ const opsControllerTestTemplate = sharedGeneratedFilePreamble + `
 package ops
 
 import (
+{{- if .AssertsInjectInto}}
+	"encoding/json"
+{{- end}}
 	"errors"
 	"testing"
 
@@ -2078,6 +2129,9 @@ import (
 	"github.com/Kong/sdk-konnect-go/test/mocks"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+{{- if .AssertsInjectInto}}
+	"sigs.k8s.io/controller-runtime/pkg/client"
+{{- end}}
 {{- if .NeedsFakeClient}}
 	"sigs.k8s.io/controller-runtime/pkg/client/fake"
 {{- end}}
@@ -2146,6 +2200,22 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .AssertsInjectInto}}
+	{
+		// Additive references are resolved to the referenced object's Konnect
+		// key, sent in place of the reference.
+		data, err := json.Marshal({{$reqBody}})
+		require.NoError(t, err)
+		var body map[string]any
+		require.NoError(t, json.Unmarshal(data, &body))
+{{- range $i, $c := .InjectIntoChecks}}
+		var referenced{{$i}} {{$.APIAlias}}.{{$c.Kind}}
+		require.NoError(t, cl.Get(ctx, client.ObjectKey{Namespace: "default", Name: "{{$c.RefName}}"}, &referenced{{$i}}))
+		require.NotEmpty(t, referenced{{$i}}.{{$c.KonnectGetter}}())
+		require.Equal(t, referenced{{$i}}.{{$c.KonnectGetter}}(), body["{{$c.TargetKey}}"])
+{{- end}}
+	}
+{{- end}}
 {{- if .Create.LabelsUnionTargets}}
 {{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
 {{- else}}
@@ -4025,6 +4095,11 @@ type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 // ReferenceNotProgrammedError is returned when a referenced CR exists but has
 // no Konnect ID yet.
 type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
+
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away.
+type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
 
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit

@@ -1178,6 +1178,24 @@ Allowed values:
 | `installed` |  |
 | `streaming` |  |
 
+#### AIGatewayCustomPolicyRef
+
+
+AIGatewayCustomPolicyRef references an AIGatewayCustomPolicy in the cluster. The referenced
+object's Konnect name is used where the Konnect API accepts it.
+
+
+
+| Field | Description |
+| --- | --- |
+| `kind` _string_ | Kind is the kind of the referenced object. |
+| `name` _string_ | Name is the name of the referenced object. |
+| `namespace` _string_ | Namespace is reserved for future cross-namespace support. |
+
+_Appears in:_
+
+- [AIGatewayPolicyAPISpec](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaypolicyapispec)
+
 #### AIGatewayCustomPolicySpec
 
 
@@ -4973,6 +4991,7 @@ AIGatewayPolicyAPISpec defines the API spec fields for AIGatewayPolicy.
 | `managedBy` _[ManagedBy](#aiconfiguration-konghq-com-v1alpha1-types-managedby)_ | Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).<br /><br />Keys must be 1–63 characters long and start with an alphanumeric character. |
 | `name` _[AIGatewayEntityIdentifier](#aiconfiguration-konghq-com-v1alpha1-types-aigatewayentityidentifier)_ | A user-defined unique identifier for this policy instance, used as a stable human-readable reference. This value is immutable after creation. |
 | `type` _string_ | The type of the Policy. This is equivalent to the Kong 3 plugin name. Some examples are: 'ai-sanitizer', 'ai-prompt-guard', and 'rate-limiting'. Note: Plugins have been renamed to Policies in Kong AI Gateway. Policy types and configuration documentation can be found in the [Developer Docs](https://developer.konghq.com/plugins/). |
+| `customPolicyRef` _[AIGatewayCustomPolicyRef](#aiconfiguration-konghq-com-v1alpha1-types-aigatewaycustompolicyref)_ | CustomPolicyRef references the AIGatewayCustomPolicy this policy uses, as an alternative to setting type to the custom policy's Konnect name. The referenced custom policy must be programmed in the same AI Gateway; its Konnect name is sent as the policy type. Exactly one of type and customPolicyRef must be set. |
 
 _Appears in:_
 

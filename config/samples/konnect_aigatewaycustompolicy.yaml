@@ -108,3 +108,56 @@ spec:
         end
 
         return MyStreamingCustomPolicy
+---
+# An AIGatewayPolicy using the streaming custom policy above. customPolicyRef
+# references the AIGatewayCustomPolicy in the cluster: the operator waits until
+# it exists in Konnect and sends its Konnect name as the policy type. Setting
+# `type: my-streaming-custom-policy` instead is equivalent; exactly one of the
+# two must be set.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: aigw-policy-uses-custom-policy
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    name: aigw-policy-uses-custom-policy
+    displayName: Uses the streaming custom policy
+    customPolicyRef:
+      name: aigw-custom-policy-streaming
+    enabled: Enabled
+    global: Enabled
+    config:
+      type: inline
+      value:
+        # Field from the custom policy's schema.lua.
+        header_name: X-Custom-Policy
+---
+# An AIGatewayPolicy using the installed custom policy above through its
+# Konnect name as the literal type, the alternative to customPolicyRef. It is
+# also how Konnect-managed or built-in policies are used.
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayPolicy
+metadata:
+  name: aigw-policy-uses-installed-custom-policy
+  namespace: default
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ai-gw-cp-1
+      namespace: default
+  apiSpec:
+    name: aigw-policy-uses-installed-custom-policy
+    displayName: Uses the installed custom policy
+    type: my-installed-custom-policy
+    enabled: Enabled
+    global: Enabled
+    config:
+      type: inline
+      value:
+        # Field from the custom policy's schema.lua.
+        header_name: X-Installed-Custom-Policy

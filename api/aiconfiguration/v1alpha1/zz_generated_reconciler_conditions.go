@@ -67,6 +67,22 @@ const (
 	// yet programmed in Konnect.
 	AIGatewayConsumerGroupRefReasonNotProgrammed = "NotProgrammed"
 
+	// AIGatewayCustomPolicyRefValidConditionType is the type of the condition that indicates
+	// whether the AIGatewayCustomPolicy reference is valid and points to an existing
+	// AIGatewayCustomPolicy.
+	AIGatewayCustomPolicyRefValidConditionType = "AIGatewayCustomPolicyRefValid"
+
+	// AIGatewayCustomPolicyRefReasonValid is the reason used with the AIGatewayCustomPolicyRefValid
+	// condition type indicating that the AIGatewayCustomPolicy reference is valid.
+	AIGatewayCustomPolicyRefReasonValid = "Valid"
+	// AIGatewayCustomPolicyRefReasonInvalid is the reason used with the AIGatewayCustomPolicyRefValid
+	// condition type indicating that the AIGatewayCustomPolicy reference is invalid.
+	AIGatewayCustomPolicyRefReasonInvalid = "Invalid"
+	// AIGatewayCustomPolicyRefReasonNotProgrammed is the reason used with the AIGatewayCustomPolicyRefValid
+	// condition type indicating that the referenced AIGatewayCustomPolicy exists but is not
+	// yet programmed in Konnect.
+	AIGatewayCustomPolicyRefReasonNotProgrammed = "NotProgrammed"
+
 	// AIGatewayMCPServerRefValidConditionType is the type of the condition that indicates
 	// whether the AIGatewayMCPServer reference is valid and points to an existing
 	// AIGatewayMCPServer.

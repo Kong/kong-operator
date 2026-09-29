@@ -46,6 +46,11 @@ type ReferenceNotFoundError = commonv1alpha1.ReferenceNotFoundError
 // no Konnect ID yet.
 type ReferenceNotProgrammedError = commonv1alpha1.ReferenceNotProgrammedError
 
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away.
+type ReferenceBeingDeletedError = commonv1alpha1.ReferenceBeingDeletedError
+
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.

@@ -108,6 +108,18 @@
   `type` is now immutable, as Konnect rejects switching between `installed`
   and `streaming`.
   [#5901](https://github.com/Kong/kong-operator/pull/5901)
+- `AIGatewayPolicy`: added `spec.apiSpec.customPolicyRef` to use an
+  `AIGatewayCustomPolicy` from the cluster instead of setting `spec.apiSpec.type`
+  to the custom policy's Konnect name. The operator waits until the referenced
+  custom policy exists in Konnect and is not being deleted, and sends its
+  Konnect name as the policy type. Exactly one of `type` and `customPolicyRef`
+  must be set; `type` keeps accepting built-in and custom policy names.
+  [#5904](https://github.com/Kong/kong-operator/pull/5904)
+- `AIGatewayCustomPolicy`: deleting a custom policy that policies still use is
+  blocked (`Programmed=False`, reason `DeletionBlocked`, naming the
+  `AIGatewayPolicy` objects using it and any Konnect policies not managed from
+  the cluster) and proceeds once they are gone.
+  [#5904](https://github.com/Kong/kong-operator/pull/5904)
 
 ### Fixes
 

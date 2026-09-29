@@ -1035,6 +1035,13 @@ func (g *Generator) Generate(parsed *parser.ParsedSpec) ([]GeneratedFile, error)
 	g.parsed = parsed
 	g.ensureInlineTypeNames(parsed)
 
+	// Add the fields of additive (InjectInto) references before anything
+	// inspects the entity schemas, so they flow through the regular reference
+	// machinery like any OAS-derived field.
+	if err := g.addInjectIntoReferenceProperties(parsed); err != nil {
+		return nil, err
+	}
+
 	// Pre-compute the set of schema names whose Go type is an anyOf union struct.
 	// These need pointer treatment at field sites so omitempty omits zero values.
 	g.anyOfSchemaNames = make(map[string]bool)
@@ -2783,6 +2790,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
 		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
 	}
+	typeXValidations = append(typeXValidations, injectIntoReferenceXValidations(g.config.References[entityName])...)
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -4548,8 +4556,19 @@ type TemplateReferenceConfig struct {
 	// than a direct spec field.
 	NestedRef bool
 	// RefsExpr is the Go expression yielding the []<RefType> slice to resolve.
-	// Top-level: obj.Spec.APISpec.<GoFieldName>. Nested: RefsAt<Entity><GoResolverName>(obj).
+	// Top-level: obj.Spec.APISpec.<GoFieldName>. Nested and optional:
+	// RefsAt<Entity><GoResolverName>(obj).
 	RefsExpr string
+	// OptionalRef is true for an additive (InjectInto) reference: its field is
+	// optional, so it sources its slice from a RefsAt<Entity><GoResolverName>
+	// accessor that yields no reference while the field is unset.
+	OptionalRef bool
+	// InjectIntoSDKJSONFieldName is the SDK payload key the resolved value of
+	// an additive (InjectInto) reference is written to, e.g. "type".
+	InjectIntoSDKJSONFieldName string
+	// InjectIntoGoFieldName is the Go field name of an additive (InjectInto)
+	// reference's target on the APISpec, e.g. "Type".
+	InjectIntoGoFieldName string
 	// GoPathSegments is the Go field-access chain for nested reference paths,
 	// computed by refFieldTarget's walk. Empty for top-level paths (which use
 	// RefsExpr's direct field access without an accessor). Nested references
@@ -4705,6 +4724,13 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 				refsExpr = "[]" + ref.TypeName() + "{obj.Spec.APISpec." + goFieldNameStr + "}"
 			}
 		}
+		// An additive (InjectInto) reference is a top-level scalar reference
+		// whose field is optional: resolve it through a RefsAt accessor that
+		// yields nothing while the field is unset.
+		optionalRef := ref.InjectInto != "" && directScalarRef
+		if optionalRef {
+			refsExpr = "RefsAt" + entityName + goResolverName + "(obj)"
+		}
 		nestedArrayScalar := isNestedArrayScalar(goPathSegments)
 		var nestedArrayList bool
 		var arrayGuardExprs, elementGuardExprs []string
@@ -4786,6 +4812,11 @@ func (g *Generator) templateReferences(entityName string) []TemplateReferenceCon
 			SameTypeRef:          sameTypeRef,
 			SameParentRefField:   sameParentRefField,
 			SameParentRefKind:    sameParentRefKind,
+			OptionalRef:          optionalRef,
+		}
+		if optionalRef {
+			result[i].InjectIntoSDKJSONFieldName = g.injectIntoTargetSDKKey(entityName, ref.InjectInto)
+			result[i].InjectIntoGoFieldName = goFieldName(result[i].InjectIntoSDKJSONFieldName)
 		}
 	}
 	return result
@@ -5231,6 +5262,235 @@ func sdkJSONKey(s string) string {
 		}
 	}
 	return string(buf)
+}
+
+// addInjectIntoReferenceProperties prepares the entity request-body schemas
+// for additive references (config.ReferenceConfig.InjectInto): it adds each
+// reference's field as an optional string property, which the top-level
+// scalar-reference machinery then emits as the ref struct, resolves and
+// watches, and it makes the InjectInto target field optional, since either it
+// or the reference supplies the value (see injectIntoReferenceXValidations).
+func (g *Generator) addInjectIntoReferenceProperties(parsed *parser.ParsedSpec) error {
+	entityNames := make([]string, 0, len(g.config.References))
+	for entityName := range g.config.References {
+		entityNames = append(entityNames, entityName)
+	}
+	slices.Sort(entityNames)
+
+	for _, entityName := range entityNames {
+		// A target filled by two references would get contradictory
+		// exactly-one rules and conflicting values.
+		injectedTargets := make(map[string]string)
+		for _, ref := range g.config.References[entityName] {
+			if ref.InjectInto == "" {
+				continue
+			}
+			if other, ok := injectedTargets[ref.InjectInto]; ok {
+				return fmt.Errorf("entity %q: references %q and %q: both inject into %q", entityName, other, ref.Path, ref.InjectInto)
+			}
+			injectedTargets[ref.InjectInto] = ref.Path
+			// Generated code reads the target as obj.Spec.APISpec.<Field>,
+			// which Origin/Mirror entities (pointer APISpec) do not support.
+			if g.entitySupportsMirror(entityName) {
+				return fmt.Errorf("entity %q: reference %q: injectInto is not supported for entities supporting mirror", entityName, ref.Path)
+			}
+			field := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
+			found := false
+			for name, schema := range parsed.RequestBodies {
+				if parser.GetEntityNameFromType(name) != entityName {
+					continue
+				}
+				found = true
+				if len(schema.OneOf) > 0 {
+					return fmt.Errorf("entity %q: reference %q: injectInto is not supported for root-union entities", entityName, ref.Path)
+				}
+				var target *parser.Property
+				for _, p := range schema.Properties {
+					switch jsonName(p.Name) {
+					case field:
+						return fmt.Errorf("entity %q: reference %q: injectInto field %q already exists in the OAS schema", entityName, ref.Path, field)
+					case ref.InjectInto:
+						target = p
+					}
+				}
+				if target == nil {
+					return fmt.Errorf("entity %q: reference %q: injectInto target %q not found in the OAS schema", entityName, ref.Path, ref.InjectInto)
+				}
+				// Generated code compares and concatenates the target with plain
+				// strings: a named ($ref) or nullable (*string) type would not
+				// compile there.
+				if target.Type != "string" || target.RefName != "" || target.Nullable {
+					return fmt.Errorf("entity %q: reference %q: injectInto target %q must be a plain, non-nullable string field", entityName, ref.Path, ref.InjectInto)
+				}
+				target.Required = false
+				// Required strings get an implicit MinLength of 1 (see
+				// KubebuilderTags); keep (at least) it now that the target is
+				// optional, so an empty value can't satisfy the exactly-one rule.
+				if target.MinLength == nil || *target.MinLength < 1 {
+					target.MinLength = new(int64(1))
+				}
+				schema.Required = slices.DeleteFunc(slices.Clone(schema.Required), func(n string) bool {
+					return jsonName(n) == ref.InjectInto
+				})
+				schema.Properties = append(schema.Properties, &parser.Property{
+					Name:        sdkJSONKey(field),
+					Type:        "string",
+					Description: ref.Description,
+				})
+			}
+			if !found {
+				return fmt.Errorf("entity %q: reference %q: no request body schema found", entityName, ref.Path)
+			}
+		}
+	}
+	return nil
+}
+
+// injectIntoTargetSDKKey returns the SDK payload key of an InjectInto target
+// (given by its CRD JSON name): its OAS property name, under which the SDK
+// request unmarshals it. Deriving it back from the CRD JSON name does not
+// round-trip for every name (a camelCase OAS name like "policyType" would
+// become "policy_type"), so that is only a fallback.
+func (g *Generator) injectIntoTargetSDKKey(entityName, injectInto string) string {
+	if target := findAPISpecProperty(g.parsed, entityName, injectInto); target != nil {
+		return target.Name
+	}
+	return sdkJSONKey(injectInto)
+}
+
+// validateReverseWatchReferences rejects reverseWatch on reference shapes the
+// generated <Referrer>RefsTo<Kind> accessor does not support: per-element ref
+// lists (a [][]<RefType>) and single ObjectRef fields.
+func validateReverseWatchReferences(entityName string, refs []TemplateReferenceConfig) error {
+	for _, ref := range refs {
+		if !ref.ReverseWatch {
+			continue
+		}
+		if ref.NestedArrayList || ref.ObjectRefField {
+			return fmt.Errorf("entity %q: reference %q: reverseWatch is not supported for this reference shape", entityName, ref.Path)
+		}
+	}
+	return nil
+}
+
+// reverseWatchReferrer describes a referring entity with a reverseWatch
+// reference to an entity, whose controller watches it.
+type reverseWatchReferrer struct {
+	// Referrer is the referring entity kind, e.g. "AIGatewayPolicy".
+	Referrer string
+	// LiteralGoField is the Go field of the reference's InjectInto target on
+	// the referrer's APISpec (e.g. "Type"), set only for an InjectInto
+	// reference: referrers may then set it literally to the referenced
+	// object's Konnect key instead of using the reference.
+	LiteralGoField string
+	// KonnectKeySuffix names the referenced entity's index on its Konnect key
+	// (IndexField<Entity>On<KonnectKeySuffix>): "KonnectName" or "KonnectID",
+	// following the reference's resolvesTo. Set together with LiteralGoField.
+	KonnectKeySuffix string
+}
+
+// konnectKeyIndexSuffix returns the name suffix of the index on a referenced
+// entity's Konnect key for a reference resolving to resolvesTo.
+func konnectKeyIndexSuffix(resolvesTo string) string {
+	if resolvesTo == "id" {
+		return "KonnectID"
+	}
+	return "KonnectName"
+}
+
+// reverseWatchReferrers returns the referring entities (sorted) with a
+// reverseWatch reference to entityName, whose controller must watch them.
+func (g *Generator) reverseWatchReferrers(entityName string) []reverseWatchReferrer {
+	var referrers []reverseWatchReferrer
+	for referrer, refs := range g.config.References {
+		for _, ref := range refs {
+			if !ref.ReverseWatch || len(ref.Kinds) != 1 || ref.Kinds[0] != entityName {
+				continue
+			}
+			rw := reverseWatchReferrer{Referrer: referrer}
+			if ref.InjectInto != "" {
+				rw.LiteralGoField = goFieldName(g.injectIntoTargetSDKKey(referrer, ref.InjectInto))
+				rw.KonnectKeySuffix = konnectKeyIndexSuffix(ref.ResolvesTo)
+			}
+			referrers = append(referrers, rw)
+			break
+		}
+	}
+	slices.SortFunc(referrers, func(a, b reverseWatchReferrer) int { return strings.Compare(a.Referrer, b.Referrer) })
+	return referrers
+}
+
+// konnectKeyIndex describes an index on an entity's "<gatewayID>/<Konnect
+// key>", used to find the objects referrers name literally.
+type konnectKeyIndex struct {
+	// Suffix is the index name suffix: "KonnectName" or "KonnectID".
+	Suffix string
+	// Getter is the method returning the Konnect key, e.g. "GetKonnectName".
+	Getter string
+}
+
+// konnectKeyIndexes returns the Konnect-key indexes entityName needs because
+// reverseWatch InjectInto references target it.
+func (g *Generator) konnectKeyIndexes(entityName string) []konnectKeyIndex {
+	seen := make(map[string]bool)
+	var indexes []konnectKeyIndex
+	for _, rw := range g.reverseWatchReferrers(entityName) {
+		if rw.KonnectKeySuffix == "" || seen[rw.KonnectKeySuffix] {
+			continue
+		}
+		seen[rw.KonnectKeySuffix] = true
+		indexes = append(indexes, konnectKeyIndex{Suffix: rw.KonnectKeySuffix, Getter: "Get" + rw.KonnectKeySuffix})
+	}
+	slices.SortFunc(indexes, func(a, b konnectKeyIndex) int { return strings.Compare(a.Suffix, b.Suffix) })
+	return indexes
+}
+
+// literalTargetIndexes returns the Go fields of entityName's APISpec that its
+// InjectInto references target, indexed on "<gatewayID>/<value>" so that the
+// entities naming a referenced object literally (rather than through the
+// reference) can be found: by the entity's own watch on the referenced kind,
+// and by the referenced kind's reverse watch.
+func (g *Generator) literalTargetIndexes(entityName string) []string {
+	var fields []string
+	for _, ref := range g.config.References[entityName] {
+		if ref.InjectInto == "" {
+			continue
+		}
+		field := goFieldName(g.injectIntoTargetSDKKey(entityName, ref.InjectInto))
+		if !slices.Contains(fields, field) {
+			fields = append(fields, field)
+		}
+	}
+	slices.Sort(fields)
+	return fields
+}
+
+// isInjectIntoTarget reports whether jsonFieldName is the InjectInto target of
+// one of entityName's additive references.
+func (g *Generator) isInjectIntoTarget(entityName, jsonFieldName string) bool {
+	for _, ref := range g.config.References[entityName] {
+		if ref.InjectInto == jsonFieldName {
+			return true
+		}
+	}
+	return false
+}
+
+// injectIntoReferenceXValidations returns the type-level CEL markers requiring
+// exactly one of each additive reference and its InjectInto target to be set.
+func injectIntoReferenceXValidations(refs []config.ReferenceConfig) []string {
+	var markers []string
+	for _, ref := range refs {
+		if ref.InjectInto == "" {
+			continue
+		}
+		field := strings.TrimPrefix(ref.Path, "spec.apiSpec.")
+		markers = append(markers, fmt.Sprintf(
+			`+kubebuilder:validation:XValidation:rule="!has(self.spec) || !has(self.spec.apiSpec) || has(self.spec.apiSpec.%s) != has(self.spec.apiSpec.%s)", message="exactly one of spec.apiSpec.%s and spec.apiSpec.%s must be set"`,
+			ref.InjectInto, field, ref.InjectInto, field,
+		))
+	}
+	return markers
 }
 
 // referenceForField returns the ReferenceConfig for the given entity+field if
@@ -6122,6 +6382,9 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	}
 
 	references := g.templateReferences(entityName)
+	if err := validateReverseWatchReferences(entityName, references); err != nil {
+		return "", err
+	}
 	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)
@@ -6434,6 +6697,9 @@ func (g *Generator) generateRootUnionSDKOps(
 	}
 
 	references := g.templateReferences(entityName)
+	if err := validateReverseWatchReferences(entityName, references); err != nil {
+		return "", err
+	}
 	injections, err := refInjections(references)
 	if err != nil {
 		return "", fmt.Errorf("entity %s: %w", entityName, err)

@@ -1262,6 +1262,62 @@ func TestReferenceConfigValidation(t *testing.T) {
 			}),
 			wantErr: "refTypeName is required when multiple kinds",
 		},
+		{
+			name: "injectInto on a top-level field accepted",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "type"
+			}),
+		},
+		{
+			name: "injectInto on a nested field rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.access.customPolicyRef"
+				rc.InjectInto = "type"
+			}),
+			wantErr: "injectInto is only supported for top-level apiSpec fields",
+		},
+		{
+			name: "injectInto into a nested target rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "config.type"
+			}),
+			wantErr: "injectInto must name a top-level apiSpec field",
+		},
+		{
+			name: "injectInto with cross-namespace support rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Path = "spec.apiSpec.customPolicyRef"
+				rc.InjectInto = "type"
+				rc.SupportCrossNamespaceReference = true
+			}),
+			wantErr: "supportCrossNamespaceReference is not supported with injectInto",
+		},
+		{
+			name: "reverseWatch on a single-kind reference accepted",
+			cfg:  base(func(rc *ReferenceConfig) { rc.ReverseWatch = true }),
+		},
+		{
+			name: "reverseWatch on a multi-kind reference rejected",
+			cfg: base(func(rc *ReferenceConfig) {
+				rc.Kinds = []string{"AIGatewayConsumer", "AIGatewayConsumerGroup"}
+				rc.RefTypeName = "AIGatewayACLRef"
+				rc.ReverseWatch = true
+			}),
+			wantErr: "reverseWatch requires exactly one kind",
+		},
+		{
+			name: "two reverseWatch references to the same kind rejected",
+			cfg: func() *APIGroupVersionConfig {
+				cfg := base(func(rc *ReferenceConfig) { rc.ReverseWatch = true })
+				second := cfg.Types[0].References[0]
+				second.Path = "spec.apiSpec.otherPolicies"
+				cfg.Types[0].References = append(cfg.Types[0].References, second)
+				return cfg
+			}(),
+			wantErr: "reverseWatch is supported for at most one reference per referenced kind",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

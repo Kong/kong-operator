@@ -75,6 +75,22 @@ func (e ReferenceNotProgrammedError) Error() string {
 	return fmt.Sprintf("%s %s/%s is not programmed in Konnect yet", e.Kind, e.Namespace, e.Name)
 }
 
+// ReferenceBeingDeletedError is returned when a referenced CR is being
+// deleted, for references that must not start using an object that is going
+// away (e.g. an AIGatewayPolicy's customPolicyRef: a new user would keep the
+// referenced custom policy's deletion blocked).
+//
+// +kubebuilder:object:generate=false
+type ReferenceBeingDeletedError struct {
+	Kind      string
+	Namespace string
+	Name      string
+}
+
+func (e ReferenceBeingDeletedError) Error() string {
+	return fmt.Sprintf("%s %s/%s is being deleted", e.Kind, e.Namespace, e.Name)
+}
+
 // ReferenceCrossNamespaceError is returned when a reference points to another
 // namespace. Cross-namespace references are rejected until explicit
 // cross-namespace support and authorization checks are implemented.

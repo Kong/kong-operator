@@ -19,6 +19,9 @@
 # Optional env:
 #   EXPECT_HEADER Response header proving AI Gateway processed the request.
 #                 Default: X-Kong-LLM-Model.
+#   EXPECT_HEADER_VALUE
+#                 When set, EXPECT_HEADER must carry exactly this value, not
+#                 just be present. Default: unset (any non-empty value matches).
 #   EXPECTED_SUCCESS
 #                 "true" (default): succeed once a 200 with EXPECT_HEADER is seen.
 #                 "false": the alias is expected to NOT resolve to a model
@@ -57,6 +60,7 @@ ADDRESS="${ADDRESS}"
 ROUTE_PATH="${ROUTE_PATH}"
 MODEL_ALIAS="${MODEL_ALIAS}"
 EXPECT_HEADER="${EXPECT_HEADER:-X-Kong-LLM-Model}"
+EXPECT_HEADER_VALUE="${EXPECT_HEADER_VALUE:-}"
 EXPECTED_SUCCESS="${EXPECTED_SUCCESS:-true}"
 REJECT_CONFIRMATIONS="${REJECT_CONFIRMATIONS:-3}"
 INCLUDE_HEADER="${INCLUDE_HEADER:-true}"
@@ -111,6 +115,7 @@ print_result() {
   "success": ${success},
   "http_status": "${code:-000}",
   "expected_header": "${EXPECT_HEADER}",
+  "expected_header_value": "$(json_escape "${EXPECT_HEADER_VALUE}")",
   "header_value": "$(json_escape "${header_value}")",
   "expected_success": "${EXPECTED_SUCCESS}",
   "model_alias": "${MODEL_ALIAS}",
@@ -145,7 +150,8 @@ response_header_value() {
 response_matches() {
   local code="$1"
   local header_value="$2"
-  [ "${code}" = "200" ] && [ -n "${header_value}" ]
+  [ "${code}" = "200" ] && [ -n "${header_value}" ] || return 1
+  [ -z "${EXPECT_HEADER_VALUE}" ] || [ "${header_value}" = "${EXPECT_HEADER_VALUE}" ]
 }
 
 CODE=""

@@ -1,0 +1,46 @@
+# Template for creating (or updating) and asserting an AIGatewayPolicy.
+#
+# To update an existing policy by removing a field (e.g. switching from type to
+# customPolicyRef), set that field to (`null`) in api_spec.
+#
+# Required bindings:
+#   - aigw_policy_name: Name of the AIGatewayPolicy resource.
+#   - namespace: Namespace where the AIGatewayPolicy is created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it belongs to (same namespace).
+#   - api_spec: The spec.apiSpec, e.g.
+#       name: my-policy
+#       displayName: My policy
+#       type: response-transformer
+#       global: Enabled
+#       config:
+#         type: inline
+#         value: {...}
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-policy
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayPolicy
+          metadata:
+            name: ($aigw_policy_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec: ($api_spec)
+    - assert:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayPolicy
+          metadata:
+            name: ($aigw_policy_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true

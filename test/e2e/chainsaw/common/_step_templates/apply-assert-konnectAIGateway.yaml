@@ -6,11 +6,23 @@
 #   - auth_name: Name of the KonnectAPIAuthConfiguration to reference (same namespace).
 #   - test_name: Identifier used for the "test" label so the hack/cleanup script can find and
 #     prune this AI Gateway from Konnect if it's left behind by a cancelled/crashed test run.
+#
+# Optional bindings (override with use.with.bindings; unset by default):
+#   - min_runtime_version: Minimum data plane runtime version, e.g. "2.1", for
+#     tests using fields or features Konnect rejects below that version.
+#   - runtime_auto_upgrade: "Enabled" to keep the minimum runtime version
+#     advancing as newer data planes connect, instead of staying pinned once
+#     Konnect deprecates that baseline.
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
   name: apply-assert-konnect-aigateway
 spec:
+  bindings:
+    - name: min_runtime_version
+      value: (`null`)
+    - name: runtime_auto_upgrade
+      value: (`null`)
   try:
     - apply:
         resource:
@@ -26,6 +38,8 @@ spec:
               description: AIGateway chainsaw e2e control plane
               labels:
                 test: ($test_name)
+              minRuntimeVersion: ($min_runtime_version)
+              runtimeAutoUpgrade: ($runtime_auto_upgrade)
             konnect:
               authRef:
                 name: ($auth_name)

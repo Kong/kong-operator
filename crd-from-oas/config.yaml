@@ -571,6 +571,25 @@ apiGroupVersions:
         secretReferences:
           - path: spec.apiSpec.config
             type: Secret
+        references:
+          # `type` takes a plugin name: a built-in plugin, or a custom policy's
+          # Konnect name. customPolicyRef lets a policy use an
+          # AIGatewayCustomPolicy declared in the cluster instead of copying
+          # its Konnect name into `type`; exactly one of the two is set.
+          - path: spec.apiSpec.customPolicyRef
+            kinds: [AIGatewayCustomPolicy]
+            resolvesTo: name
+            injectInto: type
+            # Konnect refuses to delete a custom policy while policies use it;
+            # the AIGatewayCustomPolicy controller watches the policies so a
+            # blocked deletion resumes as soon as the last one using it is gone.
+            reverseWatch: true
+            description: >-
+              CustomPolicyRef references the AIGatewayCustomPolicy this policy
+              uses, as an alternative to setting type to the custom policy's
+              Konnect name. The referenced custom policy must be programmed in
+              the same AI Gateway; its Konnect name is sent as the policy type.
+              Exactly one of type and customPolicyRef must be set.
         ops:
           sdk:
             interface: github.com/Kong/sdk-konnect-go.AIGatewayPoliciesSDK

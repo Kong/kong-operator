@@ -1,0 +1,42 @@
+# Template for creating (or updating) and asserting an AIGatewayCustomPolicy.
+#
+# Required bindings:
+#   - aigw_custom_policy_name: Name of the AIGatewayCustomPolicy resource.
+#   - namespace: Namespace where the AIGatewayCustomPolicy is created.
+#   - aigw_cp_name: Name of the KonnectAIGateway it belongs to (same namespace).
+#   - api_spec: The spec.apiSpec, e.g.
+#       type: installed
+#       installed:
+#         name: my-plugin
+#         displayName: My plugin
+#         schema: <Lua schema>
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: StepTemplate
+metadata:
+  name: apply-assert-aigateway-custom-policy
+spec:
+  try:
+    - apply:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCustomPolicy
+          metadata:
+            name: ($aigw_custom_policy_name)
+            namespace: ($namespace)
+          spec:
+            aiGatewayRef:
+              namespacedRef:
+                name: ($aigw_cp_name)
+            apiSpec: ($api_spec)
+    - assert:
+        resource:
+          apiVersion: aiconfiguration.konghq.com/v1alpha1
+          kind: AIGatewayCustomPolicy
+          metadata:
+            name: ($aigw_custom_policy_name)
+            namespace: ($namespace)
+          status:
+            (conditions[?type == 'Programmed']):
+              - status: 'True'
+            (id != null): true
+            (gatewayID.id != null): true

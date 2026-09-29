@@ -1,0 +1,79 @@
+# Provider and model routing /aigw11/chat to the shared mock LLM. The
+# AIGatewayPolicy using the custom policy is global, so it is not attached
+# here: Konnect rejects custom policy types on models.
+# Required bindings:
+#   - namespace: Namespace of the resources.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-provider-credentials
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI (mock)
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-provider-credentials
+                  key: apikey
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: aigw11-model
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: aigw11-model
+      displayName: AI GW 1.1 mock model
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - /aigw11/chat
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+            namespace: ($namespace)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a
