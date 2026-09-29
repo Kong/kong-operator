@@ -87,7 +87,9 @@ func (i *Instance) sendConfigToDataPlanes(
 	if endpoints.Len() == 0 {
 		log.Info(i.logger, "no Admin API endpoints discovered for the gateway, skipping configuration push",
 			"namespace", gwNN.Namespace, "name", gwNN.Name)
-		return nil
+		// Report anyway: the last push may have left DataPlanesConfigured=False
+		// behind, and nothing else clears it while the set is empty.
+		return i.reportPushStatus(ctx, gwNN, 0, nil)
 	}
 
 	payload, err := yaml.YAMLToJSON(yamlPayload)
