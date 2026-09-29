@@ -20,6 +20,10 @@ import (
 // references are plain names, passed through as-is (there is no AIGatewayDatastore CR yet).
 // The client is only used for the config secretRef resolution.
 func (obj *AIGatewayPolicy) ToAIGWPolicy(ctx context.Context, cl client.Client) (*aigw.Policy, error) {
+	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayPolicy %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
 	// Resolve spec.apiSpec.config's secretRef. sdkOpsAPISpec resolves into a copy of the
 	// APISpec (config is a value field), so the caller's object is not mutated.
 	resolved, err := obj.sdkOpsAPISpec(ctx, cl)

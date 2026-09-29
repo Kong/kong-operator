@@ -133,6 +133,39 @@ func TestAIGatewayModelProvider_ToAIGWProvider(t *testing.T) {
 			},
 		},
 		{
+			name: "cross-namespace secretRef rejected",
+			obj: &AIGatewayModelProvider{
+				Name: "sample-ai-gw-provider-cross-ns", Namespace: "default",
+				Spec: AIGatewayModelProviderSpec{
+					APISpec: AIGatewayModelProviderAPISpec{
+						AIGatewayModelProviderConfig: &AIGatewayModelProviderConfig{
+							Type: AIGatewayModelProviderConfigTypeAzure,
+							Azure: &AIGatewayModelProviderAzure{
+								Name:        "azure-provider",
+								DisplayName: "Azure",
+								Config: AIGatewayModelProviderAzureConfig{
+									Auth: &AIGatewayModelProviderAzureConfigAuth{
+										Type: AIGatewayModelProviderAzureConfigAuthTypeAzure,
+										Azure: &AIGatewayModelProviderConfigAuthAzure{
+											ClientSecret: SensitiveDataSource{
+												Type: SensitiveDataSourceTypeSecretRef,
+												SecretRef: &SensitiveDataSecretRef{
+													Name:      "azure-creds",
+													Key:       "client-secret",
+													Namespace: new("other-namespace"),
+												},
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "cross-namespace secretRef",
+		},
+		{
 			name: "nil config",
 			obj: &AIGatewayModelProvider{
 				Name: "no-config", Namespace: "default",

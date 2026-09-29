@@ -46,9 +46,10 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 	}
 
 	tests := []struct {
-		name string
-		obj  *AIGatewayAuthStrategy
-		want func(t *testing.T, doc *aigw.Document)
+		name    string
+		obj     *AIGatewayAuthStrategy
+		wantErr string
+		want    func(t *testing.T, doc *aigw.Document)
 	}{
 		{
 			name: "key-auth, bool normalization, managed_by dropped",
@@ -116,6 +117,36 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 				require.Equal(t, []any{"hunter2"}, strategy.Config["client_secret"])
 			},
 		},
+		{
+			name: "cross-namespace clientSecret secretRef rejected",
+			obj: &AIGatewayAuthStrategy{
+				Name: "sample-ai-gw-auth-strategy-cross-ns", Namespace: "default",
+				Spec: AIGatewayAuthStrategySpec{
+					APISpec: AIGatewayAuthStrategyAPISpec{
+						AIGatewayAuthStrategyConfig: &AIGatewayAuthStrategyConfig{
+							Type: AIGatewayAuthStrategyConfigTypeOpenIDConnect,
+							OpenIDConnect: &AIGatewayAuthStrategyOpenIDConnect{
+								Name:        "oidc-strategy",
+								DisplayName: "OIDC",
+								Config: AIGatewayAuthStrategyOpenIDConnectConfig{
+									ClientSecret: []SensitiveDataSource{
+										{
+											Type: SensitiveDataSourceTypeSecretRef,
+											SecretRef: &SensitiveDataSecretRef{
+												Name:      "oidc-creds",
+												Key:       "client-secret",
+												Namespace: new("other-namespace"),
+											},
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+			wantErr: "cross-namespace secretRef",
+		},
 	}
 
 	for _, tt := range tests {
@@ -124,6 +155,10 @@ func TestAIGatewayAuthStrategy_MarshalAIGWAuthStrategy(t *testing.T) {
 
 			cl := fake.NewClientBuilder().WithScheme(scheme).WithObjects(newOIDCSecret()).Build()
 			payload, err := tt.obj.MarshalAIGWAuthStrategy(t.Context(), cl)
+			if tt.wantErr != "" {
+				require.ErrorContains(t, err, tt.wantErr)
+				return
+			}
 			require.NoError(t, err)
 			tt.want(t, parseAuthStrategy(t, payload))
 		})

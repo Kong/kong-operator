@@ -24,6 +24,10 @@ func (obj *AIGatewayAuthStrategy) MarshalAIGWAuthStrategy(ctx context.Context, c
 		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: spec.apiSpec is required", obj.Namespace, obj.Name)
 	}
 
+	if err := rejectCrossNamespaceSecretRefs(obj); err != nil {
+		return nil, fmt.Errorf("AIGatewayAuthStrategy %s/%s: %w", obj.Namespace, obj.Name, err)
+	}
+
 	// Resolve secretRefs against a copy: sdkOpsAPISpec writes the resolved values back into
 	// the spec it walks, which would otherwise leak into the caller's object.
 	resolved, err := obj.DeepCopy().sdkOpsAPISpec(ctx, cl)

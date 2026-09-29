@@ -101,6 +101,27 @@ func TestAIGatewayPolicy_ToAIGWPolicy(t *testing.T) {
 			},
 		},
 		{
+			name: "cross-namespace config secretRef rejected",
+			obj: &AIGatewayPolicy{
+				Name: "sample-ai-gw-policy-cross-ns", Namespace: "default",
+				Spec: AIGatewayPolicySpec{
+					APISpec: AIGatewayPolicyAPISpec{
+						Config: AIGatewayPolicyConfigDataSource{
+							Type: SensitiveDataSourceTypeSecretRef,
+							SecretRef: &SensitiveDataSecretRef{
+								Name:      "policy-config",
+								Key:       "config",
+								Namespace: new("other-namespace"),
+							},
+						},
+						Name: "rate-limit-policy",
+						Type: "rate-limiting",
+					},
+				},
+			},
+			wantErr: "cross-namespace secretRef",
+		},
+		{
 			name: "missing secret for config secretRef",
 			obj: &AIGatewayPolicy{
 				Name: "sample-ai-gw-policy-missing-secret", Namespace: "default",
