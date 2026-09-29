@@ -148,6 +148,13 @@
   plane instances served the same ingress class and sent configuration to the
   same `DataPlane`.
   [#5855](https://github.com/Kong/kong-operator/pull/5855)
+- Konnect: labels set in an entity's spec can no longer override the labels
+  the operator adds to Konnect entities (`k8s-name`, `k8s-namespace`, `k8s-uid`,
+  `k8s-generation`, `k8s-kind`, `k8s-group`, `k8s-version` and `managed-by`).
+  Previously, a spec label such as `k8s-uid` replaced the operator's value. The
+  operator then could not find the entity it owns in Konnect, so it could not
+  recover a lost entity ID or delete the entity when the object was deleted.
+  [#5917](https://github.com/Kong/kong-operator/pull/5917)
 
 ## [v2.4.0-rapid.1]
 
