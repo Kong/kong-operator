@@ -47,8 +47,11 @@ func NewKongLicenseCacheGetter(r client.Reader) *KongLicenseCacheGetter {
 func (g KongLicenseCacheGetter) GetLicense() mo.Option[kong.License] {
 	list := &configurationv1alpha1.KongLicenseList{}
 	// The reader is the manager's cached client, so this never hits the API
-	// server; a bare context is enough.
+	// server; a bare context is enough. A failed List must not look like "no
+	// license": that would set LicenseValid=False and strip KONG_LICENSE_DATA,
+	// rolling the pods. Log it so the trigger stays visible.
 	if err := g.client.List(context.Background(), list); err != nil {
+		ctrl.Log.Error(err, "failed to list KongLicenses for the license getter")
 		return mo.None[kong.License]()
 	}
 
