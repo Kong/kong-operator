@@ -56,6 +56,6 @@ spec:
           - name: INSECURE
             value: ($insecure)
         content: |
-          bash ../../common/scripts/request_header_modifier_filter_test.sh
+          HEADERS_SOURCE=request bash ../../common/scripts/header_modifier_filter_test.sh
         check:
           (json_parse($stdout).success): true

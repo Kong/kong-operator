@@ -34,11 +34,11 @@ spec:
             value: ($proxy_ip)
           - name: ROUTE_PATH
             value: ($route_path)
-          - name: EXPECTED_LIMIT
-            value: ($expected_rate_limit)
+          - name: EXPECTED_HEADER
+            value: "(join('', ['X-RateLimit-Limit-Minute: ', to_string($expected_rate_limit)]))"
           - name: HOST
             value: ($host_header)
         content: |
-          bash ../../common/scripts/verify_rate_limit_header.sh
+          bash ../../common/scripts/verify_response_header.sh
         check:
           (json_parse($stdout).success): true

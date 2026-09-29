@@ -47,8 +47,8 @@ spec:
         env:
           - name: NAMESPACE
             value: ($namespace)
-          - name: DP_SVC
-            value: (join('', [($aigw_dp_name), '-ingress']))
+          - name: ADDRESS
+            value: (join('', [($aigw_dp_name), '-ingress.', ($namespace), '.svc']))
           - name: METHOD
             value: ($method)
           - name: ROUTE_PATH
@@ -88,6 +88,6 @@ spec:
           - name: EXPECTED_SUCCESS
             value: ($expected_success)
         content: |
-          bash ../../common/scripts/aigw_agent_request_from_cluster.sh
+          bash ../../common/scripts/run_script_in_pod.sh ../../common/scripts/aigw_agent_request.sh
         check:
           (json_parse($stdout).success == `true`): true

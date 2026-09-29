@@ -122,10 +122,10 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: KEG_DP_NAME
-                value: ($keg_dp_name)
+              - name: SERVICE_NAME
+                value: (join('', [($keg_dp_name), '-kafka']))
             content: |
-              bash ../../common/scripts/get_lb_address.sh
+              bash ../../common/scripts/service_lb_address.sh
             outputs:
               - name: lb_address
                 value: (json_parse($stdout).address)
@@ -171,10 +171,10 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: KEG_DP_NAME
-                value: ($keg_dp_name)
+              - name: SERVICE_NAME
+                value: (join('', [($keg_dp_name), '-kafka']))
             content: |
-              bash ../../common/scripts/get_lb_address.sh
+              bash ../../common/scripts/service_lb_address.sh
             outputs:
               - name: lb_address
                 value: (json_parse($stdout).address)
@@ -231,10 +231,10 @@ spec:
             env:
               - name: NAMESPACE
                 value: ($namespace)
-              - name: KEG_DP_NAME
-                value: ($keg_dp_name)
+              - name: SERVICE_NAME
+                value: (join('', [($keg_dp_name), '-kafka']))
             content: |
-              bash ../../common/scripts/get_lb_address.sh
+              bash ../../common/scripts/service_lb_address.sh
             outputs:
               - name: lb_address
                 value: (json_parse($stdout).address)

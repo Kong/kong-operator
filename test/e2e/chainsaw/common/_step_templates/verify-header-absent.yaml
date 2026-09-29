@@ -35,13 +35,13 @@ spec:
             value: ($proxy_ip)
           - name: ROUTE_PATH
             value: ($route_path)
-          - name: HEADER_NAME
+          - name: ABSENT_HEADER
             value: ($header_name)
           - name: PROXY_PORT
             value: ($listener_http_port)
           - name: HOST
             value: ($host_header)
         content: |
-          bash ../../common/scripts/verify_header_absent.sh
+          bash ../../common/scripts/verify_response_header.sh
         check:
           (to_string(json_parse($stdout).success) == 'true'): true
