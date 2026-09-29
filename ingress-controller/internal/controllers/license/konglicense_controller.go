@@ -241,7 +241,7 @@ func (r *KongV1Alpha1KongLicenseReconciler) Reconcile(ctx context.Context, req c
 			if err := r.repickLicenseOnDelete(ctx, obj); err != nil {
 				return ctrl.Result{}, err
 			}
-			if err := r.ensureControllerStatusConditions(ctx, obj, metav1.ConditionFalse, ConditionReasonReplacedByNewer, "KongLicense disabled"); err != nil {
+			if err := r.ensureControllerStatusConditions(ctx, obj, metav1.ConditionFalse, ConditionReasonDisabled, "KongLicense disabled"); err != nil {
 				return ctrl.Result{}, err
 			}
 		}
