@@ -105,7 +105,7 @@ func (i *Instance) sendConfigToDataPlanes(
 					"endpoint", desc,
 					"address", endpoint.Address,
 					"details", errKong.Details(),
-					"raw", fmt.Sprintf("%s", errKong.Raw()),
+					"raw", string(errKong.Raw()),
 				)
 			}
 			failures = append(failures, fmt.Sprintf("%s: %s", desc, err))

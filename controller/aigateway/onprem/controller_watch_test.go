@@ -22,7 +22,6 @@ import (
 
 	"github.com/stretchr/testify/require"
 	corev1 "k8s.io/api/core/v1"
-	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"sigs.k8s.io/controller-runtime/pkg/client"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
@@ -83,7 +82,11 @@ func TestMapAIGatewayDataPlaneToOnPremAIGateway(t *testing.T) {
 
 func TestClientCertSecretPredicate(t *testing.T) {
 	clientCertSecret := func(labels map[string]string) *corev1.Secret {
-		return &corev1.Secret{ObjectMeta: metav1.ObjectMeta{Namespace: "default", Name: "cert", Labels: labels}}
+		return &corev1.Secret{
+			Namespace: "default",
+			Name:      "cert",
+			Labels:    labels,
+		}
 	}
 
 	tests := []struct {
