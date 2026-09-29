@@ -413,11 +413,12 @@ func withLicenseEnvVar(
 		if err != nil {
 			return container, volumes, err
 		}
-		if license, ok := getter.GetLicense().Get(); ok && license.Payload != nil {
+		if license, ok := getter.GetLicense().Get(); ok && license.Payload != nil && konnectAIGatewayFromResolved(cp) == nil {
 			container.Env = append(container.Env, corev1.EnvVar{
 				Name:  EnvKongLicenseData,
 				Value: *license.Payload,
 			})
+		}
 		}
 		return container, volumes, nil
 	}
