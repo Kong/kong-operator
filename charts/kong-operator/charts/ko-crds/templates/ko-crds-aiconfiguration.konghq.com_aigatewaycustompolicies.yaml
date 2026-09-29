@@ -181,6 +181,9 @@ spec:
                 required:
                 - type
                 type: object
+                x-kubernetes-validations:
+                - message: type is immutable
+                  rule: '!has(oldSelf.type) || self.type == oldSelf.type'
             required:
             - aiGatewayRef
             type: object

@@ -120,6 +120,9 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- range .APISpecValidations}}
+	// {{.}}
+{{- end}}
 {{- if .SupportsMirror}}
 	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
 {{- else}}

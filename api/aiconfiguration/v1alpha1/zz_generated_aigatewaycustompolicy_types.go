@@ -52,6 +52,7 @@ type AIGatewayCustomPolicySpec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+	// +kubebuilder:validation:XValidation:rule="!has(oldSelf.type) || self.type == oldSelf.type",message="type is immutable"
 	APISpec AIGatewayCustomPolicyAPISpec `json:"apiSpec,omitzero"`
 }
 

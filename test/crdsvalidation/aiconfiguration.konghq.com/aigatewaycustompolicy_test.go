@@ -188,6 +188,22 @@ func TestAIGatewayCustomPolicy(t *testing.T) {
 				},
 			},
 			{
+				Name:       "type cannot change from installed to streaming",
+				TestObject: validAIGatewayCustomPolicyInstalled(ns.Name),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
+					obj.Spec.APISpec.AIGatewayCustomPolicyConfig = validAIGatewayCustomPolicyStreaming(ns.Name).Spec.APISpec.AIGatewayCustomPolicyConfig
+				},
+				ExpectedUpdateErrorMessage: new("type is immutable"),
+			},
+			{
+				Name:       "type cannot change from streaming to installed",
+				TestObject: validAIGatewayCustomPolicyStreaming(ns.Name),
+				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {
+					obj.Spec.APISpec.AIGatewayCustomPolicyConfig = validAIGatewayCustomPolicyInstalled(ns.Name).Spec.APISpec.AIGatewayCustomPolicyConfig
+				},
+				ExpectedUpdateErrorMessage: new("type is immutable"),
+			},
+			{
 				Name:       "display name and Lua sources can be updated",
 				TestObject: validAIGatewayCustomPolicyStreaming(ns.Name),
 				Update: func(obj *aiconfigurationv1alpha1.AIGatewayCustomPolicy) {

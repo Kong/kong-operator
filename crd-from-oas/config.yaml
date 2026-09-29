@@ -592,10 +592,14 @@ apiGroupVersions:
         name: AIGatewayCustomPolicy
         # The OAS declares no maxLength for the Lua schema/handler sources, so
         # the generator's default string limit (253) would reject any realistic
-        # plugin. The name is documented as immutable after creation.
+        # plugin. The name is documented as immutable after creation, and so is
+        # the type: Konnect rejects an update switching between installed and
+        # streaming, so a type change requires recreating the object.
         cel:
           spec:
             apiSpec:
+              _validations:
+                - "+kubebuilder:validation:XValidation:rule=\"!has(oldSelf.type) || self.type == oldSelf.type\",message=\"type is immutable\""
               installed:
                 name:
                   _validations:
