@@ -29,7 +29,7 @@ spec:
 # same namespace as the AIGatewayCustomPolicy. Updating a ConfigMap re-syncs
 # every custom policy referencing it to Konnect.
 #
-# The operator only sees ConfigMaps matching its --configmap-label-selector,
+# The operator only sees ConfigMaps matching its --config-map-label-selector,
 # so each ConfigMap carries the konghq.com/configmap: "true" label (the
 # default selector).
 apiVersion: v1

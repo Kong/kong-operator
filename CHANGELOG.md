@@ -118,7 +118,7 @@
   provided inline (`type: inline` with `value`) or read from a key of a
   `ConfigMap` in the same namespace (`type: configMapRef` with
   `configMapRef.name` and `configMapRef.key`). The `ConfigMap` must match the
-  operator's `--configmap-label-selector` (`konghq.com/configmap: "true"` by
+  operator's `--config-map-label-selector` (`konghq.com/configmap: "true"` by
   default). The `ConfigMapRefValid` condition reports missing `ConfigMap`s or
   keys. Changes to a referenced `ConfigMap` are applied to Konnect on the next
   sync (`--konnect-sync-period`).
