@@ -101,7 +101,7 @@ func TestSetReadySkippingLicenseCondition(t *testing.T) {
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
 			onprem := &aigatewayv1alpha1.OnPremAIGateway{
-				ObjectMeta: metav1.ObjectMeta{Generation: 3},
+				Generation: 3,
 			}
 			onprem.SetConditions(tc.conditions)
 
