@@ -29,10 +29,10 @@ import (
 
 func TestSetReadySkippingLicenseCondition(t *testing.T) {
 	tests := []struct {
-		name           string
-		conditions     []metav1.Condition
-		wantStatus     metav1.ConditionStatus
-		wantReason     string
+		name        string
+		conditions  []metav1.Condition
+		wantStatus  metav1.ConditionStatus
+		wantReason  string
 		wantMessage string
 	}{
 		{
