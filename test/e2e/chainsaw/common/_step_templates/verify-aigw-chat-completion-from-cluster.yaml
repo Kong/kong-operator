@@ -17,6 +17,8 @@
 #     for any value.
 #   - expected_success: 'true' (default) if the request is expected to
 #     eventually succeed, 'false' if it's expected to be rejected.
+#   - request_headers: Extra request headers, one "Name:value" per line (e.g.
+#     "apikey:<key>" for a key-auth protected model), or '' (default).
 apiVersion: chainsaw.kyverno.io/v1alpha1
 kind: StepTemplate
 metadata:
@@ -29,6 +31,8 @@ spec:
       value: ''
     - name: expected_success
       value: 'true'
+    - name: request_headers
+      value: ''
   try:
     - script:
         env:
@@ -46,5 +50,7 @@ spec:
             value: ($expect_header_value)
           - name: EXPECTED_SUCCESS
             value: ($expected_success)
+          - name: REQUEST_HEADERS
+            value: ($request_headers)
         content: |
           bash ../../common/scripts/aigw_chat_completion_from_cluster.sh

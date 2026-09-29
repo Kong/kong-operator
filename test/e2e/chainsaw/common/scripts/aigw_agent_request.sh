@@ -29,6 +29,9 @@
 #   EXPECTED_JSONRPC  Expected value of the response body's ".jsonrpc" field.
 #   EXPECTED_JSON_ID  Expected value of the response body's ".id" field.
 #   EXPECTED_JSON_RESULT_TEXT  Expected value of ".result.parts[0].text".
+#   EXPECTED_HEADER   Response header that must be present. Default: none.
+#   EXPECTED_HEADER_VALUE  When set together with EXPECTED_HEADER, the header
+#                     must carry exactly this value, not just be present.
 #   PORT              Ingress Service port. Default: 443.
 #   MAX_RETRIES       Retry attempts. Default: 180.
 #   RETRY_DELAY       Seconds between retries. Default: 1.
@@ -69,6 +72,8 @@ UNEXPECTED_BODY="${UNEXPECTED_BODY:-}"
 EXPECTED_JSONRPC="${EXPECTED_JSONRPC:-}"
 EXPECTED_JSON_ID="${EXPECTED_JSON_ID:-}"
 EXPECTED_JSON_RESULT_TEXT="${EXPECTED_JSON_RESULT_TEXT:-}"
+EXPECTED_HEADER="${EXPECTED_HEADER:-}"
+EXPECTED_HEADER_VALUE="${EXPECTED_HEADER_VALUE:-}"
 REQUEST_BODY="${REQUEST_BODY:-}"
 BASE_REQUEST_HEADERS="${REQUEST_HEADERS:-}"
 CONTENT_TYPE="${CONTENT_TYPE:-application/json}"
@@ -86,8 +91,9 @@ REJECT_CONFIRMATIONS="${REJECT_CONFIRMATIONS:-3}"
 
 URL="https://${ADDRESS}:${PORT}${ROUTE_PATH}"
 BODY_FILE=$(mktemp /tmp/aigw_agent_body.XXXXXX)
+HEADER_FILE=$(mktemp /tmp/aigw_agent_headers.XXXXXX)
 TOKEN_RESPONSE_FILE=$(mktemp /tmp/aigw_agent_token.XXXXXX)
-cleanup() { rm -f "${BODY_FILE}" "${TOKEN_RESPONSE_FILE}"; }
+cleanup() { rm -f "${BODY_FILE}" "${HEADER_FILE}" "${TOKEN_RESPONSE_FILE}"; }
 trap cleanup EXIT
 # Set before print_result() is usable (curl_command is only known once build_curl_cmd runs).
 CURL_CMD=""
@@ -146,6 +152,9 @@ print_result() {
   "retry_attempt": ${attempt},
   "max_retries": ${MAX_RETRIES},
   "curl_command": "$(json_escape "${CURL_CMD}")",
+  "expected_header": "${EXPECTED_HEADER}",
+  "expected_header_value": "$(json_escape "${EXPECTED_HEADER_VALUE}")",
+  "header_value": "$(json_escape "$(response_header_value "${EXPECTED_HEADER}")")",
   "body": "$(json_escape "${body}")"$( [ -n "${error}" ] && printf ',\n  "error": "%s"' "$(json_escape "${error}")" )
 }
 EOF
@@ -186,23 +195,37 @@ fetch_oidc_token() {
   printf '%s' "${token}"
 }
 
+# Single-quotes $1 for the eval'd curl command, escaping embedded single
+# quotes, so that a header value containing one cannot break the command.
+shell_quote() {
+  printf "'%s'" "$(printf '%s' "$1" | sed "s/'/'\\\\''/g")"
+}
+
 # Build the curl command as a single string, both to execute (via eval, as the
 # other *_connectivity_test.sh scripts do) and to show verbatim in the JSON result.
 build_curl_cmd() {
   local headers="$1"
-  local CMD="curl -sk -m 30 -o ${BODY_FILE} -w '%{http_code}' -X ${METHOD}"
+  local CMD="curl -sk -m 30 -o ${BODY_FILE} -D ${HEADER_FILE} -w '%{http_code}' -X ${METHOD}"
   if [ -n "${REQUEST_BODY}" ]; then
     CMD="${CMD} -H 'Content-Type: ${CONTENT_TYPE}' --data '${REQUEST_BODY}'"
   fi
   if [ -n "${headers}" ]; then
     while IFS= read -r h; do
-      [ -n "${h}" ] && CMD="${CMD} -H '${h}'"
+      [ -n "${h}" ] && CMD="${CMD} -H $(shell_quote "${h}")"
     done <<EOF
 ${headers}
 EOF
   fi
   CMD="${CMD} '${URL}'"
   echo "${CMD}"
+}
+
+# Extracts the value of a response header from HEADER_FILE (empty when
+# EXPECTED_HEADER is unset or the header is absent; the last one wins).
+response_header_value() {
+  local name="$1"
+  [ -n "${name}" ] || return 0
+  grep -i "^${name}:" "${HEADER_FILE}" 2>/dev/null | tail -1 | cut -d' ' -f2- | tr -d '\r'
 }
 
 response_matches() {
@@ -239,6 +262,15 @@ response_matches() {
     [ "$(json_field "${body}" text)" = "${EXPECTED_JSON_RESULT_TEXT}" ] || return 1
   fi
 
+  if [ -n "${EXPECTED_HEADER}" ]; then
+    local header_value
+    header_value="$(response_header_value "${EXPECTED_HEADER}")"
+    [ -n "${header_value}" ] || return 1
+    if [ -n "${EXPECTED_HEADER_VALUE}" ]; then
+      [ "${header_value}" = "${EXPECTED_HEADER_VALUE}" ] || return 1
+    fi
+  fi
+
   return 0
 }
 
@@ -256,6 +288,7 @@ for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
       REQUEST_HEADERS="$(printf '%s\nAuthorization:Bearer %s' "${BASE_REQUEST_HEADERS}" "${TOKEN}")"
       CURL_CMD="$(build_curl_cmd "${REQUEST_HEADERS}")"
       > "${BODY_FILE}"
+      > "${HEADER_FILE}"
       CODE="$(eval "${CURL_CMD}" 2>/dev/null || echo 000)"
       BODY="$(cat "${BODY_FILE}" 2>/dev/null || echo '')"
       response_matches "${CODE}" "${BODY}" && MATCHED=true
@@ -263,6 +296,7 @@ for ATTEMPT in $(seq 1 "${MAX_RETRIES}"); do
   else
     CURL_CMD="$(build_curl_cmd "${BASE_REQUEST_HEADERS}")"
     > "${BODY_FILE}"
+    > "${HEADER_FILE}"
     CODE="$(eval "${CURL_CMD}" 2>/dev/null || echo 000)"
     BODY="$(cat "${BODY_FILE}" 2>/dev/null || echo '')"
     response_matches "${CODE}" "${BODY}" && MATCHED=true

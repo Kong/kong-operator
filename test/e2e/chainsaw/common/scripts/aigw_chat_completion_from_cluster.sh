@@ -16,7 +16,7 @@ set -o pipefail
 #   DP_SVC: Ingress Service name (typically <aigw-dp-name>-ingress).
 #   CURL_IMAGE: (optional) Image for the in-cluster curl Pod. Default: curlimages/curl:latest.
 #   ROUTE_PATH, MODEL_ALIAS, EXPECT_HEADER, EXPECT_HEADER_VALUE, EXPECTED_SUCCESS, REJECT_CONFIRMATIONS,
-#   INCLUDE_HEADER, INCLUDE_BODY_MODEL, PORT, MAX_RETRIES, RETRY_DELAY: Forwarded
+#   INCLUDE_HEADER, INCLUDE_BODY_MODEL, REQUEST_HEADERS, PORT, MAX_RETRIES, RETRY_DELAY: Forwarded
 #     through as-is to aigw_chat_completion.sh (see its own env docs).
 
 SCRIPT_PATH="${SCRIPT_PATH:-../../common/scripts/aigw_chat_completion.sh}"
@@ -39,6 +39,7 @@ cat "${SCRIPT_PATH}" | kubectl run "${POD_NAME}" \
   --env="REJECT_CONFIRMATIONS=${REJECT_CONFIRMATIONS:-3}" \
   --env="INCLUDE_HEADER=${INCLUDE_HEADER:-true}" \
   --env="INCLUDE_BODY_MODEL=${INCLUDE_BODY_MODEL:-true}" \
+  --env="REQUEST_HEADERS=${REQUEST_HEADERS:-}" \
   --env="PORT=${PORT:-443}" \
   --env="MAX_RETRIES=${MAX_RETRIES:-180}" \
   --env="RETRY_DELAY=${RETRY_DELAY:-1}" \

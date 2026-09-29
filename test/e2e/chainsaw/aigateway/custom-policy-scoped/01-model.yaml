@@ -1,0 +1,87 @@
+# Provider and model routing <model_route_path> to the shared mock LLM, with the
+# given policies attached to the model. The model requires key-auth, so that
+# requests carry a consumer (and its consumer groups).
+# Required bindings:
+#   - namespace: Namespace of the resources.
+#   - aigw_cp_name: Name of the KonnectAIGateway (same namespace).
+#   - model_name: Name of the AIGatewayModel (also its Konnect name).
+#   - model_route_path: Route path of the model.
+#   - model_policies: The model's policies, e.g. [{name: my-policy}], or [].
+#   - auth_strategy_name: Name of the key-auth AIGatewayAuthStrategy.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: openai-provider-credentials
+  namespace: ($namespace)
+  labels:
+    konghq.com/secret: "true"
+type: Opaque
+stringData:
+  apikey: test-ai-gateway-key
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModelProvider
+metadata:
+  name: openai-provider
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: openai
+    openai:
+      name: openai-provider
+      displayName: OpenAI (mock)
+      config:
+        auth:
+          headers:
+            - name: apikey
+              value:
+                type: secretRef
+                secretRef:
+                  name: openai-provider-credentials
+                  key: apikey
+---
+apiVersion: aiconfiguration.konghq.com/v1alpha1
+kind: AIGatewayModel
+metadata:
+  name: ($model_name)
+  namespace: ($namespace)
+spec:
+  aiGatewayRef:
+    namespacedRef:
+      name: ($aigw_cp_name)
+  apiSpec:
+    type: model
+    model:
+      name: ($model_name)
+      displayName: ($model_name)
+      enabled: Enabled
+      formats:
+        - type: openai
+      capabilities:
+        - generate
+      config:
+        model:
+          nameHeader: Enabled
+        route:
+          model:
+            headerParam: X-Kong-LLM-Model
+            values:
+              - qwen2.5:0.5b
+          paths:
+            - ($model_route_path)
+      access:
+        authStrategies:
+          - name: ($auth_strategy_name)
+      policies: ($model_policies)
+      targets:
+        - name: qwen2.5:0.5b
+          provider:
+            name: openai-provider
+            namespace: ($namespace)
+          config:
+            type: openai
+            openai:
+              upstreamURL: http://kong-mock.kong-aigateway-mock.svc.cluster.local:8000/provider-a

@@ -21,6 +21,13 @@ case $1 in
     kubectl apply -f "${SCRIPT_DIR}/00-namespace.yaml"
     kubectl apply -f "${SCRIPT_DIR}"
 
+    # kong-mock only reads its declarative config at startup: stamp the pod
+    # template with the config's checksum so that a changed config rolls the
+    # pods on a cluster that already runs the mock (a no-op otherwise).
+    KONG_MOCK_CONFIG_CHECKSUM="$(cksum < "${SCRIPT_DIR}/20-kong-mock-config.yaml" | cut -d' ' -f1)"
+    kubectl -n kong-aigateway-mock patch deploy/kong-mock --type merge \
+      -p "{\"spec\":{\"template\":{\"metadata\":{\"annotations\":{\"konghq.com/kong-mock-config-checksum\":\"${KONG_MOCK_CONFIG_CHECKSUM}\"}}}}}"
+
     kubectl -n kong-aigateway-mock rollout status deploy/ollama --timeout="${OLLAMA_TIMEOUT}"
     kubectl -n kong-aigateway-mock rollout status deploy/kong-mock --timeout="${KONG_MOCK_TIMEOUT}"
     ;;
