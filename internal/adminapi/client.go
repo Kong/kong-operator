@@ -21,6 +21,7 @@ import (
 	"crypto/x509"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/kong/go-kong/kong"
 
@@ -54,7 +55,8 @@ func NewMTLSClient(address, serverName string, certPEM, keyPEM, caPEM []byte) (*
 	transport := http.DefaultTransport.(*http.Transport).Clone()
 	transport.TLSClientConfig = &tlsConfig
 
-	client, err := kong.NewClient(&address, &http.Client{Transport: transport, Timeout: 30 * time.Second})
+	cl := &http.Client{Transport: transport, Timeout: 30 * time.Second}
+	client, err := kong.NewClient(&address, cl)
 	if err != nil {
 		return nil, fmt.Errorf("creating Kong client: %w", err)
 	}

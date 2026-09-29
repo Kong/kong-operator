@@ -80,6 +80,7 @@ type Reconciler struct {
 	// push configuration to their data planes' Admin API.
 	ClusterCASecretName      string
 	ClusterCASecretNamespace string
+	SecretLabelSelector      string
 
 	// CertTTL is the TTL of the certificates provisioned by this controller.
 	CertTTL time.Duration

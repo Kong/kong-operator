@@ -906,6 +906,7 @@ func SetupControllers(mgr manager.Manager, c *Config, cpsMgr *multiinstance.Mana
 				// to their data planes' Admin API when pushing configuration.
 				ClusterCASecretName:      c.ClusterCASecretName,
 				ClusterCASecretNamespace: c.ClusterCASecretNamespace,
+				SecretLabelSelector:      c.SecretLabelSelector,
 				CertTTL:                  c.CertTTL,
 			},
 		},

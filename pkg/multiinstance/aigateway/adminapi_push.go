@@ -19,6 +19,7 @@ package aigateway
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strings"
@@ -28,6 +29,8 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/yaml"
+
+	"github.com/kong/go-kong/kong"
 
 	aigatewayv1alpha1 "github.com/kong/kong-operator/v2/api/aigateway/v1alpha1"
 	"github.com/kong/kong-operator/v2/controller/pkg/log"
@@ -93,6 +96,18 @@ func (i *Instance) sendConfigToDataPlanes(
 			continue
 		}
 		if err := pushClient.ReloadDeclarativeRawConfig(ctx, bytes.NewReader(payload), true, true); err != nil {
+			errKong, ok := errors.AsType[*kong.APIError](err)
+			if ok {
+				// TODO: surface the detailed configuration error information
+				// to the user through events and status conditions.
+				log.Error(i.logger, errKong,
+					"failed to push configuration to Admin API endpoint",
+					"endpoint", desc,
+					"address", endpoint.Address,
+					"details", errKong.Details(),
+					"raw", fmt.Sprintf("%s", errKong.Raw()),
+				)
+			}
 			failures = append(failures, fmt.Sprintf("%s: %s", desc, err))
 			continue
 		}
