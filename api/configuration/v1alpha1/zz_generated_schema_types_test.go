@@ -20,6 +20,45 @@ func TestBackendClusterAuthenticationAnonymous_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestBackendClusterAuthenticationSaslAwsIam_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationSaslAwsIam
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterAuthenticationSaslAwsIamAssumeRole_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationSaslAwsIamAssumeRole
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestBackendClusterAuthenticationSaslAwsIamDefaultProviderChain_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec BackendClusterAuthenticationSaslAwsIamDefaultProviderChain
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestBackendClusterAuthenticationSaslPlain_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -553,6 +592,58 @@ func TestEventGatewayJoinGroupRule_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestEventGatewayMaskEmailDomainKeepAll_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayMaskEmailDomainKeepAll
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayMaskStrategyEmail_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayMaskStrategyEmail
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayMaskStrategyKeepChars_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayMaskStrategyKeepChars
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayMaskStrategyReplace_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayMaskStrategyReplace
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestEventGatewayModifyHeaderRemoveAction_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -713,6 +804,227 @@ func TestEventGatewayParsedRecordEncryptionSelector_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
 	var spec EventGatewayParsedRecordEncryptionSelector
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordMaskFieldsConsumeConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordMaskFieldsConsumeConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordMaskFieldsConsumePolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordMaskFieldsConsumePolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordMaskFieldsProduceConfig_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordMaskFieldsProduceConfig
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordMaskFieldsProducePolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordMaskFieldsProducePolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordMaskSelector_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordMaskSelector
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigAvro_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeConsumeConfigAvro
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigJSON_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeConsumeConfigJSON
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumePolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeConsumePolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigAvro_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeProduceConfigAvro
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigJSON_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeProduceConfigJSON
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProducePolicyCreate_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeProducePolicyCreate
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaRefDestinationConfluentFormat
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaRefDestinationNone_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaRefDestinationNone
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaRefDestinationRecordHeader
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaReference_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaReference
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaSourceInline_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaSourceInline
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaSourceReference_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec EventGatewayParsedRecordTranscodeSchemaSourceReference
 	out, err := json.Marshal(spec)
 	if err != nil {
 		t.Fatalf("json.Marshal() error = %v", err)
@@ -1034,6 +1346,32 @@ func TestSchemaRegistryReferenceByName_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestSchemaValidationInlineSchemaConfigAvro_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaValidationInlineSchemaConfigAvro
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
+func TestSchemaValidationInlineSchemaConfigJSON_MarshalEmpty(t *testing.T) {
+	t.Parallel()
+
+	var spec SchemaValidationInlineSchemaConfigJSON
+	out, err := json.Marshal(spec)
+	if err != nil {
+		t.Fatalf("json.Marshal() error = %v", err)
+	}
+	if got, want := string(out), "{}"; got != want {
+		t.Fatalf("empty spec must marshal to {}: got %q, want %q", got, want)
+	}
+}
+
 func TestTLSCertificate_MarshalEmpty(t *testing.T) {
 	t.Parallel()
 
@@ -1333,6 +1671,34 @@ func TestVirtualClusterTopicAlias_MarshalEmpty(t *testing.T) {
 	}
 }
 
+func TestBackendClusterAuthenticationSaslAwsIamSaslAwsIamUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "assume_role", payload: []byte("{\"type\":\"assumeRole\",\"assumeRole\":{}}")},
+		{name: "default_provider_chain", payload: []byte("{\"type\":\"defaultProviderChain\",\"defaultProviderChain\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *BackendClusterAuthenticationSaslAwsIamSaslAwsIam
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling BackendClusterAuthenticationSaslAwsIamSaslAwsIam: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestBackendClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1341,6 +1707,7 @@ func TestBackendClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.
 		payload []byte
 	}{
 		{name: "anonymous", payload: []byte("{\"type\":\"anonymous\",\"anonymous\":{}}")},
+		{name: "sasl_aws_iam", payload: []byte("{\"type\":\"saslAwsIam\",\"saslAwsIam\":{}}")},
 		{name: "sasl_plain", payload: []byte("{\"type\":\"saslPlain\",\"saslPlain\":{}}")},
 		{name: "sasl_scram", payload: []byte("{\"type\":\"saslScram\",\"saslScram\":{}}")},
 	}
@@ -1447,6 +1814,34 @@ func TestEventGatewayConsumeSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 	}
 }
 
+func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"schemaType\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"schemaType\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKey: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1469,6 +1864,34 @@ func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegist
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"schemaType\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"schemaType\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValue: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1525,6 +1948,92 @@ func TestEventGatewayKeySourceUnmarshalJSON_NilReceiver(t *testing.T) {
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayKeySource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayMaskEmailDomainStrategyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "keep_all", payload: []byte("{\"type\":\"keepAll\",\"keepAll\":{}}")},
+		{name: "keep_chars", payload: []byte("{\"type\":\"keepChars\",\"keepChars\":{}}")},
+		{name: "replace", payload: []byte("{\"type\":\"replace\",\"replace\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayMaskEmailDomainStrategy
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayMaskEmailDomainStrategy: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayMaskEmailLocalPartStrategyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "keep_chars", payload: []byte("{\"type\":\"keepChars\",\"keepChars\":{}}")},
+		{name: "replace", payload: []byte("{\"type\":\"replace\",\"replace\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayMaskEmailLocalPartStrategy
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayMaskEmailLocalPartStrategy: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayMaskStrategyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "email", payload: []byte("{\"type\":\"email\",\"email\":{}}")},
+		{name: "keep_chars", payload: []byte("{\"type\":\"keepChars\",\"keepChars\":{}}")},
+		{name: "replace", payload: []byte("{\"type\":\"replace\",\"replace\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayMaskStrategy
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayMaskStrategy: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1643,6 +2152,488 @@ func TestEventGatewayParsedRecordEncryptionSelectorPathsUnmarshalJSON_NilReceive
 	}
 }
 
+func TestEventGatewayParsedRecordMaskSelectorPathsUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Array", payload: []byte("{\"type\":\"array\",\"array\":[]}")},
+		{name: "Expression", payload: []byte("{\"type\":\"expression\",\"expression\":\"\"}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordMaskSelectorPaths
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordMaskSelectorPaths: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordMaskSelectorStrategyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "email", payload: []byte("{\"type\":\"email\",\"email\":{}}")},
+		{name: "keep_chars", payload: []byte("{\"type\":\"keepChars\",\"keepChars\":{}}")},
+		{name: "replace", payload: []byte("{\"type\":\"replace\",\"replace\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordMaskSelectorStrategy
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordMaskSelectorStrategy: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"outputFormat\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"outputFormat\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumeConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumeConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "confluent_format", payload: []byte("{\"type\":\"confluentFormat\",\"confluentFormat\":{}}")},
+		{name: "none", payload: []byte("{\"type\":\"none\",\"none\":{}}")},
+		{name: "record_header", payload: []byte("{\"type\":\"recordHeader\",\"recordHeader\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestination: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "inline", payload: []byte("{\"type\":\"inline\",\"inline\":{}}")},
+		{name: "reference", payload: []byte("{\"type\":\"reference\",\"reference\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "confluent_format", payload: []byte("{\"type\":\"confluentFormat\",\"confluentFormat\":{}}")},
+		{name: "none", payload: []byte("{\"type\":\"none\",\"none\":{}}")},
+		{name: "record_header", payload: []byte("{\"type\":\"recordHeader\",\"recordHeader\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestination: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "inline", payload: []byte("{\"type\":\"inline\",\"inline\":{}}")},
+		{name: "reference", payload: []byte("{\"type\":\"reference\",\"reference\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumePolicyCreateConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"outputFormat\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"outputFormat\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeConsumePolicyCreateConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"outputFormat\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"outputFormat\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProduceConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProduceConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "confluent_format", payload: []byte("{\"type\":\"confluentFormat\",\"confluentFormat\":{}}")},
+		{name: "none", payload: []byte("{\"type\":\"none\",\"none\":{}}")},
+		{name: "record_header", payload: []byte("{\"type\":\"recordHeader\",\"recordHeader\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestination: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "inline", payload: []byte("{\"type\":\"inline\",\"inline\":{}}")},
+		{name: "reference", payload: []byte("{\"type\":\"reference\",\"reference\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "confluent_format", payload: []byte("{\"type\":\"confluentFormat\",\"confluentFormat\":{}}")},
+		{name: "none", payload: []byte("{\"type\":\"none\",\"none\":{}}")},
+		{name: "record_header", payload: []byte("{\"type\":\"recordHeader\",\"recordHeader\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestination: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "inline", payload: []byte("{\"type\":\"inline\",\"inline\":{}}")},
+		{name: "reference", payload: []byte("{\"type\":\"reference\",\"reference\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProducePolicyCreateConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"outputFormat\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"outputFormat\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeProducePolicyCreateConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeProducePolicyCreateConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaRefDestinationUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "confluent_format", payload: []byte("{\"type\":\"confluentFormat\",\"confluentFormat\":{}}")},
+		{name: "none", payload: []byte("{\"type\":\"none\",\"none\":{}}")},
+		{name: "record_header", payload: []byte("{\"type\":\"recordHeader\",\"recordHeader\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeSchemaRefDestination
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeSchemaRefDestination: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "Id", payload: []byte("{\"type\":\"id\",\"id\":{}}")},
+		{name: "Name", payload: []byte("{\"type\":\"name\",\"name\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistry: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaSourceUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "inline", payload: []byte("{\"type\":\"inline\",\"inline\":{}}")},
+		{name: "reference", payload: []byte("{\"type\":\"reference\",\"reference\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayParsedRecordTranscodeSchemaSource
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayParsedRecordTranscodeSchemaSource: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicyConfigUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1672,6 +2663,34 @@ func TestEventGatewayProduceSchemaValidationPolicyConfigUnmarshalJSON_NilReceive
 	}
 }
 
+func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"schemaType\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"schemaType\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKey: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistryUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1694,6 +2713,34 @@ func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegist
 				t.Fatal("expected error for nil receiver")
 			}
 			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigSchemaRegistry: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
+func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"schemaType\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"schemaType\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValue: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
 		})
@@ -1876,6 +2923,34 @@ func TestSchemaRegistryConfluentConfigAuthenticationUnmarshalJSON_NilReceiver(t 
 	}
 }
 
+func TestSchemaValidationInlineSchemaConfigUnmarshalJSON_NilReceiver(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+	}{
+		{name: "avro", payload: []byte("{\"schemaType\":\"avro\",\"avro\":{}}")},
+		{name: "json", payload: []byte("{\"schemaType\":\"json\",\"json\":{}}")},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target *SchemaValidationInlineSchemaConfig
+			err := target.UnmarshalJSON(tt.payload)
+			if err == nil {
+				t.Fatal("expected error for nil receiver")
+			}
+			if got, want := err.Error(), "unmarshaling SchemaValidationInlineSchemaConfig: nil receiver"; got != want {
+				t.Fatalf("unexpected error: got %q want %q", got, want)
+			}
+		})
+	}
+}
+
 func TestVirtualClusterAuthenticationSchemeUnmarshalJSON_NilReceiver(t *testing.T) {
 	t.Parallel()
 
@@ -1959,6 +3034,62 @@ func TestVirtualClusterNamespaceTopicSelectorUnmarshalJSON_NilReceiver(t *testin
 			if got, want := err.Error(), "unmarshaling VirtualClusterNamespaceTopicSelector: nil receiver"; got != want {
 				t.Fatalf("unexpected error: got %q want %q", got, want)
 			}
+		})
+	}
+}
+
+func TestBackendClusterAuthenticationSaslAwsIamUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, BackendClusterAuthenticationSaslAwsIam)
+	}{
+		{
+			name:    "SaslAwsIam/assume_role",
+			payload: []byte("{\"saslAwsIam\":{\"type\":\"assumeRole\",\"assumeRole\":{}}}"),
+			assert: func(t *testing.T, target BackendClusterAuthenticationSaslAwsIam) {
+				t.Helper()
+				if target.SaslAwsIam == nil {
+					t.Fatalf("SaslAwsIam should be allocated")
+				}
+				if got, want := target.SaslAwsIam.Type, BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeAssumeRole; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SaslAwsIam.AssumeRole == nil {
+					t.Fatalf("SaslAwsIam.AssumeRole should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SaslAwsIam/default_provider_chain",
+			payload: []byte("{\"saslAwsIam\":{\"type\":\"defaultProviderChain\",\"defaultProviderChain\":{}}}"),
+			assert: func(t *testing.T, target BackendClusterAuthenticationSaslAwsIam) {
+				t.Helper()
+				if target.SaslAwsIam == nil {
+					t.Fatalf("SaslAwsIam should be allocated")
+				}
+				if got, want := target.SaslAwsIam.Type, BackendClusterAuthenticationSaslAwsIamSaslAwsIamTypeDefaultProviderChain; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SaslAwsIam.DefaultProviderChain == nil {
+					t.Fatalf("SaslAwsIam.DefaultProviderChain should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target BackendClusterAuthenticationSaslAwsIam
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
 		})
 	}
 }
@@ -2100,6 +3231,38 @@ func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigUnmarshalJSO
 		assert  func(*testing.T, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig)
 	}{
 		{
+			name:    "Key/avro",
+			payload: []byte("{\"key\":{\"schemaType\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Key == nil {
+					t.Fatalf("Key should be allocated")
+				}
+				if got, want := target.Key.SchemaType, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Key.Avro == nil {
+					t.Fatalf("Key.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Key/json",
+			payload: []byte("{\"key\":{\"schemaType\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Key == nil {
+					t.Fatalf("Key should be allocated")
+				}
+				if got, want := target.Key.SchemaType, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Key.JSON == nil {
+					t.Fatalf("Key.JSON should be allocated")
+				}
+			},
+		},
+		{
 			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
@@ -2128,6 +3291,38 @@ func TestEventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigUnmarshalJSO
 				}
 				if target.SchemaRegistry.Name == nil {
 					t.Fatalf("SchemaRegistry.Name should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Value/avro",
+			payload: []byte("{\"value\":{\"schemaType\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Value == nil {
+					t.Fatalf("Value should be allocated")
+				}
+				if got, want := target.Value.SchemaType, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Value.Avro == nil {
+					t.Fatalf("Value.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Value/json",
+			payload: []byte("{\"value\":{\"schemaType\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Value == nil {
+					t.Fatalf("Value should be allocated")
+				}
+				if got, want := target.Value.SchemaType, EventGatewayConsumeSchemaValidationPolicyInlineSchemaConfigValueTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Value.JSON == nil {
+					t.Fatalf("Value.JSON should be allocated")
 				}
 			},
 		},
@@ -2347,6 +3542,694 @@ func TestEventGatewayParsedRecordEncryptionSelectorUnmarshalJSON_DecodesUnionFie
 	}
 }
 
+func TestEventGatewayParsedRecordMaskSelectorUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordMaskSelector)
+	}{
+		{
+			name:    "Paths/Array",
+			payload: []byte("{\"paths\":{\"type\":\"array\",\"array\":[]}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordMaskSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordMaskSelectorPathsTypeArray; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Array == nil {
+					t.Fatalf("Paths.Array should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Paths/Expression",
+			payload: []byte("{\"paths\":{\"type\":\"expression\",\"expression\":\"\"}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordMaskSelector) {
+				t.Helper()
+				if target.Paths == nil {
+					t.Fatalf("Paths should be allocated")
+				}
+				if got, want := target.Paths.Type, EventGatewayParsedRecordMaskSelectorPathsTypeExpression; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Paths.Expression == nil {
+					t.Fatalf("Paths.Expression should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Strategy/email",
+			payload: []byte("{\"strategy\":{\"type\":\"email\",\"email\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordMaskSelector) {
+				t.Helper()
+				if target.Strategy == nil {
+					t.Fatalf("Strategy should be allocated")
+				}
+				if got, want := target.Strategy.Type, EventGatewayParsedRecordMaskSelectorStrategyTypeEmail; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Strategy.Email == nil {
+					t.Fatalf("Strategy.Email should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Strategy/keep_chars",
+			payload: []byte("{\"strategy\":{\"type\":\"keepChars\",\"keepChars\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordMaskSelector) {
+				t.Helper()
+				if target.Strategy == nil {
+					t.Fatalf("Strategy should be allocated")
+				}
+				if got, want := target.Strategy.Type, EventGatewayParsedRecordMaskSelectorStrategyTypeKeepChars; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Strategy.KeepChars == nil {
+					t.Fatalf("Strategy.KeepChars should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Strategy/replace",
+			payload: []byte("{\"strategy\":{\"type\":\"replace\",\"replace\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordMaskSelector) {
+				t.Helper()
+				if target.Strategy == nil {
+					t.Fatalf("Strategy should be allocated")
+				}
+				if got, want := target.Strategy.Type, EventGatewayParsedRecordMaskSelectorStrategyTypeReplace; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Strategy.Replace == nil {
+					t.Fatalf("Strategy.Replace should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordMaskSelector
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigAvroUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeConsumeConfigAvro)
+	}{
+		{
+			name:    "SchemaRefDestination/confluent_format",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"confluentFormat\",\"confluentFormat\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeConfluentFormat; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.ConfluentFormat == nil {
+					t.Fatalf("SchemaRefDestination.ConfluentFormat should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/none",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"none\",\"none\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeNone; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.None == nil {
+					t.Fatalf("SchemaRefDestination.None should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/record_header",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"recordHeader\",\"recordHeader\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaRefDestinationTypeRecordHeader; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.RecordHeader == nil {
+					t.Fatalf("SchemaRefDestination.RecordHeader should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/inline",
+			payload: []byte("{\"schemaSource\":{\"type\":\"inline\",\"inline\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigAvro) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeInlin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Inlin == nil {
+					t.Fatalf("SchemaSource.Inlin should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/reference",
+			payload: []byte("{\"schemaSource\":{\"type\":\"reference\",\"reference\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigAvro) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeConsumeConfigAvroSchemaSourceTypeReferenc; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Referenc == nil {
+					t.Fatalf("SchemaSource.Referenc should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeConsumeConfigAvro
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumeConfigJSONUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeConsumeConfigJSON)
+	}{
+		{
+			name:    "SchemaRefDestination/confluent_format",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"confluentFormat\",\"confluentFormat\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeConfluentFormat; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.ConfluentFormat == nil {
+					t.Fatalf("SchemaRefDestination.ConfluentFormat should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/none",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"none\",\"none\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeNone; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.None == nil {
+					t.Fatalf("SchemaRefDestination.None should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/record_header",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"recordHeader\",\"recordHeader\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaRefDestinationTypeRecordHeader; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.RecordHeader == nil {
+					t.Fatalf("SchemaRefDestination.RecordHeader should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/inline",
+			payload: []byte("{\"schemaSource\":{\"type\":\"inline\",\"inline\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigJSON) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeInlin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Inlin == nil {
+					t.Fatalf("SchemaSource.Inlin should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/reference",
+			payload: []byte("{\"schemaSource\":{\"type\":\"reference\",\"reference\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumeConfigJSON) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeConsumeConfigJSONSchemaSourceTypeReferenc; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Referenc == nil {
+					t.Fatalf("SchemaSource.Referenc should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeConsumeConfigJSON
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeConsumePolicyCreateUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeConsumePolicyCreate)
+	}{
+		{
+			name:    "Config/avro",
+			payload: []byte("{\"config\":{\"outputFormat\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumePolicyCreate) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.OutputFormat, EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Avro == nil {
+					t.Fatalf("Config.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/json",
+			payload: []byte("{\"config\":{\"outputFormat\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeConsumePolicyCreate) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.OutputFormat, EventGatewayParsedRecordTranscodeConsumePolicyCreateConfigTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.JSON == nil {
+					t.Fatalf("Config.JSON should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeConsumePolicyCreate
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigAvroUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeProduceConfigAvro)
+	}{
+		{
+			name:    "SchemaRefDestination/confluent_format",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"confluentFormat\",\"confluentFormat\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeConfluentFormat; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.ConfluentFormat == nil {
+					t.Fatalf("SchemaRefDestination.ConfluentFormat should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/none",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"none\",\"none\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeNone; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.None == nil {
+					t.Fatalf("SchemaRefDestination.None should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/record_header",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"recordHeader\",\"recordHeader\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigAvro) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaRefDestinationTypeRecordHeader; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.RecordHeader == nil {
+					t.Fatalf("SchemaRefDestination.RecordHeader should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/inline",
+			payload: []byte("{\"schemaSource\":{\"type\":\"inline\",\"inline\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigAvro) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeInlin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Inlin == nil {
+					t.Fatalf("SchemaSource.Inlin should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/reference",
+			payload: []byte("{\"schemaSource\":{\"type\":\"reference\",\"reference\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigAvro) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeProduceConfigAvroSchemaSourceTypeReferenc; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Referenc == nil {
+					t.Fatalf("SchemaSource.Referenc should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeProduceConfigAvro
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProduceConfigJSONUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeProduceConfigJSON)
+	}{
+		{
+			name:    "SchemaRefDestination/confluent_format",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"confluentFormat\",\"confluentFormat\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeConfluentFormat; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.ConfluentFormat == nil {
+					t.Fatalf("SchemaRefDestination.ConfluentFormat should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/none",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"none\",\"none\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeNone; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.None == nil {
+					t.Fatalf("SchemaRefDestination.None should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRefDestination/record_header",
+			payload: []byte("{\"schemaRefDestination\":{\"type\":\"recordHeader\",\"recordHeader\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigJSON) {
+				t.Helper()
+				if target.SchemaRefDestination == nil {
+					t.Fatalf("SchemaRefDestination should be allocated")
+				}
+				if got, want := target.SchemaRefDestination.Type, EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaRefDestinationTypeRecordHeader; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRefDestination.RecordHeader == nil {
+					t.Fatalf("SchemaRefDestination.RecordHeader should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/inline",
+			payload: []byte("{\"schemaSource\":{\"type\":\"inline\",\"inline\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigJSON) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeInlin; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Inlin == nil {
+					t.Fatalf("SchemaSource.Inlin should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaSource/reference",
+			payload: []byte("{\"schemaSource\":{\"type\":\"reference\",\"reference\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProduceConfigJSON) {
+				t.Helper()
+				if target.SchemaSource == nil {
+					t.Fatalf("SchemaSource should be allocated")
+				}
+				if got, want := target.SchemaSource.Type, EventGatewayParsedRecordTranscodeProduceConfigJSONSchemaSourceTypeReferenc; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaSource.Referenc == nil {
+					t.Fatalf("SchemaSource.Referenc should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeProduceConfigJSON
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeProducePolicyCreateUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeProducePolicyCreate)
+	}{
+		{
+			name:    "Config/avro",
+			payload: []byte("{\"config\":{\"outputFormat\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProducePolicyCreate) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.OutputFormat, EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.Avro == nil {
+					t.Fatalf("Config.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Config/json",
+			payload: []byte("{\"config\":{\"outputFormat\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeProducePolicyCreate) {
+				t.Helper()
+				if target.Config == nil {
+					t.Fatalf("Config should be allocated")
+				}
+				if got, want := target.Config.OutputFormat, EventGatewayParsedRecordTranscodeProducePolicyCreateConfigTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Config.JSON == nil {
+					t.Fatalf("Config.JSON should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeProducePolicyCreate
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
+func TestEventGatewayParsedRecordTranscodeSchemaReferenceUnmarshalJSON_DecodesUnionFields(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		payload []byte
+		assert  func(*testing.T, EventGatewayParsedRecordTranscodeSchemaReference)
+	}{
+		{
+			name:    "SchemaRegistry/Id",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeSchemaReference) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeID; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.ID == nil {
+					t.Fatalf("SchemaRegistry.ID should be allocated")
+				}
+			},
+		},
+		{
+			name:    "SchemaRegistry/Name",
+			payload: []byte("{\"schemaRegistry\":{\"type\":\"name\",\"name\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayParsedRecordTranscodeSchemaReference) {
+				t.Helper()
+				if target.SchemaRegistry == nil {
+					t.Fatalf("SchemaRegistry should be allocated")
+				}
+				if got, want := target.SchemaRegistry.Type, EventGatewayParsedRecordTranscodeSchemaReferenceSchemaRegistryTypeName; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.SchemaRegistry.Name == nil {
+					t.Fatalf("SchemaRegistry.Name should be allocated")
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			var target EventGatewayParsedRecordTranscodeSchemaReference
+			if err := json.Unmarshal(tt.payload, &target); err != nil {
+				t.Fatalf("json.Unmarshal() error = %v", err)
+			}
+			tt.assert(t, target)
+		})
+	}
+}
+
 func TestEventGatewayProduceSchemaValidationPolicyUnmarshalJSON_DecodesUnionFields(t *testing.T) {
 	t.Parallel()
 
@@ -2428,6 +4311,38 @@ func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigUnmarshalJSO
 		assert  func(*testing.T, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig)
 	}{
 		{
+			name:    "Key/avro",
+			payload: []byte("{\"key\":{\"schemaType\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Key == nil {
+					t.Fatalf("Key should be allocated")
+				}
+				if got, want := target.Key.SchemaType, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Key.Avro == nil {
+					t.Fatalf("Key.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Key/json",
+			payload: []byte("{\"key\":{\"schemaType\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Key == nil {
+					t.Fatalf("Key should be allocated")
+				}
+				if got, want := target.Key.SchemaType, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigKeyTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Key.JSON == nil {
+					t.Fatalf("Key.JSON should be allocated")
+				}
+			},
+		},
+		{
 			name:    "SchemaRegistry/Id",
 			payload: []byte("{\"schemaRegistry\":{\"type\":\"id\",\"id\":{}}}"),
 			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
@@ -2456,6 +4371,38 @@ func TestEventGatewayProduceSchemaValidationPolicyInlineSchemaConfigUnmarshalJSO
 				}
 				if target.SchemaRegistry.Name == nil {
 					t.Fatalf("SchemaRegistry.Name should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Value/avro",
+			payload: []byte("{\"value\":{\"schemaType\":\"avro\",\"avro\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Value == nil {
+					t.Fatalf("Value should be allocated")
+				}
+				if got, want := target.Value.SchemaType, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeAvro; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Value.Avro == nil {
+					t.Fatalf("Value.Avro should be allocated")
+				}
+			},
+		},
+		{
+			name:    "Value/json",
+			payload: []byte("{\"value\":{\"schemaType\":\"json\",\"json\":{}}}"),
+			assert: func(t *testing.T, target EventGatewayProduceSchemaValidationPolicyInlineSchemaConfig) {
+				t.Helper()
+				if target.Value == nil {
+					t.Fatalf("Value should be allocated")
+				}
+				if got, want := target.Value.SchemaType, EventGatewayProduceSchemaValidationPolicyInlineSchemaConfigValueTypeJSON; got != want {
+					t.Fatalf("unexpected type: got %q want %q", got, want)
+				}
+				if target.Value.JSON == nil {
+					t.Fatalf("Value.JSON should be allocated")
 				}
 			},
 		},

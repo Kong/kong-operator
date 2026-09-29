@@ -162,6 +162,22 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		assert.True(ct, k8sutils.HasConditionTrue(aigatewayv1alpha1.ReadyType, onprem))
 	}, waitTime, tickTime)
 
+	// The reconciler writes no status in this setup (DataplaneClient is unset), so an entity
+	// create triggers exactly one reconcile and one change notification, with no requeue
+	// after it. The log line carries no create/delete distinction, so the deletion check
+	// below only counts notifications logged after the delete.
+	countNotifications := func(name string, since time.Time) (n int) {
+		for _, entry := range logs.All() {
+			if entry.Time.After(since) &&
+				entry.Message == "Received change notification" &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "name" && f.String == name }) &&
+				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "namespace" && f.String == ns.Name }) {
+				n++
+			}
+		}
+		return n
+	}
+
 	t.Log("Creating the AIGatewayModelProvider the model's target references")
 	provider := &aiconfigurationv1alpha1.AIGatewayModelProvider{
 		Name:      "test-provider",
@@ -191,6 +207,16 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 		},
 	}
 	require.NoError(t, cl.Create(ctx, provider))
+
+	// The model's render resolves its provider through the instance's cache. Informers for
+	// different kinds are not ordered, so creating the model right away can render it
+	// before the provider reaches that cache, failing the render (retried by the instance,
+	// but caught by the zero-failures check below). The provider's change notification is
+	// sent by a reconciler reading that same cache, so wait for it first.
+	t.Log("Expecting the instance to receive the provider's change notification")
+	require.EventuallyWithT(t, func(ct *assert.CollectT) {
+		assert.Positive(ct, countNotifications(provider.Name, time.Time{}))
+	}, waitTime, tickTime)
 
 	t.Log("Creating an AIGatewayModel pointing at the OnPremAIGateway")
 	model := &aiconfigurationv1alpha1.AIGatewayModel{
@@ -229,22 +255,6 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 	}
 	require.NoError(t, cl.Create(ctx, model))
 
-	// The reconciler writes no status in this setup (DataplaneClient is unset), so a model
-	// create triggers exactly one reconcile and one change notification, with no requeue
-	// after it. The log line carries no create/delete distinction, so the deletion check
-	// below only counts notifications logged after the delete.
-	countModelNotifications := func(since time.Time) (n int) {
-		for _, entry := range logs.All() {
-			if entry.Time.After(since) &&
-				entry.Message == "Received change notification" &&
-				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "name" && f.String == "test-model" }) &&
-				slices.ContainsFunc(entry.Context, func(f zapcore.Field) bool { return f.Key == "namespace" && f.String == ns.Name }) {
-				n++
-			}
-		}
-		return n
-	}
-
 	// The render step runs unobserved: sendConfig only logs on failure. Assert that no
 	// render failed, so a broken instance-cache field index or a conversion failure cannot
 	// hide behind the notification checks above.
@@ -259,7 +269,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 
 	t.Log("Expecting the instance to receive the change notification and re-render its configuration")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.Positive(ct, countModelNotifications(time.Time{}))
+		assert.Positive(ct, countNotifications(model.Name, time.Time{}))
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 
@@ -269,7 +279,7 @@ func TestOnPremAIGatewayReconciler_ConfigTracksAIGatewayModels(t *testing.T) {
 
 	t.Log("Expecting the instance to receive the model's deletion notification, addressed to its parent gateway")
 	require.EventuallyWithT(t, func(ct *assert.CollectT) {
-		assert.Positive(ct, countModelNotifications(deleteStart))
+		assert.Positive(ct, countNotifications(model.Name, deleteStart))
 		assert.Zero(ct, countSendFailures())
 	}, waitTime, tickTime)
 }

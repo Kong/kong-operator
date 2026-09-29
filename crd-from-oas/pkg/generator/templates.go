@@ -120,6 +120,9 @@ type {{.EntityName}}Spec struct {
 	// APISpec defines the desired state of the resource's API spec fields.
 	//
 	// +optional
+{{- range .APISpecValidations}}
+	// {{.}}
+{{- end}}
 {{- if .SupportsMirror}}
 	APISpec *{{.EntityName}}APISpec ` + "`" + `json:"apiSpec,omitempty"` + "`" + `
 {{- else}}
@@ -411,7 +414,9 @@ func (obj *{{.EntityName}}) SetParentRef(ref {{.ObjectRefTypeName}}) {
 
 // SkipKonnectReconciliation reports whether the entity's parent reference
 // resolves to a parent the Konnect reconciler does not manage (an
-// OnPremAIGateway): such entities are owned by the on-prem machinery.
+// OnPremAIGateway): such entities are handled by the on-prem controllers
+// where supported, or rejected at admission when the entity restricts its
+// parent kinds.
 func (obj *{{.EntityName}}) SkipKonnectReconciliation() bool {
 	return obj.Spec.{{.ParentRefGoFieldName}}.TargetsOnPremAIGateway()
 }
@@ -717,6 +722,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -731,9 +739,17 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSDKUnionsExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSDKUnions(payload)
+	{{- end}}
 	{{- if $.SecretReferences}}
+	{{- if $.FreeformKeyFields}}
+	payload = flattenSensitiveDataExcept(payload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	payload = flattenSensitiveData(payload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1617,6 +1633,9 @@ var {{$.EntityName}}SDKOpsFreeformKeyFields = []sdkOpsFreeformKeyField{
 			"{{.}}",
 {{- end}}
 		},
+{{- if .Sensitive}}
+		Sensitive: true,
+{{- end}}
 	},
 {{- end}}
 }
@@ -1633,7 +1652,11 @@ func (s *{{$.EntityName}}APISpec) marshalSDKOpsPayload() (map[string]any, error)
 		return nil, fmt.Errorf("failed to decode {{$.EntityName}}APISpec: %w", err)
 	}
 	{{- if $.SecretReferences}}
+	{{- if $.FreeformKeyFields}}
+	rawPayload = flattenSensitiveDataExcept(rawPayload, {{$.EntityName}}SDKOpsFreeformKeyFields)
+	{{- else}}
 	rawPayload = flattenSensitiveData(rawPayload)
+	{{- end}}
 	{{- end}}
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
@@ -1667,11 +1690,17 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 
 	var selected any
 	var variant string
+	{{- if $.FreeformKeyFields}}
+	variantJSON := ""
+	{{- end}}
 	switch s.{{$.UnionTypeName}}.Type {
 {{- range .Variants}}
 	case {{$.UnionTypeName}}Type{{.FieldName}}:
 		selected = payload["{{.JSONName}}"]
 		variant = "{{.FieldName}}"
+		{{- if $.FreeformKeyFields}}
+		variantJSON = "{{.JSONName}}"
+		{{- end}}
 {{- end}}
 	default:
 		return nil, "", fmt.Errorf("unsupported {{$.EntityName}} config type %q", s.{{$.UnionTypeName}}.Type)
@@ -1680,7 +1709,11 @@ func (s *{{$.EntityName}}APISpec) selectedSDKOpsPayload(payload map[string]any) 
 	if selected == nil {
 		return nil, "", fmt.Errorf("{{$.EntityName}} config payload missing for type %q", s.{{$.UnionTypeName}}.Type)
 	}
+	{{- if $.FreeformKeyFields}}
+	selected = flattenSDKUnionsExceptUnder(selected, {{$.EntityName}}SDKOpsFreeformKeyFields, variantJSON)
+	{{- else}}
 	selected = flattenSDKUnions(selected)
+	{{- end}}
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
@@ -2113,6 +2146,9 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2121,6 +2157,7 @@ func TestCreate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2200,6 +2237,9 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 {{- end}}
 	require.NoError(t, err)
 {{- $reqBody := "expectedRequest"}}{{if and .Create.CreateFullyWrapped .Create.CreateBodyField}}{{$reqBody = printf "expectedRequest.%s" .Create.CreateBodyField}}{{end}}
+{{- if .Create.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Create.LabelsUnionTargets $.Create.HasTags $.Create.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .Create.LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .Create.LabelsUnionField}}{{end}}
 {{- if .Create.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2208,6 +2248,7 @@ func TestCreate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Create.CreateFullyWrapped}}
@@ -2358,6 +2399,9 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2366,6 +2410,7 @@ func TestUpdate{{.Entity}}_UsesSDKOpsConversion(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2435,6 +2480,9 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	expectedRequest, err := obj.Spec.APISpec.{{.Update.UpdateReqMethod}}()
 {{- end}}
 	require.NoError(t, err)
+{{- if .Update.LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "expectedRequest" .Update.LabelsUnionTargets $.Update.HasTags $.Update.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "expectedRequest"}}{{if .Update.LabelsFieldPath}}{{$labelsTarget = printf "expectedRequest.%s" .Update.LabelsFieldPath}}{{end}}
 {{- if .Update.HasTags}}
 	{{$labelsTarget}}.Tags = GenerateTagsForObject(obj, {{$labelsTarget}}.Tags...)
@@ -2443,6 +2491,7 @@ func TestUpdate{{.Entity}}_PropagatesSDKError(t *testing.T) {
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$labelsTarget}}.Labels)
 {{- else}}
 	{{$labelsTarget}}.Labels = WithKubernetesMetadataLabels(obj, {{$labelsTarget}}.Labels)
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .Update.UpdateFullyWrapped}}
@@ -2714,6 +2763,7 @@ import (
 ` + flattenSDKUnionsHelper + `
 
 ` + flattenSensitiveDataHelper + `
+` + flattenSensitiveDataExceptHelper + `
 
 ` + renameKeysToSDKHelper + `
 
@@ -2755,6 +2805,25 @@ import (
 	{{.APIAlias}} "{{.APIPackagePath}}"
 )
 `
+
+// labelsUnionInjectTemplate injects Kubernetes metadata labels/tags into each
+// member of a multi-member root-union request body, guarding every member as
+// only the selected one is set at runtime. Parsed alongside the ops and ops
+// test templates; invoked with the labelsUnionInject template func.
+const labelsUnionInjectTemplate = `{{define "labelsUnionInject"}}
+{{- $root := .Root}}
+{{- range .Targets}}
+	if {{if eq $root "req"}}{{.Guard}}{{else}}{{.ExpectedGuard}}{{end}} {
+{{- if $.HasTags}}
+		{{$root}}.{{.Path}}.Tags = GenerateTagsForObject(obj, {{$root}}.{{.Path}}.Tags...)
+{{- else if $.LabelsPointer}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabelsPtr(obj, {{$root}}.{{.Path}}.Labels)
+{{- else}}
+		{{$root}}.{{.Path}}.Labels = WithKubernetesMetadataLabels(obj, {{$root}}.{{.Path}}.Labels)
+{{- end}}
+	}
+{{- end}}
+{{- end}}`
 
 // opsCreateFuncTemplate renders a single create<Entity> function body.
 // It is concatenated after the file header produced by opsPerEntityFileHeaderTemplate.
@@ -2819,6 +2888,9 @@ func create{{.Entity}}(
 		return fmt.Errorf("failed creating %s SDK request: %w", obj.GetTypeName(), err)
 	}
 {{- $reqBody := "req"}}{{if and .CreateFullyWrapped .CreateBodyField}}{{$reqBody = printf "req.%s" .CreateBodyField}}{{end}}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := $reqBody}}{{if .LabelsUnionField}}{{$labelsTarget = printf "%s.%s" $reqBody .LabelsUnionField}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsUnionField}}
@@ -2839,6 +2911,7 @@ func create{{.Entity}}(
 {{- end}}
 {{- if .LabelsUnionField}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .CreateFullyWrapped}}
@@ -2961,6 +3034,9 @@ func update{{.Entity}}(
 	if err != nil {
 		return fmt.Errorf("failed building %s SDK update request: %w", obj.GetTypeName(), err)
 	}
+{{- if .LabelsUnionTargets}}
+{{- template "labelsUnionInject" (labelsUnionInject "req" .LabelsUnionTargets $.HasTags $.LabelsPointer)}}
+{{- else}}
 {{- $labelsTarget := "req"}}{{if .LabelsFieldPath}}{{$labelsTarget = printf "req.%s" .LabelsFieldPath}}{{end}}
 {{- if .HasTags}}
 {{- if .LabelsFieldGuard}}
@@ -2981,6 +3057,7 @@ func update{{.Entity}}(
 {{- end}}
 {{- if .LabelsFieldGuard}}
 	}
+{{- end}}
 {{- end}}
 {{- end}}
 {{- if .UpdateFullyWrapped}}
@@ -3507,6 +3584,14 @@ func get{{.Entity}}ForUID(
 		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
 	}
 {{- else if .HasLabels}}
+{{- if .LabelsResponseVariantFields}}
+
+	// Without a UID every unlabeled Konnect entity would match below.
+	uid := string(obj.GetUID())
+	if uid == "" {
+		return "", EntityWithMatchingUIDNotFoundError{Entity: obj}
+	}
+{{- end}}
 
 	// TODO: pass a Filter to {{.ListSDKMethod}} (e.g. by name/labels) so we
 	// do not page through every entity in the tenant. Filter types and
@@ -3535,6 +3620,31 @@ func get{{.Entity}}ForUID(
 		return "", fmt.Errorf("failed listing %s: %w", obj.GetTypeName(), ErrNilResponse)
 	}
 
+{{- if .LabelsResponseVariantFields}}
+
+	// List items are root unions whose wrapper exposes no GetID()/GetLabels():
+	// read them from whichever variant is set.
+	// TODO: only the first page of results is scanned. Tracked in
+	// https://github.com/Kong/kong-operator/issues/3987.
+	for _, entry := range {{.ListResponseItemsExpr}} {
+		var (
+			id     string
+			labels map[string]string
+		)
+		switch {
+		{{- range .LabelsResponseVariantFields}}
+		case entry.{{.}} != nil:
+			id, labels = entry.{{.}}.GetID(), entry.{{.}}.GetLabels()
+		{{- end}}
+		default:
+			continue
+		}
+		if id != "" && labels[KubernetesUIDLabelKey] == uid {
+			return id, nil
+		}
+	}
+{{- else}}
+
 	for _, entry := range {{.ListResponseItemsExpr}} {
 		if entry.GetLabels()[KubernetesUIDLabelKey] != string(obj.GetUID()) {
 			continue
@@ -3543,6 +3653,7 @@ func get{{.Entity}}ForUID(
 			return entry.GetID(), nil
 		}
 	}
+{{- end}}
 {{- else if .HasName}}
 
 	// TODO: {{.Entity}}'s Konnect list response lacks labels/tags so UID matching

@@ -137,6 +137,33 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "conversion-listener.token_vault.redis.connection_is_proxied",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "conversion-listener.token_vault.redis.ssl",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "conversion-listener.token_vault.redis.ssl_verify",
+		Path: []string{
+			"conversion-listener",
+			"token_vault",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "conversion-listener.tools.[].annotations.destructive_hint",
 		Path: []string{
 			"conversion-listener",
@@ -246,6 +273,33 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"conversion-only",
 			"enabled",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.redis.connection_is_proxied",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.redis.ssl",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "conversion-only.token_vault.redis.ssl_verify",
+		Path: []string{
+			"conversion-only",
+			"token_vault",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -413,6 +467,33 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		},
 	},
 	{
+		Label: "listener.token_vault.redis.connection_is_proxied",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "listener.token_vault.redis.ssl",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "listener.token_vault.redis.ssl_verify",
+		Path: []string{
+			"listener",
+			"token_vault",
+			"redis",
+			"ssl_verify",
+		},
+	},
+	{
 		Label: "passthrough-listener.config.logging.audits",
 		Path: []string{
 			"passthrough-listener",
@@ -523,6 +604,33 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"passthrough-listener",
 			"enabled",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.redis.connection_is_proxied",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.redis.ssl",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "passthrough-listener.token_vault.redis.ssl_verify",
+		Path: []string{
+			"passthrough-listener",
+			"token_vault",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -645,6 +753,33 @@ var AIGatewayMCPServerSDKOpsBoolFields = []AIGatewayMCPServerSDKOpsBoolField{
 		Path: []string{
 			"upstream-server",
 			"enabled",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.redis.connection_is_proxied",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"redis",
+			"connection_is_proxied",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.redis.ssl",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"redis",
+			"ssl",
+		},
+	},
+	{
+		Label: "upstream-server.token_vault.redis.ssl_verify",
+		Path: []string{
+			"upstream-server",
+			"token_vault",
+			"redis",
+			"ssl_verify",
 		},
 	},
 	{
@@ -1005,22 +1140,28 @@ func (s *AIGatewayMCPServerAPISpec) selectedSDKOpsPayload(payload map[string]any
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayMCPServerConfig.Type {
 	case AIGatewayMCPServerConfigTypeConversionOnly:
 		selected = payload["conversion-only"]
 		variant = "ConversionOnly"
+		variantJSON = "conversion-only"
 	case AIGatewayMCPServerConfigTypeConversionListener:
 		selected = payload["conversion-listener"]
 		variant = "ConversionListener"
+		variantJSON = "conversion-listener"
 	case AIGatewayMCPServerConfigTypeListener:
 		selected = payload["listener"]
 		variant = "Listener"
+		variantJSON = "listener"
 	case AIGatewayMCPServerConfigTypePassthroughListener:
 		selected = payload["passthrough-listener"]
 		variant = "PassthroughListener"
+		variantJSON = "passthrough-listener"
 	case AIGatewayMCPServerConfigTypeUpstreamServer:
 		selected = payload["upstream-server"]
 		variant = "UpstreamServer"
+		variantJSON = "upstream-server"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayMCPServer config type %q", s.AIGatewayMCPServerConfig.Type)
 	}
@@ -1028,7 +1169,7 @@ func (s *AIGatewayMCPServerAPISpec) selectedSDKOpsPayload(payload map[string]any
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayMCPServer config payload missing for type %q", s.AIGatewayMCPServerConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayMCPServerSDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

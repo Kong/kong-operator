@@ -3,7 +3,6 @@ package generator
 import (
 	"fmt"
 	"strings"
-	"text/template"
 
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/config"
 	"github.com/kong/kong-operator/v2/crd-from-oas/pkg/parser"
@@ -136,7 +135,7 @@ func (g *Generator) generateEntityOpsTestFile(
 		}
 	}
 
-	tmpl := template.Must(template.New("ops-controller-tests").Parse(opsControllerTestTemplate))
+	tmpl := parseWithLabelsUnionInject("ops-controller-tests", opsControllerTestTemplate)
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, data); err != nil {
 		return nil, err
@@ -313,6 +312,17 @@ func buildOpsControllerRootUnionFixture(entityName string, schema *parser.Schema
 			VariantTypeName: "AIGatewayAuthStrategyKeyAuth",
 			VariantValue: fmt.Sprintf(
 				`&%[1]s.AIGatewayAuthStrategyKeyAuth{DisplayName: "test-display-name", Name: "test-auth-strategy"}`,
+				apiAlias,
+			),
+		}
+	case "AIGatewayCustomPolicy":
+		return &opsControllerRootUnionFixture{
+			UnionTypeName:   "AIGatewayCustomPolicyConfig",
+			TypeConstName:   "AIGatewayCustomPolicyConfigTypeInstalled",
+			VariantField:    "Installed",
+			VariantTypeName: "CreateAIGatewayCustomPolicyInstalledRequest",
+			VariantValue: fmt.Sprintf(
+				`&%[1]s.CreateAIGatewayCustomPolicyInstalledRequest{DisplayName: "test-display-name", Name: "test-custom-policy", Schema: "return {}"}`,
 				apiAlias,
 			),
 		}

@@ -143,8 +143,8 @@ func (s *EventGatewayBackendClusterAPISpec) marshalSDKOpsPayload() ([]byte, erro
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayBackendClusterAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, EventGatewayBackendClusterSDKOpsFreeformKeyFields)

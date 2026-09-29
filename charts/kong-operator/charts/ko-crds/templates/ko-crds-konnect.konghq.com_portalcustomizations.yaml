@@ -51,6 +51,17 @@ spec:
                   css:
                     maxLength: 253
                     type: string
+                  js:
+                    properties:
+                      custom:
+                        maxLength: 253
+                        type: string
+                      scripts:
+                        items:
+                          type: string
+                        maxItems: 20
+                        type: array
+                    type: object
                   layout:
                     maxLength: 253
                     type: string
@@ -159,6 +170,15 @@ spec:
                           type: object
                         type: array
                     type: object
+                  portalLayout:
+                    properties:
+                      footer:
+                        properties:
+                          snippetName:
+                            maxLength: 512
+                            type: string
+                        type: object
+                    type: object
                   robots:
                     maxLength: 253
                     type: string
@@ -198,6 +218,13 @@ spec:
                         enum:
                         - Enabled
                         - Disabled
+                        type: string
+                      tryItUiAudience:
+                        enum:
+                        - all
+                        - authenticated
+                        - registered
+                        maxLength: 253
                         type: string
                     type: object
                   theme:

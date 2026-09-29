@@ -1222,6 +1222,15 @@ func isEmptyFieldConfig(fc *config.FieldConfig) bool {
 	return true
 }
 
+// apiSpecCursorValidations returns the validations configured directly on the
+// spec.apiSpec cursor, or nil when there are none.
+func apiSpecCursorValidations(apiSpecCursor *config.FieldConfig) []string {
+	if apiSpecCursor == nil || len(apiSpecCursor.Validations) == 0 {
+		return nil
+	}
+	return append([]string(nil), apiSpecCursor.Validations...)
+}
+
 // childFieldConfig returns a deep copy of fc containing only descendant field
 // configuration. Direct validations on the current field are intentionally
 // dropped because they are applied at the field site, not on the nested shared
@@ -2771,6 +2780,9 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 				fn, fn, fn, fn,
 			)}
 	}
+	if parentRef != nil && len(parentRef.AllowedKinds) > 0 {
+		typeXValidations = append(typeXValidations, parentRefAllowedKindsXValidation(parentRef))
+	}
 	// A same-type ObjectRefField reference (e.g. PortalPage's parentPageIDRef)
 	// must not point at the object itself: the reference can never resolve
 	// (the object is not programmed until the reference resolves). The CEL
@@ -2813,6 +2825,10 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField  bool
 		ResponseStatusFields      []config.ResponseStatusFieldConfig
 		TypeXValidations          []string
+		// APISpecValidations are the markers configured directly on
+		// spec.apiSpec (cel.spec.apiSpec._validations), emitted on the APISpec
+		// field, e.g. transition rules spanning a root union's discriminator.
+		APISpecValidations        []string
 		SupportsMirror            bool
 		NeedsCommonV1Alpha1Import bool
 	}{
@@ -2838,6 +2854,7 @@ func (g *Generator) generateCRDType(name string, schema *parser.Schema) (string,
 		EmitParentRefStatusField:  emitParentRefStatusField,
 		ResponseStatusFields:      responseStatusFields,
 		TypeXValidations:          typeXValidations,
+		APISpecValidations:        apiSpecCursorValidations(apiSpecCursor),
 		SupportsMirror:            g.entitySupportsMirror(entityName),
 		NeedsCommonV1Alpha1Import: g.needsCommonV1Alpha1Import(entityName, objectRefImport),
 	}
@@ -3174,6 +3191,21 @@ func parentRefImmutableFieldName(parentRef *config.ParentRefConfig, immediatePar
 		return immediateParentDep.JSONName
 	}
 	return ""
+}
+
+// parentRefAllowedKindsXValidation returns the type-level CEL marker that
+// restricts the config-driven parent ref field's "kind" to
+// parentRef.AllowedKinds.
+func parentRefAllowedKindsXValidation(parentRef *config.ParentRefConfig) string {
+	quoted := make([]string, 0, len(parentRef.AllowedKinds))
+	for _, kind := range parentRef.AllowedKinds {
+		quoted = append(quoted, "'"+kind+"'")
+	}
+	fn := parentRef.FieldName
+	return fmt.Sprintf(
+		`+kubebuilder:validation:XValidation:rule="!has(self.spec.%s) || !has(self.spec.%s.kind) || self.spec.%s.kind in [%s]", message="spec.%s.kind must be one of: %s"`,
+		fn, fn, fn, strings.Join(quoted, ", "), fn, strings.Join(parentRef.AllowedKinds, ", "),
+	)
 }
 
 func rootRefAccessorEntityName(dep *parser.Dependency) string {
@@ -6004,6 +6036,27 @@ type sdkOpsRootUnionVariant struct {
 	WrappedUpdateConstructorName string
 }
 
+// rootUnionUpdateVariantTypeName returns the SDK type of the update-union
+// member matching a create-union variant. Some SDK update unions reuse the
+// create variant types (e.g. AIGatewayAuthStrategyKeyAuth in both), while
+// others declare dedicated update variants (e.g.
+// CreateAIGatewayCustomPolicyInstalledRequest vs.
+// UpdateAIGatewayCustomPolicyInstalledRequest). Prefer the create variant
+// when the update union declares it, then its Create->Update counterpart,
+// and fall back to the create variant otherwise.
+func rootUnionUpdateVariantTypeName(createVariantTypeName string, updateMemberTypes map[string]struct{}) string {
+	if _, ok := updateMemberTypes[createVariantTypeName]; ok {
+		return createVariantTypeName
+	}
+	if after, ok := strings.CutPrefix(createVariantTypeName, "Create"); ok {
+		candidate := "Update" + after
+		if _, ok := updateMemberTypes[candidate]; ok {
+			return candidate
+		}
+	}
+	return createVariantTypeName
+}
+
 // generateSDKOps generates a file with conversion methods from {Entity}APISpec
 // to SDK request types using JSON marshal/unmarshal.
 func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, opsConfig *config.EntityOpsConfig) (string, error) {
@@ -6014,7 +6067,7 @@ func (g *Generator) generateSDKOps(entityName string, schema *parser.Schema, ops
 	boolFields := g.collectSDKOpsBoolFields(schema)
 	constFields := g.collectSDKOpsConstFields(schema)
 	unionUnwrapFields := g.collectSDKOpsUnionUnwrapFields(schema)
-	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(schema)
+	freeformKeyFields := g.collectSDKOpsFreeformKeyFields(entityName, schema)
 
 	if hasRootOneOf(schema) {
 		return g.generateRootUnionSDKOps(entityName, schema, opsConfig, imports, methods, boolFields, constFields, unionUnwrapFields, freeformKeyFields)
@@ -6275,12 +6328,16 @@ func (g *Generator) generateRootUnionSDKOps(
 	// the OAS shape misclassifies variants whose only required $ref property is a
 	// scalar (e.g. a named string), which the SDK collapses to a plain type.
 	updateSDKTypeIsUnion := false
+	updateSDKUnionMemberTypes := map[string]struct{}{}
 	if hasUpdateMethod && !updateIsOperationsWrapped && updateMethodTypeName != "" {
-		memberFields, err := ParseSDKUnionMemberFieldNames(updateMethodImportPath, updateMethodTypeName)
+		memberTypes, err := ParseSDKUnionMemberTypeNames(updateMethodImportPath, updateMethodTypeName)
 		if err != nil {
 			return "", fmt.Errorf("failed to inspect SDK update type %s for %s: %w", updateMethodTypeName, entityName, err)
 		}
-		updateSDKTypeIsUnion = len(memberFields) > 0
+		updateSDKTypeIsUnion = len(memberTypes) > 0
+		for _, memberType := range memberTypes {
+			updateSDKUnionMemberTypes[memberType] = struct{}{}
+		}
 	}
 
 	var rawVariantNames []string
@@ -6321,7 +6378,9 @@ func (g *Generator) generateRootUnionSDKOps(
 			// The SDK update request is a discriminated union (same shape as
 			// create); rebuild the selected variant directly via its update
 			// constructor instead of targeting a nested payload field.
-			updateVariantTypeName = fixInitialisms(variantRefName)
+			updateVariantTypeName = rootUnionUpdateVariantTypeName(
+				fixInitialisms(variantRefName), updateSDKUnionMemberTypes,
+			)
 			updateConstructorName = "Create" + updateMethodTypeName + ctorSuffix
 			updateDirectUnion = true
 		} else if hasUpdateMethod && !updateIsOperationsWrapped {
@@ -6868,13 +6927,18 @@ func allVariantsAnonymousSingleProperty(variants []*parser.Property) bool {
 // pass verbatim. See renameKeysToSDKExcept.
 type sdkOpsFreeformKeyField struct {
 	Path []string
+	// Sensitive marks a free-form leaf that is itself a secretReference
+	// target: the generator wraps it in a SensitiveDataSource, so
+	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
+	// leaving everything below it (user data) verbatim.
+	Sensitive bool
 }
 
 // collectSDKOpsFreeformKeyFields finds free-form/map-data fields, mirroring
 // collectSDKOpsUnionUnwrapFields' walk (including the root-oneOf variant
 // traversal) so it reaches free-form fields nested inside a root union's own
 // variants (e.g. AIGatewayModel's api.config.route.headers).
-func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkOpsFreeformKeyField {
+func (g *Generator) collectSDKOpsFreeformKeyFields(entityName string, schema *parser.Schema) []sdkOpsFreeformKeyField {
 	if schema == nil {
 		return nil
 	}
@@ -6916,7 +6980,49 @@ func (g *Generator) collectSDKOpsFreeformKeyFields(schema *parser.Schema) []sdkO
 		return strings.Join(fields[i].Path, ".") < strings.Join(fields[j].Path, ".")
 	})
 
+	refs := g.config.SecretReferences[entityName]
+	for i := range fields {
+		fields[i].Sensitive = sensitiveFreeformLeaf(refs, fields[i].Path)
+	}
+
 	return fields
+}
+
+// sensitiveFreeformLeaf reports whether the free-form leaf at path is the
+// target of one of the entity's configured SecretReferences, i.e. the
+// generator wraps that leaf in a SensitiveDataSource. Path segments use the
+// payload JSON convention ("[]" descends into every array element); spec
+// paths use "."-separated JSON names where "*" matches any single segment
+// (a union variant) and "headers[]" is expanded to "headers","[]". A
+// secretReference leaf can never be an object with nested properties, so an
+// exact-length match is complete: a sensitive leaf never contains a free-form
+// subtree beneath it.
+func sensitiveFreeformLeaf(refs []config.SecretReferenceConfig, path []string) bool {
+	for _, ref := range refs {
+		segs := strings.Split(strings.TrimPrefix(ref.Path, "spec.apiSpec."), ".")
+		normalized := make([]string, 0, len(segs)+1)
+		for _, s := range segs {
+			if base, hasSlice := strings.CutSuffix(s, "[]"); hasSlice {
+				normalized = append(normalized, base, "[]")
+			} else {
+				normalized = append(normalized, s)
+			}
+		}
+		if len(normalized) != len(path) {
+			continue
+		}
+		matched := true
+		for i := range normalized {
+			if normalized[i] != "*" && normalized[i] != path[i] {
+				matched = false
+				break
+			}
+		}
+		if matched {
+			return true
+		}
+	}
+	return false
 }
 
 func (g *Generator) collectSDKOpsFreeformKeyFieldsFromProperty(prop *parser.Property, path []string, fields *[]sdkOpsFreeformKeyField) {

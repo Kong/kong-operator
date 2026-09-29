@@ -43,6 +43,7 @@ import (
 	ingresserrors "github.com/kong/kong-operator/v2/ingress-controller/pkg/errors"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/scheme"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 // -----------------------------------------------------------------------------
@@ -281,7 +282,7 @@ func adminAPIClients(
 	ctx context.Context,
 	c managercfg.Config,
 	logger logr.Logger,
-	discoverer *adminapi.Discoverer,
+	discoverer *adminapidiscovery.Discoverer,
 	factory adminapi.ClientFactory,
 ) ([]*adminapi.Client, error) {
 	// If kong-admin-svc flag has been specified then use it to get the list
@@ -320,11 +321,11 @@ func adminAPIClients(
 }
 
 type AdminAPIsDiscoverer interface {
-	GetAdminAPIsForService(context.Context, client.Client, k8stypes.NamespacedName) (sets.Set[adminapi.DiscoveredAdminAPI], error)
+	GetAdminAPIsForService(context.Context, client.Client, k8stypes.NamespacedName) (sets.Set[adminapidiscovery.DiscoveredAdminAPI], error)
 }
 
 type AdminAPIClientFactory interface {
-	CreateAdminAPIClient(context.Context, adminapi.DiscoveredAdminAPI) (*adminapi.Client, error)
+	CreateAdminAPIClient(context.Context, adminapidiscovery.DiscoveredAdminAPI) (*adminapi.Client, error)
 }
 
 func AdminAPIClientFromServiceDiscovery(
@@ -363,7 +364,7 @@ func AdminAPIClientFromServiceDiscovery(
 		}),
 	}, retryOpts...)
 
-	var adminAPIs []adminapi.DiscoveredAdminAPI
+	var adminAPIs []adminapidiscovery.DiscoveredAdminAPI
 	if err := retry.New(
 		fetchEndpointsRetryOptions...,
 	).Do(

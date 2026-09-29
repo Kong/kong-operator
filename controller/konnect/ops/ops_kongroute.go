@@ -204,20 +204,14 @@ func kongRouteToSDKRouteInput(
 			PathHandling:            route.Spec.PathHandling,
 			Paths:                   route.Spec.Paths,
 			PreserveHost:            route.Spec.PreserveHost,
-			Protocols: func() []sdkkonnectcomp.RouteJSONProtocols {
-				return lo.Map(route.Spec.Protocols,
-					func(p sdkkonnectcomp.Protocols, _ int) sdkkonnectcomp.RouteJSONProtocols {
-						return sdkkonnectcomp.RouteJSONProtocols(p)
-					},
-				)
-			}(),
-			RegexPriority:     route.Spec.RegexPriority,
-			RequestBuffering:  route.Spec.RequestBuffering,
-			ResponseBuffering: route.Spec.ResponseBuffering,
-			Snis:              route.Spec.Snis,
-			Sources:           route.Spec.Sources,
-			StripPath:         route.Spec.StripPath,
-			Tags:              GenerateTagsForObject(route, route.Spec.Tags...),
+			Protocols:               route.Spec.Protocols,
+			RegexPriority:           route.Spec.RegexPriority,
+			RequestBuffering:        route.Spec.RequestBuffering,
+			ResponseBuffering:       route.Spec.ResponseBuffering,
+			Snis:                    route.Spec.Snis,
+			Sources:                 route.Spec.Sources,
+			StripPath:               route.Spec.StripPath,
+			Tags:                    GenerateTagsForObject(route, route.Spec.Tags...),
 		},
 	}
 	if route.Status.Konnect != nil && route.Status.Konnect.ServiceID != "" {

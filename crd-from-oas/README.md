@@ -143,6 +143,13 @@ types:
 - `cases[].matchFields`: field comparisons relative to the selected variant
   object and the SDK list response item.
 
+When the request body declares `labels`, the generated helper matches the
+Kubernetes UID label (`k8s-uid`). If the SDK list response items are
+root-level discriminated unions (the wrapper exposes no `GetID()` /
+`GetLabels()`), the generated helper reads the ID and labels from whichever
+union member is set; every member must declare `ID` and `Labels`, otherwise
+generation fails and the entity must set `ops.skipGetForUID: true`.
+
 If none of the generated strategies fit, leave `skipGetForUID: true` in the
 config and provide a hand-written helper in
 `controller/konnect/ops/ops_<entity>_manual.go`.

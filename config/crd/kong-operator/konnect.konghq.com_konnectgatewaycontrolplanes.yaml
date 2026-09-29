@@ -429,6 +429,14 @@ spec:
 
                       Keys must be of length 1-63 characters, and cannot start with "kong", "konnect", "mesh", "kic", or "_".
                     type: object
+                  managed_by:
+                    additionalProperties:
+                      type: string
+                    description: |-
+                      Stores information about what manages this entity, such as the tool or system responsible for its lifecycle (for example, `terraform`).
+
+                      Keys must be 1–63 characters long and start with an alphanumeric character.
+                    type: object
                   name:
                     description: The name of the control plane.
                     type: string

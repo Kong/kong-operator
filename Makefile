@@ -289,6 +289,9 @@ lint.modules:
 # NOTE: we need to run golangci-lint separately in the root and in crd-from-oas
 # because it does not support running in repos that have multiple Go modules defined.
 # Ref: https://github.com/golangci/golangci-lint/issues/828
+# NOTE: with default GOLANGCI_LINT_FLAGS (empty), auto-fixes are applied (fix: true in
+# .golangci.yaml). CI sets GOLANGCI_LINT_FLAGS="--fix=false". To auto-fix issues without
+# linting the crd-from-oas module, run `make generate.lint-fix` instead.
 .PHONY: lint.golangci-lint
 lint.golangci-lint: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) $(GOLANGCI_LINT_FLAGS)
@@ -357,7 +360,7 @@ API_DIR ?= api
 #   make generate && make manifests && make test.charts.golden.update
 # into a single command: make generate
 # Note: manifests is placed near the end to preserve the prior ordering (docs are generated from CRDs first).
-generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.lint-fix generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
+generate: generate.api generate.api-from-oas generate.crds generate.crd-kustomize generate.k8sio-gomod-replace generate.apitypes-funcs generate.docs generate.controllers-aigw manifests test.charts.golden.update generate.cli-arguments-docs test.kongintegration.golden.update
 
 .PHONY: generate.crds
 generate.crds: controller-gen ## Generate WebhookConfiguration and CustomResourceDefinition objects.
@@ -387,7 +390,10 @@ generate.docs: generate.apidocs
 generate.apidocs: crd-ref-docs
 	./scripts/apidocs-gen/generate.sh $(CRD_REF_DOCS)
 
-# Apply same auto-fixes as golangci-lint to keep generate and lint consistent
+# Apply golangci-lint auto-fixes (same checks as lint.golangci-lint, with fixes applied).
+# Not part of the `generate` chain: CI already runs these checks (without fixes) in the
+# lint job, and fixes made during CI's generators run would be discarded.
+# Run this manually to fix linter issues in generated or regular code.
 .PHONY: generate.lint-fix
 generate.lint-fix: golangci-lint
 	$(GOLANGCI_LINT) run -v --config $(GOLANGCI_LINT_CONFIG) --fix

@@ -38,8 +38,8 @@ func (s *AIGatewayCACertificateAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayCACertificateAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
-	payload = flattenSensitiveData(payload)
+	payload = flattenSDKUnionsExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)
+	payload = flattenSensitiveDataExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, AIGatewayCACertificateSDKOpsFreeformKeyFields)

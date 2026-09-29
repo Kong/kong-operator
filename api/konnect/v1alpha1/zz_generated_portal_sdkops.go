@@ -18,6 +18,49 @@ type PortalSDKOpsBoolField struct {
 // PortalSDKOpsBoolFields lists all boolean enum fields that must be normalized for SDK payloads.
 var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 	{
+		Label: "ai.enabled",
+		Path: []string{
+			"ai",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.ai_search.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"ai_search",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.mcp_server.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"mcp_server",
+			"enabled",
+		},
+	},
+	{
+		Label: "ai.features.mcp_server.write_operations_enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"mcp_server",
+			"write_operations_enabled",
+		},
+	},
+	{
+		Label: "ai.features.portal_agent.enabled",
+		Path: []string{
+			"ai",
+			"features",
+			"portal_agent",
+			"enabled",
+		},
+	},
+	{
 		Label: "authentication_enabled",
 		Path: []string{
 			"authentication_enabled",
@@ -33,6 +76,12 @@ var PortalSDKOpsBoolFields = []PortalSDKOpsBoolField{
 		Label: "auto_approve_developers",
 		Path: []string{
 			"auto_approve_developers",
+		},
+	},
+	{
+		Label: "create_default_content",
+		Path: []string{
+			"create_default_content",
 		},
 	},
 	{
@@ -155,7 +204,7 @@ func (s *PortalAPISpec) marshalSDKOpsPayload() ([]byte, error) {
 	if err := json.Unmarshal(data, &payload); err != nil {
 		return nil, fmt.Errorf("failed to decode PortalAPISpec: %w", err)
 	}
-	payload = flattenSDKUnions(payload)
+	payload = flattenSDKUnionsExcept(payload, PortalSDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	payload = renameKeysToSDKExcept(payload, PortalSDKOpsFreeformKeyFields)

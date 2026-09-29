@@ -1,0 +1,936 @@
+apiVersion: chainsaw.kyverno.io/v1alpha1
+kind: Test
+metadata:
+  name: aigateway-custom-policy
+spec:
+  description: |
+    Konnect AIGateway - Custom Policy. Stands up a Konnect AIGateway control
+    plane and exercises the AIGatewayCustomPolicy CRD against the real Konnect
+    API:
+
+    - creates an "installed" and a "streaming" custom policy and verifies both
+      on the Konnect side (type, display name, labels, managed_by, the
+      Kubernetes UID label, and the Konnect ID matching the CR's status.id);
+    - updates the streaming policy and verifies Konnect was updated in place;
+    - removes a user label and verifies Konnect drops it (updates replace the
+      whole policy) while keeping the operator's Kubernetes metadata labels;
+    - clears the streaming CR's status.id, so the operator's next create hits
+      a 409 conflict, and verifies it recovers the same Konnect policy through
+      the Kubernetes UID label (the generated getAIGatewayCustomPolicyForUID);
+    - creates a custom policy directly in Konnect, then applies a CR with the
+      same type and name, verifying the operator does not adopt a policy it
+      does not own (the create conflict is resolved by the Kubernetes UID
+      label only) and leaves it untouched, also when the CR is deleted;
+    - applies a second CR with the same name as an existing one, verifying it
+      does not take over the first CR's Konnect policy: it is never
+      programmed, does not overwrite it, and deleting it does not delete it;
+    - deletes the CRs and verifies the custom policies are removed from
+      Konnect.
+
+    Konnect is queried directly through the generic konnect_api_request.sh;
+    the Konnect AI Gateway ID, the CRs' Konnect IDs and UIDs are read with
+    get_resource_field.sh. Custom policies are addressed by name: the API
+    accepts an ID or a name, and the name is unique and immutable.
+
+    No data plane is needed: this test covers the CRD <-> Konnect contract,
+    not policy execution on traffic.
+  bindings:
+    - name: test_name
+      value: ($namespace)
+    - name: konnect_token
+      value: (env('KONNECT_TOKEN'))
+    - name: konnect_url
+      value: (env('KONNECT_SERVER_URL') || 'eu.api.konghq.tech')
+    - name: auth_secret_name
+      value: (join('-', [($test_name), 'konnect-auth-secret']))
+    - name: auth_secret_namespace
+      value: ($namespace)
+    - name: konnect_auth_name
+      value: (join('-', [($test_name), 'konnect-api-auth']))
+    - name: konnect_auth_namespace
+      value: ($namespace)
+    - name: aigw_cp_name
+      value: (join('-', [($test_name), 'cp']))
+    - name: aigw_cp_namespace
+      value: ($namespace)
+    - name: custom_policy_resource
+      value: aigatewaycustompolicies.aiconfiguration.konghq.com
+    - name: installed_cr_name
+      value: custom-policy-installed
+    - name: installed_policy_name
+      value: (join('-', [($test_name), 'installed']))
+    - name: installed_display_name
+      value: Chainsaw installed custom policy
+    - name: label_team
+      value: chainsaw
+    - name: streaming_cr_name
+      value: custom-policy-streaming
+    - name: streaming_policy_name
+      value: (join('-', [($test_name), 'streaming']))
+    - name: foreign_cr_name
+      value: custom-policy-foreign
+    - name: foreign_policy_name
+      value: (join('-', [($test_name), 'foreign']))
+    - name: foreign_display_name
+      value: Created outside the operator
+    - name: duplicate_cr_name
+      value: custom-policy-duplicate
+  steps:
+    - name: Create-auth-secret
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAuthSecret.yaml
+    - name: Create-konnect-api-auth
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAPIAuthConfiguration-secretref.yaml
+    - name: Create-konnect-aigateway
+      bindings:
+        - name: auth_name
+          value: ($konnect_auth_name)
+      use:
+        template: ../../common/_step_templates/apply-assert-konnectAIGateway.yaml
+
+    - name: Create-installed-custom-policy
+      description: |
+        Create an "installed" AIGatewayCustomPolicy and verify it on the
+        Konnect side: ID matching the CR's status.id, type, display name, user
+        labels, managed_by, and the CR's Kubernetes UID label.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($installed_cr_name)
+        - name: konnect_policy_name
+          value: ($installed_policy_name)
+      try:
+        - apply:
+            file: 01-custom-policy-installed.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($installed_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($installed_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_uid
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $installed_policy_name]))
+              - name: WANT_ID
+                value: ($policy_id)
+              - name: WANT_UID
+                value: ($policy_uid)
+              - name: WANT_DISPLAY_NAME
+                value: ($installed_display_name)
+              - name: EXPECTED_JQ
+                value: >-
+                  .id == $ENV.WANT_ID and .type == "installed"
+                  and .display_name == $ENV.WANT_DISPLAY_NAME
+                  and .labels["k8s-uid"] == $ENV.WANT_UID
+                  and .labels.team == "chainsaw-installed"
+                  and .managed_by.tool == "chainsaw"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Create-streaming-custom-policy
+      description: |
+        Create a "streaming" AIGatewayCustomPolicy and verify it on the
+        Konnect side: ID matching the CR's status.id, type, display name,
+        handler, user labels, managed_by, and the CR's Kubernetes UID label.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_cr_name)
+        - name: konnect_policy_name
+          value: ($streaming_policy_name)
+        - name: display_name
+          value: Chainsaw streaming custom policy
+        - name: handler_marker
+          value: chainsaw-v1
+      try:
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_uid
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $streaming_policy_name]))
+              - name: WANT_ID
+                value: ($policy_id)
+              - name: WANT_UID
+                value: ($policy_uid)
+              - name: WANT_DISPLAY_NAME
+                value: ($display_name)
+              - name: WANT_HANDLER_MARKER
+                value: ($handler_marker)
+              - name: EXPECTED_JQ
+                value: >-
+                  .id == $ENV.WANT_ID and .type == "streaming"
+                  and .display_name == $ENV.WANT_DISPLAY_NAME
+                  and (.handler | contains($ENV.WANT_HANDLER_MARKER))
+                  and .labels["k8s-uid"] == $ENV.WANT_UID
+                  and .labels.team == "chainsaw"
+                  and .managed_by.tool == "chainsaw"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Update-streaming-custom-policy
+      description: |
+        Change the streaming policy's display name, handler and labels, and
+        verify Konnect holds the new values under the same ID (updated in
+        place, not deleted and recreated), still owned by the CR.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_cr_name)
+        - name: konnect_policy_name
+          value: ($streaming_policy_name)
+        - name: display_name
+          value: Chainsaw streaming custom policy (updated)
+        - name: handler_marker
+          value: chainsaw-v2
+        - name: label_team
+          value: chainsaw-updated
+      try:
+        - description: Record the Konnect ID before the update.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: id_before_update
+                value: (json_parse($stdout).value)
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_uid
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $streaming_policy_name]))
+              - name: WANT_ID
+                value: ($id_before_update)
+              - name: WANT_UID
+                value: ($policy_uid)
+              - name: WANT_DISPLAY_NAME
+                value: ($display_name)
+              - name: WANT_HANDLER_MARKER
+                value: ($handler_marker)
+              - name: EXPECTED_JQ
+                value: >-
+                  .id == $ENV.WANT_ID and .type == "streaming"
+                  and .display_name == $ENV.WANT_DISPLAY_NAME
+                  and (.handler | contains($ENV.WANT_HANDLER_MARKER))
+                  and .updated_at != .created_at
+                  and .labels["k8s-uid"] == $ENV.WANT_UID
+                  and .labels.team == "chainsaw-updated"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - description: The CR still carries the same Konnect ID.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            check:
+              ($error == null): true
+              (json_parse($stdout).value == $id_before_update): true
+
+    - name: Remove-label-from-streaming-custom-policy
+      description: |
+        Remove the user "team" label from the streaming policy's spec and
+        verify Konnect no longer has it, while the Kubernetes metadata labels
+        (including the UID label) and managed_by are kept.
+      try:
+        - patch:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($streaming_cr_name)
+                namespace: ($namespace)
+              spec:
+                apiSpec:
+                  streaming:
+                    labels:
+                      team: null
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_uid
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $streaming_policy_name]))
+              - name: WANT_UID
+                value: ($policy_uid)
+              - name: EXPECTED_JQ
+                value: >-
+                  .labels.team == null
+                  and .labels["k8s-uid"] == $ENV.WANT_UID
+                  and .managed_by.tool == "chainsaw"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Recover-lost-Konnect-ID-by-UID-label
+      description: |
+        Clear the streaming CR's status.id, as if the operator lost it (e.g.
+        a failed status write). The operator creates the policy again, gets a
+        409 conflict (the name is taken by its own policy), and must recover
+        the existing policy through the Kubernetes UID label: the CR gets the
+        same Konnect ID back and no second policy is created.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($streaming_cr_name)
+      try:
+        - description: Record the Konnect ID before clearing it.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: id_before_clear
+                value: (json_parse($stdout).value)
+        - description: Clear status.id.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: SUBRESOURCE
+                value: status
+              - name: FIELD_PATH
+                value: /status/id
+              - name: OP
+                value: remove
+            content: |
+              bash ../../common/scripts/patch_resource_field.sh
+            check:
+              ($error == null): true
+              (json_parse($stdout).value == null): true
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+        - description: The CR got the same Konnect ID back.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            check:
+              ($error == null): true
+              (json_parse($stdout).value == $id_before_clear): true
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($streaming_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: policy_uid
+                value: (json_parse($stdout).value)
+        - description: Konnect still has the one policy, owned by the CR.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $streaming_policy_name]))
+              - name: WANT_ID
+                value: ($id_before_clear)
+              - name: WANT_UID
+                value: ($policy_uid)
+              - name: EXPECTED_JQ
+                value: .id == $ENV.WANT_ID and .labels["k8s-uid"] == $ENV.WANT_UID
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Do-not-adopt-custom-policy-created-outside-the-operator
+      description: |
+        Create a streaming custom policy directly in Konnect, then apply a CR
+        with the same type and name. The operator's create gets a 409
+        conflict, and the conflict lookup only matches the Kubernetes UID
+        label, which the pre-created policy does not carry: the CR must not
+        adopt it (never Programmed, no status.id) and the Konnect policy must
+        stay untouched. Deleting the CR must not delete the Konnect policy.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($foreign_cr_name)
+        - name: konnect_policy_name
+          value: ($foreign_policy_name)
+        - name: display_name
+          value: Chainsaw foreign custom policy
+        - name: handler_marker
+          value: chainsaw-foreign
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - description: Create the custom policy directly in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: METHOD
+                value: POST
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies']))
+              - name: POLICY_NAME
+                value: ($foreign_policy_name)
+              - name: POLICY_DISPLAY_NAME
+                value: ($foreign_display_name)
+              - name: BODY
+                value: >-
+                  {name: $ENV.POLICY_NAME, type: "streaming",
+                  display_name: $ENV.POLICY_DISPLAY_NAME,
+                  schema: ("return { name = \"" + $ENV.POLICY_NAME + "\", fields = { { config = { type = \"record\", fields = {} } } } }"),
+                  handler: "return { PRIORITY = 1000, VERSION = \"1.0.0\" }"}
+              - name: EXPECTED_STATUS
+                value: "200,201"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+            outputs:
+              - name: precreated_id
+                value: (json_parse($stdout).body.id)
+        - apply:
+            file: 02-custom-policy-streaming.yaml
+        - assert:
+            file: 03-assert-custom-policy-not-programmed.yaml
+        - description: |
+            The CR stays unprogrammed (no status.id) across more than one
+            Konnect sync (default: 1 minute), so a late adoption would show.
+            The next operation then verifies the Konnect side is untouched.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($foreign_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: JQ_CONDITION
+                value: >-
+                  .status | (.id // "") == ""
+                  and ([.conditions[]? | select(.type == "Programmed" and .status == "True")] | length) == 0
+            content: |
+              bash ../../common/scripts/assert_resource_condition_holds.sh
+        - description: The pre-created policy keeps its ID and display name and never gets a UID label.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $foreign_policy_name]))
+              - name: WANT_ID
+                value: ($precreated_id)
+              - name: WANT_DISPLAY_NAME
+                value: ($foreign_display_name)
+              - name: EXPECTED_JQ
+                value: >-
+                  .id == $ENV.WANT_ID and .type == "streaming"
+                  and .display_name == $ENV.WANT_DISPLAY_NAME
+                  and .labels["k8s-uid"] == null
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($foreign_cr_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($foreign_cr_name)
+                namespace: ($namespace)
+        - description: Deleting the CR must leave the pre-created policy in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $foreign_policy_name]))
+              - name: WANT_ID
+                value: ($precreated_id)
+              - name: WANT_DISPLAY_NAME
+                value: ($foreign_display_name)
+              - name: EXPECTED_JQ
+                value: .id == $ENV.WANT_ID and .display_name == $ENV.WANT_DISPLAY_NAME
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+      finally:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - description: Remove the pre-created policy from Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: METHOD
+                value: DELETE
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $foreign_policy_name]))
+              - name: EXPECTED_STATUS
+                value: "200,204,404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+
+    - name: Duplicate-CR-does-not-take-over-an-existing-custom-policy
+      description: |
+        Apply a second CR with the same name (and type) as the installed
+        policy's CR, but a different display name. Its create gets a 409
+        conflict, and the conflict lookup must not match the first CR's policy
+        (it carries the first CR's Kubernetes UID label). The duplicate must
+        never be programmed, must not overwrite the policy, and deleting it
+        must not delete the policy from Konnect.
+      bindings:
+        - name: aigw_custom_policy_name
+          value: ($duplicate_cr_name)
+        - name: konnect_policy_name
+          value: ($installed_policy_name)
+        - name: installed_display_name
+          value: Chainsaw duplicate custom policy
+      try:
+        - description: Record the installed policy's Konnect ID and UID.
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($installed_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: installed_id
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($installed_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .metadata.uid
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: installed_uid
+                value: (json_parse($stdout).value)
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - apply:
+            file: 01-custom-policy-installed.yaml
+        - assert:
+            file: 03-assert-custom-policy-not-programmed.yaml
+        - description: |
+            The duplicate stays unprogrammed across more than one Konnect sync
+            (default: 1 minute).
+          script:
+            env:
+              - name: RESOURCE_TYPE
+                value: ($custom_policy_resource)
+              - name: RESOURCE_NAME
+                value: ($duplicate_cr_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: JQ_CONDITION
+                value: >-
+                  .status | (.id // "") == ""
+                  and ([.conditions[]? | select(.type == "Programmed" and .status == "True")] | length) == 0
+            content: |
+              bash ../../common/scripts/assert_resource_condition_holds.sh
+        - description: The policy is still the first CR's, with its original display name.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $installed_policy_name]))
+              - name: WANT_ID
+                value: ($installed_id)
+              - name: WANT_UID
+                value: ($installed_uid)
+              - name: EXPECTED_JQ
+                value: >-
+                  .id == $ENV.WANT_ID
+                  and .display_name == "Chainsaw installed custom policy"
+                  and .labels["k8s-uid"] == $ENV.WANT_UID
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($duplicate_cr_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                name: ($duplicate_cr_name)
+                namespace: ($namespace)
+        - description: Deleting the duplicate must leave the first CR's policy in Konnect.
+          script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $installed_policy_name]))
+              - name: WANT_ID
+                value: ($installed_id)
+              - name: WANT_UID
+                value: ($installed_uid)
+              - name: EXPECTED_JQ
+                value: .id == $ENV.WANT_ID and .labels["k8s-uid"] == $ENV.WANT_UID
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - assert:
+            file: 00-assert-custom-policy-programmed.yaml
+            bindings:
+              - name: aigw_custom_policy_name
+                value: ($installed_cr_name)
+
+    - name: Delete-custom-policies-and-verify-konnect-cleanup
+      description: |
+        Delete every AIGatewayCustomPolicy, wait for the Konnect-side finalizer
+        to clear, and verify Konnect no longer has the policies. Done inside
+        try: (rather than relying on end-of-test cleanup, which also deletes
+        the whole AI Gateway) so a hanging deletion fires the catch: snapshot
+        and a leftover policy fails the test.
+      try:
+        - script:
+            env:
+              - name: RESOURCE_TYPE
+                value: konnectaigateways.konnect.konghq.com
+              - name: RESOURCE_NAME
+                value: ($aigw_cp_name)
+              - name: NAMESPACE
+                value: ($namespace)
+              - name: FIELD
+                value: .status.id
+            content: |
+              bash ../../common/scripts/get_resource_field.sh
+            outputs:
+              - name: gateway_id
+                value: (json_parse($stdout).value)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($installed_cr_name)
+              namespace: ($namespace)
+        - delete:
+            ref:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              name: ($streaming_cr_name)
+              namespace: ($namespace)
+        - error:
+            resource:
+              apiVersion: aiconfiguration.konghq.com/v1alpha1
+              kind: AIGatewayCustomPolicy
+              metadata:
+                namespace: ($namespace)
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $installed_policy_name]))
+              - name: EXPECTED_STATUS
+                value: "404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+        - script:
+            env:
+              - name: KONNECT_TOKEN
+                value: ($konnect_token)
+              - name: KONNECT_URL
+                value: ($konnect_url)
+              - name: API_PATH
+                value: (join('', ['/v1/ai-gateways/', $gateway_id, '/custom-policies/', $streaming_policy_name]))
+              - name: EXPECTED_STATUS
+                value: "404"
+            content: |
+              bash ../../common/scripts/konnect_api_request.sh
+  catch:
+    - description: Capture debug snapshot on test failure.
+      script:
+        env:
+          - name: TEST_NAME
+            value: aigateway-custom-policy
+          - name: NAMESPACE
+            value: ($namespace)
+          - name: OPERATOR_NAMESPACE
+            value: kong-system
+        content: |
+          bash ../../common/scripts/debug_snapshot.sh

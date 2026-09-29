@@ -73,13 +73,58 @@ type KonnectEntityRef struct {
 // to {"<disc>": "X", ...}, while scalar and array members are rewritten to
 // the bare selected payload. Both forms match the Konnect SDK request types.
 func flattenSDKUnions(v any) any {
+	return flattenSDKUnionsWalk(v, nil)
+}
+
+// flattenSDKUnionsExcept is flattenSDKUnions, but leaves every subtree at or
+// under a free-form path in fields untouched (see sdkOpsFreeformKeyField):
+// free-form config is user data that Konnect accepts as-is, so the
+// discriminated-union heuristic must never rewrite it, nor rewrite any map
+// holding such a subtree (a sibling string value naming the free-form key
+// would otherwise delete the subtree and hoist its contents).
+func flattenSDKUnionsExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		paths = append(paths, f.Path)
+	}
+	return flattenSDKUnionsWalk(v, paths)
+}
+
+// flattenSDKUnionsExceptUnder is flattenSDKUnionsExcept for root-union
+// entities, whose free-form paths are prefixed with the selected variant's
+// JSON name (they are shared with the full-payload-scope renameKeysToSDKExcept
+// walk); the prefix is stripped so the paths apply within the variant payload
+// selected by selectedSDKOpsPayload.
+func flattenSDKUnionsExceptUnder(v any, fields []sdkOpsFreeformKeyField, variant string) any {
+	paths := make([][]string, 0, len(fields))
+	for _, f := range fields {
+		if len(f.Path) > 1 && f.Path[0] == variant {
+			paths = append(paths, f.Path[1:])
+		}
+	}
+	return flattenSDKUnionsWalk(v, paths)
+}
+
+func flattenSDKUnionsWalk(v any, paths [][]string) any {
 	switch x := v.(type) {
 	case map[string]any:
+		protected := false
 		for k, val := range x {
-			x[k] = flattenSDKUnions(val)
+			// Paths use snake_case segments (they are shared with the
+			// post-rename renameKeysToSDKExcept walk); camelToSnakeCase is
+			// idempotent on already-snake keys, so this matches both the
+			// pre-rename and post-rename pipelines.
+			sub, atLeaf := advanceFreeformKeyPaths(paths, camelToSnakeCase(k))
+			if atLeaf {
+				// Free-form subtree: user data. Rewriting this map could
+				// delete or clobber it, so skip the union rewrite.
+				protected = true
+				continue
+			}
+			x[k] = flattenSDKUnionsWalk(val, sub)
 		}
 		_, discriminatorValue, inner, ok := nestedSDKUnionMember(x)
-		if !ok {
+		if !ok || protected {
 			return x
 		}
 		innerMap, ok := inner.(map[string]any)
@@ -98,8 +143,9 @@ func flattenSDKUnions(v any) any {
 		}
 		return x
 	case []any:
+		sub, _ := advanceFreeformKeyPaths(paths, "[]")
 		for i, val := range x {
-			x[i] = flattenSDKUnions(val)
+			x[i] = flattenSDKUnionsWalk(val, sub)
 		}
 		return x
 	}
@@ -167,6 +213,103 @@ func flattenSensitiveData(v any) any {
 	return v
 }
 
+// advanceFreeformKeyFields mirrors advanceFreeformKeyPaths over typed
+// free-form fields, reporting whether the matched leaf is sensitive.
+func advanceFreeformKeyFields(fields []sdkOpsFreeformKeyField, seg string) (sub []sdkOpsFreeformKeyField, sensitive, ok bool) {
+	for _, f := range fields {
+		if len(f.Path) == 0 {
+			continue
+		}
+		head := f.Path[0]
+		if head != seg && !(head == "{}" && seg != "[]") {
+			continue
+		}
+		if len(f.Path) == 1 {
+			ok = true
+			if f.Sensitive {
+				sensitive = true
+			}
+			continue
+		}
+		sub = append(sub, sdkOpsFreeformKeyField{Path: f.Path[1:], Sensitive: f.Sensitive})
+	}
+	return sub, sensitive, ok
+}
+
+// unwrapSensitiveDataSource collapses a SensitiveDataSource wire shape
+// {"type": "inline|secretRef", "value": X, ...} to X at a single free-form
+// leaf. Mirrors flattenSensitiveData's per-map check, including returning the
+// map unchanged when there is no "value" key (e.g. an unresolved secretRef).
+func unwrapSensitiveDataSource(v any) any {
+	m, ok := v.(map[string]any)
+	if !ok {
+		return v
+	}
+	typ, _ := m["type"].(string)
+	if typ != "inline" && typ != "secretRef" {
+		return v
+	}
+	if rawVal, hasVal := m["value"]; hasVal {
+		return rawVal
+	}
+	return v
+}
+
+// flattenSensitiveDataExcept is flattenSensitiveData scoped by free-form
+// fields: at or under every free-form leaf the walk stops rewriting, because
+// those maps are user data (labels, header maps, nested inline-shaped
+// objects) that must reach the SDK verbatim — a user map that merely *looks*
+// like {"type": "inline", "value": X} must not be collapsed. The one
+// exception is a free-form leaf marked Sensitive: the generator itself wraps
+// it in a DataSource, so the leaf's own wrapper is unwrapped while its
+// contents stay untouched. Everywhere else the generic collapse applies
+// unchanged.
+func flattenSensitiveDataExcept(v any, fields []sdkOpsFreeformKeyField) any {
+	return flattenSensitiveDataWalk(v, fields)
+}
+
+func flattenSensitiveDataWalk(v any, fields []sdkOpsFreeformKeyField) any {
+	switch x := v.(type) {
+	case map[string]any:
+		for k, val := range x {
+			// Paths hold JSON names shared with the rename walk;
+			// camelToSnakeCase is idempotent on already-snake/kebab keys, so
+			// this matches both the pre-rename and post-rename pipelines.
+			sub, sensitiveLeaf, atLeaf := advanceFreeformKeyFields(fields, camelToSnakeCase(k))
+			if atLeaf {
+				if sensitiveLeaf {
+					x[k] = unwrapSensitiveDataSource(val)
+				}
+				// Free-form leaf: never descend, never rewrite user data.
+				continue
+			}
+			x[k] = flattenSensitiveDataWalk(val, sub)
+		}
+		typ, _ := x["type"].(string)
+		if typ != "inline" && typ != "secretRef" {
+			return x
+		}
+		if rawVal, hasVal := x["value"]; hasVal {
+			return rawVal
+		}
+		return x
+	case []any:
+		sub, sensitiveLeaf, atLeaf := advanceFreeformKeyFields(fields, "[]")
+		for i, val := range x {
+			if atLeaf {
+				if sensitiveLeaf {
+					x[i] = unwrapSensitiveDataSource(val)
+				}
+				// Free-form leaf: never descend, never rewrite user data.
+				continue
+			}
+			x[i] = flattenSensitiveDataWalk(val, sub)
+		}
+		return x
+	}
+	return v
+}
+
 // camelToSnakeCase converts a camelCase string to snake_case.
 // e.g. "bootstrapServers" → "bootstrap_servers", "defaultAPIVisibility" → "default_api_visibility"
 func camelToSnakeCase(s string) string {
@@ -203,6 +346,11 @@ func isSDKDiscriminatorKey(key string) bool {
 // not be camelCase→snake_case renamed by renameKeysToSDK.
 type sdkOpsFreeformKeyField struct {
 	Path []string
+	// Sensitive marks a free-form leaf that is itself a secretReference
+	// target: the generator wraps it in a SensitiveDataSource, so
+	// flattenSensitiveDataExcept collapses that wrapper at the leaf while
+	// leaving everything below it (user data) verbatim.
+	Sensitive bool
 }
 
 func renameKeysToSDK(v any) any {

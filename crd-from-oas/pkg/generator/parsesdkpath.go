@@ -81,6 +81,96 @@ func ParseSDKUnionMemberFieldNames(importPath, typeName string) ([]string, error
 	return extractSDKUnionMemberFieldNames(structType), nil
 }
 
+// ParseSDKUnionMemberTypeNames returns the type names of the struct fields
+// tagged as union members on an SDK type. It returns an empty slice when the
+// type is not a union wrapper.
+func ParseSDKUnionMemberTypeNames(importPath, typeName string) ([]string, error) {
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil {
+		return nil, err
+	}
+	if !ok {
+		return nil, nil
+	}
+	return extractSDKUnionMemberTypeNames(structType)
+}
+
+// sdkStructHasField reports whether the SDK struct typeName in importPath
+// declares a field named fieldName.
+func sdkStructHasField(importPath, typeName, fieldName string) (bool, error) {
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("type %q not found in %q", typeName, importPath)
+	}
+	for _, field := range structType.Fields.List {
+		for _, name := range field.Names {
+			if name.Name == fieldName {
+				return true, nil
+			}
+		}
+	}
+	return false, nil
+}
+
+// sdkStructFieldIsStringMap reports whether the field fieldName of the SDK
+// components struct typeName is a map[string]string. It errors when the type
+// or field is not found.
+func sdkStructFieldIsStringMap(typeName, fieldName string) (bool, error) {
+	const importPath = "github.com/Kong/sdk-konnect-go/models/components"
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil {
+		return false, err
+	}
+	if !ok {
+		return false, fmt.Errorf("type %q not found in %q", typeName, importPath)
+	}
+	for _, field := range structType.Fields.List {
+		for _, name := range field.Names {
+			if name.Name != fieldName {
+				continue
+			}
+			mapType, isMap := field.Type.(*ast.MapType)
+			if !isMap {
+				return false, nil
+			}
+			key, keyOK := mapType.Key.(*ast.Ident)
+			value, valueOK := mapType.Value.(*ast.Ident)
+			return keyOK && valueOK && key.Name == "string" && value.Name == "string", nil
+		}
+	}
+	return false, fmt.Errorf("field %q not found on type %q in %q", fieldName, typeName, importPath)
+}
+
+// sdkSliceFieldElemTypeName returns the element type name of the slice field
+// fieldName on the SDK struct typeName in importPath. ok is false when the
+// type is not declared in the package, or has no such slice field.
+func sdkSliceFieldElemTypeName(importPath, typeName, fieldName string) (string, bool, error) {
+	structType, ok, err := sdkStructType(importPath, typeName)
+	if err != nil || !ok {
+		return "", false, err
+	}
+	for _, field := range structType.Fields.List {
+		for _, name := range field.Names {
+			if name.Name != fieldName {
+				continue
+			}
+			arrayType, isArray := field.Type.(*ast.ArrayType)
+			if !isArray {
+				return "", false, nil
+			}
+			elemTypeName, _, err := sdkFieldTypeName(arrayType.Elt)
+			if err != nil {
+				return "", false, err
+			}
+			return elemTypeName, true, nil
+		}
+	}
+	return "", false, nil
+}
+
 // sdkStructType resolves typeName within importPath to its declared struct
 // type, using a per-package AST index built once and cached across calls
 // (see sdkTypeIndexCache). ok is false when the type is not declared in the
@@ -314,6 +404,25 @@ func extractSDKUnionMemberFieldNames(structType *ast.StructType) []string {
 		}
 	}
 	return names
+}
+
+func extractSDKUnionMemberTypeNames(structType *ast.StructType) ([]string, error) {
+	var names []string
+	for _, field := range structType.Fields.List {
+		if field.Tag == nil {
+			continue
+		}
+		tag := reflect.StructTag(strings.Trim(field.Tag.Value, "`"))
+		if tag.Get("union") != "member" {
+			continue
+		}
+		typeName, _, err := sdkFieldTypeName(field.Type)
+		if err != nil {
+			return nil, err
+		}
+		names = append(names, typeName)
+	}
+	return names, nil
 }
 
 func sdkFieldTypeName(expr ast.Expr) (string, bool, error) {

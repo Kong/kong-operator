@@ -11,6 +11,7 @@ import (
 	"github.com/kong/kong-operator/v2/ingress-controller/internal/adminapi"
 	managercfg "github.com/kong/kong-operator/v2/ingress-controller/pkg/manager/config"
 	"github.com/kong/kong-operator/v2/ingress-controller/test/mocks"
+	adminapidiscovery "github.com/kong/kong-operator/v2/internal/adminapi"
 )
 
 func TestClientFactory_CreateAdminAPIClientAttachesDiscoveryMetadata(t *testing.T) {
@@ -20,7 +21,7 @@ func TestClientFactory_CreateAdminAPIClientAttachesDiscoveryMetadata(t *testing.
 	adminAPIServer := httptest.NewServer(adminAPIHandler)
 	t.Cleanup(func() { adminAPIServer.Close() })
 
-	client, err := factory.CreateAdminAPIClient(t.Context(), adminapi.DiscoveredAdminAPI{
+	client, err := factory.CreateAdminAPIClient(t.Context(), adminapidiscovery.DiscoveredAdminAPI{
 		Address:       adminAPIServer.URL,
 		TLSServerName: "pod.dataplane-admin.namespace.svc",
 		PodRef: k8stypes.NamespacedName{

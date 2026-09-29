@@ -286,6 +286,12 @@ type ParentRefConfig struct {
 	// accessors keep their commonv1alpha1.ObjectRef signature. When unset, the
 	// field is emitted as commonv1alpha1.ObjectRef.
 	TypeName string `yaml:"typeName,omitempty"`
+	// AllowedKinds optionally restricts the kinds the parent ref field may
+	// target, via a generated CEL rule on its "kind" field. Use it when the ref
+	// type admits more kinds than the entity supports, e.g. an AIGatewayRef
+	// entity that has no OnPremAIGateway support and would otherwise be
+	// accepted by the API server but never reconciled.
+	AllowedKinds []string `yaml:"allowedKinds,omitempty"`
 }
 
 // ReconcilerConfig holds configuration for reconciler code generation.

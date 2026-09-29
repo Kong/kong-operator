@@ -277,7 +277,7 @@ func (s *AIGatewayAuthStrategyAPISpec) marshalSDKOpsPayload() (map[string]any, e
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode AIGatewayAuthStrategyAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, AIGatewayAuthStrategySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, AIGatewayAuthStrategySDKOpsFreeformKeyFields)
@@ -298,13 +298,16 @@ func (s *AIGatewayAuthStrategyAPISpec) selectedSDKOpsPayload(payload map[string]
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.AIGatewayAuthStrategyConfig.Type {
 	case AIGatewayAuthStrategyConfigTypeKeyAuth:
 		selected = payload["key-auth"]
 		variant = "KeyAuth"
+		variantJSON = "key-auth"
 	case AIGatewayAuthStrategyConfigTypeOpenIDConnect:
 		selected = payload["openid-connect"]
 		variant = "OpenIDConnect"
+		variantJSON = "openid-connect"
 	default:
 		return nil, "", fmt.Errorf("unsupported AIGatewayAuthStrategy config type %q", s.AIGatewayAuthStrategyConfig.Type)
 	}
@@ -312,7 +315,7 @@ func (s *AIGatewayAuthStrategyAPISpec) selectedSDKOpsPayload(payload map[string]
 	if selected == nil {
 		return nil, "", fmt.Errorf("AIGatewayAuthStrategy config payload missing for type %q", s.AIGatewayAuthStrategyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, AIGatewayAuthStrategySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {

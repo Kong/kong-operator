@@ -24,12 +24,16 @@ type DiscoveredAdminAPI struct {
 	PodRef k8stypes.NamespacedName
 }
 
+// Discoverer discovers Admin API endpoints from Kubernetes EndpointSlices
+// belonging to Admin API Services.
 type Discoverer struct {
 	// portNames is the set of port names that Admin API Service ports will be
 	// matched against.
 	portNames sets.Set[string]
 }
 
+// NewDiscoverer creates a new Discoverer. adminAPIPortNames is the set of port
+// names that Admin API Service ports will be matched against.
 func NewDiscoverer(
 	adminAPIPortNames sets.Set[string],
 ) (*Discoverer, error) {

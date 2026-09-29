@@ -91,6 +91,11 @@ jobs:
       minor: ${{ steps.semver_parser.outputs.minor }}
       patch: ${{ steps.semver_parser.outputs.patch }}
       prerelease: ${{ steps.semver_parser.outputs.prerelease }}
+      release_branch: ${{ steps.release_branch.outputs.release_branch }}
+      # NOTE: true for patches of a rapid release (e.g. 2.4.0-rapid.1.1), released
+      # from release/N.M.0-rapid.K.x.
+      rapid_patch: ${{ steps.release_branch.outputs.rapid_patch }}
+      changelog_anchor: ${{ steps.release_branch.outputs.changelog_anchor }}
     runs-on: ubuntu-latest
 
     steps:
@@ -111,6 +116,32 @@ jobs:
         with:
           input_string: ${{ env.VERSION }}
           version_extractor_regex: "(.*)$"
+
+      - name: Determine the release branch, rapid patch flag and changelog anchor
+        id: release_branch
+        env:
+          VERSION: ${{ steps.semver_parser.outputs.fullversion }}
+          MAJOR: ${{ steps.semver_parser.outputs.major }}
+          MINOR: ${{ steps.semver_parser.outputs.minor }}
+          PATCH: ${{ steps.semver_parser.outputs.patch }}
+          PRERELEASE: ${{ steps.semver_parser.outputs.prerelease }}
+        run: |
+          RELEASE_BRANCH=""
+          if [[ "$PATCH" == "0" && -z "$PRERELEASE" ]]; then
+            RELEASE_BRANCH="release/${MAJOR}.${MINOR}.x"
+          elif [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^rapid\.[0-9]+$ ]]; then
+            RELEASE_BRANCH="release/${MAJOR}.${MINOR}.0-${PRERELEASE}.x"
+          fi
+          echo "release_branch=${RELEASE_BRANCH}" >> "$GITHUB_OUTPUT"
+
+          RAPID_PATCH=false
+          if [[ "$PATCH" == "0" && "$PRERELEASE" =~ ^rapid\.[0-9]+\.[0-9]+$ ]]; then
+            RAPID_PATCH=true
+          fi
+          echo "rapid_patch=${RAPID_PATCH}" >> "$GITHUB_OUTPUT"
+
+          # CHANGELOG.md heading anchors drop the dots: 2.4.0-rapid.1.1 -> v240-rapid11.
+          echo "changelog_anchor=v${VERSION//./}" >> "$GITHUB_OUTPUT"
 
       - name: check if tag already exists
         uses: mukunku/tag-exists-action@5c39604fe8aef7e65acb6fbcf96ec580f7680313 # v1.7.0
@@ -210,7 +241,7 @@ jobs:
 
             #### Links:
 
-            - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#v${{ needs.semver.outputs.major }}${{ needs.semver.outputs.minor }}${{ needs.semver.outputs.patch }}${{ needs.semver.outputs.prerelease }})
+            - [Changelog](https://github.com/kong/kong-operator/blob/main/CHANGELOG.md#${{ needs.semver.outputs.changelog_anchor }})
 
           token: ${{ secrets.GITHUB_TOKEN }}
           tag: v${{ needs.semver.outputs.version }}
@@ -238,14 +269,14 @@ jobs:
       - look_for_release
       - publish-release
       - semver
-    # NOTE: only create a release branch if the release is not a patch release
-    # or a prerelease.
-    # For patch releases, the release branch should already be in place.
-    # For prereleases, we do not want to create a release branch.
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch == '0' && needs.semver.outputs.prerelease == '' }}
+    # NOTE: only create a release branch for releases the semver job maps to
+    # one: stable N.M.0 -> release/N.M.x, rapid N.M.0-rapid.K ->
+    # release/N.M.0-rapid.K.x. Patch releases already have their branch;
+    # other prereleases get none.
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.release_branch != '' }}
     runs-on: ubuntu-latest
     env:
-      RELEASE_BRANCH: "release/${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+      RELEASE_BRANCH: ${{ needs.semver.outputs.release_branch }}
     steps:
       - name: Harden Runner
         uses: step-security/harden-runner@e14015d583714f6e62063499dc959a02595150a1 # v2.21.1
@@ -275,6 +306,8 @@ jobs:
           branch: "refs/heads/${{ env.RELEASE_BRANCH }}"
           sha: "${{ github.sha }}"
 
+      # NOTE: charts-sync.yaml tracks a single branch: the most recently created
+      # release branch (release/N.M.x or release/N.M.0-rapid.K.x).
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - env:
           CHARTS_SYNC_WORKFLOW_PATH: .github/workflows/charts-sync.yaml
@@ -284,6 +317,8 @@ jobs:
           yq eval '.on.push.branches = [ strenv(RELEASE_BRANCH) ]' -i "$CHARTS_SYNC_WORKFLOW_PATH"
           git add "$CHARTS_SYNC_WORKFLOW_PATH"
           git commit -m "chore: update charts sync workflow to trigger on $RELEASE_BRANCH branch"
+          # e.g. release/2.4.x -> chore/charts-sync-2.4.x
+          echo "CHARTS_SYNC_PR_BRANCH=chore/charts-sync-${RELEASE_BRANCH#release/}" >> "$GITHUB_ENV"
 
       - uses: peter-evans/create-pull-request@5f6978faf089d4d20b00c7766989d076bb2fc7f1 # v8.1.1
         with:
@@ -294,7 +329,7 @@ jobs:
           # required checks, so this PR could never merge. The App additionally
           # needs the `workflows` permission, because this PR edits a workflow.
           token: ${{ steps.app-token.outputs.token }}
-          branch: "chore/charts-sync-${{ needs.semver.outputs.major }}.${{ needs.semver.outputs.minor }}.x"
+          branch: ${{ env.CHARTS_SYNC_PR_BRANCH }}
           base: main
           delete-branch: true
           title: "chore: update charts sync workflow to trigger on ${{ env.RELEASE_BRANCH }} branch"
@@ -312,7 +347,9 @@ jobs:
       - look_for_release
       - publish-release
       - semver
-    if: ${{ needs.look_for_release.outputs.release_found == 'true' && needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '' && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
+    # NOTE: patch releases (N.M.P with P != 0) and patches of rapid releases
+    # (e.g. 2.4.0-rapid.1.1) are cherry-picked back to main.
+    if: ${{ needs.look_for_release.outputs.release_found == 'true' && ((needs.semver.outputs.patch != '0' && needs.semver.outputs.prerelease == '') || needs.semver.outputs.rapid_patch == 'true') && needs.look_for_release.outputs.release_latest == 'true' && github.ref_name != 'main' }}
     env:
       CHERRYPICK_BRANCH: cherry-pick/${{ github.sha }}-to-main
     runs-on: ubuntu-latest

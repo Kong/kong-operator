@@ -154,7 +154,7 @@ func (s *EventGatewayListenerPolicyAPISpec) marshalSDKOpsPayload() (map[string]a
 	if err := json.Unmarshal(data, &rawPayload); err != nil {
 		return nil, fmt.Errorf("failed to decode EventGatewayListenerPolicyAPISpec: %w", err)
 	}
-	rawPayload = flattenSensitiveData(rawPayload)
+	rawPayload = flattenSensitiveDataExcept(rawPayload, EventGatewayListenerPolicySDKOpsFreeformKeyFields)
 	// Convert camelCase CRD wire-format keys and discriminator values to
 	// snake_case for the Konnect SDK request types.
 	renamed := renameKeysToSDKExcept(rawPayload, EventGatewayListenerPolicySDKOpsFreeformKeyFields)
@@ -175,13 +175,16 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 
 	var selected any
 	var variant string
+	variantJSON := ""
 	switch s.EventGatewayListenerPolicyConfig.Type {
 	case EventGatewayListenerPolicyConfigTypeEventGatewayTLSListen:
 		selected = payload["tls_server"]
 		variant = "EventGatewayTLSListen"
+		variantJSON = "tls_server"
 	case EventGatewayListenerPolicyConfigTypeForwardToVirtualClust:
 		selected = payload["forward_to_virtual_cluster"]
 		variant = "ForwardToVirtualClust"
+		variantJSON = "forward_to_virtual_cluster"
 	default:
 		return nil, "", fmt.Errorf("unsupported EventGatewayListenerPolicy config type %q", s.EventGatewayListenerPolicyConfig.Type)
 	}
@@ -189,7 +192,7 @@ func (s *EventGatewayListenerPolicyAPISpec) selectedSDKOpsPayload(payload map[st
 	if selected == nil {
 		return nil, "", fmt.Errorf("EventGatewayListenerPolicy config payload missing for type %q", s.EventGatewayListenerPolicyConfig.Type)
 	}
-	selected = flattenSDKUnions(selected)
+	selected = flattenSDKUnionsExceptUnder(selected, EventGatewayListenerPolicySDKOpsFreeformKeyFields, variantJSON)
 	if selectedMap, ok := selected.(map[string]any); ok {
 		if typeValue, ok := payload["type"]; ok {
 			if _, hasType := selectedMap["type"]; !hasType {
