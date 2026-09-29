@@ -171,11 +171,12 @@ func UIDLabelForObject(obj client.Object) string {
 // the Kubernetes metadata labels take precedence, so a user-set entry (nil or not)
 // cannot override or delete them.
 func WithKubernetesMetadataLabelsPtr(obj ObjectWithMetadata, userSetLabels map[string]*string) map[string]*string {
-	metadataLabels := WithKubernetesMetadataLabels(obj, nil)
-	out := make(map[string]*string, len(metadataLabels)+len(userSetLabels))
-	maps.Copy(out, userSetLabels)
+	out := maps.Clone(userSetLabels)
+	if out == nil {
+		out = map[string]*string{}
+	}
 	delete(out, KubernetesNamespaceLabelKey)
-	for k, v := range metadataLabels {
+	for k, v := range WithKubernetesMetadataLabels(obj, nil) {
 		out[k] = &v
 	}
 	return out
